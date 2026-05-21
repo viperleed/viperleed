@@ -1,6 +1,6 @@
 """Module time_resolved of viperleed.gui.measure.measurement.
 
-This module contains the definition of the TimeResolved class
+This module contains the definition of time-resolved measurement classes
 for measuring data in a time-based fashion.
 """
 __authors__ = (
@@ -11,6 +11,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-19'
 __license__ = 'GPLv3+'
 
+from abc import abstractmethod
+from configparser import NoOptionError
+from configparser import NoSectionError
 from math import ceil
 
 from PyQt5 import QtCore as qtc
@@ -35,13 +38,12 @@ _UNIQUE = qtc.Qt.UniqueConnection
 
 
 class TimeResolved(MeasurementABC):  # too-many-instance-attributes
-    """Time resolved measurement class."""
+    """Abstract base class for time-resolved measurements."""
 
-    display_name = 'Time resolved'
+    display_name = None
 
     _mandatory_settings = (
         *MeasurementABC._mandatory_settings,
-        ('measurement_settings', 'is_continuous'),
         ('measurement_settings', 'energy_step_duration'),
         ('energies', 'endless'),
         ('energies', 'constant_energy'),
@@ -214,16 +216,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         return self.measurement_interval_min
 
     @property
+    @abstractmethod
     def is_continuous(self):
         """Return whether the measurement is continuous."""
-        try:
-            return self.settings.getboolean('measurement_settings',
-                                            'is_continuous')
-        except ValueError:
-            # Not a valid boolean
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/is_continuous', '')
-            return False
 
     @property
     def measurement_interval(self):
@@ -391,14 +386,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 )
 
         info = (
-            ('measurement_settings', 'is_continuous',
-             'Continuous measurement',
-             '<nobr>If selected, the measurement will be a continuous, '
-             '</nobr>time-resolved measurement, i.e., it will return '
-             'data as quickly as possible, without averaging. Useful to '
-             'perform fast sampling of quantities. Typically used for '
-             'determining response times of a LEED unit. For <it>I</it>'
-             '(<it>t</it>) measurments, use non-continuous mode.'),
             ('energies', 'endless', 'Keep repeating',
              '<nobr>If selected, the measurement will return to the start '
              '</nobr>energy after reaching the end and go on. This kind '
@@ -418,7 +405,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         end_energy = handler['energies']['end_energy']
         delta_energy = handler['energies']['delta_energy']
         constant = handler['energies']['constant_energy']
-        continuous = handler['measurement_settings']['is_continuous']
         interval = handler['measurement_settings']['measurement_interval']
         for option in (end_energy, delta_energy):
             constant.handler_widget.unchecked.connect(option.set_enabled)
@@ -426,10 +412,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 option.handler_widget.setVisible
                 )
             retain_size_when_hidden(option.handler_widget)
-        continuous.handler_widget.unchecked.connect(interval.set_enabled)
-        continuous.handler_widget.unchecked.connect(
-            interval.handler_widget.setVisible
-            )
+        is_triggered = not self.is_continuous
+        interval.set_enabled(is_triggered)
+        interval.handler_widget.setVisible(is_triggered)
         retain_size_when_hidden(interval.handler_widget)
 
         settings_path = SystemSettings().paths['configuration']
@@ -444,6 +429,29 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement."""
+        # Only access parser APIs directly when available, as callers may
+        # pass dict/path/str and rely on the base class for conversion.
+        if hasattr(new_settings, 'get') and hasattr(new_settings, 'set'):
+            meas_class = new_settings.get('measurement_settings',
+                                          'measurement_class',
+                                          fallback='')
+            if meas_class == 'TimeResolved':
+                try:
+                    legacy_continuous = new_settings.getboolean(
+                        'measurement_settings', 'is_continuous'
+                        )
+                except (ValueError, NoSectionError, NoOptionError):
+                    legacy_continuous = self.is_continuous
+                if legacy_continuous != self.is_continuous:
+                    self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                    'measurement_settings/is_continuous', '')
+                    return False
+                new_settings.set('measurement_settings', 'measurement_class',
+                                 self.__class__.__name__)
+            # Keep this flag synchronized for compatibility with loading old
+            # time-resolved data/configuration that still relies on it.
+            new_settings.set('measurement_settings', 'is_continuous',
+                             str(self.is_continuous))
         settings_ok = super().set_settings(new_settings)
         self.data_points.time_resolved = True
         self.data_points.continuous = self.is_continuous
@@ -781,3 +789,54 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         primary.busy = True
         primary.busy_changed.connect(self._check_is_finished, type=_UNIQUE)
         primary.stop()
+
+
+class TimeResolvedTriggered(TimeResolved):
+    """Triggered time-resolved measurement."""
+
+    display_name = 'Time resolved (triggered)'
+
+    @property
+    def is_continuous(self):
+        """Return whether the measurement is continuous."""
+        return False
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the `config` file is for this measurement."""
+        meas_class = config.get('measurement_settings', 'measurement_class',
+                                fallback=None)
+        if meas_class == cls.__name__:
+            return True
+        if meas_class != 'TimeResolved':
+            return False
+        try:
+            return not config.getboolean('measurement_settings',
+                                         'is_continuous')
+        except (ValueError, NoSectionError, NoOptionError):
+            return True
+
+
+class TimeResolvedContinuous(TimeResolved):
+    """Continuous time-resolved measurement."""
+
+    display_name = 'Time resolved (continuous)'
+
+    @property
+    def is_continuous(self):
+        """Return whether the measurement is continuous."""
+        return True
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the `config` file is for this measurement."""
+        meas_class = config.get('measurement_settings', 'measurement_class',
+                                fallback=None)
+        if meas_class == cls.__name__:
+            return True
+        if meas_class != 'TimeResolved':
+            return False
+        try:
+            return config.getboolean('measurement_settings', 'is_continuous')
+        except (ValueError, NoSectionError, NoOptionError):
+            return False

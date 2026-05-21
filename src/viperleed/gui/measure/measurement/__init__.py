@@ -27,9 +27,13 @@ __license__ = 'GPLv3+'
 from viperleed.gui.measure.measurement.energy_calibration import (
     MeasureEnergyCalibration,
     )
-from viperleed.gui.measure.measurement.time_resolved import TimeResolved
+from viperleed.gui.measure.measurement.time_resolved import (
+    TimeResolvedContinuous,
+    TimeResolvedTriggered,
+    )
 from viperleed.gui.measure.measurement.iv_video import IVVideo
 
 ALL_MEASUREMENTS = {cls.display_name: cls for cls in (MeasureEnergyCalibration,
-                                                      TimeResolved,
+                                                      TimeResolvedTriggered,
+                                                      TimeResolvedContinuous,
                                                       IVVideo)}

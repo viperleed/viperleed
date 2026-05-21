@@ -294,3 +294,34 @@ class TestSystemSettings:
         settings_path = Path(sys_settings._sys_qsettings.fileName()).resolve()
         assert settings_path.parent.is_dir()
         assert settings_path.is_file()
+
+
+class TestTimeResolvedAliasSections:
+    """Tests for time-resolved aliases for split measurement classes."""
+
+    @fixture(autouse=True)
+    def mock_aliases(self, tmp_path, mocker):
+        """Create aliases where split classes must reuse TimeResolved aliases."""
+        aliases = tmp_path / 'aliases.ini'
+        aliases.write_text('''
+[MeasurementABC]
+new_sections = ()
+
+[TimeResolved]
+parent_aliases = ('MeasurementABC', )
+energies/endless = ('measurement_settings/endless', )
+
+[TimeResolvedTriggered]
+parent_aliases = ('TimeResolved', )
+
+[TimeResolvedContinuous]
+parent_aliases = ('TimeResolved', )
+''')
+        mocker.patch(f'{_MODULE}.get_aliases_path', return_value=aliases)
+
+    @parametrize('cls_name', ('TimeResolvedTriggered', 'TimeResolvedContinuous'))
+    def test_split_classes_reuse_time_resolved_aliases(self, cls_name):
+        """Ensure split classes inherit aliases from TimeResolved section."""
+        parser = AliasConfigParser(cls_name=cls_name)
+        parser.read_dict({'measurement_settings': {'endless': 'True'}})
+        assert parser.getboolean('energies', 'endless')
