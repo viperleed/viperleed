@@ -20,13 +20,12 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.energyramp import ABRUPT
+from viperleed.gui.measure.classes.energyramp import ALL_ENERGY_RAMPS
 from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
 from viperleed.gui.measure.classes.energyramp import END_E_NAME
 from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import START_E_NAME
-from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
-from viperleed.gui.measure.classes.energyramp import SawtoothEnergyRamp
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
@@ -51,8 +50,6 @@ RAMP_N_FOOTER_ROWS = 1
 RAMP_N_HEADER_ROWS = 1
 STEP_N_COLUMNS = 2
 STEP_N_HEADER_ROWS = 2
-ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
-                    ConstantEnergyRamp)
 ALLOWED_ENERGY_RAMPS = {
     'IVVideo': (LinearEnergyRamp,),
     'MeasureEnergyCalibration': (LinearEnergyRamp,),

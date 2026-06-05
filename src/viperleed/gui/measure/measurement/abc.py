@@ -134,10 +134,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     _mandatory_settings = (
         ('devices', 'primary_controller'),
-        ('energies', 'start_energy'),
-        ('energies', 'delta_energy'),
-        ('energies', 'end_energy'),
-        ('energies', 'step_profile'),
         )
 
     def __init__(self, settings):
@@ -394,11 +390,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             specify additional information on what is wrong with each
             invalid setting.
         """
+        invalid_ramp_settings = EnergyRampABC.are_settings_invalid(
+            settings
+            )
+
         invalid_settings = settings.misses_settings(
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
-        return [(invalid,) for invalid in invalid_settings]
+        return [(invalid,) for invalid in (*invalid_settings,
+                                           *invalid_ramp_settings)]
 
     def disconnect_devices_and_notify(self):
         """Disconnect devices and emit devices_disconnected."""

@@ -34,6 +34,8 @@ DEFAULT_END = 0.0
 DEFAULT_START = 0.0
 MINIMUM_ENERGY = 0.0
 MINIMUM_DELTA = 1e-4
+ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
+                    ConstantEnergyRamp)
 
 
 def get_ramp_from_settings(settings):
@@ -61,6 +63,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
 
     display_name = None
     info_text = None
+    _mandatory_settings = (('energies', 'start_energy'),)
 
     def __init__(self, *args, **kwargs):
         """Initialise generic energy ramp class."""
@@ -197,6 +200,36 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
             are not acceptable.
         """
         return True, ''
+
+    @classmethod
+    def are_settings_invalid(cls, settings):
+        """Check if there are any invalid settings.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The new settings.
+
+        Returns
+        -------
+        invalid_settings : list of tuples
+            Invalid _mandatory_settings of cls as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
+        """
+        ramp_name = settings.get('energies', 'ramp_type', fallback=None)
+        for ramp in ALL_ENERGY_RAMPS:
+            if ramp_name == ramp.__name__:
+                mandatory_settings = ramp._mandatory_settings
+                break
+        else:
+            mandatory_settings = cls._mandatory_settings
+        invalid_settings = settings.misses_settings(*mandatory_settings)
+        return [(invalid,) for invalid in invalid_settings]
 
     def set_ramp(self, settings):
         """Set the energy ramp from settings.
@@ -426,6 +459,9 @@ class LinearEnergyRamp(EnergyRampABC):
     display_name = 'Linear'
     info_text = ('<nobr>Linearly increases or decreases the energy'
                  f' </nobr>up to and including {END_E_NAME}.')
+    _mandatory_settings = (*EnergyRampABC._mandatory_settings,
+                           ('energies', 'delta_energy'),
+                           ('energies', 'end_energy'))
 
     def __init__(self, *args, **kwargs):
         """Initialize LinearEnergyRamp."""
