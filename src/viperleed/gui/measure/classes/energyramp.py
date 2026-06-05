@@ -34,8 +34,6 @@ DEFAULT_END = 0.0
 DEFAULT_START = 0.0
 MINIMUM_ENERGY = 0.0
 MINIMUM_DELTA = 1e-4
-ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
-                    ConstantEnergyRamp)
 
 
 def get_ramp_from_settings(settings):
@@ -656,3 +654,7 @@ class SawtoothEnergyRamp(LinearEnergyRamp):
     def ramp_finished(self):
         """Return whether the energy ramp has been finished."""
         return False  # An endless energy ramp is never finished.
+
+
+ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
+                    ConstantEnergyRamp)
