@@ -222,10 +222,11 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
         ramp_name = settings.get('energies', 'ramp_type', fallback=None)
         for ramp in ALL_ENERGY_RAMPS:
             if ramp_name == ramp.__name__:
-                mandatory_settings = ramp._mandatory_settings
+                ramp_class = ramp
                 break
         else:
-            mandatory_settings = cls._mandatory_settings
+            ramp_class = get_ramp_from_settings(settings)
+        mandatory_settings = ramp_class._mandatory_settings
         invalid_settings = settings.misses_settings(*mandatory_settings)
         return [(invalid,) for invalid in invalid_settings]
 
