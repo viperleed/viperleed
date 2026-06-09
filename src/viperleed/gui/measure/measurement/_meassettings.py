@@ -358,8 +358,16 @@ class EnergyRampEditor(SettingsDialogSectionBase):
     def _update_energy_ramp_options(self):
         """Update the energy ramp options to reflect the current settings."""
         for option in self._energy_options:
-            value = self._settings['energies'].getfloat(option.option_name,
-                                                        fallback=None)
+            try:
+                value = self._settings['energies'].getfloat(option.option_name,
+                                                            fallback=None)
+            except (TypeError, ValueError):
+                base.emit_error(
+                    self, QObjectSettingsErrors.INVALID_SETTINGS,
+                    f'energies/{option.option_name}',
+                    f'Invalid numeric value for {option.option_name}'
+                    )
+                continue
             if value is not None:
                 with qtc.QSignalBlocker(option.handler_widget):
                     option.handler_widget.setValue(value)
