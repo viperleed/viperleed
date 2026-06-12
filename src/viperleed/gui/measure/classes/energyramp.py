@@ -199,8 +199,8 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
         """
         return True, ''
 
-    @classmethod
-    def are_settings_invalid(cls, settings):
+    @staticmethod
+    def are_settings_invalid(settings):
         """Check if there are any invalid settings.
 
         Parameters
@@ -211,13 +211,10 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
         Returns
         -------
         invalid_settings : list of tuples
-            Invalid _mandatory_settings of cls as a list of tuples.
-            The first entry in each tuple can be either '<section>',
-            '<section>/<option>', or
+            Invalid _mandatory_settings of ramp_class as a list of
+            tuples. The first entry in each tuple can be either
+            '<section>', '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
-            Further optional entries may be added by subclasses. They
-            specify additional information on what is wrong with each
-            invalid setting.
         """
         ramp_name = settings.get('energies', 'ramp_type', fallback=None)
         for ramp in ALL_ENERGY_RAMPS:
@@ -226,6 +223,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
                 break
         else:
             ramp_class = get_ramp_from_settings(settings)
+        # pylint: disable-next=protected-access
         mandatory_settings = ramp_class._mandatory_settings
         invalid_settings = settings.misses_settings(*mandatory_settings)
         return [(invalid,) for invalid in invalid_settings]
