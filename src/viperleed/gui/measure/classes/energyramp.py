@@ -655,5 +655,8 @@ class SawtoothEnergyRamp(LinearEnergyRamp):
         return False  # An endless energy ramp is never finished.
 
 
-ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
-                    ConstantEnergyRamp)
+ALL_ENERGY_RAMPS = (
+    ConstantEnergyRamp,
+    LinearEnergyRamp,
+    SawtoothEnergyRamp,
+    )
