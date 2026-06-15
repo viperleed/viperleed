@@ -124,3 +124,41 @@ class InfoLabel(qtw.QWidget):
         layout.addWidget(self._field_info)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
+
+
+class InfoComboBox(qtw.QWidget):
+    """A QComboBox with an attached FieldInfo that displays item info text.
+
+    The user data of the items in self._combo_box must be objects
+    with an info_text attribute. This text is displayed in the
+    tooltip of the attached FieldInfo when the item is selected.
+    """
+
+    def __init__(self, parent=None):
+        """Initialize instance."""
+        super().__init__(parent=parent)
+        self._combo_box = qtw.QComboBox()
+        self._field_info = None
+        self._compose()
+
+    @property
+    def combo_box(self):
+        """Return the QComboBox widget."""
+        return self._combo_box
+
+    def _compose(self):
+        """Compose combo box and FieldInfo."""
+        layout = qtw.QHBoxLayout()
+        layout.addWidget(self._combo_box)
+        self._field_info = FieldInfo.for_widget(qtw.QLabel('a'), tooltip='')
+        layout.addWidget(self._field_info)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        self._combo_box.currentIndexChanged.connect(self._update_field_info)
+
+    @qtc.pyqtSlot(int)
+    def _update_field_info(self, _):
+        """Update the field info text from the selected combo box item."""
+        selected_data = self._combo_box.currentData()
+        info_text = getattr(selected_data, 'info_text', None)
+        self._field_info.set_info_text(info_text or '')

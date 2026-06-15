@@ -441,10 +441,12 @@ class ViPErLEEDSettings(AliasConfigParser):
                 raise TypeError(f'Invalid mandatory setting {setting}. '
                                 f'with length {len(setting)}. Expected '
                                 'length <= 3.')
+
             # (<section>,)
+            if not self.has_section(setting[0]):
+                invalid_settings.append(setting[0])
+                continue
             if len(setting) == 1:
-                if not self.has_section(setting[0]):
-                    invalid_settings.append(setting[0])
                 continue
 
             # (<section>, <option>) or (<section>, <option>, <admissible>)
