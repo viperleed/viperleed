@@ -254,6 +254,7 @@ class Measure(ViPErLEEDPluginBase):                                             
     """A GUI that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
+    warning_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, parent=None):
         """Initialize window."""
@@ -282,6 +283,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             'bad_px_finder': BadPixelsFinderDialog(),
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
+            'warning_box': _QMSG(self),
             'device_settings': {},     # keys: unique names; No cameras
             'firmware_upgrade': FirmwareUpgradeDialog(self),
             'measurement_selection': SelectNewMeasurementDialog(self),
@@ -297,6 +299,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
             'errors': [],         # Report a bunch at once
+            'warnings': [],       # Report warnings without aborting
+            'warnings_set': set(),
             'n_retry_close': 0,   # Try at most 50 times, i.e., 2.5 sec
             }
         self._timers = {
@@ -539,6 +543,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         layout.addWidget(self._ctrls['energy_input'], 2, 2, 1, 1)
         self._compose_menu()
         self._compose_error_box()
+        self._compose_warning_box()
 
         # Take care of dialogs and other windows
         self._dialogs['sys_settings'].setModal(True)
@@ -550,6 +555,13 @@ class Measure(ViPErLEEDPluginBase):                                             
         err_box.setWindowTitle("Error")
         err_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
         err_box.setIcon(err_box.Critical)
+
+    def _compose_warning_box(self):
+        """Prepare the message box shown when warnings happen."""
+        warn_box = self._dialogs['warning_box']
+        warn_box.setWindowTitle("Warning")
+        warn_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
+        warn_box.setIcon(warn_box.Warning)
 
     def _compose_menu(self):
         """Put together menu."""
@@ -607,6 +619,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             ('bad_px_finder', 'finished',
              functools.partial(self._switch_button_enable, True)),
             ('error_box', 'finished', self._report_errors),
+            ('warning_box', 'finished', self._report_warnings),
             ('firmware_upgrade', 'error_occurred', self._on_error_occurred),
             ('bad_px_finder', 'error_occurred', self._on_error_occurred),
             ('measurement_selection', 'measurement_selected',
@@ -622,6 +635,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             signal.connect(slot)
         # OTHERS
         self.error_occurred.connect(self._on_error_occurred)
+        self.warning_occurred.connect(self._on_warning_occurred)
         self._measurement_thread.finished.connect(self._switch_button_enable)
 
         # TIMERS
@@ -642,8 +656,10 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Errors
         connect(measurement.error_occurred, self._on_error_occurred)
+        connect(measurement.warning_occurred, self._on_warning_occurred)
         for device in measurement.devices:
             connect(device.error_occurred, self._on_error_occurred)
+            connect(device.warning_occurred, self._on_warning_occurred)
 
         # Measurement events and start/stopping
         connect(measurement.new_data_available, self._on_data_received)
@@ -911,6 +927,16 @@ class Measure(ViPErLEEDPluginBase):                                             
         if self._glob['errors']:
             self._timers['report_errors'].start()
         self._timers['start_measurement'].stop()
+
+    @qtc.pyqtSlot(tuple)
+    def _on_warning_occurred(self, warning_info):
+        """React to a warning."""
+        sender = self.sender()
+        warning = (sender, *warning_info)
+        if warning not in self._glob['warnings_set']:
+            self._glob['warnings'].append(warning)
+            self._glob['warnings_set'].add(warning)
+            self._report_warnings()
 
     @qtc.pyqtSlot()
     def _on_measurement_finished(self, *_):
@@ -1186,6 +1212,40 @@ class Measure(ViPErLEEDPluginBase):                                             
         err_box.setText('\n\n'.join(err_text))
         err_box.open()
         self._glob['errors'] = []
+
+    def _report_warnings(self):
+        if not self._glob['warnings']:
+            return
+
+        warn_box = self._dialogs['warning_box']
+        if warn_box.isVisible():
+            return
+
+        warn_text = []
+        for sender, warning_code, warning_message in self._glob['warnings']:
+            if isinstance(sender, CameraABC):
+                source = f'camera {sender.name}'
+            elif isinstance(sender, ControllerABC):
+                source = f'controller {sender.name} at {sender.address}'
+            elif isinstance(sender, MeasurementABC):
+                source = f'measurement {type(sender).__name__}'
+            elif isinstance(sender, SerialABC):
+                source = f'{type(sender).__name__} at {sender.port_name}'
+            elif isinstance(sender, FirmwareUpgradeDialog):
+                source = 'firmware upgrade dialog'
+            elif isinstance(sender, BadPixelsFinderDialog):
+                source = 'bad pixels finder dialog'
+            else:
+                source = 'system or unknown'
+
+            warn_text.append(f'WARNING from {source}\n'
+                             f'(Code: {warning_code})'
+                             f'\n\n{warning_message}')
+
+        warn_box.setText('\n\n'.join(warn_text))
+        warn_box.open()
+        self._glob['warnings'] = []
+        self._glob['warnings_set'].clear()
 
     @qtc.pyqtSlot()
     def _on_measurement_cancelled(self):

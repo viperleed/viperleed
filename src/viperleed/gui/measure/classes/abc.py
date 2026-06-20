@@ -100,8 +100,10 @@ class QObjectWithError(qtc.QObject):                                            
     # Emitted whenever an error has been detected. Contains
     # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
+    warning_occurred = qtc.pyqtSignal(tuple)
 
     emit_error = base.emit_error
+    emit_warning = base.emit_warning
 
     def __init__(self, *args, **kwargs):
         """Initialise instance.

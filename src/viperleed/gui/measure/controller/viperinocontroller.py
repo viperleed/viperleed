@@ -284,15 +284,15 @@ class ViPErinoController(MeasureControllerABC):
             tc_type = self.settings.get('conversions', 'thermocouple_type',
                                         fallback=None)
             if tc_type is None:
-                self.emit_error(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
-                                '\nInfo: missing entry in settings.')
+                self.emit_warning(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                                  '\nInfo: missing entry in settings.')
                 return None
             try:
                 self._thermocouple = Thermocouple(tc_type)
             except ValueError as err:
                 # Unknown thermocouple type
-                self.emit_error(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
-                                f'\nInfo: {err}.')
+                self.emit_warning(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                                  f'\nInfo: {err}.')
                 return None
         return self._thermocouple
 
