@@ -47,7 +47,7 @@ Before you start with the modifications, make sure you have all required compone
 
 
 For the beam HV pin:
-    - 2 equal resistors (between 200 and 500 :math:`\Omega`) with ~1 W power rating, tolerance :math:`\leq 1\%`,
+    - 2 equal resistors (between 200 and 1000 :math:`\Omega`) with ~1 W power rating, tolerance :math:`\leq 1\%`,
     - male and female plug pins (e.g., Vogt part no. 1365a.61 and 1361.61),
     - a short shrink tube (~1.5 cm),
 
@@ -83,14 +83,14 @@ Here, :math:`\epsilon` is the relative difference between the two :math:`R` resi
 Thus a 1% difference in the resistors at 20 V filament voltage will result in a 50 meV offset in the energy calibration.
 
 Furthermore, the smaller :math:`R` is relative to :math:`R_{\mathrm{ViPErLEED}}`, the smaller the gain error of the energy calibration will be.
-With 330 :math:`\Omega` resistors, the gain error is about :math:`1\times 10^{-5}`, or ~0.1 eV at 1000 eV.
+With 330 :math:`\Omega` resistors, the gain error is about :math:`1\times 10^{-5}`, or ~0.01 eV at 1000 eV.
 However, the resistors should not be chosen too small as the additional current :math:`I_{\mathrm{extra}}` (see :numref:`fig_ebeam_circuit`) drawn by the voltage divider is
 
 .. math::
     I_{\mathrm{extra}} = \frac{\Delta V_{\mathrm{fil}}}{2R} = I_{\mathrm{fil}} \frac{R_{\mathrm{fil}}}{2R}
 
 when the BEAM HV plug is disconnected.
-This equates to about 30 mA with 20 V filament voltage and a 330 :math:`\Omega` resistor, i.e. ~0.6 W.
+This equates to about 30 mA with 20 V filament voltage and a 330 :math:`\Omega` resistor, i.e. ~0.3 W.
 
 Opening up the electronics
 ==========================
@@ -217,7 +217,7 @@ Once securely placed, solder both wires to the side of the diodes, while being c
     :width: 100%
 
     * - .. _fig_pin_location_zoomed_out:
-  
+
         .. figure:: /_static/hardware/ErLEED_modification/pin_location/location_medium.svg
 
             Filament output and highlighted location of new pin.

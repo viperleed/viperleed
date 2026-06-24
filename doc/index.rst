@@ -107,6 +107,7 @@ project:
     :caption: Hardware and measurements
 
     Hardware<content/hardware>
+    Measurement<content/measurement>
 
 .. toctree::
     :maxdepth: 1
