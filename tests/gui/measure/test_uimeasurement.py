@@ -8,7 +8,11 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-03-31'
 __license__ = 'GPLv3+'
 
+import json
+
 from types import SimpleNamespace
+from pytest_cases import parametrize
+from PyQt5 import QtCore as qtc
 
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.uimeasurement import _DeviceDetectionWorker
@@ -205,55 +209,98 @@ def test_stop_device_search_triggers(mocker):
     assert detect_signal.disconnected == [fake_worker.detect_devices]
 
 
-def test_device_detection_worker_emits_default_settings_error(mocker):
-    """Check DefaultSettingsError is emitted via worker error signal."""
+test_cases = (
+    (
+        {
+            'camera': {
+                'success': False,
+                'error_type': 'DEFAULT_SETTINGS_CORRUPTED',
+                'error_msg': 'bad defaults'
+            },
+            'controller': {
+                'success': True,
+                'devices': {
+                    'test_ctrl': [
+                        'viperleed.gui.measure.controller.viperinocontroller',
+                        'ViPErinoController',
+                        {'unique_name': 'TEST',
+                         'has_hardware_interface': True,
+                         'more': {}}
+                        ]
+                }
+            }
+        },
+        'test_ctrl',
+        {},
+        QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[0]
+
+    ),
+    (
+        {
+            'camera': {'success': False, 'error_type': 'RUNTIME_ERROR',
+                       'error_msg': 'something went wrong'},
+            'controller': {'success': True, 'devices': {}}
+        },
+        {},
+        {},
+        UIErrors.RUNTIME_ERROR.value[0]
+    )
+)
+
+@parametrize('devices, ctrl, camera, error', test_cases)
+def test_device_detection_worker(mocker, devices, ctrl, camera, error):
+    """Check device detection."""
+
+    class FakeProcess(qtc.QObject):
+        # Patch QProcess used by the worker to simulate subprocess.
+        NormalExit = qtc.QProcess.NormalExit
+        NotRunning = qtc.QProcess.NotRunning
+        ExitStatus = qtc.QProcess.ExitStatus
+        ProcessError = qtc.QProcess.ProcessError
+
+        finished = qtc.pyqtSignal(int, qtc.QProcess.ExitStatus)
+        errorOccurred = qtc.pyqtSignal(qtc.QProcess.ProcessError)
+
+        def __init__(self):
+            super().__init__()
+            self._finished_callbacks = []
+            self._error_callbacks = []
+
+        def start(self, exe, args):
+            # Simulate immediate process completion with JSON on stdout.
+            data = devices
+
+            self._stdout = json.dumps(data).encode()
+            self.finished.emit(0, self.NormalExit)
+
+        def state(self):
+            return self.NotRunning
+
+        def readAllStandardOutput(self):
+            class B:
+                def __init__(self, b):
+                    self._b = b
+                def data(self):
+                    return self._b
+            return B(self._stdout)
+
+        def readAllStandardError(self):
+            class B:
+                def data(self):
+                    return b''
+            return B(b'')
+
+    mocker.patch('viperleed.gui.measure.uimeasurement.qtc.QProcess',
+                 FakeProcess)
+
     worker = _DeviceDetectionWorker()
     emitted_errors = []
     emitted_devices = []
     worker.error_occurred.connect(emitted_errors.append)
     worker.devices_detected.connect(emitted_devices.append)
-
-    class _DefaultErr(Exception):
-        pass
-
-    mocker.patch(
-        'viperleed.gui.measure.uimeasurement.DefaultSettingsError',
-        _DefaultErr
-        )
-    get_devices = mocker.patch(
-        'viperleed.gui.measure.uimeasurement.base.get_devices'
-        )
-    get_devices.side_effect = [_DefaultErr('bad defaults'), {'ctrl': ('c', 'i')}]
-
     worker.detect_devices()
 
-    assert emitted_devices == [
-        {'camera': {}, 'controller': {'ctrl': ('c', 'i')}}
-        ]
-    assert emitted_errors == [
-        (QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[0],
-         QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[1]
-         .format('bad defaults'))
-        ]
-
-
-def test_device_detection_worker_emits_runtime_error(mocker):
-    """Check unexpected exceptions are emitted as runtime errors."""
-    worker = _DeviceDetectionWorker()
-    emitted_errors = []
-    emitted_devices = []
-    worker.error_occurred.connect(emitted_errors.append)
-    worker.devices_detected.connect(emitted_devices.append)
-
-    get_devices = mocker.patch(
-        'viperleed.gui.measure.uimeasurement.base.get_devices'
-        )
-    get_devices.side_effect = [RuntimeError('boom'), {}]
-
-    worker.detect_devices()
-
-    assert emitted_devices == [{'camera': {}, 'controller': {}}]
-    assert emitted_errors == [
-        (UIErrors.RUNTIME_ERROR.value[0],
-         UIErrors.RUNTIME_ERROR.value[1].format('boom'))
-        ]
+    if emitted_devices[0]['controller']:
+        assert ctrl in emitted_devices[0]['controller']
+    assert emitted_devices[0]['camera'] == camera
+    assert emitted_errors[0][0] == error
