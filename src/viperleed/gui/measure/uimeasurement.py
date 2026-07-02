@@ -884,12 +884,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
-    # @emit_default_faulty
-    # def _detect_devices(self, device_type):
-    #     """Detect and return devices of a certain type."""
-    #     # Notice that self is used by emit_default_faulty.
-    #     return base.get_devices(device_type)
-
     def _make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""
         address = ctrl_info.more['address']
