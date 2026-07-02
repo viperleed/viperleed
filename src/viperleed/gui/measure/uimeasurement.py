@@ -293,6 +293,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         if proc.state() != qtc.QProcess.NotRunning:
             proc.kill()
             proc.waitForFinished(1000)
+        proc.deleteLater()
         self._process = None
 
     def _cleanup_detection(self):
