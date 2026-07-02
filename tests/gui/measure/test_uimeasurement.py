@@ -202,6 +202,14 @@ def test_stop_device_search_triggers(mocker):
         _trigger_device_search=lambda: None,
         )
 
+    # _stop_device_search_triggers also invokes QMetaObject.invokeMethod
+    # to call "stop" on the worker thread. The fake worker is not a
+    # QObject, so PyQt5 cannot resolve the overloaded call. Mock it out
+    # since this is not what we are testing here.
+    mocker.patch(
+        'viperleed.gui.measure.uimeasurement.qtc.QMetaObject.invokeMethod'
+        )
+
     Measure._stop_device_search_triggers(fake)
 
     stop.assert_called_once_with()
@@ -261,7 +269,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
         finished = qtc.pyqtSignal(int, qtc.QProcess.ExitStatus)
         errorOccurred = qtc.pyqtSignal(qtc.QProcess.ProcessError)
 
-        def __init__(self):
+        def __init__(self, parent):
             super().__init__()
             self._finished_callbacks = []
             self._error_callbacks = []
