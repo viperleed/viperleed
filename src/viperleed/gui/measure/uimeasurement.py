@@ -267,7 +267,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         if self._process and self._process.state() != qtc.QProcess.NotRunning:
             return
 
-        self._process = qtc.QProcess()
+        self._process = qtc.QProcess(self)
         self._process.finished.connect(self._on_process_finished)
         self._process.errorOccurred.connect(self._on_process_error)
 
@@ -294,6 +294,15 @@ class _DeviceDetectionWorker(qtc.QObject):
             proc.kill()
             proc.waitForFinished(1000)
         self._process = None
+
+    def _cleanup_detection(self):
+        """Cleanup detection to avoid lingering process."""
+        proc = self._process
+        if proc is not None:
+            base.safe_disconnect(proc.finished, self._on_process_finished)
+            base.safe_disconnect(proc.errorOccurred, self._on_process_error)
+            proc.deleteLater()
+            self._process = None
 
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
@@ -346,6 +355,7 @@ class _DeviceDetectionWorker(qtc.QObject):
                     base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(err_msg))
 
         self.devices_detected.emit(detected_out)
+        self._cleanup_detection()
 
     @qtc.pyqtSlot(qtc.QProcess.ProcessError)
     def _on_process_error(self, err):
@@ -354,6 +364,7 @@ class _DeviceDetectionWorker(qtc.QObject):
             base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(f"Subprocess launch error: {err}"))
 
         self.devices_detected.emit({'camera': {}, 'controller': {}})
+        self._cleanup_detection()
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
