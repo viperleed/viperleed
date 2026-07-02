@@ -359,10 +359,9 @@ class _DeviceDetectionWorker(qtc.QObject):
 
     @qtc.pyqtSlot(qtc.QProcess.ProcessError)
     def _on_process_error(self, err):
-        # For completely failed launches
-        for d in ('camera', 'controller'):
-            base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(f"Subprocess launch error: {err}"))
-
+        err_str = self._process.errorString() if self._process else str(err)
+        base.emit_error(self, UIErrors.RUNTIME_ERROR,
+                        Exception(f"Subprocess launch error: {err_str}"))
         self.devices_detected.emit({'camera': {}, 'controller': {}})
         self._cleanup_detection()
 
