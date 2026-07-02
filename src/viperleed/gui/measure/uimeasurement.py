@@ -282,6 +282,19 @@ class _DeviceDetectionWorker(qtc.QObject):
 
         self._process.start(exe, args)
 
+    @qtc.pyqtSlot()
+    def stop(self):
+        """Kill any in-flight detection subprocess and clean up."""
+        proc = self._process
+        if proc is None:
+            return
+        base.safe_disconnect(proc.finished, self._on_process_finished)
+        base.safe_disconnect(proc.errorOccurred, self._on_process_error)
+        if proc.state() != qtc.QProcess.NotRunning:
+            proc.kill()
+            proc.waitForFinished(1000)
+        self._process = None
+
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
         detected_out = {}
@@ -472,6 +485,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 self._measurement_thread.terminate()
             retry_later = True
         if self._device_detection_thread.isRunning():
+            qtc.QMetaObject.invokeMethod(self._device_detection_worker, "stop",
+                                         qtc.Qt.BlockingQueuedConnection)
             self._device_detection_thread.quit()
             if not self._device_detection_thread.wait(100):
                 self._device_detection_thread.terminate()
@@ -492,7 +507,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             viewer.close()
             camera = viewer.camera
             if camera and camera.is_running:
-                print(camera.name, "is running")
                 camera.stop()
                 retry_later = True
 
@@ -513,6 +527,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                              self._trigger_device_search)
         base.safe_disconnect(self.detect_devices_requested,
                              self._device_detection_worker.detect_devices)
+        qtc.QMetaObject.invokeMethod(self._device_detection_worker, "stop",
+                                     qtc.Qt.QueuedConnection)
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
         """Allow copying (Ctrl+C) device name to clipboard when visible."""
