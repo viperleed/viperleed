@@ -309,12 +309,14 @@ class _DeviceDetectionWorker(qtc.QObject):
         detected_out = {}
 
         if exit_code != 0 or exit_status != qtc.QProcess.NormalExit:
-            # We failed to execute the CLI smoothly, parse as a generic exception.
-            error_data = self._process.readAllStandardError().data().decode(errors='replace')
-            for d in ('camera', 'controller'):
-                detected_out[d] = {}
-                base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(f"Detection failed: {error_data}"))
+            error_data = (self._process.readAllStandardError().data().decode(
+                            errors='replace'
+                            ))
+            detected_out[d] = {'camera': {}, 'controller': {}}
+            base.emit_error(self, UIErrors.RUNTIME_ERROR,
+                            f'Detection failed: {error_data}')
             self.devices_detected.emit(detected_out)
+            self._cleanup_detection()
             return
 
         try:
@@ -325,10 +327,10 @@ class _DeviceDetectionWorker(qtc.QObject):
             json_str = output.splitlines()[-1] if output else "{}"
             parsed = json.loads(json_str)
         except Exception as exc:
-            for d in ('camera', 'controller'):
-                detected_out[d] = {}
-                base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
+            detected_out = {'camera': {}, 'controller': {}}
+            base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
             self.devices_detected.emit(detected_out)
+            self._cleanup_detection()
             return
 
         # Restore objects
