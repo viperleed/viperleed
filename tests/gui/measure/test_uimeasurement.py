@@ -229,8 +229,8 @@ test_cases = (
                 'success': True,
                 'devices': {
                     'test_ctrl': [
-                        'viperleed.gui.measure.controller.viperinocontroller',
-                        'ViPErinoController',
+                         'types',
+                         'SimpleNamespace',
                         {'unique_name': 'TEST',
                          'has_hardware_interface': True,
                          'more': {}}
