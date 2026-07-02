@@ -307,13 +307,12 @@ class _DeviceDetectionWorker(qtc.QObject):
 
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
-        detected_out = {}
+        detected_out = {'camera': {}, 'controller': {}}
 
         if exit_code != 0 or exit_status != qtc.QProcess.NormalExit:
-            error_data = (self._process.readAllStandardError().data().decode(
+            error_data = self._process.readAllStandardError().data().decode(
                             errors='replace'
-                            ))
-            detected_out[d] = {'camera': {}, 'controller': {}}
+                            )
             base.emit_error(self, UIErrors.RUNTIME_ERROR,
                             f'Detection failed: {error_data}')
             self.devices_detected.emit(detected_out)
@@ -328,7 +327,6 @@ class _DeviceDetectionWorker(qtc.QObject):
             json_str = output.splitlines()[-1] if output else "{}"
             parsed = json.loads(json_str)
         except Exception as exc:
-            detected_out = {'camera': {}, 'controller': {}}
             base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
             self.devices_detected.emit(detected_out)
             self._cleanup_detection()
