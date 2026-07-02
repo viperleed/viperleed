@@ -296,8 +296,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
             class B:
                 def data(self):
                     return b''
-            return B(b'')
-
+            return B()
     mocker.patch('viperleed.gui.measure.uimeasurement.qtc.QProcess',
                  FakeProcess)
 
