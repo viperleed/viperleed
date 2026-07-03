@@ -144,8 +144,6 @@ __license__ = 'GPLv3+'
 # BUG: imaging source max no. frames should account for the overestimate
 
 #   M E A S U R E M E N T
-# TODO: energy ramps are not equivalent for iv == calibration != time_resolved
-#       will be solved with the EnergyRamp class
 # TODO: Measurement. If primary does not measure, find a better way
 #       than sending an empty data_ready for getting the times right
 # TODO: Ecal coefficients stored only if user OK with it. Requires plot
@@ -263,7 +261,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         Using a separate process guarantees the main event loop
         remains responsive during hardware connection checks.
         """
-        # If a search is already running, avoid launching a new process immediately.
+        # If a search is already running, avoid launching a new process.
         if self._process and self._process.state() != qtc.QProcess.NotRunning:
             return
 
@@ -320,11 +318,11 @@ class _DeviceDetectionWorker(qtc.QObject):
             return
 
         try:
-            output = self._process.readAllStandardOutput().data().decode().strip()
+            out = self._process.readAllStandardOutput().data().decode().strip()
             # Device discovery prints connection warnings (e.g. Qt or
             # failed COMs) to stdout. We take only the last line, which
             # contains our dumped JSON.
-            json_str = output.splitlines()[-1] if output else "{}"
+            json_str = out.splitlines()[-1] if out else "{}"
             parsed = json.loads(json_str)
         except Exception as exc:
             base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
@@ -334,26 +332,28 @@ class _DeviceDetectionWorker(qtc.QObject):
 
         # Restore objects
         for device_type, result in parsed.items():
-            if result.get("success"):
+            if result.get('success'):
                 try:
                     recreated = {}
-                    for name, (mod_name, cls_name, device_kwargs) in result["devices"].items():
+                    devices = result['devices']
+                    for name, (mod_name, cls_name, kwargs) in devices.items():
                         mod = import_module(mod_name)
                         cls = getattr(mod, cls_name)
-                        recreated[name] = (cls, SettingsInfo(**device_kwargs))
+                        recreated[name] = (cls, SettingsInfo(**kwargs))
                 except Exception as exc:
                     detected_out[device_type] = {}
-                    base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
+                    base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
                 else:
                     detected_out[device_type] = recreated
             else:
                 detected_out[device_type] = {}
-                err_type = result.get("error_type")
-                err_msg = result.get("error_msg", "")
-                if err_type == "DEFAULT_SETTINGS_CORRUPTED":
-                    base.emit_error(self, QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED, Exception(err_msg))
+                err_type = result.get('error_type')
+                err_msg = result.get('error_msg', '')
+                if err_type == 'DEFAULT_SETTINGS_CORRUPTED':
+                    err = QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED
                 else:
-                    base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(err_msg))
+                    err = UIErrors.RUNTIME_ERROR
+                base.emit_error(self, err, f'Detection failed: {err_msg}')
 
         self.devices_detected.emit(detected_out)
         self._cleanup_detection()
@@ -362,7 +362,7 @@ class _DeviceDetectionWorker(qtc.QObject):
     def _on_process_error(self, err):
         err_str = self._process.errorString() if self._process else str(err)
         base.emit_error(self, UIErrors.RUNTIME_ERROR,
-                        Exception(f"Subprocess launch error: {err_str}"))
+                        f'Subprocess launch error: {err_str}')
         self.devices_detected.emit({'camera': {}, 'controller': {}})
         self._cleanup_detection()
 
@@ -370,9 +370,9 @@ class _DeviceDetectionWorker(qtc.QObject):
 class UIErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the UI."""
 
-    FILE_NOT_FOUND_ERROR = (1000, "Could not find file {}.\n{}")
-    FILE_UNSUPPORTED = (1001, "Cannot open {}.\n{}")
-    RUNTIME_ERROR = (1002, "{}")
+    FILE_NOT_FOUND_ERROR = (1000, 'Could not find file {}.\n{}')
+    FILE_UNSUPPORTED = (1001, 'Cannot open {}.\n{}')
+    RUNTIME_ERROR = (1002, '{}')
 
 
 # too-many-instance-attributes
