@@ -6,6 +6,14 @@ even when discovery is run locally within a QThread. Running it in a subprocess
 solves all blocking issues seamlessly.
 """
 
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
+    )
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
+__created__ = '2026-04-29'
+__license__ = 'GPLv3+'
+
 import dataclasses
 import json
 import sys

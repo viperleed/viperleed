@@ -6,8 +6,9 @@ the ViPErLEED Graphical User Interface.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
