@@ -330,8 +330,23 @@ class _DeviceDetectionWorker(qtc.QObject):
             self._cleanup_detection()
             return
 
+        if not isinstance(parsed, dict):
+            base.emit_error(
+                self, UIErrors.RUNTIME_ERROR,
+                f'Unexpected detection output: {parsed!r}'
+                )
+            self.devices_detected.emit(detected_out)
+            self._cleanup_detection()
+            return
+
         # Restore objects
         for device_type, result in parsed.items():
+            if not isinstance(result, dict) or 'success' not in result:
+                base.emit_error(
+                    self, UIErrors.RUNTIME_ERROR,
+                    f'Invalid entry for {device_type!r}: {result!r}'
+                    )
+                continue
             if result.get('success'):
                 try:
                     recreated = {}
@@ -341,12 +356,10 @@ class _DeviceDetectionWorker(qtc.QObject):
                         cls = getattr(mod, cls_name)
                         recreated[name] = (cls, SettingsInfo(**kwargs))
                 except Exception as exc:
-                    detected_out[device_type] = {}
                     base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
                 else:
                     detected_out[device_type] = recreated
             else:
-                detected_out[device_type] = {}
                 err_type = result.get('error_type')
                 err_msg = result.get('error_msg', '')
                 if err_type == 'DEFAULT_SETTINGS_CORRUPTED':

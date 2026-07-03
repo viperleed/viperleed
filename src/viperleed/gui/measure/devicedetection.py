@@ -23,6 +23,7 @@ class JSONEncoderSafe(json.JSONEncoder):
         except TypeError:
             return str(o)
 
+
 def run_device_detection():
     """Detect available, supported devices and serialize results as JSON data.
 
