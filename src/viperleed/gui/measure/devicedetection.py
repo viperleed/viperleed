@@ -1,9 +1,9 @@
 """Script and functions for running device detection in a separate process.
 
-Because ViPErLEED heavily interacts with OS driver calls (e.g. QSerialPort.open)
-during detection, the Python GIL and C-level threads can stall the main GUI event loop
-even when discovery is run locally within a QThread. Running it in a subprocess
-solves all blocking issues seamlessly.
+Because ViPErLEED heavily interacts with OS driver calls (e.g.
+QSerialPort.open) during detection, the Python GIL and C-level threads can
+stall the main GUI event loop even when discovery is run locally within a
+QThread. Running it in a subprocess solves all blocking issues seamlessly.
 """
 
 __authors__ = (
@@ -38,18 +38,15 @@ def run_device_detection():
     Returns
     -------
     detected : dict
-        A dictionary containing the detection results keyed by device type.
-        Can contain either successfully serialized representations of SettingsInfo
-        or structured error messages.
+        A dictionary containing the detection results keyed by device
+        type. Can contain either successfully serialized representations
+        of SettingsInfo or structured error messages.
     """
     detected = {}
 
-    # Qt networking and serial interfaces (e.g. QSerialPort, QThread, waitForReadyRead)
-    # strictly require a QCoreApplication instance to process their underlying event loops.
-    # Because we're executing headlessly in a new process, we must provide one.
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QCoreApplication(sys.argv)
+    # Provide CoreApplication instance to process underlying event loops.
+    if QCoreApplication.instance() is None:
+        QCoreApplication(sys.argv)
 
     for device_type in ('camera', 'controller'):
         try:
@@ -61,7 +58,8 @@ def run_device_detection():
                     cls.__name__,
                     dataclasses.asdict(device),
                 )
-            detected[device_type] = {"success": True, "devices": serialized_devs}
+            detected[device_type] = {"success": True,
+                                     "devices": serialized_devs}
         except DefaultSettingsError as exc:
             detected[device_type] = {
                 "success": False,
