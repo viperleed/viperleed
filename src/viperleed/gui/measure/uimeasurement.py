@@ -253,6 +253,7 @@ class _DeviceDetectionWorker(qtc.QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._process = None
+        self._timeout = None
 
     @qtc.pyqtSlot()
     def detect_devices(self):
@@ -278,6 +279,11 @@ class _DeviceDetectionWorker(qtc.QObject):
             exe = sys.executable
             args = ['-m', 'viperleed.gui', '--detect-devices']
 
+        self._timeout = qtc.QTimer(self)
+        self._timeout.setSingleShot(True)
+        self._timeout.timeout.connect(self._on_detection_timeout)
+        self._timeout.start(30000)
+
         self._process.start(exe, args)
 
     @qtc.pyqtSlot()
@@ -300,8 +306,19 @@ class _DeviceDetectionWorker(qtc.QObject):
         if proc is not None:
             base.safe_disconnect(proc.finished, self._on_process_finished)
             base.safe_disconnect(proc.errorOccurred, self._on_process_error)
+            self._timeout.stop()
             proc.deleteLater()
             self._process = None
+
+    @qtc.pyqtSlot()
+    def _on_detection_timeout(self):
+        """Kill the subprocess if it takes too long."""
+        if self._process is None or proc.state() == qtc.QProcess.NotRunning:
+            return
+        base.emit_error(self, UIErrors.RUNTIME_ERROR,
+                        'Device detection timed out.')
+        self._cleanup_detection()
+        self.devices_detected.emit({'camera': {}, 'controller': {}})
 
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
@@ -455,7 +472,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._measurement_thread.start(_TIME_CRITICAL)
         self._device_detection_thread = qtc.QThread()
         self._device_detection_worker = _DeviceDetectionWorker()
-        self._device_detection_worker.moveToThread(self._device_detection_thread)
+        self._device_detection_worker.moveToThread(
+            self._device_detection_thread
+            )
         self._device_detection_thread.start()
         self._device_search_in_progress = False
 
@@ -514,6 +533,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._device_detection_thread.quit()
             if not self._device_detection_thread.wait(100):
                 self._device_detection_thread.terminate()
+            self._device_detection_worker.deleteLater()
+            self._device_detection_thread.deleteLater()
             retry_later = True
 
         if self._glob['plot']:
@@ -599,7 +620,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
         if self.measurement and self.measurement.running:
             return False
-        if any(viewer.isVisible() for viewer in self._dialogs['camera_viewers']):
+        if any(viewer.isVisible()
+               for viewer in self._dialogs['camera_viewers']):
             return False
         if any(dialog.isVisible()
                for dialog in self._dialogs['device_settings'].values()):
@@ -608,7 +630,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     @qtc.pyqtSlot()
     def _trigger_device_search(self):
-        """Start a device search if no search is running and no device is active."""
+        """Start search if no search is running and no device is active."""
         if not self._device_search_allowed():
             return
         self._device_search_in_progress = True
