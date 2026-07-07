@@ -523,14 +523,16 @@ class Measure(ViPErLEEDPluginBase):                                             
             if not self._measurement_thread.wait(100):
                 self._measurement_thread.terminate()
             retry_later = True
-        if self._device_detection_thread.isRunning():
+        detection_thread = self._device_detection_thread
+        if detection_thread and detection_thread.isRunning():
+            self._device_detection_thread = None
             qtc.QMetaObject.invokeMethod(self._device_detection_worker, 'stop',
                                          qtc.Qt.BlockingQueuedConnection)
-            self._device_detection_thread.quit()
-            if not self._device_detection_thread.wait(100):
-                self._device_detection_thread.terminate()
+            detection_thread.quit()
+            if not detection_thread.wait(100):
+                detection_thread.terminate()
             self._device_detection_worker.deleteLater()
-            self._device_detection_thread.deleteLater()
+            detection_thread.deleteLater()
             retry_later = True
 
         if self._glob['plot']:
