@@ -313,7 +313,8 @@ class _DeviceDetectionWorker(qtc.QObject):
     @qtc.pyqtSlot()
     def _on_detection_timeout(self):
         """Kill the subprocess if it takes too long."""
-        if self._process is None or proc.state() == qtc.QProcess.NotRunning:
+        proc = self._process
+        if proc is None or proc.state() == qtc.QProcess.NotRunning:
             return
         base.emit_error(self, UIErrors.RUNTIME_ERROR,
                         'Device detection timed out.')
