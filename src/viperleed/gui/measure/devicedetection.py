@@ -17,6 +17,7 @@ __license__ = 'GPLv3+'
 import dataclasses
 import json
 import sys
+
 from PyQt5.QtCore import QCoreApplication
 
 from viperleed.gui.measure import hardwarebase as base

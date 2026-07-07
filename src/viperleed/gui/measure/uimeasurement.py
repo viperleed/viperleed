@@ -297,18 +297,9 @@ class _DeviceDetectionWorker(qtc.QObject):
         if proc.state() != qtc.QProcess.NotRunning:
             proc.kill()
             proc.waitForFinished(1000)
+        self._timeout.stop()
         proc.deleteLater()
         self._process = None
-
-    def _cleanup_detection(self):
-        """Cleanup detection to avoid lingering process."""
-        proc = self._process
-        if proc is not None:
-            base.safe_disconnect(proc.finished, self._on_process_finished)
-            base.safe_disconnect(proc.errorOccurred, self._on_process_error)
-            self._timeout.stop()
-            proc.deleteLater()
-            self._process = None
 
     @qtc.pyqtSlot()
     def _on_detection_timeout(self):
@@ -318,7 +309,7 @@ class _DeviceDetectionWorker(qtc.QObject):
             return
         base.emit_error(self, UIErrors.RUNTIME_ERROR,
                         'Device detection timed out.')
-        self._cleanup_detection()
+        self.stop()
         self.devices_detected.emit({'camera': {}, 'controller': {}})
 
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
@@ -332,7 +323,7 @@ class _DeviceDetectionWorker(qtc.QObject):
             base.emit_error(self, UIErrors.RUNTIME_ERROR,
                             f'Detection failed: {error_data}')
             self.devices_detected.emit(detected_out)
-            self._cleanup_detection()
+            self.stop()
             return
 
         try:
@@ -345,7 +336,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         except Exception as exc:
             base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
             self.devices_detected.emit(detected_out)
-            self._cleanup_detection()
+            self.stop()
             return
 
         if not isinstance(parsed, dict):
@@ -354,7 +345,7 @@ class _DeviceDetectionWorker(qtc.QObject):
                 f'Unexpected detection output: {parsed!r}'
                 )
             self.devices_detected.emit(detected_out)
-            self._cleanup_detection()
+            self.stop()
             return
 
         # Restore objects
@@ -387,7 +378,7 @@ class _DeviceDetectionWorker(qtc.QObject):
                 base.emit_error(self, err, f'Detection failed: {err_msg}')
 
         self.devices_detected.emit(detected_out)
-        self._cleanup_detection()
+        self.stop()
 
     @qtc.pyqtSlot(qtc.QProcess.ProcessError)
     def _on_process_error(self, err):
@@ -395,7 +386,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         base.emit_error(self, UIErrors.RUNTIME_ERROR,
                         f'Subprocess launch error: {err_str}')
         self.devices_detected.emit({'camera': {}, 'controller': {}})
-        self._cleanup_detection()
+        self.stop()
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -529,7 +520,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 self._measurement_thread.terminate()
             retry_later = True
         if self._device_detection_thread.isRunning():
-            qtc.QMetaObject.invokeMethod(self._device_detection_worker, "stop",
+            qtc.QMetaObject.invokeMethod(self._device_detection_worker, 'stop',
                                          qtc.Qt.BlockingQueuedConnection)
             self._device_detection_thread.quit()
             if not self._device_detection_thread.wait(100):
@@ -573,7 +564,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                              self._trigger_device_search)
         base.safe_disconnect(self.detect_devices_requested,
                              self._device_detection_worker.detect_devices)
-        qtc.QMetaObject.invokeMethod(self._device_detection_worker, "stop",
+        qtc.QMetaObject.invokeMethod(self._device_detection_worker, 'stop',
                                      qtc.Qt.QueuedConnection)
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
