@@ -292,12 +292,16 @@ class _DeviceDetectionWorker(qtc.QObject):
         proc = self._process
         if proc is None:
             return
+        if self._timeout:
+            self._timeout.stop()
+            base.safe_disconnect(self._timeout.timeout,
+                                 self._on_detection_timeout)
+            self._timeout = None
         base.safe_disconnect(proc.finished, self._on_process_finished)
         base.safe_disconnect(proc.errorOccurred, self._on_process_error)
         if proc.state() != qtc.QProcess.NotRunning:
             proc.kill()
             proc.waitForFinished(1000)
-        self._timeout.stop()
         proc.deleteLater()
         self._process = None
 
