@@ -1386,6 +1386,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 source = 'firmware upgrade dialog'
             elif isinstance(sender, BadPixelsFinderDialog):
                 source = 'bad pixels finder dialog'
+            elif isinstance(sender, _DeviceDetectionWorker):
+                source = 'device detection'
             else:
                 source = 'system or unknown'
 
