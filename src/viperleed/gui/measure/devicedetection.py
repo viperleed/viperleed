@@ -46,8 +46,9 @@ def run_device_detection():
     detected = {}
 
     # Provide CoreApplication instance to process underlying event loops.
-    if QCoreApplication.instance() is None:
-        QCoreApplication(sys.argv)
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QCoreApplication(sys.argv)
 
     for device_type in ('camera', 'controller'):
         try:
