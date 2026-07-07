@@ -282,7 +282,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         self._timeout = qtc.QTimer(self)
         self._timeout.setSingleShot(True)
         self._timeout.timeout.connect(self._on_detection_timeout)
-        self._timeout.start(30000)
+        self._timeout.start(20000)
 
         self._process.start(exe, args)
 
@@ -481,7 +481,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             ('start_measurement', 50, True),
             ('retry_open_bpx_dialog', 50, True),
             ('delay_check_settings', 5, True),
-            ('refresh_devices', 60000, False),
+            ('refresh_devices', 30000, False),
             )
         for timer, interval, single in _timer_setup:
             self._timers[timer].setSingleShot(single)
