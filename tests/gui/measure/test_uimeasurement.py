@@ -140,7 +140,7 @@ def test_device_search_allowed_states():
     assert not Measure._device_search_allowed(fake)
 
 
-def test_trigger_device_search_blocks_reentry():
+def test_update_device_lists_blocks_reentry():
     """Check that a second search is blocked while one is in progress."""
     signal = _FakeSignal()
     fake = SimpleNamespace(
@@ -151,11 +151,11 @@ def test_trigger_device_search_blocks_reentry():
         lambda: not fake._device_search_in_progress
         )
 
-    Measure._trigger_device_search(fake)
+    Measure.update_device_lists(fake)
     assert fake._device_search_in_progress
     assert signal.emitted == 1
 
-    Measure._trigger_device_search(fake)
+    Measure.update_device_lists(fake)
     assert signal.emitted == 1
 
 
@@ -199,7 +199,7 @@ def test_stop_device_search_triggers(mocker):
         _timers={'refresh_devices': refresh_timer},
         detect_devices_requested=detect_signal,
         _device_detection_worker=fake_worker,
-        _trigger_device_search=lambda: None,
+        update_device_lists=lambda: None,
         )
 
     # _stop_device_search_triggers also invokes QMetaObject.invokeMethod
@@ -213,7 +213,7 @@ def test_stop_device_search_triggers(mocker):
     Measure._stop_device_search_triggers(fake)
 
     stop.assert_called_once_with()
-    assert timer_signal.disconnected == [fake._trigger_device_search]
+    assert timer_signal.disconnected == [fake.update_device_lists]
     assert detect_signal.disconnected == [fake_worker.detect_devices]
 
 

@@ -567,7 +567,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Stop periodic/queued search triggers before shutdown."""
         self._timers['refresh_devices'].stop()
         base.safe_disconnect(self._timers['refresh_devices'].timeout,
-                             self._trigger_device_search)
+                             self.update_device_lists)
         base.safe_disconnect(self.detect_devices_requested,
                              self._device_detection_worker.detect_devices)
         qtc.QMetaObject.invokeMethod(self._device_detection_worker, 'stop',
@@ -608,9 +608,13 @@ class Measure(ViPErLEEDPluginBase):                                             
         # BEFORE the widgets are actually shown.
         self._timers['delay_check_settings'].start()
 
+    @qtc.pyqtSlot()
     def update_device_lists(self):
         """Request update of entries in "Devices" menu."""
-        self._trigger_device_search()
+        if not self._device_search_allowed():
+            return
+        self._device_search_in_progress = True
+        self.detect_devices_requested.emit()
 
     def _device_search_allowed(self):
         """Return whether a new device search can be started."""
@@ -625,14 +629,6 @@ class Measure(ViPErLEEDPluginBase):                                             
                for dialog in self._dialogs['device_settings'].values()):
             return False
         return True
-
-    @qtc.pyqtSlot()
-    def _trigger_device_search(self):
-        """Start search if no search is running and no device is active."""
-        if not self._device_search_allowed():
-            return
-        self._device_search_in_progress = True
-        self.detect_devices_requested.emit()
 
     @qtc.pyqtSlot(object)
     def _on_devices_detected(self, detected_devices):
@@ -776,7 +772,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Devices
         devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
-        devices_menu.aboutToShow.connect(self._trigger_device_search)
+        devices_menu.aboutToShow.connect(self.update_device_lists)
         menu.insertMenu(self.about_action, devices_menu)
         devices_menu.addMenu("Cameras")
         devices_menu.addMenu("Controllers")
@@ -851,7 +847,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             ('start_measurement', self._on_measurement_started),
             ('retry_open_bpx_dialog', self._on_bad_pixels_selected),
             ('delay_check_settings', self._check_sys_settings_ok),
-            ('refresh_devices', self._trigger_device_search),
+            ('refresh_devices', self.update_device_lists),
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
