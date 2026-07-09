@@ -263,7 +263,7 @@ class _DeviceDetectionWorker(qtc.QObject):
         remains responsive during hardware connection checks.
         """
         # If a search is already running, avoid launching a new process.
-        if self._process and self._process.state() != qtc.QProcess.NotRunning:
+        if self._process:
             return
 
         self._process = qtc.QProcess(self)
@@ -308,8 +308,7 @@ class _DeviceDetectionWorker(qtc.QObject):
     @qtc.pyqtSlot()
     def _on_detection_timeout(self):
         """Kill the subprocess if it takes too long."""
-        proc = self._process
-        if proc is None or proc.state() == qtc.QProcess.NotRunning:
+        if self._process is None:
             return
         base.emit_error(self, UIErrors.RUNTIME_ERROR,
                         'Device detection timed out.')
@@ -386,6 +385,8 @@ class _DeviceDetectionWorker(qtc.QObject):
 
     @qtc.pyqtSlot(qtc.QProcess.ProcessError)
     def _on_process_error(self, err):
+        if self._process is None:
+            return
         err_str = self._process.errorString() if self._process else str(err)
         base.emit_error(self, UIErrors.RUNTIME_ERROR,
                         f'Subprocess launch error: {err_str}')

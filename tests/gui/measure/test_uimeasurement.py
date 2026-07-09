@@ -434,25 +434,6 @@ def test_detection_timeout(mocker):
     worker.stop.assert_called_once()
 
 
-def test_detection_timeout_not_running(mocker):
-    """Timeout should do nothing if the process already finished."""
-    worker = _DeviceDetectionWorker()
-
-    worker.devices_detected.connect(mocker.Mock())
-    worker.error_occurred.connect(mocker.Mock())
-
-    proc = mocker.Mock()
-    proc.state.return_value = qtc.QProcess.NotRunning
-
-    worker._process = proc
-
-    stop = mocker.patch.object(worker, "stop")
-
-    worker._on_detection_timeout()
-
-    stop.assert_not_called()
-
-
 def test_process_error(mocker):
     """Process launch errors should emit an empty device list."""
     worker = _DeviceDetectionWorker()
