@@ -456,6 +456,18 @@ def test_detection_timeout_no_process():
     assert not devices
 
 
+def test_process_error_no_process():
+    """_on_process_error should be a no-op when _process is None."""
+    worker = _DeviceDetectionWorker()
+    errors = []
+    devices = []
+    worker.error_occurred.connect(errors.append)
+    worker.devices_detected.connect(devices.append)
+    worker._on_process_error(qtc.QProcess.FailedToStart)
+    assert not errors
+    assert not devices
+
+
 test_cases = (
     (
         {
