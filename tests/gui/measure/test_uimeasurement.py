@@ -216,46 +216,6 @@ def test_stop_device_search_triggers(mocker):
     assert timer_signal.disconnected == [fake.update_device_lists]
     assert detect_signal.disconnected == [fake_worker.detect_devices]
 
-
-test_cases = (
-    (
-        {
-            'camera': {
-                'success': False,
-                'error_type': 'DEFAULT_SETTINGS_CORRUPTED',
-                'error_msg': 'bad defaults'
-            },
-            'controller': {
-                'success': True,
-                'devices': {
-                    'test_ctrl': [
-                         'types',
-                         'SimpleNamespace',
-                        {'unique_name': 'TEST',
-                         'has_hardware_interface': True,
-                         'more': {}}
-                        ]
-                }
-            }
-        },
-        'test_ctrl',
-        {},
-        QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[0]
-
-    ),
-    (
-        {
-            'camera': {'success': False, 'error_type': 'RUNTIME_ERROR',
-                       'error_msg': 'something went wrong'},
-            'controller': {'success': True, 'devices': {}}
-        },
-        {},
-        {},
-        UIErrors.RUNTIME_ERROR.value[0]
-    )
-)
-
-
 def test_detect_devices_does_not_restart_running_process(mocker):
     """A second detection request should be ignored while one is running."""
     proc = mocker.Mock()
@@ -474,6 +434,65 @@ def test_stop_running_process(mocker):
     proc.waitForFinished.assert_called_once_with(1000)
     proc.deleteLater.assert_called_once()
     assert worker._process is None
+
+
+def test_stop_returns_early_when_no_process():
+    """stop() should be a no-op when _process is None."""
+    worker = _DeviceDetectionWorker()
+    assert worker._process is None
+    worker.stop()  # should not raise
+    assert worker._process is None
+
+
+def test_detection_timeout_no_process():
+    """_on_detection_timeout should be a no-op when _process is None."""
+    worker = _DeviceDetectionWorker()
+    errors = []
+    devices = []
+    worker.error_occurred.connect(errors.append)
+    worker.devices_detected.connect(devices.append)
+    worker._on_detection_timeout()
+    assert not errors
+    assert not devices
+
+
+test_cases = (
+    (
+        {
+            'camera': {
+                'success': False,
+                'error_type': 'DEFAULT_SETTINGS_CORRUPTED',
+                'error_msg': 'bad defaults'
+            },
+            'controller': {
+                'success': True,
+                'devices': {
+                    'test_ctrl': [
+                         'types',
+                         'SimpleNamespace',
+                        {'unique_name': 'TEST',
+                         'has_hardware_interface': True,
+                         'more': {}}
+                        ]
+                }
+            }
+        },
+        'test_ctrl',
+        {},
+        QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[0]
+
+    ),
+    (
+        {
+            'camera': {'success': False, 'error_type': 'RUNTIME_ERROR',
+                       'error_msg': 'something went wrong'},
+            'controller': {'success': True, 'devices': {}}
+        },
+        {},
+        {},
+        UIErrors.RUNTIME_ERROR.value[0]
+    )
+)
 
 
 @parametrize('devices, ctrl, camera, error', test_cases)
