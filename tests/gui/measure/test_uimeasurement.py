@@ -203,7 +203,7 @@ def test_stop_device_search_triggers(mocker):
         )
 
     # _stop_device_search_triggers also invokes QMetaObject.invokeMethod
-    # to call "stop" on the worker thread. The fake worker is not a
+    # to call 'stop' on the worker thread. The fake worker is not a
     # QObject, so PyQt5 cannot resolve the overloaded call. Mock it out
     # since this is not what we are testing here.
     mocker.patch(
@@ -216,6 +216,7 @@ def test_stop_device_search_triggers(mocker):
     assert timer_signal.disconnected == [fake.update_device_lists]
     assert detect_signal.disconnected == [fake_worker.detect_devices]
 
+
 def test_detect_devices_does_not_restart_running_process(mocker):
     """A second detection request should be ignored while one is running."""
     proc = mocker.Mock()
@@ -225,7 +226,7 @@ def test_detect_devices_does_not_restart_running_process(mocker):
     worker._process = proc
 
     qprocess = mocker.patch(
-        "viperleed.gui.measure.uimeasurement.qtc.QProcess"
+        'viperleed.gui.measure.uimeasurement.qtc.QProcess'
     )
 
     worker.detect_devices()
@@ -233,7 +234,18 @@ def test_detect_devices_does_not_restart_running_process(mocker):
     qprocess.assert_not_called()
 
 
-def test_process_finished_nonzero_exit(mocker):
+@parametrize(
+    'exit_code, stdout, stderr',
+    [
+        (1, b'', b'failure'),
+        (0, b'not json', b''),
+        (0, json.dumps([]).encode(), b''),
+        (0, json.dumps({'camera': [],
+                        'controller': {'success': True,'devices': {}}}
+                       ).encode(), b''),
+    ],
+)
+def test_process_finished_failure_cases(mocker, exit_code, stdout, stderr):
     """A failing subprocess should emit an empty device list."""
     worker = _DeviceDetectionWorker()
 
@@ -244,92 +256,17 @@ def test_process_finished_nonzero_exit(mocker):
     worker.devices_detected.connect(devices.append)
 
     proc = mocker.Mock()
-    proc.readAllStandardError.return_value.data.return_value = b"failure"
+    proc.readAllStandardOutput.return_value.data.return_value = stdout
+    proc.readAllStandardError.return_value.data.return_value = stderr
     worker._process = proc
 
-    mocker.patch.object(worker, "stop")
+    mocker.patch.object(worker, 'stop')
 
-    worker._on_process_finished(1, qtc.QProcess.NormalExit)
+    worker._on_process_finished(exit_code, qtc.QProcess.NormalExit)
 
-    assert devices == [{"camera": {}, "controller": {}}]
+    assert devices == [{'camera': {}, 'controller': {}}]
     assert errors
     worker.stop.assert_called_once()
-
-
-def test_process_finished_invalid_json(mocker):
-    """Invalid JSON should emit an error and empty device list."""
-    worker = _DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
-
-    proc = mocker.Mock()
-    proc.readAllStandardOutput.return_value.data.return_value = b"not json"
-    worker._process = proc
-
-    mocker.patch.object(worker, "stop")
-
-    worker._on_process_finished(0, qtc.QProcess.NormalExit)
-
-    assert devices == [{"camera": {}, "controller": {}}]
-    assert errors
-    worker.stop.assert_called_once()
-
-
-def test_process_finished_json_not_dict(mocker):
-    """JSON output must be a dictionary."""
-    worker = _DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
-
-    proc = mocker.Mock()
-    proc.readAllStandardOutput.return_value.data.return_value = (
-        json.dumps([]).encode()
-    )
-    worker._process = proc
-
-    mocker.patch.object(worker, "stop")
-
-    worker._on_process_finished(0, qtc.QProcess.NormalExit)
-
-    assert devices == [{"camera": {}, "controller": {}}]
-    assert errors
-
-
-def test_process_finished_invalid_device_entry(mocker):
-    """Malformed device entries should be skipped."""
-    worker = _DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
-
-    proc = mocker.Mock()
-    proc.readAllStandardOutput.return_value.data.return_value = json.dumps({
-        "camera": [],
-        "controller": {
-            "success": True,
-            "devices": {}
-        }
-    }).encode()
-
-    worker._process = proc
-
-    mocker.patch.object(worker, "stop")
-
-    worker._on_process_finished(0, qtc.QProcess.NormalExit)
-
-    assert devices == [{"camera": {}, "controller": {}}]
-    assert errors
 
 
 def test_process_finished_import_failure(mocker):
@@ -344,16 +281,16 @@ def test_process_finished_import_failure(mocker):
 
     proc = mocker.Mock()
     proc.readAllStandardOutput.return_value.data.return_value = json.dumps({
-        "controller": {
-            "success": True,
-            "devices": {
-                "ctrl": [
-                    "does.not.exist",
-                    "Missing",
+        'controller': {
+            'success': True,
+            'devices': {
+                'ctrl': [
+                    'does.not.exist',
+                    'Missing',
                     {
-                        "unique_name": "TEST",
-                        "has_hardware_interface": True,
-                        "more": {}
+                        'unique_name': 'TEST',
+                        'has_hardware_interface': True,
+                        'more': {}
                     }
                 ]
             }
@@ -362,12 +299,13 @@ def test_process_finished_import_failure(mocker):
 
     worker._process = proc
 
-    mocker.patch.object(worker, "stop")
+    mocker.patch.object(worker, 'stop')
 
     worker._on_process_finished(0, qtc.QProcess.NormalExit)
 
-    assert devices[0]["controller"] == {}
+    assert devices[0]['controller'] == {}
     assert errors
+    worker.stop.assert_called_once()
 
 
 def test_detection_timeout(mocker):
@@ -385,11 +323,11 @@ def test_detection_timeout(mocker):
 
     worker._process = proc
 
-    mocker.patch.object(worker, "stop")
+    mocker.patch.object(worker, 'stop')
 
     worker._on_detection_timeout()
 
-    assert devices == [{"camera": {}, "controller": {}}]
+    assert devices == [{'camera': {}, 'controller': {}}]
     assert errors
     worker.stop.assert_called_once()
 
@@ -405,15 +343,15 @@ def test_process_error(mocker):
     worker.devices_detected.connect(devices.append)
 
     proc = mocker.Mock()
-    proc.errorString.return_value = "boom"
+    proc.errorString.return_value = 'boom'
 
     worker._process = proc
 
-    mocker.patch.object(worker, "stop")
+    mocker.patch.object(worker, 'stop')
 
     worker._on_process_error(qtc.QProcess.FailedToStart)
 
-    assert devices == [{"camera": {}, "controller": {}}]
+    assert devices == [{'camera': {}, 'controller': {}}]
     assert errors
     worker.stop.assert_called_once()
 
@@ -492,7 +430,37 @@ test_cases = (
         'test_ctrl',
         {},
         QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[0]
-
+    ),
+    (
+        {
+            'camera': {
+                'success': True,
+                'devices': {
+                    'test_cam': [
+                         'types',
+                         'SimpleNamespace',
+                        {'unique_name': 'TEST1',
+                         'has_hardware_interface': True,
+                         'more': {}}
+                        ]
+                }
+            },
+            'controller': {
+                'success': True,
+                'devices': {
+                    'test_ctrl': [
+                         'types',
+                         'SimpleNamespace',
+                        {'unique_name': 'TEST2',
+                         'has_hardware_interface': True,
+                         'more': {}}
+                        ]
+                }
+            }
+        },
+        'test_ctrl',
+        'test_cam',
+        []
     ),
     (
         {
@@ -561,5 +529,13 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
 
     if emitted_devices[0]['controller']:
         assert ctrl in emitted_devices[0]['controller']
-    assert emitted_devices[0]['camera'] == camera
-    assert emitted_errors[0][0] == error
+    else:
+        assert emitted_devices[0]['controller'] == ctrl
+    if emitted_devices[0]['camera']:
+        assert camera in emitted_devices[0]['camera']
+    else:
+        assert emitted_devices[0]['camera'] == camera
+    if emitted_errors:
+        assert emitted_errors[0][0] == error
+    else:
+        assert emitted_errors == error
