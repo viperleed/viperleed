@@ -36,7 +36,7 @@ If you are executing viperleed in a conda environment, try one of the
 following:
     1. Creating a new, clean environment without Qt by calling
        conda create with the --no-default-packages flag, then
-            pip install "viperleed[GUI]"
+            pip install 'viperleed[GUI]'
        there.
     2. Deactivating the current environment first, if you have
        installed viperleed globally.
@@ -150,7 +150,7 @@ def gui_main():
     Body of the functionality that invokes the ViPErLEED
     Graphical User Interface.
     """
-    log_path = Path(__file__).resolve().parent.parent / "_logs"
+    log_path = Path(__file__).resolve().parent.parent / '_logs'
     if not log_path.exists():
         log_path.mkdir()
 
@@ -160,7 +160,7 @@ def gui_main():
      widgets_lib,
      plugin_selector) = import_graphics_modules()
 
-    # Ensure we always use "." as decimal separators
+    # Ensure we always use '.' as decimal separators
     qtc.QLocale.setDefault(qtc.QLocale.c())
 
     print('Loading GUI...', flush=True, end='')
