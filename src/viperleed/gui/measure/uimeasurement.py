@@ -30,7 +30,7 @@ __license__ = 'GPLv3+'
 #      Could perhaps be solved if we try halving the frame rate when
 #      a timeout occurs (with limits on the number of retries and/or the
 #      slowest sensible frame rate).
-# BUG: Progress bar "Finding bad pixels" gets reproducibly stuck at 12%
+# BUG: Progress bar 'Finding bad pixels' gets reproducibly stuck at 12%
 #      in Prague; then timeout error. Cannot reproduce at all here with
 #      any of my cameras. Should prepare a debug version with some logging
 # BUG: IS: hardware may be so slow that all frames are lost when estimating
@@ -73,7 +73,7 @@ __license__ = 'GPLv3+'
 #       for a nicer bug-reporting dialog
 # TODO: would be very nice to always load the default settings first, and
 #       then read in on top of them the ones saved locally. This would allow
-#       to seriously reduce the number of lines in many of the "local"
+#       to seriously reduce the number of lines in many of the 'local'
 #       configuration files. This also make it possible to have default
 #       config files for the same object type, differentiated by some
 #       other search criterion.
@@ -123,7 +123,7 @@ __license__ = 'GPLv3+'
 #       way to prevent accessing the same device from different objects.
 #       The most difficult part with the singleton/Borg is handling
 #       movements to threads.
-# TODO?: CameraViewer can still pop up. Try using "with qtc.QSignalBlocker:"
+# TODO?: CameraViewer can still pop up. Try using 'with qtc.QSignalBlocker:'
 #       while entering the closeEvent? This seems to happen especially when
 #       closing the selector with a running camera.
 # TODO: Define settings that can be modified without stop-starting the
@@ -134,7 +134,7 @@ __license__ = 'GPLv3+'
 #       allow the same operations as in the context menu.
 # TODO: camera returns other data with images. Stuff that comes to mind:
 #       max(image); fraction of saturated pixels;
-# BUG: exception ignored in ctypes callback: "camera has no exposure"
+# BUG: exception ignored in ctypes callback: 'camera has no exposure'
 #      probably a masked AttributeError??
 # TODO: bad pixels info not updated on show
 # TODO: bad pixels & dark progress bar: text is not always accurate
@@ -334,7 +334,7 @@ class _DeviceDetectionWorker(qtc.QObject):
             # Device discovery prints connection warnings (e.g. Qt or
             # failed COMs) to stdout. We take only the last line, which
             # contains our dumped JSON.
-            json_str = out.splitlines()[-1] if out else "{}"
+            json_str = out.splitlines()[-1] if out else '{}'
             parsed = json.loads(json_str)
         except Exception as exc:
             base.emit_error(self, UIErrors.RUNTIME_ERROR, str(exc))
@@ -414,16 +414,16 @@ class Measure(ViPErLEEDPluginBase):                                             
         super().__init__(parent, name=TITLE)
         # Keep references to controls, dialogs, and some globals
         self._ctrls = {
-            'measure': qtw.QPushButton("New Measurement"),
-            'abort': qtw.QPushButton("Abort"),
+            'measure': qtw.QPushButton('New Measurement'),
+            'abort': qtw.QPushButton('Abort'),
             'energy_input': qtw.QLineEdit(''),                                  # TODO: QDoubleSpinBox?
-            'set_energy': qtw.QPushButton("Set energy"),
+            'set_energy': qtw.QPushButton('Set energy'),
             'menus': {
-                'file': qtw.QMenu("&File"),
-                'devices': qtw.QMenu("&Devices"),
-                'tools': qtw.QMenu("&Tools"),
-                'views': qtw.QMenu("&View"),
-                'sys_settings': qtw.QAction("&Settings"),
+                'file': qtw.QMenu('&File'),
+                'devices': qtw.QMenu('&Devices'),
+                'tools': qtw.QMenu('&Tools'),
+                'views': qtw.QMenu('&View'),
+                'sys_settings': qtw.QAction('&Settings'),
                 },
             }
 
@@ -432,7 +432,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs = {
             'sys_settings':
                 SettingsDialog(handled_obj=SystemSettings(),
-                               title="System settings"),
+                               title='System settings'),
             'bad_px_finder': BadPixelsFinderDialog(),
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
@@ -446,7 +446,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             }
         self._glob = {
             'plot': MeasurementPlot(),
-            'last_dir': self.system_settings.paths["measurements"],
+            'last_dir': self.system_settings.paths['measurements'],
             # Keep track of the last config used for a measurement.
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
@@ -578,11 +578,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Allow copying (Ctrl+C) device name to clipboard when visible."""
         if (event.key() != qtc.Qt.Key_C
                 or not event.modifiers() & qtc.Qt.ControlModifier):
-            # Not "Ctrl+C"
+            # Not 'Ctrl+C'
             super().keyPressEvent(event)
             return
 
-        # See if any of the "Devices" submenus are open
+        # See if any of the 'Devices' submenus are open
         menus = [a.menu() for a in self._ctrls['menus']['devices'].actions()]
         for menu in menus:
             if menu.isVisible():
@@ -611,7 +611,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     @qtc.pyqtSlot()
     def update_device_lists(self):
-        """Request update of entries in "Devices" menu."""
+        """Request update of entries in 'Devices' menu."""
         if not self._device_search_allowed():
             return
         self._device_search_in_progress = True
@@ -756,7 +756,7 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _compose_error_box(self):
         """Prepare the message box shown when errors happen."""
         err_box = self._dialogs['error_box']
-        err_box.setWindowTitle("Error")
+        err_box.setWindowTitle('Error')
         err_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
         err_box.setIcon(err_box.Critical)
 
@@ -767,24 +767,24 @@ class Measure(ViPErLEEDPluginBase):                                             
         # File
         file_menu = self._ctrls['menus']['file']
         menu.insertMenu(self.about_action, file_menu)
-        act = file_menu.addAction("&Open...")
-        act.setShortcut("Ctrl+O")
+        act = file_menu.addAction('&Open...')
+        act.setShortcut('Ctrl+O')
         act.triggered.connect(self._on_read_pressed)
 
         # Devices
         devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
         devices_menu.aboutToShow.connect(self.update_device_lists)
         menu.insertMenu(self.about_action, devices_menu)
-        devices_menu.addMenu("Cameras")
-        devices_menu.addMenu("Controllers")
+        devices_menu.addMenu('Cameras')
+        devices_menu.addMenu('Controllers')
 
         # Tools
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)
-        act = tools_menu.addAction("Find bad pixels...")
+        act = tools_menu.addAction('Find bad pixels...')
         act.triggered.connect(self._on_bad_pixels_selected)
 
-        act = tools_menu.addAction("Upload/upgrade firmware...")
+        act = tools_menu.addAction('Upload/upgrade firmware...')
         act.setEnabled(True)
         act.triggered.connect(self._dialogs['firmware_upgrade'].open)
 
@@ -939,8 +939,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Find an appropriate settings file, searching in the user
         # configuration folder, and falling back on the base default.
         _cfg_dir = self.system_settings.paths['configuration']
-        kwargs = {"directory": _cfg_dir, "parent_widget": self,
-                  "third_btn_text": "Create a new settings file"}
+        kwargs = {'directory': _cfg_dir, 'parent_widget': self,
+                  'third_btn_text': 'Create a new settings file'}
 
         try:
             config = base.get_object_settings(device_cls, settings_info,
@@ -962,8 +962,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 # configuration tree to contain one default config
                 # file per each known device. (Measurements can use
                 # device settings from anywhere, though.)
-                print("Config not in correct folder tree. "
-                      "Consider editing system settings.")                      # TODO
+                print('Config not in correct folder tree. '
+                      'Consider editing system settings.')                      # TODO
             return device_cls(settings=config, **other_info)
 
         # Not found, but user wants to make a new one. Use _defaults
@@ -974,9 +974,9 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Edit the device name in the settings, then save to file
         if issubclass(device_cls, ControllerABC):
-            section = "controller"
+            section = 'controller'
         elif issubclass(device_cls, CameraABC):
-            section = "camera_settings"
+            section = 'camera_settings'
         else:
             raise TypeError('Unknown device class detected. Please '
                             'contact the ViPErLEED developers.')
@@ -984,9 +984,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         device_name = (settings_info.more.get('name')
                        or settings_info.unique_name)
         device.settings[section]['device_name'] = device_name
-        new_cfg_path = Path(_cfg_dir) / f"{device.name_clean}.ini"
+        new_cfg_path = Path(_cfg_dir) / f'{device.name_clean}.ini'
         if new_cfg_path.exists():
-            print(f"{section} config file name conflict! Overwriting existing")  # TODO: ask what to do with the (invalid) file
+            print(f'{section} config file name conflict! Overwriting existing')  # TODO: ask what to do with the (invalid) file
         with new_cfg_path.open('w', encoding='utf-8') as fproxy:
             device.settings.write(fproxy)
         device.uses_default_settings = False
@@ -1029,7 +1029,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['abort'].setEnabled(False)
         self._dialogs['bad_px_finder'].open()
 
-    def _on_camera_clicked(self, *_):                                           # TODO: may want to display a busy dialog with "starting camera <name>..."
+    def _on_camera_clicked(self, *_):                                           # TODO: may want to display a busy dialog with 'starting camera <name>...'
         self._check_sys_settings_ok()
         cam_name = self.sender().text()
 
@@ -1072,7 +1072,7 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _on_camera_error(self, error_info):
         """Stop camera and report errors."""
         *_, err_msg = error_info
-        if 'bad_pixels' not in err_msg.replace(" ", "_"):
+        if 'bad_pixels' not in err_msg.replace(' ', '_'):
             self.sender().stop()
         self._on_error_occurred(error_info)
 
@@ -1206,7 +1206,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     @qtc.pyqtSlot()
     def _on_settings_accepted(self):
-        print("\n\nSTARTING\n")
+        print('\n\nSTARTING\n')
         dialog = self.sender()
         assert dialog is self._dialogs['measurement_settings']
         self._connect_measurement()  # For errors from the measurement.
@@ -1255,9 +1255,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             if path_widg.path and path_widg.path.exists():
                 continue
             _reply = _QMSG.question(
-                _dialog, "Directory does not exist",
-                f"'{option.option_name.title()}' directory "
-                "does not exist. Would you like to create it?",
+                _dialog, 'Directory does not exist',
+                f'"{option.option_name.title()}" directory '
+                'does not exist. Would you like to create it?',
                 _QMSG.Yes | _QMSG.No
                 )
             if _reply == _QMSG.Yes:
@@ -1292,37 +1292,37 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     @qtc.pyqtSlot()
     def _print_done(self):
-        print("\n#### DONE! ####")
+        print('\n#### DONE! ####')
         start, prep, finish = self._timestamps.values()
         n_steps = self.measurement.data_points.nr_steps_done
-        txt = f"Measurement took {finish-start:.2f} s"
+        txt = f'Measurement took {finish-start:.2f} s'
         if prep-start > 0:
-            txt += f", of which {prep-start:.2f} s for preparation. "
+            txt += f', of which {prep-start:.2f} s for preparation. '
         else:
-            txt += ". "
+            txt += '. '
         if n_steps:
-            txt += (f"This is on average {1000*(finish-prep)/n_steps:.2f} ms"
-                    " per energy step")
-        print(txt, "\n")
+            txt += (f'This is on average {1000*(finish-prep)/n_steps:.2f} ms'
+                    ' per energy step')
+        print(txt, '\n')
 
     def _read_archive(self, fname, datapts, meas_config):
         """Read from a .zip archive containing .csv and .ini."""
         fname = Path(fname)
         with ZipFile(fname, 'r') as arch:
             try:
-                csv_lines = arch.read("measurement.csv").decode().split('\n')
+                csv_lines = arch.read('measurement.csv').decode().split('\n')
             except KeyError as err:
                 # not found
                 base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
-                                fname / "measurement.csv", err)
+                                fname / 'measurement.csv', err)
                 return False
 
             try:
-                cfg_lines = arch.read("measurement.ini").decode()
+                cfg_lines = arch.read('measurement.ini').decode()
             except KeyError as err:
                 # not found
                 base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
-                                fname / "measurement.ini", err)
+                                fname / 'measurement.ini', err)
                 return False
 
         meas_config.read_string(cfg_lines)
@@ -1331,7 +1331,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         meas_config.prepare_aliases(cls_name)
         # Use the information in the config for
         # correctly updating the DataPoints
-        datapts.time_resolved = cls_name == "TimeResolved"
+        datapts.time_resolved = cls_name == 'TimeResolved'
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')
@@ -1344,7 +1344,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _read_folder(self, csv_name, datapts, meas_config):
         """Read data from a folder containing .csv and .ini."""
-        config_name = csv_name.with_suffix(".ini")
+        config_name = csv_name.with_suffix('.ini')
         try:
             meas_config.read(config_name)
         except MissingSettingsFileError as err:
