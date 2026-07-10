@@ -11,13 +11,13 @@ __license__ = 'GPLv3+'
 import json
 
 from types import SimpleNamespace
-from pytest_cases import parametrize
 from PyQt5 import QtCore as qtc
+from pytest_cases import parametrize
 
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
-from viperleed.gui.measure.uimeasurement import _DeviceDetectionWorker
+from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
+from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
 from viperleed.gui.measure.uimeasurement import Measure
-from viperleed.gui.measure.uimeasurement import UIErrors
 
 
 class _FakeSignal:  # pylint: disable=too-few-public-methods
@@ -222,7 +222,7 @@ def test_detect_devices_does_not_restart_running_process(mocker):
     proc = mocker.Mock()
     proc.state.return_value = qtc.QProcess.Running
 
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
     worker._process = proc
 
     qprocess = mocker.patch(
@@ -247,7 +247,7 @@ def test_detect_devices_does_not_restart_running_process(mocker):
 )
 def test_process_finished_failure_cases(mocker, exit_code, stdout, stderr):
     """A failing subprocess should emit an empty device list."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
 
     errors = []
     devices = []
@@ -271,7 +271,7 @@ def test_process_finished_failure_cases(mocker, exit_code, stdout, stderr):
 
 def test_process_finished_import_failure(mocker):
     """Import errors during object reconstruction should be reported."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
 
     errors = []
     devices = []
@@ -310,7 +310,7 @@ def test_process_finished_import_failure(mocker):
 
 def test_detection_timeout(mocker):
     """Timeout should stop detection and emit an empty device list."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
 
     errors = []
     devices = []
@@ -334,7 +334,7 @@ def test_detection_timeout(mocker):
 
 def test_process_error(mocker):
     """Process launch errors should emit an empty device list."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
 
     errors = []
     devices = []
@@ -358,7 +358,7 @@ def test_process_error(mocker):
 
 def test_stop_running_process(mocker):
     """Running processes should be terminated and cleaned up."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
 
     proc = mocker.Mock()
     proc.state.return_value = qtc.QProcess.Running
@@ -376,7 +376,7 @@ def test_stop_running_process(mocker):
 
 def test_stop_returns_early_when_no_process():
     """stop() should be a no-op when _process is None."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
     assert worker._process is None
     worker.stop()  # should not raise
     assert worker._process is None
@@ -384,7 +384,7 @@ def test_stop_returns_early_when_no_process():
 
 def test_detection_timeout_no_process():
     """_on_detection_timeout should be a no-op when _process is None."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
     errors = []
     devices = []
     worker.error_occurred.connect(errors.append)
@@ -396,7 +396,7 @@ def test_detection_timeout_no_process():
 
 def test_process_error_no_process():
     """_on_process_error should be a no-op when _process is None."""
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
     errors = []
     devices = []
     worker.error_occurred.connect(errors.append)
@@ -470,7 +470,7 @@ test_cases = (
         },
         {},
         {},
-        UIErrors.RUNTIME_ERROR.value[0]
+        DeviceDetectionErrors.RUNTIME_ERROR.value[0]
     )
 )
 
@@ -520,7 +520,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
     mocker.patch('viperleed.gui.measure.uimeasurement.qtc.QProcess',
                  FakeProcess)
 
-    worker = _DeviceDetectionWorker()
+    worker = DeviceDetectionWorker()
     emitted_errors = []
     emitted_devices = []
     worker.error_occurred.connect(emitted_errors.append)

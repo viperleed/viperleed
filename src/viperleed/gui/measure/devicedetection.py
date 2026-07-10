@@ -15,12 +15,15 @@ __created__ = '2026-04-29'
 __license__ = 'GPLv3+'
 
 import dataclasses
+from importlib import import_module
 import json
 import sys
 
-from PyQt5.QtCore import QCoreApplication
+import PyQt5.QtCore as qtc
 
 from viperleed.gui.measure import hardwarebase as base
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.classes.abc import SettingsInfo
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
 
 
@@ -31,6 +34,162 @@ class JSONEncoderSafe(json.JSONEncoder):
             return super().default(o)
         except TypeError:
             return str(o)
+
+
+class DeviceDetectionErrors(base.ViPErLEEDErrorEnum):
+    """Class for errors occurring during device detection."""
+
+    RUNTIME_ERROR = (1100, '{}')
+
+
+class DeviceDetectionWorker(qtc.QObject):
+    """Worker object for detecting devices in a dedicated thread."""
+
+    devices_detected = qtc.pyqtSignal(object)
+    error_occurred = qtc.pyqtSignal(tuple)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._process = None
+        self._timeout = None
+
+    @qtc.pyqtSlot()
+    def detect_devices(self):
+        """Detect all supported device types and emit the result via QProcess.
+
+        Using a separate process guarantees the main event loop
+        remains responsive during hardware connection checks.
+        """
+        # If a search is already running, avoid launching a new process.
+        if self._process:
+            return
+
+        self._process = qtc.QProcess(self)
+        self._process.finished.connect(self._on_process_finished)
+        self._process.errorOccurred.connect(self._on_process_error)
+
+        if getattr(sys, 'frozen', False):
+            # Bundled executable
+            exe = sys.executable
+            args = ['--detect-devices']
+        else:
+            # Standard Python environment
+            exe = sys.executable
+            args = ['-m', 'viperleed.gui', '--detect-devices']
+
+        self._timeout = qtc.QTimer(self)
+        self._timeout.setSingleShot(True)
+        self._timeout.timeout.connect(self._on_detection_timeout)
+        self._timeout.start(20000)
+
+        self._process.start(exe, args)
+
+    @qtc.pyqtSlot()
+    def stop(self):
+        """Kill any in-flight detection subprocess and clean up."""
+        proc = self._process
+        if proc is None:
+            return
+        if self._timeout:
+            self._timeout.stop()
+            base.safe_disconnect(self._timeout.timeout,
+                                 self._on_detection_timeout)
+            self._timeout = None
+        base.safe_disconnect(proc.finished, self._on_process_finished)
+        base.safe_disconnect(proc.errorOccurred, self._on_process_error)
+        if proc.state() != qtc.QProcess.NotRunning:
+            proc.kill()
+            proc.waitForFinished(1000)
+        proc.deleteLater()
+        self._process = None
+
+    @qtc.pyqtSlot()
+    def _on_detection_timeout(self):
+        """Kill the subprocess if it takes too long."""
+        if self._process is None:
+            return
+        base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                        'Device detection timed out.')
+        self.stop()
+        self.devices_detected.emit({'camera': {}, 'controller': {}})
+
+    @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
+    def _on_process_finished(self, exit_code, exit_status):
+        detected_out = {'camera': {}, 'controller': {}}
+
+        if exit_code != 0 or exit_status != qtc.QProcess.NormalExit:
+            error_data = self._process.readAllStandardError().data().decode(
+                            errors='replace'
+                            )
+            base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                            f'Detection failed: {error_data}')
+            self.devices_detected.emit(detected_out)
+            self.stop()
+            return
+
+        try:
+            out = self._process.readAllStandardOutput().data().decode().strip()
+            # Device discovery prints connection warnings (e.g. Qt or
+            # failed COMs) to stdout. We take only the last line, which
+            # contains our dumped JSON.
+            json_str = out.splitlines()[-1] if out else '{}'
+            parsed = json.loads(json_str)
+        except Exception as exc:
+            base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR, str(exc))
+            self.devices_detected.emit(detected_out)
+            self.stop()
+            return
+
+        if not isinstance(parsed, dict):
+            base.emit_error(
+                self, DeviceDetectionErrors.RUNTIME_ERROR,
+                f'Unexpected detection output: {parsed!r}'
+                )
+            self.devices_detected.emit(detected_out)
+            self.stop()
+            return
+
+        # Restore objects
+        for device_type, result in parsed.items():
+            if not isinstance(result, dict) or 'success' not in result:
+                base.emit_error(
+                    self, DeviceDetectionErrors.RUNTIME_ERROR,
+                    f'Invalid entry for {device_type!r}: {result!r}'
+                    )
+                continue
+            if result.get('success'):
+                try:
+                    recreated = {}
+                    devices = result['devices']
+                    for name, (mod_name, cls_name, kwargs) in devices.items():
+                        mod = import_module(mod_name)
+                        cls = getattr(mod, cls_name)
+                        recreated[name] = (cls, SettingsInfo(**kwargs))
+                except Exception as exc:
+                    base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR, str(exc))
+                else:
+                    detected_out[device_type] = recreated
+            else:
+                err_type = result.get('error_type')
+                err_msg = result.get('error_msg', '')
+                if err_type == 'DEFAULT_SETTINGS_CORRUPTED':
+                    err = QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED
+                else:
+                    err = DeviceDetectionErrors.RUNTIME_ERROR
+                base.emit_error(self, err, f'Detection failed: {err_msg}')
+
+        self.devices_detected.emit(detected_out)
+        self.stop()
+
+    @qtc.pyqtSlot(qtc.QProcess.ProcessError)
+    def _on_process_error(self, err):
+        if self._process is None:
+            return
+        err_str = self._process.errorString() if self._process else str(err)
+        base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                        f'Subprocess launch error: {err_str}')
+        self.devices_detected.emit({'camera': {}, 'controller': {}})
+        self.stop()
 
 
 def run_device_detection():
@@ -46,9 +205,9 @@ def run_device_detection():
     detected = {}
 
     # Provide CoreApplication instance to process underlying event loops.
-    app = QCoreApplication.instance()
+    app = qtc.QCoreApplication.instance()
     if app is None:
-        app = QCoreApplication(sys.argv)
+        app = qtc.QCoreApplication(sys.argv)
 
     for device_type in ('camera', 'controller'):
         try:
