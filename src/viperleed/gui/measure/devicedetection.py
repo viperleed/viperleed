@@ -60,18 +60,18 @@ def run_device_detection():
                     cls.__name__,
                     dataclasses.asdict(device),
                 )
-            detected[device_type] = {"success": True,
-                                     "devices": serialized_devs}
+            detected[device_type] = {'success': True,
+                                     'devices': serialized_devs}
         except DefaultSettingsError as exc:
             detected[device_type] = {
-                "success": False,
-                "error_type": "DEFAULT_SETTINGS_CORRUPTED",
-                "error_msg": str(exc),
+                'success': False,
+                'error_type': 'DEFAULT_SETTINGS_CORRUPTED',
+                'error_msg': str(exc),
             }
         except Exception as exc:  # pylint: disable=broad-exception-caught
             detected[device_type] = {
-                "success": False,
-                "error_type": "RUNTIME_ERROR",
-                "error_msg": str(exc),
+                'success': False,
+                'error_type': 'RUNTIME_ERROR',
+                'error_msg': str(exc),
             }
     return detected
