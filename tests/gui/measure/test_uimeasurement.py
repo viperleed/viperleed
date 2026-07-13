@@ -21,11 +21,13 @@ from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
 from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
 from viperleed.gui.measure.uimeasurement import Measure
 
-
-class _FakeSignal:  # pylint: disable=too-few-public-methods
+# pylint: disable=invalid-name
+# pylint: disable=protected-access
+class _FakeSignal:
     """A minimal signal-like object."""
 
     def __init__(self):
+        """Initialize fake signal."""
         self.connected = []
         self.emitted = 0
         self.disconnected = []
@@ -43,10 +45,11 @@ class _FakeSignal:  # pylint: disable=too-few-public-methods
         self.disconnected.append(slot)
 
 
-class _FakeAction:  # pylint: disable=too-few-public-methods
+class _FakeAction:
     """A minimal action-like object."""
 
     def __init__(self, text):
+        """Initialize fake action."""
         self._text = text
         self._data = None
         self.triggered = _FakeSignal()
@@ -70,6 +73,7 @@ class _FakeSubMenu:
     """A minimal menu-like object."""
 
     def __init__(self):
+        """Initialize fake menu object."""
         self._actions = []
         self.enabled = True
 
@@ -96,6 +100,7 @@ class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
     """A devices menu exposing two sub-menus via actions()."""
 
     def __init__(self):
+        """Initialize fake device menu."""
         self.cameras = _FakeSubMenu()
         self.controllers = _FakeSubMenu()
         self._actions = [
@@ -181,7 +186,9 @@ def test_on_devices_detected_updates_menu_and_unblocks_search():
     controllers = devices_menu.controllers.actions()
     assert len(cameras) == 1
     assert len(controllers) == 1
+    # pylint: disable-next=magic-value-comparison
     assert cameras[0].text == 'cam_a'
+    # pylint: disable-next=magic-value-comparison
     assert controllers[0].text == 'ctrl_a'
     assert cameras[0].triggered.connected == [fake._on_camera_clicked]
     assert controllers[0].triggered.connected == [fake._on_controller_clicked]
@@ -478,11 +485,12 @@ test_cases = (
 
 
 @parametrize('devices, ctrl, camera, error', test_cases)
+# pylint: disable-next=too-complex
 def test_device_detection_worker(mocker, devices, ctrl, camera, error):
     """Check device detection."""
 
     class FakeProcess(qtc.QObject):
-        # Patch QProcess used by the worker to simulate subprocess.
+        """Fake process used by the worker to simulate detection subprocess."""
         NormalExit = qtc.QProcess.NormalExit
         NotRunning = qtc.QProcess.NotRunning
         ExitStatus = qtc.QProcess.ExitStatus
@@ -491,31 +499,40 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
         finished = qtc.pyqtSignal(int, qtc.QProcess.ExitStatus)
         errorOccurred = qtc.pyqtSignal(qtc.QProcess.ProcessError)
 
-        def __init__(self, parent):
+        def __init__(self, _):
+            """Initialize fake QProcess."""
             super().__init__()
             self._finished_callbacks = []
             self._error_callbacks = []
+            self._stdout = None
 
-        def start(self, exe, args):
-            # Simulate immediate process completion with JSON on stdout.
+        def start(self, *_):
+            """Simulate immediate process completion with JSON on stdout."""
             data = devices
-
             self._stdout = json.dumps(data).encode()
             self.finished.emit(0, self.NormalExit)
 
         def state(self):
+            """Return NotRunning as state."""
             return self.NotRunning
 
         def readAllStandardOutput(self):
-            class B:
+            """Return fake output."""
+            # pylint: disable=missing-function-docstring
+            class B:    # pylint: disable=too-few-public-methods
+                """Dummy class to replicate call chain."""
                 def __init__(self, b):
                     self._b = b
                 def data(self):
                     return self._b
+            # pylint: enable=missing-function-docstring
             return B(self._stdout)
 
         def readAllStandardError(self):
-            class B:
+            """Return fake error."""
+            class B:    # pylint: disable=too-few-public-methods
+                """Dummy class to replicate call chain."""
+                # pylint: disable-next=missing-function-docstring
                 def data(self):
                     return b''
             return B()
