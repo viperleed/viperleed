@@ -27,6 +27,11 @@ from viperleed.gui.measure.classes.abc import SettingsInfo
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
 
 
+DEF_CORRUPTED = 'DEFAULT_SETTINGS_CORRUPTED'
+ATTR_ERR = 'ATTRIBUTE_ERROR'
+RUN_ERR = 'RUNTIME_ERROR'
+
+
 class JSONEncoderSafe(json.JSONEncoder):
     """Custom JSON encoder that gracefully handles datatypes like Version."""
     def default(self, o):
@@ -40,6 +45,7 @@ class DeviceDetectionErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring during device detection."""
 
     RUNTIME_ERROR = (1100, '{}')
+    ATTRIBUTE_ERROR = (1101, '{}')
 
 
 class DeviceDetectionWorker(qtc.QObject):
@@ -103,6 +109,18 @@ class DeviceDetectionWorker(qtc.QObject):
         proc.deleteLater()
         self._process = None
 
+    def _emit_detection_error(self, result):
+        """Emit the appropriate detection error from detection results."""
+        err_type = result.get('error_type')
+        err_msg = result.get('error_msg', '')
+        if err_type == DEF_CORRUPTED:
+            err = QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED
+        elif err_type == ATTR_ERR:
+            err = DeviceDetectionErrors.ATTRIBUTE_ERROR
+        else:
+            err = DeviceDetectionErrors.RUNTIME_ERROR
+        base.emit_error(self, err, f'Detection failed: {err_msg}')
+
     @qtc.pyqtSlot()
     def _on_detection_timeout(self):
         """Kill the subprocess if it takes too long."""
@@ -113,11 +131,17 @@ class DeviceDetectionWorker(qtc.QObject):
         self.stop()
         self.devices_detected.emit({'camera': {}, 'controller': {}})
 
+    def _parse_detection_output(self):
+        """Parse and return the output of the device detection."""
+        out = self._process.readAllStandardOutput().data().decode().strip()
+        json_str = out.splitlines()[-1] if out else '{}'
+        return json.loads(json_str)
+
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
         detected_out = {'camera': {}, 'controller': {}}
 
-        if exit_code != 0 or exit_status != qtc.QProcess.NormalExit:
+        if exit_code or exit_status != qtc.QProcess.NormalExit:
             error_data = self._process.readAllStandardError().data().decode(
                             errors='replace'
                             )
@@ -128,17 +152,17 @@ class DeviceDetectionWorker(qtc.QObject):
             return
 
         try:
-            out = self._process.readAllStandardOutput().data().decode().strip()
-            # Device discovery prints connection warnings (e.g. Qt or
-            # failed COMs) to stdout. We take only the last line, which
-            # contains our dumped JSON.
-            json_str = out.splitlines()[-1] if out else '{}'
-            parsed = json.loads(json_str)
+            parsed = self._parse_detection_output()
+        # pylint: disable-next=broad-exception-caught
         except Exception as exc:
-            base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR, str(exc))
+            base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                            str(exc))
             self.devices_detected.emit(detected_out)
             self.stop()
             return
+        # Device discovery prints connection warnings (e.g. Qt or
+        # failed COMs) to stdout. We take only the last line, which
+        # contains our dumped JSON.
 
         if not isinstance(parsed, dict):
             base.emit_error(
@@ -151,6 +175,7 @@ class DeviceDetectionWorker(qtc.QObject):
 
         # Restore objects
         for device_type, result in parsed.items():
+            # pylint: disable-next=magic-value-comparison
             if not isinstance(result, dict) or 'success' not in result:
                 base.emit_error(
                     self, DeviceDetectionErrors.RUNTIME_ERROR,
@@ -159,25 +184,15 @@ class DeviceDetectionWorker(qtc.QObject):
                 continue
             if result.get('success'):
                 try:
-                    recreated = {}
-                    devices = result['devices']
-                    for name, (mod_name, cls_name, kwargs) in devices.items():
-                        mod = import_module(mod_name)
-                        cls = getattr(mod, cls_name)
-                        recreated[name] = (cls, SettingsInfo(**kwargs))
+                    recreated = self._recreate_devices(result['devices'])
+                # pylint: disable-next=broad-exception-caught
                 except Exception as exc:
-                    base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR, str(exc))
+                    base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                                    str(exc))
                 else:
                     detected_out[device_type] = recreated
             else:
-                err_type = result.get('error_type')
-                err_msg = result.get('error_msg', '')
-                if err_type == 'DEFAULT_SETTINGS_CORRUPTED':
-                    err = QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED
-                else:
-                    err = DeviceDetectionErrors.RUNTIME_ERROR
-                base.emit_error(self, err, f'Detection failed: {err_msg}')
-
+                self._emit_detection_error(result)
         self.devices_detected.emit(detected_out)
         self.stop()
 
@@ -190,6 +205,15 @@ class DeviceDetectionWorker(qtc.QObject):
                         f'Subprocess launch error: {err_str}')
         self.devices_detected.emit({'camera': {}, 'controller': {}})
         self.stop()
+
+    def _recreate_devices(self, devices):
+        """Recreate and return devices from detection results."""
+        recreated = {}
+        for name, (mod_name, cls_name, kwargs) in devices.items():
+            mod = import_module(mod_name)
+            cls = getattr(mod, cls_name)
+            recreated[name] = (cls, SettingsInfo(**kwargs))
+        return recreated
 
 
 def run_device_detection():
@@ -212,6 +236,26 @@ def run_device_detection():
     for device_type in ('camera', 'controller'):
         try:
             detected_devs = base.get_devices(device_type)
+        except DefaultSettingsError as exc:
+            detected[device_type] = {
+                'success': False,
+                'error_type': DEF_CORRUPTED,
+                'error_msg': str(exc),
+            }
+        except AttributeError as exc:
+            detected[device_type] = {
+                'success': False,
+                'error_type': ATTR_ERR,
+                'error_msg': str(exc),
+            }
+        # pylint: disable-next=broad-exception-caught
+        except Exception as exc:
+            detected[device_type] = {
+                'success': False,
+                'error_type': RUN_ERR,
+                'error_msg': str(exc),
+            }
+        else:
             serialized_devs = {}
             for name, (cls, device) in detected_devs.items():
                 serialized_devs[name] = (
@@ -221,16 +265,4 @@ def run_device_detection():
                 )
             detected[device_type] = {'success': True,
                                      'devices': serialized_devs}
-        except DefaultSettingsError as exc:
-            detected[device_type] = {
-                'success': False,
-                'error_type': 'DEFAULT_SETTINGS_CORRUPTED',
-                'error_msg': str(exc),
-            }
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            detected[device_type] = {
-                'success': False,
-                'error_type': 'RUNTIME_ERROR',
-                'error_msg': str(exc),
-            }
     return detected

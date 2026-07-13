@@ -15,6 +15,8 @@ from PyQt5 import QtCore as qtc
 from pytest_cases import parametrize
 
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.devicedetection import DEF_CORRUPTED
+from viperleed.gui.measure.devicedetection import RUN_ERR
 from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
 from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
 from viperleed.gui.measure.uimeasurement import Measure
@@ -411,7 +413,7 @@ test_cases = (
         {
             'camera': {
                 'success': False,
-                'error_type': 'DEFAULT_SETTINGS_CORRUPTED',
+                'error_type': DEF_CORRUPTED,
                 'error_msg': 'bad defaults'
             },
             'controller': {
@@ -464,7 +466,7 @@ test_cases = (
     ),
     (
         {
-            'camera': {'success': False, 'error_type': 'RUNTIME_ERROR',
+            'camera': {'success': False, 'error_type': RUN_ERR,
                        'error_msg': 'something went wrong'},
             'controller': {'success': True, 'devices': {}}
         },

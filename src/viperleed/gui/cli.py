@@ -69,11 +69,13 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         """Call either the CLI or graphical versions of the GUI."""
         args = self.parse_cli_args(args)
         if args.detect_devices:
+            # pylint: disable=import-outside-toplevel
             import json
             # Lazy import to allow loading CLI without PyQt5.
             from viperleed.gui.measure.devicedetection import (
                 run_device_detection, JSONEncoderSafe
                 )
+            # pylint: enable=import-outside-toplevel
             print(json.dumps(run_device_detection(), cls=JSONEncoderSafe))
             return 0
         if args.nogui:
