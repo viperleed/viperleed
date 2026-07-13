@@ -685,17 +685,17 @@ class ControllerABC(DeviceABC):
                             display_name='Measurement Configuration')
         _i0 = QuantityInfo.I0.display_name
         info = (
-            ('i0_settle_time', f'{_i0} settle time',
-             f'<nobr>The time interval required for the {_i0} current'
-             '</nobr> to reach a stable value after a new energy has '
-             'been set. This should be calibrated for a typical step '
-             'size (e.g., 0.5 eV).'),
             ('hv_settle_time', 'Energy settle time',
              '<nobr>The time interval required for the true beam '
              'energy</nobr> to reach a stable value after a new '
              'energy has been set. This should be calibrated for '
              'a typical step size (e.g., 0.5 eV).'),
-            ('first_settle_time', 'First-energy settle time',
+            ('i0_settle_time', f'{_i0} settle time',
+             f'<nobr>The time interval required for the {_i0} current'
+             '</nobr> to reach a stable value after a new energy has '
+             'been set. This should be calibrated for a typical step '
+             'size (e.g., 0.5 eV).'),
+            ('first_settle_time', '1st energy settle time',
              '<nobr>The time interval required for the true beam '
              'energy</nobr> to reach a stable value when the first energy '
              'of a ramp is set. This is usually significantly longer than '
