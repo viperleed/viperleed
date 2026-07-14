@@ -899,15 +899,14 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if self.primary_controller.busy:
             return
 
-        # Use the controller.busy_changed to move from this segment
-        # of the preparation to the exit point of the preparation
-        # that will later start the measurement loop.
         base.safe_disconnect(self.primary_controller.serial.busy_changed,
                              self._continue_preparation)
-        # The camera.busy_changed signals are connected only now, rather
-        # than during _begin_preparation. This prevents early calls
-        # to the _check_preparation_finished method, should cameras
-        # be ready early.
+        # Use the controller.busy_changed to move from this segment of the
+        # preparation to the exit point of the preparation that will later
+        # start the measurement loop. The camera.busy_changed signals are
+        # connected only now, rather than during _begin_preparation. This
+        # prevents early calls to the _check_preparation_finished method,
+        # should cameras be ready early.
         for device in self.devices:
             device.busy_changed.connect(self._check_preparation_finished,
                                         type=_UNIQUE)
