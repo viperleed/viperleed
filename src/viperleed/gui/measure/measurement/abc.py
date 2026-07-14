@@ -912,24 +912,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                         type=_UNIQUE)
         self._preparation_continued.emit()
 
-    @qtc.pyqtSlot(bool)
-    def _set_starting_energy(self):
-        """Set the starting energy and wait for stabilization.
-
-        Returns
-        -------
-        None.
-        """
-        if any(controller.busy for controller in self.controllers):
-            return
-        for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.busy_changed, self._set_starting_energy)
-        primary = self.primary_controller
-        base.safe_connect(primary.serial.busy_changed,
-                          self._continue_preparation, type=_UNIQUE)
-        primary.set_energy(self._energy_ramp.start_energy,
-                           primary.long_settle_time, trigger_meas=False)
-
     def _connect_cameras(self):
         """Connect necessary camera signals."""
         # It is not necessary to call .connect_(), as it is called
@@ -1653,3 +1635,21 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 fname.rmdir()
             except OSError:
                 pass
+
+    @qtc.pyqtSlot(bool)
+    def _set_starting_energy(self):
+        """Set the starting energy and wait for stabilization.
+
+        Returns
+        -------
+        None.
+        """
+        if any(controller.busy for controller in self.controllers):
+            return
+        for ctrl in self.controllers:
+            base.safe_disconnect(ctrl.busy_changed, self._set_starting_energy)
+        primary = self.primary_controller
+        base.safe_connect(primary.serial.busy_changed,
+                          self._continue_preparation, type=_UNIQUE)
+        primary.set_energy(self._energy_ramp.start_energy,
+                           primary.long_settle_time, trigger_meas=False)
