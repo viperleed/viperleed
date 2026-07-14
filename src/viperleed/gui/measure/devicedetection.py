@@ -65,6 +65,7 @@ class DeviceDetectionWorker(qtc.QObject):
 
         Using a separate process guarantees the main event loop
         remains responsive during hardware connection checks.
+
         Returns
         -------
         None.
@@ -185,7 +186,7 @@ class DeviceDetectionWorker(qtc.QObject):
                     f'Invalid entry for {device_type!r}: {result!r}'
                     )
                 continue
-            if not result.get('success'):
+            if not result['success']:
                 self._emit_detection_error(result)
                 continue
             try:
@@ -196,7 +197,7 @@ class DeviceDetectionWorker(qtc.QObject):
                                 str(exc))
             else:
                 detected_out[device_type] = recreated
-                
+
         self.devices_detected.emit(detected_out)
         self.stop()
 
