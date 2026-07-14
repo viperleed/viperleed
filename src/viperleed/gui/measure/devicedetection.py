@@ -32,15 +32,6 @@ ATTR_ERR = 'ATTRIBUTE_ERROR'
 RUN_ERR = 'RUNTIME_ERROR'
 
 
-class JSONEncoderSafe(json.JSONEncoder):
-    """Custom JSON encoder that gracefully handles datatypes like Version."""
-    def default(self, o):
-        try:
-            return super().default(o)
-        except TypeError:
-            return str(o)
-
-
 class DeviceDetectionErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring during device detection."""
 
@@ -135,11 +126,15 @@ class DeviceDetectionWorker(qtc.QObject):
         self.stop()
         self.devices_detected.emit({'camera': {}, 'controller': {}})
 
-    def _parse_detection_output(self):
-        """Parse and return the output of the device detection."""
-        out = self._process.readAllStandardOutput().data().decode().strip()
-        json_str = out.splitlines()[-1] if out else '{}'
-        return json.loads(json_str)
+    @qtc.pyqtSlot(qtc.QProcess.ProcessError)
+    def _on_process_error(self, err):
+        if self._process is None:
+            return
+        err_str = self._process.errorString() if self._process else str(err)
+        base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                        f'Subprocess launch error: {err_str}')
+        self.devices_detected.emit({'camera': {}, 'controller': {}})
+        self.stop()
 
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
@@ -164,9 +159,6 @@ class DeviceDetectionWorker(qtc.QObject):
             self.devices_detected.emit(detected_out)
             self.stop()
             return
-        # Device discovery prints connection warnings (e.g. Qt or
-        # failed COMs) to stdout. We take only the last line, which
-        # contains our dumped JSON.
 
         if not isinstance(parsed, dict):
             base.emit_error(
@@ -201,15 +193,14 @@ class DeviceDetectionWorker(qtc.QObject):
         self.devices_detected.emit(detected_out)
         self.stop()
 
-    @qtc.pyqtSlot(qtc.QProcess.ProcessError)
-    def _on_process_error(self, err):
-        if self._process is None:
-            return
-        err_str = self._process.errorString() if self._process else str(err)
-        base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
-                        f'Subprocess launch error: {err_str}')
-        self.devices_detected.emit({'camera': {}, 'controller': {}})
-        self.stop()
+    def _parse_detection_output(self):
+        """Parse and return the output of the device detection."""
+        out = self._process.readAllStandardOutput().data().decode().strip()
+        # Device discovery prints connection warnings (e.g. Qt or
+        # failed COMs) to stdout. We take only the last line, which
+        # contains our dumped JSON.
+        json_str = out.splitlines()[-1] if out else '{}'
+        return json.loads(json_str)
 
     def _recreate_devices(self, devices):
         """Recreate and return devices from detection results."""
@@ -219,6 +210,15 @@ class DeviceDetectionWorker(qtc.QObject):
             cls = getattr(mod, cls_name)
             recreated[name] = (cls, SettingsInfo(**kwargs))
         return recreated
+
+
+class JSONEncoderSafe(json.JSONEncoder):
+    """Custom JSON encoder that gracefully handles datatypes like Version."""
+    def default(self, o):
+        try:
+            return super().default(o)
+        except TypeError:
+            return str(o)
 
 
 def run_device_detection():
