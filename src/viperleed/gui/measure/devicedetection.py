@@ -185,17 +185,18 @@ class DeviceDetectionWorker(qtc.QObject):
                     f'Invalid entry for {device_type!r}: {result!r}'
                     )
                 continue
-            if result.get('success'):
-                try:
-                    recreated = self._recreate_devices(result['devices'])
-                # pylint: disable-next=broad-exception-caught
-                except Exception as exc:
-                    base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
-                                    str(exc))
-                else:
-                    detected_out[device_type] = recreated
-            else:
+            if not result.get('success'):
                 self._emit_detection_error(result)
+                continue
+            try:
+                recreated = self._recreate_devices(result['devices'])
+            # pylint: disable-next=broad-exception-caught
+            except Exception as exc:
+                base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
+                                str(exc))
+            else:
+                detected_out[device_type] = recreated
+                
         self.devices_detected.emit(detected_out)
         self.stop()
 
