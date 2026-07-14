@@ -93,6 +93,7 @@ class MeasurementReusedError(MeasurementException):
 
 # Progression:
 # Entry: .start()
+# * ._set_starting_energy()
 # * ._continue_preparation()
 # * ._check_preparation_finished()
 # * BEGIN MEASURING by auto-call to ._begin_next_energy_step()
@@ -162,7 +163,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         self._camera_timer = qtc.QTimer(parent=self)
         self._camera_timer.setSingleShot(True)
-        self._first_energy_set = False
 
         # _force_end_timer ensures that no-matter-what we will
         # wait at most 4.5 sec to clean up the measurement at its
@@ -779,7 +779,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Starts the first part of the measurement preparation.
         """
         self.current_energy = self._energy_ramp.start_energy
-        self._first_energy_set = False
 
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
@@ -796,8 +795,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                  self._on_controller_data_ready)
 
             # When controllers will turn "not busy" at the end of
-            # this first preparation segment, go to second segment
-            ctrl.busy_changed.connect(self._continue_preparation)
+            # this first preparation segment, set the the first energy.
+            ctrl.busy_changed.connect(self._set_starting_energy)
 
         # Disconnect the camera.busy_changed signal here, and reconnect
         # it later in ._check_preparation_finished(). This prevents
@@ -897,29 +896,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Starts the second part of the measurement
             preparation.
         """
-        if any(controller.busy for controller in self.controllers):
-            return
-
-        primary = self.primary_controller
-        if not self._first_energy_set:
-            self._first_energy_set = True
-
-            for ctrl in self.controllers:
-                base.safe_disconnect(ctrl.busy_changed,
-                                     self._continue_preparation)
-            base.safe_connect(primary.serial.busy_changed,
-                              self._continue_preparation, type=_UNIQUE)
-            primary.set_energy(self._energy_ramp.start_energy,
-                               primary.long_settle_time,
-                               trigger_meas=False)
-            if not primary.serial.busy:
-                self._continue_preparation(False)
+        if self.primary_controller.busy:
             return
 
         # Use the controller.busy_changed to move from this segment
         # of the preparation to the exit point of the preparation
         # that will later start the measurement loop.
-        base.safe_disconnect(primary.serial.busy_changed,
+        base.safe_disconnect(self.primary_controller.serial.busy_changed,
                              self._continue_preparation)
         # The camera.busy_changed signals are connected only now, rather
         # than during _begin_preparation. This prevents early calls
@@ -929,6 +912,24 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             device.busy_changed.connect(self._check_preparation_finished,
                                         type=_UNIQUE)
         self._preparation_continued.emit()
+
+    @qtc.pyqtSlot(bool)
+    def _set_starting_energy(self):
+        """Set the starting energy and wait for stabilization.
+
+        Returns
+        -------
+        None.
+        """
+        if any(controller.busy for controller in self.controllers):
+            return
+        for ctrl in self.controllers:
+            base.safe_disconnect(ctrl.busy_changed, self._set_starting_energy)
+        primary = self.primary_controller
+        base.safe_connect(primary.serial.busy_changed,
+                          self._continue_preparation, type=_UNIQUE)
+        primary.set_energy(self._energy_ramp.start_energy,
+                           primary.long_settle_time, trigger_meas=False)
 
     def _connect_cameras(self):
         """Connect necessary camera signals."""
@@ -998,7 +999,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         disconnect(self._request_stop_devices, ctrl.stop)
         disconnect(self._preparation_started, ctrl.begin_preparation)
         disconnect(self._preparation_continued, ctrl.continue_preparation)
-        busy_slots = (self._continue_preparation,
+        busy_slots = (self._set_starting_energy,
+                      self._continue_preparation,
                       self._check_preparation_finished,
                       self._cleanup_and_end, self._finalize)
         for slot in busy_slots:
