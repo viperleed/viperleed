@@ -65,6 +65,9 @@ class DeviceDetectionWorker(qtc.QObject):
 
         Using a separate process guarantees the main event loop
         remains responsive during hardware connection checks.
+        Returns
+        -------
+        None.
         """
         # If a search is already running, avoid launching a new process.
         if self._process:
