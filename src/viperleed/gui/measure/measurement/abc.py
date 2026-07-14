@@ -795,7 +795,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                  self._on_controller_data_ready)
 
             # When controllers will turn "not busy" at the end of
-            # this first preparation segment, set the the first energy.
+            # this first preparation segment, set the first energy.
             ctrl.busy_changed.connect(self._set_starting_energy)
 
         # Disconnect the camera.busy_changed signal here, and reconnect
