@@ -131,7 +131,7 @@ class DeviceDetectionWorker(qtc.QObject):
         """Emit device detection subprocess errors and stop."""
         if self._process is None:
             return
-        err_str = self._process.errorString() if self._process else str(err)
+        err_str = self._process.errorString()
         base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
                         f'Subprocess launch error: {err_str}')
         self.devices_detected.emit({'camera': {}, 'controller': {}})

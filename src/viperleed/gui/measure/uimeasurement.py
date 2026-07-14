@@ -252,8 +252,8 @@ class UIErrors(base.ViPErLEEDErrorEnum):
 class Measure(ViPErLEEDPluginBase):                                             # TODO: Figure out how to inherit error_occurred from QObjectWithError. QObjectMeta hook?
     """A GUI that allows to take measurements."""
 
-    error_occurred = qtc.pyqtSignal(tuple)
     detect_devices_requested = qtc.pyqtSignal()
+    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, parent=None):
         """Initialize window."""
