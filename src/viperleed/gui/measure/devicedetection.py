@@ -128,6 +128,7 @@ class DeviceDetectionWorker(qtc.QObject):
 
     @qtc.pyqtSlot(qtc.QProcess.ProcessError)
     def _on_process_error(self, err):
+        """Emit device detection subprocess errors and stop."""
         if self._process is None:
             return
         err_str = self._process.errorString() if self._process else str(err)
@@ -138,6 +139,28 @@ class DeviceDetectionWorker(qtc.QObject):
 
     @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
     def _on_process_finished(self, exit_code, exit_status):
+        """Handle device detection subprocess output.
+
+        Parse the subprocess output to reconstruct detected devices or
+        emit appropriate errors if detection failed, timed out, or
+        produced invalid data. Clean up the process upon completion.
+
+        Parameters
+        ----------
+        exit_code : int
+            The exit code returned by the subprocess.
+        exit_status : qtc.QProcess.ExitStatus
+            The exit status of the subprocess.
+
+        Emits
+        -----
+        error_occurred
+            If detection fails due to subprocess errors, invalid output,
+            or device recreation errors.
+        devices_detected
+            With the detected devices dictionary upon completion or as
+            an empty dummy in case of an error.
+        """
         detected_out = {'camera': {}, 'controller': {}}
 
         if exit_code or exit_status != qtc.QProcess.NormalExit:
