@@ -313,12 +313,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.measurement = None
         self._measurement_thread = qtc.QThread()
         self._measurement_thread.start(_TIME_CRITICAL)
-        self._device_detection_thread = qtc.QThread()
-        self._device_detection_worker = DeviceDetectionWorker()
-        self._device_detection_worker.moveToThread(
-            self._device_detection_thread
-            )
-        self._device_detection_thread.start()
+        self._device_detection_worker = DeviceDetectionWorker(parent=self)
         self._device_search_in_progress = False
 
         _timer_setup = (
@@ -370,17 +365,10 @@ class Measure(ViPErLEEDPluginBase):                                             
             if not self._measurement_thread.wait(100):
                 self._measurement_thread.terminate()
             retry_later = True
-        detection_thread = self._device_detection_thread
-        if detection_thread and detection_thread.isRunning():
-            self._device_detection_thread = None
-            qtc.QMetaObject.invokeMethod(self._device_detection_worker, 'stop',
-                                         qtc.Qt.BlockingQueuedConnection)
-            detection_thread.quit()
-            if not detection_thread.wait(100):
-                detection_thread.terminate()
+
+        if self._device_detection_worker:
             self._device_detection_worker.deleteLater()
-            detection_thread.deleteLater()
-            retry_later = True
+            self._device_detection_worker = None
 
         if self._glob['plot']:
             self._glob['plot'].close()
@@ -415,10 +403,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._timers['refresh_devices'].stop()
         base.safe_disconnect(self._timers['refresh_devices'].timeout,
                              self.update_device_lists)
-        base.safe_disconnect(self.detect_devices_requested,
-                             self._device_detection_worker.detect_devices)
-        qtc.QMetaObject.invokeMethod(self._device_detection_worker, 'stop',
-                                     qtc.Qt.QueuedConnection)
+        if self._device_detection_worker:
+            base.safe_disconnect(self.detect_devices_requested,
+                                 self._device_detection_worker.detect_devices)
+            self._device_detection_worker.stop()
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
         """Allow copying (Ctrl+C) device name to clipboard when visible."""
