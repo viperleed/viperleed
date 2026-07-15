@@ -9,7 +9,6 @@ __created__ = '2026-03-31'
 __license__ = 'GPLv3+'
 
 import json
-from types import SimpleNamespace
 
 from PyQt5 import QtCore as qtc
 from pytest_cases import parametrize
@@ -100,26 +99,30 @@ class _FakeSubMenu:
 class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
     """A devices menu exposing two sub-menus via actions()."""
 
-    def __init__(self):
+    def __init__(self, mocker):
         """Initialize fake device menu."""
         self.cameras = _FakeSubMenu()
         self.controllers = _FakeSubMenu()
-        self._actions = [SimpleNamespace(menu=lambda: self.cameras),
-                         SimpleNamespace(menu=lambda: self.controllers)]
-
+        cam_action = mocker.Mock()
+        cam_action.menu.return_value = self.cameras
+        ctrl_action = mocker.Mock()
+        ctrl_action.menu.return_value = self.controllers
+        self._actions = [cam_action, ctrl_action]
     def actions(self):
         """Return actions for submenus."""
         return self._actions
 
 
-def test_device_search_allowed_states():
+def test_device_search_allowed_states(mocker):
     """Check that running searches and measurements block new searches."""
-    fake_measure = SimpleNamespace(running=False)
-    camera_viewer = SimpleNamespace(isVisible=lambda: False)
-    ctrl_dialog = SimpleNamespace(isVisible=lambda: False)
-    fake = SimpleNamespace(_device_search_in_progress=False,
-                           measurement=fake_measure,
-                           _dialogs={
+    fake_measure = mocker.MagicMock(running=False)
+    camera_viewer = mocker.MagicMock()
+    camera_viewer.isVisible.return_value = False
+    ctrl_dialog = mocker.MagicMock()
+    ctrl_dialog.isVisible.return_value = False
+    fake = mocker.MagicMock(_device_search_in_progress=False,
+                            measurement=fake_measure,
+                            _dialogs={
                                 'camera_viewers': [camera_viewer],
                                 'device_settings': {'ctrl': ctrl_dialog}})
 
@@ -133,22 +136,22 @@ def test_device_search_allowed_states():
     assert not Measure._device_search_allowed(fake)
     fake.measurement.running = False
 
-    fake._dialogs['camera_viewers'] = [SimpleNamespace(isVisible=lambda: True)]
+    camera_viewer.isVisible.return_value = True
+    fake._dialogs['camera_viewers'] = [camera_viewer]
     assert Measure._device_search_allowed(fake)
     fake._dialogs['camera_viewers'] = [camera_viewer]
 
-    fake._dialogs['device_settings'] = {
-        'ctrl': SimpleNamespace(isVisible=lambda: True)
-        }
+    ctrl_dialog.isVisible.return_value = True
+    fake._dialogs['device_settings'] = {'ctrl': ctrl_dialog}
     assert Measure._device_search_allowed(fake)
 
 
-def test_update_device_lists_blocks_reentry():
+def test_update_device_lists_blocks_reentry(mocker):
     """Check that a second search is blocked while one is in progress."""
     signal = _FakeSignal()
-    fake = SimpleNamespace(_device_search_in_progress=False,
-                           detect_devices_requested=signal,)
-    fake._device_search_allowed = lambda: not fake._device_search_in_progress
+    fake = mocker.Mock(_device_search_in_progress=False,
+                       detect_devices_requested=signal)
+    fake._device_search_allowed = mocker.Mock(side_effect=[True, False])
 
     Measure.update_device_lists(fake)
     assert fake._device_search_in_progress
@@ -158,13 +161,13 @@ def test_update_device_lists_blocks_reentry():
     assert signal.emitted == 1
 
 
-def test_on_devices_detected_updates_menu_and_unblocks_search():
+def test_on_devices_detected_updates_menu_and_unblocks_search(mocker):
     """Check menu updates with newly detected devices."""
-    devices_menu = _FakeDevicesMenu()
-    fake = SimpleNamespace(_ctrls={'menus': {'devices': devices_menu}},
-                           _on_camera_clicked=lambda: None,
-                           _on_controller_clicked=lambda: None,
-                           _device_search_in_progress=True,)
+    devices_menu = _FakeDevicesMenu(mocker)
+    fake = mocker.Mock(_ctrls={'menus': {'devices': devices_menu}},
+                       _device_search_in_progress=True)
+    fake._on_camera_clicked = mocker.Mock()
+    fake._on_controller_clicked = mocker.Mock()
     detected_devices = {
         'camera': {'cam_a': ('camera_cls', 'camera_info')},
         'controller': {'ctrl_a': ('controller_cls', 'controller_info')},
@@ -194,14 +197,13 @@ def test_stop_device_search_triggers(mocker):
     timer_stop = mocker.Mock()
     worker_stop = mocker.Mock()
     delete_later = mocker.Mock()
-    refresh_timer = SimpleNamespace(stop=timer_stop, timeout=timer_signal)
-    fake_worker = SimpleNamespace(detect_devices=lambda: None, stop=worker_stop,
-                                  deleteLater=delete_later)
-    fake = SimpleNamespace(_timers={'refresh_devices': refresh_timer},
-                           detect_devices_requested=detect_signal,
-                           _device_detection_worker=fake_worker,
-                           update_device_lists=lambda: None,)
-
+    refresh_timer = mocker.Mock(stop=timer_stop, timeout=timer_signal)
+    fake_worker = mocker.Mock(stop=worker_stop, deleteLater=delete_later)
+    fake_worker.detect_devices = mocker.Mock()
+    fake = mocker.Mock(_timers={'refresh_devices': refresh_timer},
+                       detect_devices_requested=detect_signal,
+                       _device_detection_worker=fake_worker)
+    fake.update_device_lists = mocker.Mock()
     Measure._stop_device_search_triggers(fake)
 
     timer_stop.assert_called_once_with()
