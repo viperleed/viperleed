@@ -112,7 +112,7 @@ class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
 
 
 def test_device_search_allowed_states():
-    """Check that active devices and running searches block new searches."""
+    """Check that running searches and measurements block new searches."""
     fake_measure = SimpleNamespace(running=False)
     camera_viewer = SimpleNamespace(isVisible=lambda: False)
     ctrl_dialog = SimpleNamespace(isVisible=lambda: False)
@@ -133,13 +133,13 @@ def test_device_search_allowed_states():
     fake.measurement.running = False
 
     fake._dialogs['camera_viewers'] = [SimpleNamespace(isVisible=lambda: True)]
-    assert not Measure._device_search_allowed(fake)
+    assert Measure._device_search_allowed(fake)
     fake._dialogs['camera_viewers'] = [camera_viewer]
 
     fake._dialogs['device_settings'] = {
         'ctrl': SimpleNamespace(isVisible=lambda: True)
         }
-    assert not Measure._device_search_allowed(fake)
+    assert Measure._device_search_allowed(fake)
 
 
 def test_update_device_lists_blocks_reentry():

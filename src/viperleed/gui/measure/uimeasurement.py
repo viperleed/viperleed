@@ -457,12 +457,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
         if self.measurement and self.measurement.running:
             return False
-        if any(viewer.isVisible()
-               for viewer in self._dialogs['camera_viewers']):
-            return False
-        if any(dialog.isVisible()
-               for dialog in self._dialogs['device_settings'].values()):
-            return False
         return True
 
     @qtc.pyqtSlot(object)
