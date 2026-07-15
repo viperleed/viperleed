@@ -36,9 +36,11 @@ class _FakeSignal:
         """Store connected slots."""
         self.connected.append(slot)
 
-    def emit(self):
-        """Count emissions."""
+    def emit(self, *args, **kwargs):
+        """Count emissions and call connected slots."""
         self.emitted += 1
+        for slot in self.connected:
+            slot(*args, **kwargs)
 
     def disconnect(self, slot):
         """Store disconnected slots."""
@@ -468,62 +470,28 @@ test_cases = (
 
 
 @parametrize('devices, ctrl, camera, error', test_cases)
-# pylint: disable-next=too-complex
 def test_device_detection_worker(mocker, devices, ctrl, camera, error):
     """Check device detection."""
 
-    class FakeProcess(qtc.QObject):
-        """Fake process used by the worker to simulate detection subprocess."""
-        # pylint: disable=invalid-name
-        NormalExit = qtc.QProcess.NormalExit
-        NotRunning = qtc.QProcess.NotRunning
-        ExitStatus = qtc.QProcess.ExitStatus
-        ProcessError = qtc.QProcess.ProcessError
+    finished_signal = _FakeSignal()
+    error_signal = _FakeSignal()
+    proc = mocker.Mock()
+    proc.readAllStandardOutput.return_value.data.return_value = (
+        json.dumps(devices).encode()
+    )
+    proc.readAllStandardError.return_value.data.return_value = b''
+    proc.state.return_value = qtc.QProcess.NotRunning
+    proc.finished = finished_signal
+    proc.errorOccurred = error_signal
 
-        finished = qtc.pyqtSignal(int, qtc.QProcess.ExitStatus)
-        errorOccurred = qtc.pyqtSignal(qtc.QProcess.ProcessError)
-        # pylint: enable=invalid-name
+    def start_and_finish(*_):
+        """Simulate process start and immediate completion."""
+        finished_signal.emit(0, qtc.QProcess.NormalExit)
 
-        def __init__(self, _):
-            """Initialize fake QProcess."""
-            super().__init__()
-            self._finished_callbacks = []
-            self._error_callbacks = []
-            self._stdout = None
+    proc.start = mocker.Mock(side_effect=start_and_finish)
 
-        def start(self, *_):
-            """Simulate immediate process completion with JSON on stdout."""
-            data = devices
-            self._stdout = json.dumps(data).encode()
-            self.finished.emit(0, self.NormalExit)
-
-        def state(self):
-            """Return NotRunning as state."""
-            return self.NotRunning
-
-        # pylint: disable=invalid-name
-        def readAllStandardOutput(self):
-            """Return fake output."""
-            # pylint: disable=missing-function-docstring
-            class B:    # pylint: disable=too-few-public-methods
-                """Dummy class to replicate call chain."""
-                def __init__(self, b):
-                    self._b = b
-                def data(self):
-                    return self._b
-            # pylint: enable=missing-function-docstring
-            return B(self._stdout)
-
-        def readAllStandardError(self):
-            """Return fake error."""
-            class B:    # pylint: disable=too-few-public-methods
-                """Dummy class to replicate call chain."""
-                # pylint: disable-next=missing-function-docstring
-                def data(self):
-                    return b''
-            return B()
-        # pylint: enable=invalid-name
-    mocker.patch(_QPROCESS, FakeProcess)
+    mocker.patch(_QPROCESS, return_value=proc)
+    mocker.patch('viperleed.gui.measure.uimeasurement.qtc.QTimer')
 
     worker = DeviceDetectionWorker()
     emitted_errors = []
