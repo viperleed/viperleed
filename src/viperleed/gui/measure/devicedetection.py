@@ -165,8 +165,8 @@ class DeviceDetectionWorker(qtc.QObject):
 
         if exit_code or exit_status != qtc.QProcess.NormalExit:
             error_data = self._process.readAllStandardError().data().decode(
-                            errors='replace'
-                            )
+                errors='replace'
+                )
             base.emit_error(self, DeviceDetectionErrors.RUNTIME_ERROR,
                             f'Detection failed: {error_data}')
             self.devices_detected.emit(detected_out)

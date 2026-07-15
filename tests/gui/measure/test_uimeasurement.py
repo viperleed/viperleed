@@ -9,8 +9,8 @@ __created__ = '2026-03-31'
 __license__ = 'GPLv3+'
 
 import json
-
 from types import SimpleNamespace
+
 from PyQt5 import QtCore as qtc
 from pytest_cases import parametrize
 
