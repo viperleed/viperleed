@@ -103,10 +103,8 @@ class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
         """Initialize fake device menu."""
         self.cameras = _FakeSubMenu()
         self.controllers = _FakeSubMenu()
-        self._actions = [
-            SimpleNamespace(menu=lambda: self.cameras),
-            SimpleNamespace(menu=lambda: self.controllers),
-            ]
+        self._actions = [SimpleNamespace(menu=lambda: self.cameras),
+                         SimpleNamespace(menu=lambda: self.controllers)]
 
     def actions(self):
         """Return actions for submenus."""
@@ -118,14 +116,11 @@ def test_device_search_allowed_states():
     fake_measure = SimpleNamespace(running=False)
     camera_viewer = SimpleNamespace(isVisible=lambda: False)
     ctrl_dialog = SimpleNamespace(isVisible=lambda: False)
-    fake = SimpleNamespace(
-        _device_search_in_progress=False,
-        measurement=fake_measure,
-        _dialogs={
-            'camera_viewers': [camera_viewer],
-            'device_settings': {'ctrl': ctrl_dialog},
-            },
-        )
+    fake = SimpleNamespace(_device_search_in_progress=False,
+                           measurement=fake_measure,
+                           _dialogs={
+                                'camera_viewers': [camera_viewer],
+                                'device_settings': {'ctrl': ctrl_dialog}})
 
     assert Measure._device_search_allowed(fake)
 
@@ -150,13 +145,9 @@ def test_device_search_allowed_states():
 def test_update_device_lists_blocks_reentry():
     """Check that a second search is blocked while one is in progress."""
     signal = _FakeSignal()
-    fake = SimpleNamespace(
-        _device_search_in_progress=False,
-        detect_devices_requested=signal,
-        )
-    fake._device_search_allowed = (
-        lambda: not fake._device_search_in_progress
-        )
+    fake = SimpleNamespace(_device_search_in_progress=False,
+                           detect_devices_requested=signal,)
+    fake._device_search_allowed = (lambda: not fake._device_search_in_progress)
 
     Measure.update_device_lists(fake)
     assert fake._device_search_in_progress
@@ -169,12 +160,10 @@ def test_update_device_lists_blocks_reentry():
 def test_on_devices_detected_updates_menu_and_unblocks_search():
     """Check menu updates with newly detected devices."""
     devices_menu = _FakeDevicesMenu()
-    fake = SimpleNamespace(
-        _ctrls={'menus': {'devices': devices_menu}},
-        _on_camera_clicked=lambda: None,
-        _on_controller_clicked=lambda: None,
-        _device_search_in_progress=True,
-        )
+    fake = SimpleNamespace(_ctrls={'menus': {'devices': devices_menu}},
+                           _on_camera_clicked=lambda: None,
+                           _on_controller_clicked=lambda: None,
+                           _device_search_in_progress=True,)
     detected_devices = {
         'camera': {'cam_a': ('camera_cls', 'camera_info')},
         'controller': {'ctrl_a': ('controller_cls', 'controller_info')},
@@ -201,27 +190,21 @@ def test_stop_device_search_triggers(mocker):
     """Check shutdown helper disables periodic and queued search triggers."""
     timer_signal = _FakeSignal()
     detect_signal = _FakeSignal()
-    stop = mocker.Mock()
-    refresh_timer = SimpleNamespace(stop=stop, timeout=timer_signal)
-    fake_worker = SimpleNamespace(detect_devices=lambda: None)
-    fake = SimpleNamespace(
-        _timers={'refresh_devices': refresh_timer},
-        detect_devices_requested=detect_signal,
-        _device_detection_worker=fake_worker,
-        update_device_lists=lambda: None,
-        )
-
-    # _stop_device_search_triggers also invokes QMetaObject.invokeMethod
-    # to call 'stop' on the worker thread. The fake worker is not a
-    # QObject, so PyQt5 cannot resolve the overloaded call. Mock it out
-    # since this is not what we are testing here.
-    mocker.patch(
-        'viperleed.gui.measure.uimeasurement.qtc.QMetaObject.invokeMethod'
-        )
+    timer_stop = mocker.Mock()
+    worker_stop = mocker.Mock()
+    delete_later = mocker.Mock()
+    refresh_timer = SimpleNamespace(stop=timer_stop, timeout=timer_signal)
+    fake_worker = SimpleNamespace(detect_devices=lambda: None, stop=worker_stop,
+                                  deleteLater=delete_later)
+    fake = SimpleNamespace(_timers={'refresh_devices': refresh_timer},
+                           detect_devices_requested=detect_signal,
+                           _device_detection_worker=fake_worker,
+                           update_device_lists=lambda: None,)
 
     Measure._stop_device_search_triggers(fake)
 
-    stop.assert_called_once_with()
+    timer_stop.assert_called_once_with()
+    worker_stop.assert_called_once_with()
     assert timer_signal.disconnected == [fake.update_device_lists]
     assert detect_signal.disconnected == [fake_worker.detect_devices]
 
