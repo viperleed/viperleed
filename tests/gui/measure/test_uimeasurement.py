@@ -21,7 +21,8 @@ from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
 from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
 from viperleed.gui.measure.uimeasurement import Measure
 
-# pylint: disable=invalid-name
+_QPROCESS = 'viperleed.gui.measure.uimeasurement.qtc.QProcess'
+
 # pylint: disable=protected-access
 class _FakeSignal:
     """A minimal signal-like object."""
@@ -54,7 +55,7 @@ class _FakeAction:
         self._data = None
         self.triggered = _FakeSignal()
 
-    def setData(self, data):
+    def setData(self, data):    # pylint: disable=invalid-name
         """Store action data."""
         self._data = data
 
@@ -81,7 +82,7 @@ class _FakeSubMenu:
         """Clear existing actions."""
         self._actions = []
 
-    def addAction(self, text):
+    def addAction(self, text):      # pylint: disable=invalid-name
         """Add and return an action."""
         action = _FakeAction(text)
         self._actions.append(action)
@@ -91,7 +92,7 @@ class _FakeSubMenu:
         """Return menu actions."""
         return self._actions
 
-    def setEnabled(self, enabled):
+    def setEnabled(self, enabled):  # pylint: disable=invalid-name
         """Set enabled status."""
         self.enabled = enabled
 
@@ -147,7 +148,7 @@ def test_update_device_lists_blocks_reentry():
     signal = _FakeSignal()
     fake = SimpleNamespace(_device_search_in_progress=False,
                            detect_devices_requested=signal,)
-    fake._device_search_allowed = (lambda: not fake._device_search_in_progress)
+    fake._device_search_allowed = lambda: not fake._device_search_in_progress
 
     Measure.update_device_lists(fake)
     assert fake._device_search_in_progress
@@ -216,10 +217,7 @@ def test_detect_devices_does_not_restart_running_process(mocker):
 
     worker = DeviceDetectionWorker()
     worker._process = proc
-
-    qprocess = mocker.patch(
-        'viperleed.gui.measure.uimeasurement.qtc.QProcess'
-    )
+    qprocess = mocker.patch(_QPROCESS)
 
     worker.detect_devices()
 
@@ -474,6 +472,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
 
     class FakeProcess(qtc.QObject):
         """Fake process used by the worker to simulate detection subprocess."""
+        # pylint: disable=invalid-name
         NormalExit = qtc.QProcess.NormalExit
         NotRunning = qtc.QProcess.NotRunning
         ExitStatus = qtc.QProcess.ExitStatus
@@ -481,6 +480,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
 
         finished = qtc.pyqtSignal(int, qtc.QProcess.ExitStatus)
         errorOccurred = qtc.pyqtSignal(qtc.QProcess.ProcessError)
+        # pylint: enable=invalid-name
 
         def __init__(self, _):
             """Initialize fake QProcess."""
@@ -499,6 +499,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
             """Return NotRunning as state."""
             return self.NotRunning
 
+        # pylint: disable=invalid-name
         def readAllStandardOutput(self):
             """Return fake output."""
             # pylint: disable=missing-function-docstring
@@ -519,8 +520,8 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
                 def data(self):
                     return b''
             return B()
-    mocker.patch('viperleed.gui.measure.uimeasurement.qtc.QProcess',
-                 FakeProcess)
+        # pylint: enable=invalid-name
+    mocker.patch(_QPROCESS, FakeProcess)
 
     worker = DeviceDetectionWorker()
     emitted_errors = []
