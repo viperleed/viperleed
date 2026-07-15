@@ -15,7 +15,6 @@ __license__ = 'GPLv3+'
 from importlib import import_module
 from itertools import chain
 from pathlib import Path
-import argparse
 import signal
 import sys
 
@@ -68,16 +67,6 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
     def __call__(self, args=None):
         """Call either the CLI or graphical versions of the GUI."""
         args = self.parse_cli_args(args)
-        if args.detect_devices:
-            # pylint: disable=import-outside-toplevel
-            import json
-            # Lazy import to allow loading CLI without PyQt5.
-            from viperleed.gui.measure.devicedetection import (
-                run_device_detection, JSONEncoderSafe
-                )
-            # pylint: enable=import-outside-toplevel
-            print(json.dumps(run_device_detection(), cls=JSONEncoderSafe))
-            return 0
         if args.nogui:
             return commandline_main()
         self.check_can_run_gui()
@@ -90,11 +79,6 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             '--nogui',
             help=('run the ViPErLEED graphical user interface in '
                   'command-line mode, i.e., without any windows'),
-            action='store_true',
-            )
-        parser.add_argument(
-            '--detect-devices',
-            help=argparse.SUPPRESS,  # Hidden flag for QProcess
             action='store_true',
             )
 

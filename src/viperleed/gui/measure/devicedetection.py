@@ -69,14 +69,8 @@ class DeviceDetectionWorker(qtc.QObject):
         self._process.finished.connect(self._on_process_finished)
         self._process.errorOccurred.connect(self._on_process_error)
 
-        if getattr(sys, 'frozen', False):
-            # Bundled executable
-            exe = sys.executable
-            args = ['--detect-devices']
-        else:
-            # Standard Python environment
-            exe = sys.executable
-            args = ['-m', 'viperleed.gui', '--detect-devices']
+        exe = sys.executable
+        args = ['-m', 'viperleed.gui.measure.devicedetection']
 
         self._timeout = qtc.QTimer(self)
         self._timeout.setSingleShot(True)
@@ -294,3 +288,7 @@ def run_device_detection():
             detected[device_type] = {'success': True,
                                      'devices': serialized_devs}
     return detected
+
+if __name__ == '__main__':
+    """Run device detection when invoked as a script."""
+    print(json.dumps(run_device_detection(), cls=JSONEncoderSafe))
