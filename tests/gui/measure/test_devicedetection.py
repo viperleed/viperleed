@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import json
 
 from PyQt5 import QtCore as qtc
+from pytest import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
@@ -21,6 +22,17 @@ from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
 
 
 _QPROCESS = 'viperleed.gui.measure.devicedetection.qtc.QProcess'
+
+
+@fixture
+def _worker():
+    """Create a DeviceDetectionWorker with error and device collectors."""
+    worker = DeviceDetectionWorker()
+    errors = []
+    devices = []
+    worker.error_occurred.connect(errors.append)
+    worker.devices_detected.connect(devices.append)
+    return worker, errors, devices
 
 
 # pylint: disable=protected-access
@@ -73,15 +85,10 @@ def test_detect_devices_does_not_restart_running_process(mocker):
                        ).encode(), b''),
     ],
 )
-def test_process_finished_failure_cases(mocker, exit_code, stdout, stderr):
+def test_process_finished_failure_cases(mocker, _worker, exit_code, stdout,
+                                        stderr):
     """A failing subprocess should emit an empty device list."""
-    worker = DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
+    worker, errors, devices = _worker
 
     proc = mocker.Mock()
     proc.readAllStandardOutput.return_value.data.return_value = stdout
@@ -97,15 +104,9 @@ def test_process_finished_failure_cases(mocker, exit_code, stdout, stderr):
     worker.stop.assert_called_once()
 
 
-def test_process_finished_import_failure(mocker):
+def test_process_finished_import_failure(mocker, _worker):
     """Import errors during object reconstruction should be reported."""
-    worker = DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
+    worker, errors, devices = _worker
 
     proc = mocker.Mock()
     proc.readAllStandardOutput.return_value.data.return_value = json.dumps({
@@ -136,15 +137,9 @@ def test_process_finished_import_failure(mocker):
     worker.stop.assert_called_once()
 
 
-def test_detection_timeout(mocker):
+def test_detection_timeout(mocker, _worker):
     """Timeout should stop detection and emit an empty device list."""
-    worker = DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
+    worker, errors, devices = _worker
 
     proc = mocker.Mock()
     proc.state.return_value = qtc.QProcess.Running
@@ -160,15 +155,9 @@ def test_detection_timeout(mocker):
     worker.stop.assert_called_once()
 
 
-def test_process_error(mocker):
+def test_process_error(mocker, _worker):
     """Process launch errors should emit an empty device list."""
-    worker = DeviceDetectionWorker()
-
-    errors = []
-    devices = []
-
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
+    worker, errors, devices = _worker
 
     proc = mocker.Mock()
     proc.errorString.return_value = 'boom'
@@ -210,25 +199,17 @@ def test_stop_returns_early_when_no_process():
     assert worker._process is None
 
 
-def test_detection_timeout_no_process():
+def test_detection_timeout_no_process(_worker):
     """_on_detection_timeout should be a no-op when _process is None."""
-    worker = DeviceDetectionWorker()
-    errors = []
-    devices = []
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
+    worker, errors, devices = _worker
     worker._on_detection_timeout()
     assert not errors
     assert not devices
 
 
-def test_process_error_no_process():
+def test_process_error_no_process(_worker):
     """_on_process_error should be a no-op when _process is None."""
-    worker = DeviceDetectionWorker()
-    errors = []
-    devices = []
-    worker.error_occurred.connect(errors.append)
-    worker.devices_detected.connect(devices.append)
+    worker, errors, devices = _worker
     worker._on_process_error(qtc.QProcess.FailedToStart)
     assert not errors
     assert not devices
@@ -303,8 +284,8 @@ test_cases = (
 )
 
 
-@parametrize('devices, ctrl, camera, error', test_cases)
-def test_device_detection_worker(mocker, devices, ctrl, camera, error):
+@parametrize('devices, ctrl, cam, error', test_cases)
+def test_device_detection_worker(mocker, _worker, devices, ctrl, cam, error):
     """Check device detection."""
 
     finished_signal = _FakeSignal()
@@ -327,11 +308,7 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
     mocker.patch(_QPROCESS, return_value=proc)
     mocker.patch('viperleed.gui.measure.devicedetection.qtc.QTimer')
 
-    worker = DeviceDetectionWorker()
-    emitted_errors = []
-    emitted_devices = []
-    worker.error_occurred.connect(emitted_errors.append)
-    worker.devices_detected.connect(emitted_devices.append)
+    worker, emitted_errors, emitted_devices = _worker
     worker.detect_devices()
 
     if emitted_devices[0]['controller']:
@@ -339,9 +316,9 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
     else:
         assert emitted_devices[0]['controller'] == ctrl
     if emitted_devices[0]['camera']:
-        assert camera in emitted_devices[0]['camera']
+        assert cam in emitted_devices[0]['camera']
     else:
-        assert emitted_devices[0]['camera'] == camera
+        assert emitted_devices[0]['camera'] == cam
     if emitted_errors:
         assert emitted_errors[0][0] == error
     else:
