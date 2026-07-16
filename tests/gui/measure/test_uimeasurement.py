@@ -26,10 +26,8 @@ class _FakeSignal:
         self.connected.append(slot)
 
     def emit(self, *args, **kwargs):
-        """Count emissions and call connected slots."""
+        """Count emissions."""
         self.emitted += 1
-        for slot in self.connected:
-            slot(*args, **kwargs)
 
     def disconnect(self, slot):
         """Store disconnected slots."""

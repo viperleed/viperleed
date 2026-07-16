@@ -346,4 +346,3 @@ def test_device_detection_worker(mocker, devices, ctrl, camera, error):
         assert emitted_errors[0][0] == error
     else:
         assert emitted_errors == error
-
