@@ -311,14 +311,22 @@ def test_device_detection_worker(mocker, _worker, devices, ctrl, cam, error):
     worker, emitted_errors, emitted_devices = _worker
     worker.detect_devices()
 
+    # Check controllers: if a controller was found, verify the expected
+    # controller key exists in the result. Otherwise verify the result
+    # is empty.
     if emitted_devices[0]['controller']:
         assert ctrl in emitted_devices[0]['controller']
     else:
         assert emitted_devices[0]['controller'] == ctrl
+
+    # Check cameras: same logic as controller.
     if emitted_devices[0]['camera']:
         assert cam in emitted_devices[0]['camera']
     else:
         assert emitted_devices[0]['camera'] == cam
+
+    # Check errors: if errors were emitted, verify the first error matches
+    # the expected error type. Else check that no errors were emitted.
     if emitted_errors:
         assert emitted_errors[0][0] == error
     else:
