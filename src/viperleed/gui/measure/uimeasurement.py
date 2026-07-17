@@ -298,6 +298,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             'last_cfg': ViPErLEEDSettings(),
             'errors': [],         # Report a bunch at once
             'n_retry_close': 0,   # Try at most 50 times, i.e., 2.5 sec
+            'autodetect_enabled': True,  # Track autodetection state
             }
         self._timers = {
             'report_errors': qtc.QTimer(parent=self),
@@ -449,6 +450,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         if not self._device_search_allowed():
             return
         self._device_search_in_progress = True
+        self._ctrls['menus']['force_detect'].setEnabled(False)
         self.detect_devices_requested.emit()
 
     def _device_search_allowed(self):
@@ -463,8 +465,8 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _on_devices_detected(self, detected_devices):
         """Update the menu with newly detected devices."""
         try:
-            devices_menu = self._ctrls['menus']['devices']
-            cameras, controllers = [a.menu() for a in devices_menu.actions()]
+            cameras = self._ctrls['menus']['devices'].actions()[0].menu()
+            controllers = self._ctrls['menus']['devices'].actions()[1].menu()
             cameras.clear()
             controllers.clear()
 
@@ -487,6 +489,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             controllers.setEnabled(bool(controllers.actions()))
         finally:
             self._device_search_in_progress = False
+            self._ctrls['menus']['force_detect'].setEnabled(True)
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
@@ -598,13 +601,24 @@ class Measure(ViPErLEEDPluginBase):                                             
         act.triggered.connect(self._on_read_pressed)
 
         # Devices
-        devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
-        devices_menu.aboutToShow.connect(self.update_device_lists)
+        devices_menu = self._ctrls['menus']['devices']
         menu.insertMenu(self.about_action, devices_menu)
         devices_menu.addMenu('Cameras')
         devices_menu.addMenu('Controllers')
         for action in self._ctrls['menus']['devices'].actions():
             action.menu().setEnabled(False)
+
+        # Add autodetection toggle action
+        autodetect_action = devices_menu.addAction('Enable &Autodetection')
+        autodetect_action.setCheckable(True)
+        autodetect_action.setChecked(True)
+        autodetect_action.triggered.connect(self._on_autodetect_toggled)
+        self._ctrls['menus']['autodetect'] = autodetect_action
+
+        devices_menu.addSeparator()
+        force_detect_action = devices_menu.addAction('Force Device Detection')
+        force_detect_action.triggered.connect(self.update_device_lists)
+        self._ctrls['menus']['force_detect'] = force_detect_action
 
         # Tools
         tools_menu = self._ctrls['menus']['tools']
@@ -830,6 +844,15 @@ class Measure(ViPErLEEDPluginBase):                                             
         for default in default_settings:
             shutil.copy2(default, base.get_default_path())
         ensure_aliases_exist()
+
+    @qtc.pyqtSlot(bool)
+    def _on_autodetect_toggled(self, checked):
+        """Enable or disable device autodetection."""
+        self._glob['autodetect_enabled'] = checked
+        if checked:
+            self._timers['refresh_devices'].start()
+        else:
+            self._timers['refresh_devices'].stop()
 
     def _on_bad_pixels_selected(self):
         """Stop all cameras, then open the dialog."""
