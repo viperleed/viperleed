@@ -450,7 +450,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         if not self._device_search_allowed():
             return
         self._device_search_in_progress = True
-        self._ctrls['menus']['force_detect'].setEnabled(False)
+        self._update_force_detect_button_state()
         self.detect_devices_requested.emit()
 
     def _device_search_allowed(self):
@@ -460,6 +460,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         if self.measurement and self.measurement.running:
             return False
         return True
+
+    def _update_force_detect_button_state(self):
+        """Update the enabled state of the force detect button."""
+        enabled = self._device_search_allowed()
+        self._ctrls['menus']['force_detect'].setEnabled(enabled)
 
     @qtc.pyqtSlot(object)
     def _on_devices_detected(self, detected_devices):
@@ -489,7 +494,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             controllers.setEnabled(bool(controllers.actions()))
         finally:
             self._device_search_in_progress = False
-            self._ctrls['menus']['force_detect'].setEnabled(True)
+            self._update_force_detect_button_state()
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
@@ -567,7 +572,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         for ctrl in ('measure', 'abort', 'set_energy', 'energy_input'):
             self._ctrls[ctrl].setFont(font)
             self._ctrls[ctrl].ensurePolished()
-        self._switch_button_enable(True)
 
         layout = self.centralWidget().layout()
 
@@ -577,6 +581,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         layout.addWidget(self._ctrls['energy_input'], 2, 2, 1, 1)
         self._compose_menu()
         self._compose_error_box()
+        self._switch_button_enable(True)
 
         # Take care of dialogs and other windows
         self._dialogs['sys_settings'].setModal(True)
@@ -975,6 +980,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         if self._glob['errors']:
             self._timers['report_errors'].start()
         self._timers['start_measurement'].stop()
+        # Reset device search state if worker errored
+        if isinstance(sender, DeviceDetectionWorker):
+            self._device_search_in_progress = False
+            self._update_force_detect_button_state()
 
     @qtc.pyqtSlot()
     def _on_measurement_finished(self, *_):
@@ -1280,3 +1289,4 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['abort'].setEnabled(not idle)
         self.menuBar().setEnabled(idle)
         self.statusBar().showMessage('Ready' if idle else 'Busy')
+        self._update_force_detect_button_state()
