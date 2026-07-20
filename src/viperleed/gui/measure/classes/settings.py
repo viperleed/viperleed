@@ -437,32 +437,33 @@ class ViPErLEEDSettings(AliasConfigParser):
         """
         invalid_settings = []
         for setting in required_settings:
-            if not setting or len(setting) > 3:
-                raise TypeError(f'Invalid mandatory setting {setting}. '
-                                f'with length {len(setting)}. Expected '
-                                'length <= 3.')
+            length = len(setting)
+            if not setting or length > 3:
+                raise TypeError(f'Invalid mandatory setting {setting}. with '
+                                f'length {length}. Expected length <= 3.')
+
+            settings_broken = False
+            if not self.has_section(setting[0]):
+                settings_broken = True
+            elif length > 1 and not self.has_option(setting[0], setting[1]):
+                settings_broken = True
+            elif length > 2 and self[setting[0]][setting[1]] not in setting[2]:
+                settings_broken = True
+
+            if not settings_broken:
+                continue
 
             # (<section>,)
-            if not self.has_section(setting[0]):
+            if length == 1:
                 invalid_settings.append(setting[0])
                 continue
-            if len(setting) == 1:
+            # (<section>, <option>)
+            if length == 2:
+                invalid_settings.append(f'{setting[0]}/{setting[1]}')
                 continue
-
-            # (<section>, <option>) or (<section>, <option>, <admissible>)
-            section, option = setting[:2]
-            if not self.has_option(section, option):
-                invalid_settings.append(f'{section}/{option}')
-                continue
-
             # (<section>, <option>, <admissible>)
-            if len(setting) == 3:
-                admissible_values = setting[2]
-                if self[section][option] not in admissible_values:
-                    invalid_settings.append(
-                        '/'.join(setting[:2])
-                        + ' not one of ' + ', '.join(admissible_values)
-                        )
+            invalid_settings.append('/'.join(setting[:2]) + ' not one of ' +
+                                    ', '.join(setting[2]))
         return invalid_settings
 
     def read(self, filenames, encoding=None):
@@ -871,10 +872,18 @@ class SystemSettings(ViPErLEEDSettings):
 
         # We're missing settings. Let's add them back...
         for missing in invalid:
-            section, option = missing.split('/')
+            # 1. Strip off the value-error suffix if present
+            clean_keys = missing.split(' not one of ')[0]
+            if '/' in clean_keys:
+                section, option = clean_keys.split('/')
+            else:
+                # Only section is missing, no option
+                section = clean_keys
+                option = None
             if section not in self:
                 self.add_section(section)
-            self.set(section, option, '')
+            if option:
+                self.set(section, option, '')
 
         if invalid:
             # ...and save changes
