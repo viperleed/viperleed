@@ -616,7 +616,16 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Add autodetection toggle action
         autodetect_action = devices_menu.addAction('Enable &Autodetection')
         autodetect_action.setCheckable(True)
-        autodetect_action.setChecked(True)
+        # Load saved setting, default to True if not set
+        try:
+            saved_state = self.system_settings.getboolean(
+                'GUI', 'autodetect_devices', fallback=True
+                )
+        except ValueError:
+            self.system_settings.set('GUI', 'autodetect_devices', 'True')
+            saved_state = True
+        self._glob['autodetect_enabled'] = saved_state
+        autodetect_action.setChecked(saved_state)
         autodetect_action.triggered.connect(self._on_autodetect_toggled)
         self._ctrls['menus']['autodetect'] = autodetect_action
 
@@ -699,7 +708,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
-        self._timers['refresh_devices'].start()
+        if self._glob['autodetect_enabled']:
+            self._timers['refresh_devices'].start()
 
     def _connect_measurement(self):
         connect = functools.partial(base.safe_connect, type=_UNIQUE)
@@ -854,6 +864,8 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _on_autodetect_toggled(self, checked):
         """Enable or disable device autodetection."""
         self._glob['autodetect_enabled'] = checked
+        self.system_settings.set('GUI', 'autodetect_devices', str(checked))
+        self.system_settings.update_file()
         if checked:
             self._timers['refresh_devices'].start()
         else:

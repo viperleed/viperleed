@@ -755,6 +755,7 @@ class SystemSettings(ViPErLEEDSettings):
         ('PATHS', 'arduino_cli'),
         ('PATHS', 'drivers'),
         ('PATHS', 'firmware'),
+        ('GUI', 'autodetect_devices'),
         )
 
     def __new__(cls, *args, **kwargs):
