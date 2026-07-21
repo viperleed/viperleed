@@ -883,12 +883,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def _continue_preparation(self, _):
         """Continue preparation for measurements.
 
-        Do nothing till all controllers are done with the first part
-        of the preparation, then set the starting energy and wait for
-        stabilization, then move on to the second segment (i.e.,
-        everything that is done after the starting energy is set).
-        Finally, move on to trigger the beginning of the measurement
-        loop.
+        Perform all preparation tasks that are done after the starting
+        energy is set. Finally, move on to trigger the beginning of the
+        measurement loop.
 
         Emits
         -----
@@ -898,7 +895,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         if self.primary_controller.busy:
             return
-
+        # Assert that no secondary controllers are busy either.
+        # This is a safety check in case the signal connection logic
+        # changes in the future.
+        assert not any(c.busy for c in self.secondary_controllers), \
+            ('Secondary controller(s) still busy: '
+             f'{[c.name for c in self.secondary_controllers if c.busy]}')
         base.safe_disconnect(self.primary_controller.serial.busy_changed,
                              self._continue_preparation)
         # Use the controller.busy_changed to move from this segment of the
@@ -1637,8 +1639,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 pass
 
     @qtc.pyqtSlot(bool)
-    def _set_starting_energy(self):
+    def _set_starting_energy(self, _):
         """Set the starting energy and wait for stabilization.
+
+        Sets the starting energy and moves on to _continue_preparation
+        after the settle time for the first energy has passed.
 
         Returns
         -------
