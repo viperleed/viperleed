@@ -464,6 +464,11 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _update_force_detect_button_state(self):
         """Update the enabled state of the force detect button."""
         enabled = self._device_search_allowed()
+        action = self._ctrls['menus']['force_detect']
+        if self._device_search_in_progress:
+            action.setText('Detecting devices...')
+        else:
+            action.setText('Force Device Detection')
         self._ctrls['menus']['force_detect'].setEnabled(enabled)
 
     @qtc.pyqtSlot(object)
