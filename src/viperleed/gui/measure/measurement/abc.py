@@ -967,6 +967,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """Disconnect necessary camera signals."""
         disconnect = base.safe_disconnect
         for camera in self.cameras:
+            disconnect(camera.busy_changed, self._check_preparation_finished)
             disconnect(camera.busy_changed, self._on_camera_busy_changed)
             disconnect(self._camera_timer.timeout, camera.trigger_now)
             disconnect(self._preparation_started, camera.start)
@@ -983,7 +984,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         disconnect(self._preparation_started, ctrl.begin_preparation)
         disconnect(self._preparation_continued, ctrl.continue_preparation)
         busy_slots = (self._set_starting_energy,
-                      self._continue_preparation,
                       self._check_preparation_finished,
                       self._cleanup_and_end, self._finalize)
         for slot in busy_slots:
@@ -1004,6 +1004,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for ctrl in self.secondary_controllers:
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
         self._disconnect_controller(primary)
+        base.safe_disconnect(primary.serial.busy_changed,
+                             self._continue_preparation)
 
     def _disconnect_secondary_controllers(self):
         """Disconnect serials and signals of the secondary controllers."""
@@ -1507,10 +1509,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             about_to_trigger = self.primary_controller.about_to_trigger
             for ctrl in self.secondary_controllers:
                 base.safe_disconnect(about_to_trigger, ctrl.measure_now)
+            base.safe_disconnect(self.primary_controller.serial.busy_changed,
+                                 self._continue_preparation)
 
         for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.busy_changed,
-                                 self._continue_preparation)
             base.safe_disconnect(ctrl.busy_changed,
                                  self._check_preparation_finished)
             # Force all controllers to busy, such that ._finalize()
@@ -1519,6 +1521,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             base.safe_connect(ctrl.busy_changed, self._finalize, type=_UNIQUE)
 
         for camera in self.cameras:
+            base.safe_disconnect(camera.busy_changed,
+                                 self._check_preparation_finished)
             base.safe_connect(camera.stopped, self._finalize, type=_UNIQUE)
 
         self._request_stop_devices.emit()
@@ -1654,6 +1658,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed, self._set_starting_energy)
         primary = self.primary_controller
+
+        # We are using primary.serial.busy_changed here because it is
+        # emitted after the settle time has elapsed. We cannot use the
+        # primary.busy_changed as the primary will not change to
+        # busy = False after the energy has been set.
         base.safe_connect(primary.serial.busy_changed,
                           self._continue_preparation, type=_UNIQUE)
         primary.set_energy(self._energy_ramp.start_energy,
