@@ -1158,10 +1158,16 @@ class ViPErinoController(MeasureControllerABC):
         tc_voltages = self.measurements[QuantityInfo.TEMPERATURE]
         cjc_temperatures = self.measurements.get(QuantityInfo.COLD_JUNCTION,
                                                  [None]*len(tc_voltages))
-        self.measurements[QuantityInfo.TEMPERATURE] = [
-            self.thermocouple.temperature(v, t0)
-            for v, t0 in zip(tc_voltages, cjc_temperatures)
-            ]
+        try:
+            self.measurements[QuantityInfo.TEMPERATURE] = [
+                self.thermocouple.temperature(v, t0)
+                for v, t0 in zip(tc_voltages, cjc_temperatures)
+                ]
+        except ValueError as err:
+            self.measurements[QuantityInfo.TEMPERATURE] = tc_voltages
+            self.emit_error(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                            f'\nInfo: {err}.')
+
 
     @classmethod
     def _get_version(cls, config):
