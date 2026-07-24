@@ -155,9 +155,14 @@ class CollapsibleDeviceList(CollapsibleList):
 
     def event(self, event):
         """Extend event to match QScrollArea width to required width."""
-        width = self.widget().sizeHint().width()+10 if self.widget() else 10
-        if width > self.minimumWidth():
-            self.setMinimumWidth(width)
+        event_type = event.type()
+        if event_type in (qtc.QEvent.Show,
+                          qtc.QEvent.Resize,
+                          qtc.QEvent.LayoutRequest):
+            required_width = self._required_width()
+            new_min_width = max(self.minimumWidth(), required_width)
+            if new_min_width != self.minimumWidth():
+                self.setMinimumWidth(new_min_width)
         return super().event(event)
 
     def store_settings(self):
@@ -258,6 +263,20 @@ class CollapsibleDeviceList(CollapsibleList):
             self._widths[label] = q_label.sizeHint().width()
             top_labels.addSpacing(_PIXEL_SPACING)
         self._layout.insertLayout(1, top_labels)
+
+    def _required_width(self):
+        """Return minimum pixel width required to display all contents."""
+        if not self.widget():
+            return 10
+        widget = self.widget()
+        width = widget.minimumSizeHint().width()
+        view_widths = (
+            view.minimumSizeHint().width() for view in self.views.keys()
+            )
+        width = max(width, max(view_widths, default=0))
+        width += self.verticalScrollBar().sizeHint().width()
+        width += 2*self.frameWidth() + _PIXEL_SPACING
+        return width
 
     def _update_stored_settings(self):
         """Update the internally stored settings.
