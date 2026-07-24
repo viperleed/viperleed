@@ -114,6 +114,7 @@ class CollapsibleDeviceList(CollapsibleList):
             view.set_settings_folder(self.default_settings_folder)
         self.append_view(view)
         view.settings_changed.connect(self._emit_and_update_settings)
+        view.error_occurred.connect(self.error_occurred)
         return view
 
     def are_settings_ok(self):

@@ -3,11 +3,12 @@
 This module contains the definition of the TimeResolved class
 for measuring data in a time-based fashion.
 """
+
 __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-07-19'
 __license__ = 'GPLv3+'
 
@@ -23,7 +24,6 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement._meassettings import DeviceEditor
-from viperleed.gui.measure.measurement._meassettings import START_E_NAME
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.gui.widgets.checkboxes import QCheckBoxInvertedSignal
 from viperleed.gui.widgets.lib import retain_size_when_hidden
@@ -43,8 +43,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         *MeasurementABC._mandatory_settings,
         ('measurement_settings', 'is_continuous'),
         ('measurement_settings', 'energy_step_duration'),
-        ('energies', 'endless'),
-        ('energies', 'constant_energy'),
         )
 
     _request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                  # TODO: could be done with QMetaObject.invokeMethod
@@ -89,82 +87,12 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # should also not invoke in _on_one_measurement_triggered
 
     @property
-    def _constant_energy(self):
-        """Return whether the measurement has a static energy."""
-        fallback = False
-        if not self.settings:
-            return fallback
-        try:
-            constant_energy = self.settings.getboolean('energies',
-                                                       'constant_energy')
-        except (TypeError, ValueError):
-            # Not a bool
-            constant_energy = fallback
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/constant_energy', '')
-        return constant_energy
-
-    @property
-    def _delta_energy(self):
-        """Return the amplitude of an energy step in eV."""
-        # pylint: disable=redefined-variable-type
-        # Seems a pylint bug
-
-        # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actually need it.
-        fallback = 0.5
-        if not self.settings:
-            return fallback
-        try:
-            delta = self.settings.getfloat('energies', 'delta_energy')
-        except (TypeError, ValueError):
-            # Not a float
-            delta = fallback
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/delta_energy', '')
-        return delta
-
-    @property
-    def _endless(self):
-        """Return whether the measurement is endless."""
-        fallback = False
-        if not self.settings:
-            return fallback
-        try:
-            endless = self.settings.getboolean('energies', 'endless')
-        except (TypeError, ValueError):
-            # Not a bool
-            endless = fallback
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/endless', '')
-        return endless
-
-    @property
-    def _end_energy(self):
-        """Return the energy (in eV) at which the energy ramp ends."""
-        # pylint: disable=redefined-variable-type
-        # Seems a pylint bug
-
-        # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actually need it.
-        fallback = 0.0
-        if not self.settings:
-            return fallback
-        try:
-            egy = self.settings.getfloat('energies', 'end_energy')
-        except (TypeError, ValueError):
-            # Not a float
-            egy = fallback
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/end_energy', '')
-        return egy
-
-    @property
     def _n_digits(self):
         """Return the appropriate number of digits for padding image names."""
         # Used for zero-padding counter in image names.
-        num_meas = (1 + round((self._end_energy - self.start_energy)            # TODO: get it from generator when implemented correctly
-                              / self._delta_energy))
+        num_meas = self._energy_ramp.n_steps
+        if num_meas <= 0:
+            return super()._n_digits
         num_meas *= ceil(self.energy_step_duration / self.measurement_interval)
         return len(str(num_meas))
 
@@ -176,36 +104,36 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         min_t = self.energy_step_duration_min
         try:
-            interval = self.settings.getint('measurement_settings',
+            duration = self.settings.getint('measurement_settings',
                                             'energy_step_duration')
         except (TypeError, ValueError):
             # Not an int
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/energy_step_duration', '')
-            interval = min_t
+            duration = min_t
 
-        if interval < min_t:
+        if duration < min_t:
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                f'{interval} (too short)',
+                f'{duration} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
-            interval = min_t
+            duration = min_t
             self.settings.set('measurement_settings', 'energy_step_duration',
-                              str(interval))
-            self._energy_step_timer.setInterval(interval)
-        return interval
+                              str(duration))
+            self._energy_step_timer.setInterval(duration)
+        return duration
 
     @energy_step_duration.setter
-    def energy_step_duration(self, new_interval):
+    def energy_step_duration(self, new_duration):
         """Set the duration of one energy step (msec)."""
         min_t = self.energy_step_duration_min
-        if new_interval < min_t:
-            raise ValueError(f"{new_interval} is too small for the "
-                             f"controllers. Minimum is {min_t}")
-        self.settings.set('measurement_settings', 'measurement_interval',
-                          str(new_interval))
-        self._energy_step_timer.setInterval(new_interval)
+        if new_duration < min_t:
+            raise ValueError(f'{new_duration} is too small for the '
+                             f'controllers. Minimum is {min_t}')
+        self.settings.set('measurement_settings', 'energy_step_duration',
+                          str(new_duration))
+        self._energy_step_timer.setInterval(new_duration)
 
     @property
     def energy_step_duration_min(self):
@@ -245,7 +173,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             interval = min_t
 
         if interval < min_t:
-            txt = f"{interval} (too short)"
+            txt = f'{interval} (too short)'
             interval = min_t
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
@@ -264,8 +192,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # continuous mode.
         min_t = self.measurement_interval_min
         if new_interval < min_t:
-            raise ValueError(f"{new_interval} out of bounds. "
-                             f"Should be at least {min_t}")
+            raise ValueError(f'{new_interval} out of bounds. '
+                             f'Should be at least {min_t}')
         self.settings.set('measurement_settings', 'measurement_interval',
                           str(new_interval))
         self._trigger_one_measurement.setInterval(new_interval)
@@ -331,11 +259,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if not super().are_runtime_settings_ok():
             return False
 
-        num_meas = (1 + round((self._end_energy - self.start_energy)
-                              / self._delta_energy))
         if self.is_continuous:
             self._prepare_continuous_mode()
-            self.data_points.nr_steps_total = num_meas                          # TODO: incorrect for endless and constant energy. Also, unused now that we use different DataPoints for plotting and measurement.
+            self.data_points.nr_steps_total = max(1, self._energy_ramp.n_steps)
         else:
             # With the next connection, triggering the first
             # measurement at the current energy also starts
@@ -348,30 +274,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             about_to_trigger.connect(self._camera_timer.start)
 
         return True
-
-    def energy_generator(self):                                                 # TODO: move to parent; improve.
-        """Determine next energy to set.
-
-        Determine the next energy to set using parameters from
-        the config and self.current_energy.
-
-        Returns
-        -------
-        energy : float
-            Next energy to set.
-        """
-        if self._constant_energy:
-            return self.start_energy
-        energy = self.current_energy + self._delta_energy
-        ramp_finished = energy > self._end_energy
-        if self._delta_energy < 0:
-            ramp_finished = energy < self._end_energy
-
-        if self._endless:
-            self.new_data_available.emit(self.data_points[-1])
-            if ramp_finished:
-                energy = self.start_energy
-        return energy
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
@@ -391,22 +293,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 )
 
         info = (
-            ('measurement_settings', 'is_continuous',
-             'Continuous measurement',
+            ('measurement_settings', 'is_continuous', 'Continuous measurement',
              '<nobr>If selected, the measurement will be a continuous, '
              '</nobr>time-resolved measurement, i.e., it will return '
              'data as quickly as possible, without averaging. Useful to '
              'perform fast sampling of quantities. Typically used for '
              'determining response times of a LEED unit. For <it>I</it>'
-             '(<it>t</it>) measurments, use non-continuous mode.'),
-            ('energies', 'endless', 'Keep repeating',
-             '<nobr>If selected, the measurement will return to the start '
-             '</nobr>energy after reaching the end and go on. This kind '
-             'of measurement can only be manually aborted.'),
-            ('energies', 'constant_energy', 'Constant energy',
-             '<nobr>If selected, the measurement will always remain at '
-             f'</nobr>{START_E_NAME}. This kind of measurement can only'
-             ' be manually aborted.'),
+             '(<it>t</it>) measurements, use non-continuous mode.'),
             )
         for section, option_name, display_name, tip in info:
             widget = QCheckBoxInvertedSignal()
@@ -415,17 +308,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 display_name=display_name, tooltip=tip
                 )
 
-        end_energy = handler['energies']['end_energy']
-        delta_energy = handler['energies']['delta_energy']
-        constant = handler['energies']['constant_energy']
         continuous = handler['measurement_settings']['is_continuous']
         interval = handler['measurement_settings']['measurement_interval']
-        for option in (end_energy, delta_energy):
-            constant.handler_widget.unchecked.connect(option.set_enabled)
-            constant.handler_widget.unchecked.connect(
-                option.handler_widget.setVisible
-                )
-            retain_size_when_hidden(option.handler_widget)
         continuous.handler_widget.unchecked.connect(interval.set_enabled)
         continuous.handler_widget.unchecked.connect(
             interval.handler_widget.setVisible
@@ -475,7 +359,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # i.e., when the primary_controller is done setting the
         # last energy (self.current_energy), i.e., when it emits
         # .about_to_trigger. This is necessary, since we may be
-        # using a non-abrupt self.step_profile.
+        # using a non-abrupt self._energy_ramp.step_profile.
         base.safe_connect(about_to_trigger, self._energy_step_timer.start,
                           type=_UNIQUE)
 
@@ -497,7 +381,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # is requested also causes _trigger_one_measurement to start.
         # This will keep firing at .measurement_interval, calling
         # ctrl.measure_now() and camera.trigger_now() each time
-        self.set_leed_energy(*self.step_profile,
+        self.set_leed_energy(*self._energy_ramp.step_profile,
                              self.current_energy, settle_time)
 
         if _continuous:
@@ -580,26 +464,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             # this point, since we may end up in an infinite loop.
             self.data_points.calculate_times(complain=False)
         super()._finalize()
-
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
-
-        If the desired number of steps/measurements has been reached
-        evaluate data and return True. Otherwise generate next energy
-        and return False.
-
-        Returns
-        -------
-        bool
-        """
-        super()._is_finished()
-        ramp_finished = self.energy_generator() > self._end_energy
-        if self._delta_energy < 0:
-            ramp_finished = self.current_energy < self._end_energy
-        if ramp_finished:
-            return True
-        self.current_energy = self.energy_generator()
-        return False
 
     def _make_cameras(self):
         """Make cameras from self.settings, none in continuous."""

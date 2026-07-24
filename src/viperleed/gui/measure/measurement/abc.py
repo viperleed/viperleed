@@ -9,7 +9,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-07-19'
 __license__ = 'GPLv3+'
 
@@ -29,6 +29,8 @@ from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import QObjectWithSettingsABC
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
+from viperleed.gui.measure.classes.energyramp import EnergyRampABC
+from viperleed.gui.measure.classes.energyramp import get_ramp_from_settings
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes.settings import SystemSettings
@@ -38,8 +40,7 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsHandler,
     SettingsTag,
     )
-from viperleed.gui.measure.measurement import _meassettings as _settings
-from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.gui.measure.measurement._meassettings import EnergyRampEditor
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -133,10 +134,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     _mandatory_settings = (
         ('devices', 'primary_controller'),
-        ('energies', 'start_energy'),
-        ('energies', 'delta_energy'),
-        ('energies', 'end_energy'),
-        ('energies', 'step_profile'),
         )
 
     def __init__(self, settings):
@@ -145,11 +142,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._other_mandatory_settings = [('measurement_settings',
                                            'measurement_class',
                                            (self.__class__.__name__,))]
-        self._current_energy = 0
-        self._previous_energy = 0
         self._primary_controller = None
         self._secondary_controllers = []
         self._cameras = []
+        self._energy_ramp = None
         self._aborted = False
         self._has_been_used_before = False  # Used to stop reuse of object.     # TODO: We may want to modify the measurement to allow this behaviour.
         self._temp_dir = None   # Directory for saving files
@@ -220,7 +216,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @property
     def current_energy(self):
         """Return the current energy in electronvolts."""
-        return self._current_energy
+        if not self._energy_ramp:
+            return 0.0
+        return self._energy_ramp.current_energy
 
     @current_energy.setter
     def current_energy(self, new_energy):
@@ -235,8 +233,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         new_energy : float
             The new current energy
         """
-        self._previous_energy = self.current_energy
-        self._current_energy = new_energy
+        if not self._energy_ramp:
+            raise RuntimeError('Cannot set current energy '
+                               'if no energy ramp is set.')
+        self._energy_ramp.current_energy = new_energy
 
     @property
     def current_step_nr(self):
@@ -252,13 +252,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def hv_settle_time(self):
         """Return the time interval for the settling of energies."""
         if not self.primary_controller:
-            raise RuntimeError("Cannot return a voltage-settling time "
-                               "when no primary controller was set.")
+            raise RuntimeError('Cannot return a voltage-settling time '
+                               'when no primary controller was set.')
         return self.primary_controller.hv_settle_time
 
     @property
     def primary_controller(self):
-        """Return the primary controllers used by this class."""
+        """Return the primary controller used by this class."""
         return self._primary_controller
 
     @primary_controller.setter
@@ -318,66 +318,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             thread.start(priority=thread.TimeCriticalPriority)
         self._secondary_controllers = new_controllers
         self._connect_secondary_controllers()
-
-    @property
-    def start_energy(self):
-        """Return the first energy for the energy ramp."""
-        if not self.settings:
-            return 0.0
-        try:
-            return self.settings.getfloat('energies', 'start_energy',
-                                          fallback=0)
-        except (TypeError, ValueError):
-            # Not a float
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/start_energy', '')
-            return 0.0
-
-    @property
-    def step_profile(self):                                                     # TODO: probably move to generator class?
-        """Return a list of energies and times for setting the next energy.
-
-        The returned value excludes the very last step, i.e.,
-        self.current_energy and the settling time for it.
-        A typical call to set_leed_energy would be
-            self.set_leed_energy(*self.step_profile,
-                                 self.current_energy,
-                                 last_settle_time,
-                                 ...)
-
-        Returns
-        -------
-        step_profile : tuple
-            Sequence of energies and waiting intervals.
-        """
-        try:
-            profile = self.settings.getsequence('energies', 'step_profile',
-                                                fallback=("abrupt",))
-        except NotASequenceError:
-            profile = self.settings['energies']['step_profile']
-
-        if isinstance(profile, str):
-            profile = (profile,)
-
-        # Now we have two acceptable cases:
-        # (1) the sequence can be cast to (float, int, float, int...)
-        # (2) the first entry is a known profile shape
-        try:
-            return self._step_profile_from_strings(profile)
-        except (ValueError, TypeError):
-            pass
-
-        shape, *params = profile
-        if shape.lower() == 'abrupt':
-            values = tuple()
-        elif shape.lower() == 'linear':
-            values = self._get_linear_step(*params)
-        else:
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/step_profile',
-                            f'Unknown profile shape {shape}')
-            values = tuple()
-        return values
 
     @abstractmethod
     @qtc.pyqtSlot()
@@ -450,11 +390,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             specify additional information on what is wrong with each
             invalid setting.
         """
+        invalid_ramp_settings = EnergyRampABC.are_settings_invalid(
+            settings
+            )
+
         invalid_settings = settings.misses_settings(
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
-        return [(invalid,) for invalid in invalid_settings]
+        return [(invalid,) for invalid in (*invalid_settings,
+                                           *invalid_ramp_settings)]
 
     def disconnect_devices_and_notify(self):
         """Disconnect devices and emit devices_disconnected."""
@@ -480,11 +425,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         as the default button of the dialog.
 
         The base-class implementation returns a handler that
-        already contains the following settings:
-            'energies'/'start_energy'
-            'energies'/'delta_energy'
-            'energies'/'end_energy'
-            'energies'/'step_profile'
+        already contains the EnergyRampEditor for energy ramp
+        settings.
 
         Returns
         -------
@@ -517,31 +459,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             type_display, display_name='Measurement type',
             )
 
-        handler.add_section('energies', tags=SettingsTag.REGULAR)
-        info = (
-            ('start_energy', _settings.START_E_NAME,
-             '<nobr>The energy at which the measurement starts.</nobr>'),
-            ('delta_energy', _settings.DELTA_E_NAME,
-             '<nobr>The energy difference between two measurement '
-             'steps.</nobr>'),
-            ('end_energy', _settings.END_E_NAME,
-             '<nobr>The energy value at which </nobr>'
-             'the measurement will finish.'),
-            )
-        for option_name, display_name, tip in info:
-            widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
-                                           suffix=' eV')
-            handler.add_option('energies', option_name, handler_widget=widget,
-                               display_name=display_name, tooltip=tip)
-        delta_energy = handler['energies']['delta_energy']
-        with qtc.QSignalBlocker(delta_energy.handler_widget):
-            delta_energy.handler_widget.soft_minimum = 0.1                      # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
-        delta_energy.handler_widget.setSingleStep(0.5)
-
-        widget = _settings.StepProfileViewer()
-        tip = '<nobr>How to move from </nobr>one energy to the next one.'
-        handler.add_option('energies', 'step_profile', handler_widget=widget,
-                           display_name='Step profile', tooltip=tip)
+        ramp_section = EnergyRampEditor(self.settings)
+        handler.add_complex_section(ramp_section)
         return handler
 
     @classmethod
@@ -665,7 +584,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             dummy_dict[QuantityInfo.TIMESTAMPS].append(primary.time_stamp)
             self.data_points.add_data(dummy_dict, primary)
 
-        if self.current_energy != self._previous_energy:
+        if self.current_energy != self._energy_ramp.previous_energy:
             primary.set_energy(energy, settle_time, *more_steps,
                                trigger_meas=trigger_meas)
             return
@@ -682,6 +601,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         primary.about_to_trigger.emit()
 
+    @abstractmethod
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement.
@@ -700,6 +620,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         devices_disconnected signal has to be received before
         calling set_settings on a measurement object that was
         used before.
+
+        Reimplementations of this method must set whether the
+        measurement is time_resolved in the data_points.
 
         Parameters
         ----------
@@ -778,6 +701,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                               if c.measures()}
         for camera in self.cameras:
             self._missing_data[camera] = 1
+
+        self._prepare_energy_ramp()
         return True
 
     @qtc.pyqtSlot()
@@ -800,7 +725,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._has_been_used_before = True
         self.settings.set('measurement_info', 'was_aborted', 'False')
         self.settings.set('measurement_info', 'started',
-                          time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+                          time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime()))
         self.running = True
         self._begin_preparation()
 
@@ -830,8 +755,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
-        image_name = (f"{{__count__:0>{self._n_digits}}}_"
-                      f"{self.current_energy:.1f}eV.tiff")
+        image_name = (f'{{__count__:0>{self._n_digits}}}_'
+                      f'{self.current_energy:.1f}eV.tiff')
         for camera in self.cameras:
             camera.process_info.filename = image_name
             camera.process_info.energy = self.current_energy
@@ -853,7 +778,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
-        self.current_energy = self.start_energy
+        self.current_energy = self._energy_ramp.start_energy
 
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
@@ -883,7 +808,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # Notice that we have to handle only controllers:
         # ._preparation_started is already connected to camera.start
         self._preparation_started.emit(
-            (self.start_energy, primary.long_settle_time)
+            (self._energy_ramp.start_energy, primary.long_settle_time)
             )
 
     @qtc.pyqtSlot(bool)
@@ -934,7 +859,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._connect_cameras()
 
         self.prepared.emit()           # Signal that we're done.
-        self.current_energy = self.start_energy
+        self.current_energy = self._energy_ramp.start_energy
         self._begin_next_energy_step()  # And start the measurement loop
 
     @qtc.pyqtSlot(bool)
@@ -960,7 +885,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def _continue_preparation(self, _):
         """Continue preparation for measurements.
 
-        Do nothing till all controllers are done with te first part
+        Do nothing till all controllers are done with the first part
         of the preparation, then move on to the second segment (i.e.,
         everything that is done after the starting energy is set).
         Finally, move on to trigger the beginning of the measurement
@@ -1097,7 +1022,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         This is the slot connected to the busy_changed signal of
         all controllers, and to the .stopped signal of all cameras,
-        after ._is_finished() returns True, or after .abort()ing the
+        after the energy ramp is finished, or after .abort()ing the
         measurement. Signals are disconnected again once all devices
         turn "not busy".
 
@@ -1116,6 +1041,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         finally:
             # Disconnect all devices and their signals
             self._disconnect_devices()
+            if self.current_energy == 0:
+                self._cleanup_and_end()
+                return
 
             # Keep only the primary controller connected, so we can
             # set the LEED energy to zero (and detect it has been set)
@@ -1181,69 +1109,17 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             raise ValueError(f'No config file {configname!r} in '
                              f'directory {self.settings.base_dir}') from None
 
-    def _get_linear_step(self, *params):
-        """Return energies and times for a simple linear step."""
-        if len(params) != 2:
-            # Too many/too few
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/step_profile',
-                            'Too many/few parameters for linear profile. '
-                            f'Expected 2, found {len(params)}')
-            return tuple()
+    def _on_ramp_finished(self):
+        """Called when the energy ramp finishes, before finalization.
 
-        try:
-            n_steps, tot_time = (int(p) for p in params)
-        except (TypeError, ValueError):
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/step_profile',
-                            'Could not convert to integer the '
-                            'parameters for linear profile')
-            return tuple()
-
-        if n_steps <= 0 or tot_time < 0:
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/step_profile',
-                            'Linear-step parameters should be '
-                            'positive integers')
-            return tuple()
-
-        delta_t = tot_time // n_steps
-        delta_e = self.current_energy - self._previous_energy
-        if not delta_t or abs(delta_e) < 1e-4:
-            return tuple()
-
-        # Make a line of the form f(t) = t/tot_time, with t == 0
-        # the time at which self.current_energy is set, and choose
-        # an (almost) equally-spaced time grid, with the first
-        # interval compensating for non integer-divisibility
-        times = [-tot_time,
-                 *(-(i-1)*delta_t for i in range(n_steps, 0, -1))]
-        intervals = (tj - ti for ti, tj in zip(times, times[1:]))
-
-        # The best way to approximate a function with a piecewise
-        # constant signal is to have values fk equal to the average
-        # of f over the k-th interval. For our line, this means
-        # f[k] = (t[k] + t[k+1]) / (2*tot_time)
-        slope = delta_e / (2 * tot_time)
-        energies = (slope*(ti + tj) + self.current_energy
-                    for ti, tj in zip(times, times[1:]))
-
-        # Finally interleave energies and times
-        return tuple(v for tup in zip(energies, intervals) for v in tup)
-
-    @abstractmethod
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
-
-        This method must be overridden in subclasses. It should
-        check if the measurement cycle is done via the settings.
+        Subclasses can override this to perform cleanup or post-processing
+        actions (e.g., energy calibration) after the last energy step.
 
         Returns
         -------
-        finished : bool
-            True when the measurement is finished.
+        None.
         """
-        return True
+        pass
 
     def _make_camera(self, camera_settings):
         """Instantiate camera class object.
@@ -1586,11 +1462,34 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # Remove the image just appended to the archive
         img_name.unlink()
 
+    def _prepare_energy_ramp(self):
+        """Prepare the energy ramp."""
+        ramp_name = self.settings.get('energies', 'ramp_type', fallback=None)
+        ramp_type = None
+        if ramp_name:
+            try:
+                ramp_type = base.class_from_name('classes', ramp_name)
+            except (RuntimeError, ValueError):
+                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                'energies/ramp_type',
+                                f'Invalid string {ramp_name}.')
+        if ramp_type and not issubclass(ramp_type, EnergyRampABC):
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energies/ramp_type',
+                            f'Invalid string {ramp_name}.')
+            ramp_type = None
+        if ramp_type is None:
+            ramp_type = get_ramp_from_settings(self.settings)
+            self.settings.set('energies', 'ramp_type', str(ramp_type.__name__))
+        self._energy_ramp = ramp_type()
+        self._energy_ramp.error_occurred.connect(self.error_occurred)
+        self._energy_ramp.set_ramp(self.settings)
+
     def _prepare_finalization(self):
         """Prepare for finalization.
 
-        This method is called both when ._is_finished() returns
-        True, and while .abort()ing a measurement.
+        This method is called both when the energy ramp is
+        finished and while .abort()ing a measurement.
 
         This method may need to be extended in subclasses.
         Ensure that finalization is prepared properly and that
@@ -1657,9 +1556,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self.data_points.nr_steps_done += 1
         self.new_data_available.emit(self.data_points[-1].copy())
 
-        if self._is_finished():
+        if self._energy_ramp.ramp_finished():
+            self._on_ramp_finished()
             self._prepare_finalization()
         else:
+            self._energy_ramp.increment_energy()
             self._begin_next_energy_step()
 
     # too-many-locals, too-complex
@@ -1736,28 +1637,3 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 fname.rmdir()
             except OSError:
                 pass
-
-    def _step_profile_from_strings(self, profile):                              # TODO: Warn for .ini files created before 23/05/2025.
-        """Return a tuple of energies and times from strings."""
-        delta = self.current_energy - self._previous_energy
-        if abs(delta) < 1e-4:
-            return tuple()
-
-        energies_times = [0]*len(profile)
-        for i, fraction in enumerate(profile[::2]):
-            # We shift by -1 here in order to display to the user that
-            # the 'current_energy' (the energy before the energy step)
-            # is equivalent to a step fraction of 0 and the next energy
-            # is equivalent to 1. We have to do this as the
-            # current_energy is already incremented to the next energy.
-            this_delta = (float(fraction) - 1) * delta
-            energies_times[2*i] = this_delta + self.current_energy
-        for i, time_ in enumerate(profile[1::2]):
-            time_ = int(time_)
-            if time_ < 0:
-                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                                'energies/step_profile',
-                                '\nInfo: Time intervals must be non-negative')
-                return tuple()
-            energies_times[2*i+1] = time_
-        return tuple(energies_times)
