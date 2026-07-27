@@ -442,28 +442,32 @@ class ViPErLEEDSettings(AliasConfigParser):
                 raise TypeError(f'Invalid mandatory setting {setting}. with '
                                 f'length {length}. Expected length <= 3.')
 
+            # First, check if settings are broken without reporting yet.
             settings_broken = False
-            if not self.has_section(setting[0]):
+            section, option, admissible = tuple(setting) + (None,) * (3-length)
+            if not self.has_section(section):
                 settings_broken = True
-            elif length > 1 and not self.has_option(setting[0], setting[1]):
+            elif length > 1 and not self.has_option(section, option):
                 settings_broken = True
-            elif length > 2 and self[setting[0]][setting[1]] not in setting[2]:
+            elif length > 2 and self[section][option] not in admissible:
                 settings_broken = True
 
             if not settings_broken:
                 continue
 
+            # Then report broken settings. This two-step approach ensures
+            # the entire setting is reported regardless of which part failed.
             # (<section>,)
             if length == 1:
-                invalid_settings.append(setting[0])
+                invalid_settings.append(section)
                 continue
             # (<section>, <option>)
             if length == 2:
-                invalid_settings.append(f'{setting[0]}/{setting[1]}')
+                invalid_settings.append(f'{section}/{option}')
                 continue
             # (<section>, <option>, <admissible>)
             invalid_settings.append('/'.join(setting[:2]) + ' not one of ' +
-                                    ', '.join(setting[2]))
+                                    ', '.join(admissible))
         return invalid_settings
 
     def read(self, filenames, encoding=None):
