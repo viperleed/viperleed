@@ -290,5 +290,5 @@ def run_device_detection():
     return detected
 
 if __name__ == '__main__':
-    """Run device detection when invoked as a script."""
+    # Run device detection when invoked as a script.
     print(json.dumps(run_device_detection(), cls=JSONEncoderSafe))
