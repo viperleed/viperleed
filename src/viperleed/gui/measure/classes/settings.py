@@ -873,7 +873,7 @@ class SystemSettings(ViPErLEEDSettings):
         # We're missing settings. Let's add them back...
         for missing in invalid:
             # 1. Strip off the value-error suffix if present
-            clean_keys = missing.split(' not one of ')[0]
+            clean_keys, *_ = missing.split(' not one of ')
             if '/' in clean_keys:
                 section, option = clean_keys.split('/')
             else:
