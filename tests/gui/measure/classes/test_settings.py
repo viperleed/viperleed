@@ -281,27 +281,9 @@ fallback_values = (('A/opt2', 'cfb'),)
         parser.read_string(f'[oldsection]\noption={expected}')
         assert parser['new_section']['new_option'] == expected
 
-# pylint: disable-next=too-few-public-methods
+
 class TestSystemSettings:
     """Tests for SystemSettings."""
-
-    def test_hidden_folder_and_settings_creation(self, tmp_path, mocker):
-        """Test whether the hidden folder and settings were created."""
-        fake_path = tmp_path / 'ViPErLEED' / 'Measurement.ini'
-        # Patch detected folder path to be in tmp_path.
-        mocker.patch('PyQt5.QtCore.QSettings.fileName',
-                     return_value=str(fake_path))
-        # Patch QSettings.allKeys to force creation of settings folder.
-        mocker.patch('PyQt5.QtCore.QSettings.allKeys', return_value=None)
-        sys_settings = SystemSettings()
-        # pylint: disable-next=protected-access
-        settings_path = Path(sys_settings._sys_qsettings.fileName()).resolve()
-        assert settings_path.parent.is_dir()
-        assert settings_path.is_file()
-
-
-class TestCheckMandatorySettings:
-    """Tests for _check_mandatory_settings behavior."""
 
     @fixture
     def settings(self, tmp_path, mocker):
@@ -335,6 +317,20 @@ class TestCheckMandatorySettings:
         assert settings.has_section('SecB')
         settings.update_file.assert_called_once()
 
+    def test_hidden_folder_and_settings_creation(self, tmp_path, mocker):
+        """Test whether the hidden folder and settings were created."""
+        fake_path = tmp_path / 'ViPErLEED' / 'Measurement.ini'
+        # Patch detected folder path to be in tmp_path.
+        mocker.patch('PyQt5.QtCore.QSettings.fileName',
+                     return_value=str(fake_path))
+        # Patch QSettings.allKeys to force creation of settings folder.
+        mocker.patch('PyQt5.QtCore.QSettings.allKeys', return_value=None)
+        sys_settings = SystemSettings()
+        # pylint: disable-next=protected-access
+        settings_path = Path(sys_settings._sys_qsettings.fileName()).resolve()
+        assert settings_path.parent.is_dir()
+        assert settings_path.is_file()
+
     def test_raises_runtime_error_on_missing_mandatory(self, settings):
         """Check that RuntimeError is raised when mandatory settings fail."""
         settings._SystemSettings__non_null = []
@@ -346,8 +342,8 @@ class TestCheckMandatorySettings:
     # pylint: enable=protected-access
 
 
-class TestMissesSettings:
-    """Tests for the misses_settings method."""
+class TestViPErLEEDSettings:
+    """Tests for the ViPErLEEDSettings class."""
 
     def test_all_settings_valid(self):
         """Check that no invalid settings are returned when all exist."""
