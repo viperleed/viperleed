@@ -359,7 +359,7 @@ class TestMissesSettings:
             ('Sec', 'opt1'),
             ('Sec', 'opt2', ['a', 'b'])
         )
-        assert invalid == []    # pylint: disable=C1803
+        assert not invalid
 
     def test_missing_section(self):
         """Check reporting when a section is missing."""
