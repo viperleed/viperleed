@@ -301,13 +301,15 @@ class TestSystemSettings:
         mocker.patch.object(sys_settings, 'update_file')
         return sys_settings
 
-    # pylint: disable=protected-access
-    def test_auto_fills_missing_non_null_settings(self, settings):
+    def test_auto_fills_missing_non_null_settings(self, settings, mocker):
         """Check that missing settings are auto-created."""
         # Define requirements
-        settings._SystemSettings__non_null = [('SecA', 'opt1')]
-        settings._SystemSettings__non_mandatory = [('SecB',)]
-        settings._SystemSettings__mandatory = []
+        mocker.patch.object(settings, '_SystemSettings__non_null',
+                            [('SecA', 'opt1')])
+        mocker.patch.object(settings, '_SystemSettings__non_mandatory',
+                            [('SecB',)])
+        mocker.patch.object(settings, '_SystemSettings__mandatory', [])
+        # pylint: disable-next=protected-access
         settings._check_mandatory_settings()
 
         # Check auto-creation
@@ -331,15 +333,16 @@ class TestSystemSettings:
         assert settings_path.parent.is_dir()
         assert settings_path.is_file()
 
-    def test_raises_runtime_error_on_missing_mandatory(self, settings):
+    def test_raises_runtime_error_on_missing_mandatory(self, settings, mocker):
         """Check that RuntimeError is raised when mandatory settings fail."""
-        settings._SystemSettings__non_null = []
-        settings._SystemSettings__non_mandatory = []
-        settings._SystemSettings__mandatory = [('MandatorySec', 'opt')]
+        mocker.patch.object(settings, '_SystemSettings__non_null', [])
+        mocker.patch.object(settings, '_SystemSettings__non_mandatory', [])
+        mocker.patch.object(settings, '_SystemSettings__mandatory',
+                            [('MandatorySec', 'opt')])
 
         with pytest.raises(RuntimeError, match='MandatorySec/opt'):
+            # pylint: disable-next=protected-access
             settings._check_mandatory_settings()
-    # pylint: enable=protected-access
 
 
 class TestViPErLEEDSettings:
