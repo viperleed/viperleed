@@ -56,8 +56,10 @@ class _FakeSignal:
             slot(*args, **kwargs)
 
     def disconnect(self, slot):
-        """Store disconnected slots."""
+        """Store disconnected slots and remove from connected."""
         self.disconnected.append(slot)
+        if slot in self.connected:
+            self.connected.remove(slot)
 
 
 def test_detect_devices_does_not_restart_running_process(mocker):
