@@ -350,7 +350,7 @@ class TestViPErLEEDSettings:
 
     def test_all_settings_valid(self):
         """Check that no invalid settings are returned when all exist."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
+        parser = ViPErLEEDSettings()
         parser.read_dict({'Sec': {'opt1': 'val1', 'opt2': 'a'}})
 
         invalid = parser.misses_settings(
@@ -362,7 +362,7 @@ class TestViPErLEEDSettings:
 
     def test_invalid_admissible_value(self):
         """Check reporting when an option is not in admissible_values."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
+        parser = ViPErLEEDSettings()
         parser.read_dict({'Sec': {'opt': 'wrong_val'}})
         invalid = parser.misses_settings(('Sec', 'opt', ['val1', 'val2']))
         assert invalid == ['Sec/opt not one of val1, val2']
@@ -370,19 +370,19 @@ class TestViPErLEEDSettings:
     @parametrize('bad_setting', [(), ('a', 'b', 'c', 'd')])
     def test_invalid_setting_format_raises(self, bad_setting):
         """Check that setting tuples with bad length raise TypeError."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
+        parser = ViPErLEEDSettings()
         with pytest.raises(TypeError):
             parser.misses_settings(bad_setting)
 
     def test_missing_option(self):
         """Check reporting when an option within a section is missing."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
+        parser = ViPErLEEDSettings()
         parser.read_dict({'Sec': {}})
         invalid = parser.misses_settings(('Sec', 'MissingOpt'))
         assert invalid == ['Sec/MissingOpt']
 
     def test_missing_section(self):
         """Check reporting when a section is missing."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
+        parser = ViPErLEEDSettings()
         invalid = parser.misses_settings(('MissingSec',))
         assert invalid == ['MissingSec']
