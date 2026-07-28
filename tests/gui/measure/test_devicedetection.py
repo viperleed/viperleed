@@ -303,7 +303,7 @@ def test_device_detection_worker(mocker, _worker, devices, ctrl, cam, error):
         """Simulate process start and immediate completion."""
         finished_signal.emit(0, qtc.QProcess.NormalExit)
 
-    proc.start = mocker.Mock(side_effect=start_and_finish)
+    proc.start.side_effect = start_and_finish
 
     mocker.patch(_QPROCESS, return_value=proc)
     mocker.patch('viperleed.gui.measure.devicedetection.qtc.QTimer')
