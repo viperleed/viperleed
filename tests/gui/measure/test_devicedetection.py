@@ -320,10 +320,10 @@ def test_device_detection_worker(mocker, _worker, devices, ctrl, cam, error):
         assert not emitted_devices[0]['controller']
 
     # Check cameras: same logic as controller.
-    if emitted_devices[0]['camera']:
+    if cam:
         assert cam in emitted_devices[0]['camera']
     else:
-        assert emitted_devices[0]['camera'] == cam
+        assert not emitted_devices[0]['camera']
 
     # Check errors: if errors were emitted, verify the first error matches
     # the expected error type. Else check that no errors were emitted.
