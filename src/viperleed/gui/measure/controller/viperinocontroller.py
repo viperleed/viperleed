@@ -1163,10 +1163,10 @@ class ViPErinoController(MeasureControllerABC):
                 self.thermocouple.temperature(v, t0)
                 for v, t0 in zip(tc_voltages, cjc_temperatures)
                 ]
-        except ValueError as err:
+        except ValueError as exc:
             self.measurements[QuantityInfo.TEMPERATURE] = tc_voltages
             self.emit_error(
-                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE, f'\nInfo: {err}. '
+                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE, f'\nInfo: {exc}. '
                 'Check if the thermocouple is wired incorrectly.'
                 )
 
