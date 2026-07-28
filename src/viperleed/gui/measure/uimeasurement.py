@@ -635,7 +635,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['menus']['autodetect'] = autodetect_action
 
         devices_menu.addSeparator()
-        force_detect_action = devices_menu.addAction('Force Device Detection')
+        force_detect_action = devices_menu.addAction('Refresh now')
         force_detect_action.triggered.connect(self.update_device_lists)
         self._ctrls['menus']['force_detect'] = force_detect_action
 
