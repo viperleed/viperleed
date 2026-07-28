@@ -468,7 +468,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         if self._device_search_in_progress:
             action.setText('Detecting devices...')
         else:
-            action.setText('Force Device Detection')
+            action.setText('Refresh now')
         self._ctrls['menus']['force_detect'].setEnabled(enabled)
 
     @qtc.pyqtSlot(object)
