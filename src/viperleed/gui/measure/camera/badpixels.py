@@ -6,6 +6,7 @@ from a camera and computes a pixel-badness array.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-09'
@@ -315,8 +316,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """
         # Each bad pixel will be replaced by the average of
         # two best neighbors, chosen among the opposing ones.
-        # The badness of neighbors is multiplied by weights
-        # that scale with the square of the distance:
+        # We add weights that scale with the square of the
+        # distance to the badness of neighbors:
         #
         #                    5 4 5
         #                  5 2 1 2 5
@@ -340,7 +341,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         for i, offset in enumerate(offsets):
             repl_plus = bad_coords.T + offset
             repl_minus = bad_coords.T - offset
-            weighted_badness = badness * (offset[0]**2 + offset[1]**2)
+            weighted_badness = badness + offset[0]**2 + offset[1]**2
 
             # Pick only those bad pixels whose replacements
             # are on the inside of the image.
@@ -559,7 +560,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         picked up by each pixel. The threshold when a pixel is
         considered to have too much telegraph noise is when the
         flicker of the pixel is about 3 times the average flicker.
-        (3-1)^2 * 1.5 = 6,
+        (3**2 - 1)*0.75 = 6,
         where 6 is the threshold used for the total badness.
 
         To determine the long-term flickering we use a medium exposure
@@ -573,7 +574,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """
         flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
         flicker_mean = flicker.mean()
-        self._badness += ((flicker / flicker_mean - 1)**2) * 1.5
+        if flicker_mean:
+            self._badness += ((flicker / flicker_mean)**2 - 1) * 0.75
 
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
