@@ -971,11 +971,13 @@ class ViPErinoController(MeasureControllerABC):
         # quantity cannot be measured (using __added_cold_junction)
         self.__added_cold_junction = False
         measurements = self.__adc_measurement_types
-        if (QuantityInfo.TEMPERATURE in measurements
-            and QuantityInfo.COLD_JUNCTION not in measurements
+        if QuantityInfo.TEMPERATURE in measurements:
+            if QuantityInfo.AUX not in measurements:
+                quantities = (*quantities, QuantityInfo.AUX.label)
+            if (QuantityInfo.COLD_JUNCTION not in measurements
                 and measurements[-1] is not None):
-            quantities = (*quantities, QuantityInfo.COLD_JUNCTION)
-            self.__added_cold_junction = True
+                quantities = (*quantities, QuantityInfo.COLD_JUNCTION.label)
+                self.__added_cold_junction = True
 
         super().set_measurements(quantities)
         self.__check_measurements_possible()
@@ -1150,10 +1152,22 @@ class ViPErinoController(MeasureControllerABC):
         return value / gain
 
     def __convert_thermocouple_voltages(self):
-        """Convert TC voltages in measurements to degrees centigrade."""
+        """Convert TC voltages in measurements to degrees centigrade.
+
+        Convert the TC voltages to degrees centigrade using the CJC
+        temperatures as a reference. At the same time, store the TC
+        voltages under the QuantityInfo.AUX key in case conversion
+        fails.
+
+        Emits
+        -----
+        error_occurred
+            If the conversion fails.
+        """
         if self.thermocouple is None:
             return
         tc_voltages = self.measurements[QuantityInfo.TEMPERATURE]
+        self.measurements[QuantityInfo.AUX] = tc_voltages
         cjc_temperatures = self.measurements.get(QuantityInfo.COLD_JUNCTION,
                                                  [None]*len(tc_voltages))
         try:
@@ -1162,7 +1176,6 @@ class ViPErinoController(MeasureControllerABC):
                 for v, t0 in zip(tc_voltages, cjc_temperatures)
                 ]
         except ValueError as exc:
-            self.measurements[QuantityInfo.TEMPERATURE] = tc_voltages
             self.emit_error(
                 ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE, f'\nInfo: {exc}. '
                 'Check if the thermocouple is wired incorrectly.'
