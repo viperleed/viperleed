@@ -327,7 +327,7 @@ def test_device_detection_worker(mocker, _worker, devices, ctrl, cam, error):
 
     # Check errors: if errors were emitted, verify the first error matches
     # the expected error type. Else check that no errors were emitted.
-    if emitted_errors:
+    if error:
         assert emitted_errors[0][0] == error
     else:
-        assert emitted_errors == error
+        assert not emitted_errors
