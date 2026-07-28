@@ -271,7 +271,7 @@ class CollapsibleDeviceList(CollapsibleList):
         widget = self.widget()
         width = widget.minimumSizeHint().width()
         view_widths = (
-            view.minimumSizeHint().width() for view in self.views.keys()
+            view.minimumSizeHint().width() for view in self.views
             )
         width = max(width, max(view_widths, default=0))
         width += self.verticalScrollBar().sizeHint().width()
