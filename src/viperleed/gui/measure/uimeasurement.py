@@ -617,6 +617,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         for action in self._ctrls['menus']['devices'].actions():
             action.menu().setEnabled(False)
 
+        devices_menu.addSeparator()
         # Add autodetection toggle action
         autodetect_action = devices_menu.addAction('Enable &Autodetection')
         autodetect_action.setCheckable(True)
@@ -632,7 +633,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         autodetect_action.triggered.connect(self._on_autodetect_toggled)
         self._ctrls['menus']['autodetect'] = autodetect_action
 
-        devices_menu.addSeparator()
         force_detect_action = devices_menu.addAction('Refresh now')
         force_detect_action.triggered.connect(self.update_device_lists)
         self._ctrls['menus']['force_detect'] = force_detect_action
