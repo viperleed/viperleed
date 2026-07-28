@@ -128,12 +128,9 @@ def test_device_search_allowed_states(mocker):
     fake.measurement.running = False
 
     camera_viewer.isVisible.return_value = True
-    fake._dialogs['camera_viewers'] = [camera_viewer]
     assert Measure._device_search_allowed(fake)
-    fake._dialogs['camera_viewers'] = [camera_viewer]
 
     ctrl_dialog.isVisible.return_value = True
-    fake._dialogs['device_settings'] = {'ctrl': ctrl_dialog}
     assert Measure._device_search_allowed(fake)
 
 
