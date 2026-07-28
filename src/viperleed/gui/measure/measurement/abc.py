@@ -124,8 +124,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     # Abort current tasks on all devices
     _request_stop_devices = qtc.pyqtSignal()                                    # TODO: Could use QMetaObject.invokeMethod
 
-    # _preparation_started: emitted in ._begin_preparation to start
-    # the first preparation segment.
+    # _preparation_started: emitted in ._begin_preparation to trigger
+    # the first preparation segment on the devices.
     _preparation_started = qtc.pyqtSignal()                                     # TODO: Could use QMetaObject.invokeMethod
 
     # _preparation_continued: emitted after all controllers have
