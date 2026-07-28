@@ -19,6 +19,7 @@ import pytest
 
 from viperleed.gui.measure.classes.settings import AliasConfigParser
 from viperleed.gui.measure.classes.settings import SystemSettings
+from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.classes.settings import ensure_aliases_exist
 from viperleed.gui.measure.classes.settings import get_aliases_path
 from viperleed.gui.measure.classes.settings import interpolate_config_path
@@ -45,7 +46,9 @@ class TestEnsureAliasesExist:
         user_aliases = tmp_path / 'aliases.ini'
         user_aliases.write_text('[Foo]\nstays_user=stays1\nchanged=user')
         installed_aliases = ConfigParser()
-        installed_aliases.read_string('[Foo]\nstays_installed=stays2\nchanged=installed')
+        installed_aliases.read_string(
+            '[Foo]\nstays_installed=stays2\nchanged=installed'
+            )
         defaults = tmp_path / '_defaults'
         defaults.mkdir()
         with (defaults/'_aliases.ini').open('w') as installed_ini:
@@ -282,6 +285,40 @@ fallback_values = (('A/opt2', 'cfb'),)
 class TestSystemSettings:
     """Tests for SystemSettings."""
 
+    @fixture
+    def settings(self, tmp_path, mocker):
+        """Create a mock SystemSettings instance pointing to a tmp file."""
+        fake_path = tmp_path / 'settings.ini'
+        fake_qs = mocker.Mock()
+        fake_qs.fileName.return_value = str(fake_path)
+        fake_qs.childGroups.return_value = []
+        fake_qs.childKeys.return_value = []
+        fake_qs.allKeys.return_value = []
+        fake_qs.value.return_value = ''
+
+        mocker.patch(f'{_MODULE}.get_qsettings', return_value=fake_qs)
+        sys_settings = SystemSettings()
+        mocker.patch.object(sys_settings, 'update_file')
+        return sys_settings
+
+    def test_auto_fills_missing_non_null_settings(self, settings, mocker):
+        """Check that missing settings are auto-created."""
+        # Define requirements
+        mocker.patch.object(settings, '_SystemSettings__non_null',
+                            [('SecA', 'opt1')])
+        mocker.patch.object(settings, '_SystemSettings__non_mandatory',
+                            [('SecB',)])
+        mocker.patch.object(settings, '_SystemSettings__mandatory', [])
+        # pylint: disable-next=protected-access
+        settings._check_mandatory_settings()
+
+        # Check auto-creation
+        assert settings.has_section('SecA')
+        assert settings.has_option('SecA', 'opt1')
+        assert settings.get('SecA', 'opt1') == ''   # pylint: disable=C1804
+        assert settings.has_section('SecB')
+        settings.update_file.assert_called_once()
+
     def test_hidden_folder_and_settings_creation(self, tmp_path, mocker):
         """Test whether the hidden folder and settings were created."""
         fake_path = tmp_path / 'ViPErLEED' / 'Measurement.ini'
@@ -291,6 +328,61 @@ class TestSystemSettings:
         # Patch QSettings.allKeys to force creation of settings folder.
         mocker.patch('PyQt5.QtCore.QSettings.allKeys', return_value=None)
         sys_settings = SystemSettings()
+        # pylint: disable-next=protected-access
         settings_path = Path(sys_settings._sys_qsettings.fileName()).resolve()
         assert settings_path.parent.is_dir()
         assert settings_path.is_file()
+
+    def test_raises_runtime_error_on_missing_mandatory(self, settings, mocker):
+        """Check that RuntimeError is raised when mandatory settings fail."""
+        mocker.patch.object(settings, '_SystemSettings__non_null', [])
+        mocker.patch.object(settings, '_SystemSettings__non_mandatory', [])
+        mocker.patch.object(settings, '_SystemSettings__mandatory',
+                            [('MandatorySec', 'opt')])
+
+        with pytest.raises(RuntimeError, match='MandatorySec/opt'):
+            # pylint: disable-next=protected-access
+            settings._check_mandatory_settings()
+
+
+class TestViPErLEEDSettings:
+    """Tests for the ViPErLEEDSettings class."""
+
+    def test_all_settings_valid(self):
+        """Check that no invalid settings are returned when all exist."""
+        parser = ViPErLEEDSettings()
+        parser.read_dict({'Sec': {'opt1': 'val1', 'opt2': 'a'}})
+
+        invalid = parser.misses_settings(
+            ('Sec',),
+            ('Sec', 'opt1'),
+            ('Sec', 'opt2', ['a', 'b'])
+        )
+        assert not invalid
+
+    def test_invalid_admissible_value(self):
+        """Check reporting when an option is not in admissible_values."""
+        parser = ViPErLEEDSettings()
+        parser.read_dict({'Sec': {'opt': 'wrong_val'}})
+        invalid = parser.misses_settings(('Sec', 'opt', ['val1', 'val2']))
+        assert invalid == ['Sec/opt not one of val1, val2']
+
+    @parametrize('bad_setting', [(), ('a', 'b', 'c', 'd')])
+    def test_invalid_setting_format_raises(self, bad_setting):
+        """Check that setting tuples with bad length raise TypeError."""
+        parser = ViPErLEEDSettings()
+        with pytest.raises(TypeError):
+            parser.misses_settings(bad_setting)
+
+    def test_missing_option(self):
+        """Check reporting when an option within a section is missing."""
+        parser = ViPErLEEDSettings()
+        parser.read_dict({'Sec': {}})
+        invalid = parser.misses_settings(('Sec', 'MissingOpt'))
+        assert invalid == ['Sec/MissingOpt']
+
+    def test_missing_section(self):
+        """Check reporting when a section is missing."""
+        parser = ViPErLEEDSettings()
+        invalid = parser.misses_settings(('MissingSec',))
+        assert invalid == ['MissingSec']
