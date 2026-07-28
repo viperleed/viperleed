@@ -174,10 +174,6 @@ class ControllerABC(DeviceABC):
         self.begin_prepare_todos = defaultdict(bool)
         self.continue_prepare_todos = defaultdict(bool)
 
-        # Sequence used to store the energies and times (in
-        # alternating order) to be set during the preparation.
-        self.first_energies_and_times = []
-
     def __deepcopy__(self, memo):
         """Return self rather than a deep copy."""
         # One has to be very careful, like for cameras
@@ -579,27 +575,19 @@ class ControllerABC(DeviceABC):
                                                     *extra_mandatory)
         return [(invalid,) for invalid in invalid_settings]
 
-    @qtc.pyqtSlot(tuple)
-    def begin_preparation(self, energies_and_times):
+    @qtc.pyqtSlot()
+    def begin_preparation(self):
         """Trigger the first step in the preparation for measurements.
 
         Set self.busy to True, reset all begin_prepare_todos and start
         first step of the preparation. The .busy_changed() signal
         will be emitted carrying False once all steps are complete.
 
-        Parameters
-        ----------
-        energies_and_times : tuple
-            Starting sequence of energies and times the controller
-            will use to set the energy during preparation. These
-            quantities are used only if self.sets_energy is True.
-
         Returns
         -------
         None.
         """
         self.reset_preparation_todos()
-        self.first_energies_and_times = energies_and_times
 
         # Clear any unsent messages. Any message that comes during
         # preparation will not be sent till the end of the whole
@@ -997,11 +985,7 @@ class ControllerABC(DeviceABC):
             break
         if next_to_do:
             todos[next_to_do.__name__] = False
-            if next_to_do.__name__ == 'set_energy':
-                # Never trigger measurements during preparation
-                next_to_do(*self.first_energies_and_times, trigger_meas=False)
-            else:
-                next_to_do()
+            next_to_do()
             return
 
         # Disconnect signal: will be reconnected

@@ -160,8 +160,6 @@ class ViPErinoController(MeasureControllerABC):
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
         self.begin_prepare_todos['set_up_adcs'] = True
-        if sets_energy:
-            self.begin_prepare_todos['set_energy'] = True
         self.continue_prepare_todos['start_autogain'] = True
 
         self.hardware = {}
