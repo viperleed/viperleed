@@ -390,9 +390,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             specify additional information on what is wrong with each
             invalid setting.
         """
-        invalid_ramp_settings = EnergyRampABC.are_settings_invalid(
-            settings
-            )
+        invalid_ramp_settings = EnergyRampABC.are_settings_invalid(settings)
 
         invalid_settings = settings.misses_settings(
             *self._mandatory_settings,
