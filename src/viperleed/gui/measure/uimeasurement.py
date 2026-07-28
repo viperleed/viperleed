@@ -618,20 +618,22 @@ class Measure(ViPErLEEDPluginBase):                                             
             action.menu().setEnabled(False)
 
         devices_menu.addSeparator()
-        # Add autodetection toggle action
-        autodetect_action = devices_menu.addAction('Enable &Autodetection')
-        autodetect_action.setCheckable(True)
+        # Add live detection toggle action
+        live_detection_action = devices_menu.addAction('Live detection')
+        live_detection_action.setCheckable(True)
         # Load saved setting, default to True if not set
         try:
             saved_state = self.system_settings.getboolean(
-                'DEVICES', 'autodetect_devices', fallback=True
+                'DEVICES', 'live_detection', fallback=True
                 )
         except ValueError:
-            self.system_settings.set('DEVICES', 'autodetect_devices', 'True')
+            self.system_settings.set('DEVICES', 'live_detection', 'True')
             saved_state = True
-        autodetect_action.setChecked(saved_state)
-        autodetect_action.triggered.connect(self._on_autodetect_toggled)
-        self._ctrls['menus']['autodetect'] = autodetect_action
+        live_detection_action.setChecked(saved_state)
+        live_detection_action.triggered.connect(
+            self._on_live_detection_toggled
+            )
+        self._ctrls['menus']['live_detection'] = live_detection_action
 
         force_detect_action = devices_menu.addAction('Refresh now')
         force_detect_action.triggered.connect(self.update_device_lists)
@@ -711,7 +713,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
-        if self._ctrls['menus']['autodetect'].isChecked():
+        if self._ctrls['menus']['live_detection'].isChecked():
             self.update_device_lists()
             self._timers['refresh_devices'].start()
 
@@ -865,9 +867,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         ensure_aliases_exist()
 
     @qtc.pyqtSlot(bool)
-    def _on_autodetect_toggled(self, checked):
-        """Enable or disable device autodetection."""
-        self.system_settings.set('DEVICES', 'autodetect_devices', str(checked))
+    def _on_live_detection_toggled(self, checked):
+        """Enable or disable device live detection."""
+        self.system_settings.set('DEVICES', 'live_detection', str(checked))
         self.system_settings.update_file()
         if checked:
             self._timers['refresh_devices'].start()

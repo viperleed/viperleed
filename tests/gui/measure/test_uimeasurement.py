@@ -92,7 +92,6 @@ def test_device_search_allowed_states(mocker):
     ctrl_dialog.isVisible.return_value = False
     fake = mocker.MagicMock(_device_search_in_progress=False,
                             measurement=fake_measure,
-                            _glob={'autodetect_enabled': True},
                             _dialogs={
                                 'camera_viewers': [camera_viewer],
                                 'device_settings': {'ctrl': ctrl_dialog}})
@@ -118,7 +117,6 @@ def test_update_device_lists_blocks_reentry(mocker):
     """Check that a second search is blocked while one is in progress."""
     signal = _FakeSignal()
     fake = mocker.Mock(_device_search_in_progress=False,
-                       _glob={'autodetect_enabled': True},
                        detect_devices_requested=signal)
     fake._device_search_allowed = mocker.Mock(side_effect=[True, False])
 
@@ -134,7 +132,6 @@ def test_on_devices_detected_updates_menu_and_unblocks_search(mocker):
     """Check menu updates with newly detected devices."""
     devices_menu = _FakeDevicesMenu(mocker)
     fake = mocker.Mock(_ctrls={'menus': {'devices': devices_menu}},
-                       _glob={'autodetect_enabled': True},
                        _device_search_in_progress=True)
     fake._on_camera_clicked = mocker.Mock()
     fake._on_controller_clicked = mocker.Mock()
