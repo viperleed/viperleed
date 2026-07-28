@@ -19,6 +19,7 @@ from viperleed.gui.measure.devicedetection import DEF_CORRUPTED
 from viperleed.gui.measure.devicedetection import RUN_ERR
 from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
 from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
+
 from .mock_qt import _FakeSignal
 
 

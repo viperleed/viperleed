@@ -287,6 +287,7 @@ def run_device_detection():
                                      'devices': serialized_devs}
     return detected
 
+
 if __name__ == '__main__':
     # Run device detection when invoked as a script.
     print(json.dumps(run_device_detection(), cls=JSONEncoderSafe))

@@ -9,6 +9,7 @@ __created__ = '2026-03-31'
 __license__ = 'GPLv3+'
 
 from viperleed.gui.measure.uimeasurement import Measure
+
 from .mock_qt import _FakeSignal
 
 
