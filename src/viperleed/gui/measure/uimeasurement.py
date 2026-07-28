@@ -712,6 +712,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
         if self._ctrls['menus']['autodetect'].isChecked():
+            self.update_device_lists()
             self._timers['refresh_devices'].start()
 
     def _connect_measurement(self):
