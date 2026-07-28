@@ -298,7 +298,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             'last_cfg': ViPErLEEDSettings(),
             'errors': [],         # Report a bunch at once
             'n_retry_close': 0,   # Try at most 50 times, i.e., 2.5 sec
-            'autodetect_enabled': True,  # Track autodetection state
             }
         self._timers = {
             'report_errors': qtc.QTimer(parent=self),
@@ -629,7 +628,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         except ValueError:
             self.system_settings.set('DEVICES', 'autodetect_devices', 'True')
             saved_state = True
-        self._glob['autodetect_enabled'] = saved_state
         autodetect_action.setChecked(saved_state)
         autodetect_action.triggered.connect(self._on_autodetect_toggled)
         self._ctrls['menus']['autodetect'] = autodetect_action
@@ -713,7 +711,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
-        if self._glob['autodetect_enabled']:
+        if self._ctrls['menus']['autodetect'].isChecked():
             self._timers['refresh_devices'].start()
 
     def _connect_measurement(self):
@@ -868,7 +866,6 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot(bool)
     def _on_autodetect_toggled(self, checked):
         """Enable or disable device autodetection."""
-        self._glob['autodetect_enabled'] = checked
         self.system_settings.set('DEVICES', 'autodetect_devices', str(checked))
         self.system_settings.update_file()
         if checked:
