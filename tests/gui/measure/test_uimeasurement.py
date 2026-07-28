@@ -97,6 +97,7 @@ class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
         ctrl_action = mocker.Mock()
         ctrl_action.menu.return_value = self.controllers
         self._actions = [cam_action, ctrl_action]
+
     def actions(self):
         """Return actions for submenus."""
         return self._actions
