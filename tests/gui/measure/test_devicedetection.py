@@ -19,6 +19,7 @@ from viperleed.gui.measure.devicedetection import DEF_CORRUPTED
 from viperleed.gui.measure.devicedetection import RUN_ERR
 from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
 from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
+from .mock_qt import _FakeSignal
 
 
 _QPROCESS = 'viperleed.gui.measure.devicedetection.qtc.QProcess'
@@ -36,32 +37,6 @@ def _worker():
 
 
 # pylint: disable=protected-access
-class _FakeSignal:
-    """A minimal signal-like object."""
-
-    def __init__(self):
-        """Initialize fake signal."""
-        self.connected = []
-        self.emitted = 0
-        self.disconnected = []
-
-    def connect(self, slot):
-        """Store connected slots."""
-        self.connected.append(slot)
-
-    def emit(self, *args, **kwargs):
-        """Count emissions and call connected slots."""
-        self.emitted += 1
-        for slot in self.connected:
-            slot(*args, **kwargs)
-
-    def disconnect(self, slot):
-        """Store disconnected slots and remove from connected."""
-        self.disconnected.append(slot)
-        if slot in self.connected:
-            self.connected.remove(slot)
-
-
 class TestDeviceDetectionWorker:
     """Tests for DeviceDetectionWorker class."""
 

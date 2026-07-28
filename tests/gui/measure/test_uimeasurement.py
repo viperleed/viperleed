@@ -9,31 +9,10 @@ __created__ = '2026-03-31'
 __license__ = 'GPLv3+'
 
 from viperleed.gui.measure.uimeasurement import Measure
+from .mock_qt import _FakeSignal
 
 
 # pylint: disable=protected-access
-class _FakeSignal:
-    """A minimal signal-like object."""
-
-    def __init__(self):
-        """Initialize fake signal."""
-        self.connected = []
-        self.emitted = 0
-        self.disconnected = []
-
-    def connect(self, slot):
-        """Store connected slots."""
-        self.connected.append(slot)
-
-    def emit(self, *_):
-        """Count emissions."""
-        self.emitted += 1
-
-    def disconnect(self, slot):
-        """Store disconnected slots."""
-        self.disconnected.append(slot)
-
-
 class _FakeAction:
     """A minimal action-like object."""
 
