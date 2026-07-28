@@ -360,19 +360,6 @@ class TestViPErLEEDSettings:
         )
         assert not invalid
 
-    def test_missing_section(self):
-        """Check reporting when a section is missing."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
-        invalid = parser.misses_settings(('MissingSec',))
-        assert invalid == ['MissingSec']
-
-    def test_missing_option(self):
-        """Check reporting when an option within a section is missing."""
-        parser = ViPErLEEDSettings(cls_name='Foo')
-        parser.read_dict({'Sec': {}})
-        invalid = parser.misses_settings(('Sec', 'MissingOpt'))
-        assert invalid == ['Sec/MissingOpt']
-
     def test_invalid_admissible_value(self):
         """Check reporting when an option is not in admissible_values."""
         parser = ViPErLEEDSettings(cls_name='Foo')
@@ -386,3 +373,16 @@ class TestViPErLEEDSettings:
         parser = ViPErLEEDSettings(cls_name='Foo')
         with pytest.raises(TypeError):
             parser.misses_settings(bad_setting)
+
+    def test_missing_option(self):
+        """Check reporting when an option within a section is missing."""
+        parser = ViPErLEEDSettings(cls_name='Foo')
+        parser.read_dict({'Sec': {}})
+        invalid = parser.misses_settings(('Sec', 'MissingOpt'))
+        assert invalid == ['Sec/MissingOpt']
+
+    def test_missing_section(self):
+        """Check reporting when a section is missing."""
+        parser = ViPErLEEDSettings(cls_name='Foo')
+        invalid = parser.misses_settings(('MissingSec',))
+        assert invalid == ['MissingSec']
