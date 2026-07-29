@@ -964,6 +964,7 @@ class ViPErinoController(MeasureControllerABC):
                 self.emit_error(ViPErinoErrors.UNSUPPORTED_QUANTITY, quantity)
                 return
 
+        measurements = self.__adc_measurement_types
         # If the temperature is being measured, the thermocouple
         # voltage should also be stored.
         if (QuantityInfo.TEMPERATURE in measurements
@@ -976,7 +977,6 @@ class ViPErinoController(MeasureControllerABC):
         # did not ask for. Make sure we don't raise errors if this
         # quantity cannot be measured (using __added_cold_junction)
         self.__added_cold_junction = False
-        measurements = self.__adc_measurement_types
         if (QuantityInfo.TEMPERATURE in measurements
             and QuantityInfo.COLD_JUNCTION not in measurements
                 and measurements[-1] is not None):
