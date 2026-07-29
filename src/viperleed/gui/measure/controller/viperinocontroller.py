@@ -977,7 +977,6 @@ class ViPErinoController(MeasureControllerABC):
         # quantity cannot be measured (using __added_cold_junction)
         self.__added_cold_junction = False
         measurements = self.__adc_measurement_types
-
         if (QuantityInfo.TEMPERATURE in measurements
             and QuantityInfo.COLD_JUNCTION not in measurements
                 and measurements[-1] is not None):
