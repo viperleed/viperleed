@@ -500,6 +500,87 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._device_search_in_progress = False
             self._update_force_detect_button_state()
 
+    @qtc.pyqtSlot()
+    def _on_select_primary_controller(self):
+        """Show dialog to select primary controller for energy setting."""
+        # Collect all available controllers from device detection
+        controllers = {}
+        try:
+            detected = base.get_devices('controller')
+            for name, (cls, info) in detected.items():
+                controllers[name] = (cls, info)
+        except DefaultSettingsError:
+            pass
+
+        if not controllers:
+            qtw.QMessageBox.warning(
+                self, 'No Controllers Available',
+                'No controllers detected. Please ensure at least one '
+                'controller is connected and properly configured.'
+            )
+            return
+
+        # Get current primary controller path
+        current_primary_path = self.system_settings.get(
+            'DEVICES', 'primary_controller', fallback=''
+        )
+
+        # Create selection dialog
+        dialog = qtw.QDialog(self)
+        dialog.setWindowTitle('Select Primary Controller')
+        dialog.setModal(True)
+        layout = qtw.QVBoxLayout(dialog)
+
+        label = qtw.QLabel('Select the controller to use for setting energy:')
+        layout.addWidget(label)
+
+        combo = qtw.QComboBox()
+        combo.setEditable(False)
+        for i, (name, (cls, info)) in enumerate(controllers.items()):
+            combo.addItem(name)
+            # Mark current primary
+            ctrl_path = info.more.get('settings_path', '')
+            if (str(ctrl_path) == current_primary_path):
+                combo.setCurrentIndex(i)
+        layout.addWidget(combo)
+
+        # Buttons
+        buttons = qtw.QDialogButtonBox(
+            qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec() == qtw.QDialog.Accepted:
+            selected_name = combo.currentText()
+            cls, info = controllers[selected_name]
+            address = info.more['address']
+
+            try:
+                ctrl = self._make_device(cls, info, address=address)
+            except DefaultSettingsError:
+                return
+
+            if not ctrl:
+                return
+
+            ctrl_path = ctrl.settings.last_file
+            if ctrl_path and ctrl_path.is_file():
+                self.system_settings.set('DEVICES', 'primary_controller',
+                                         ctrl_path.as_posix())
+                self.system_settings.update_file()
+                qtw.QMessageBox.information(
+                    self, 'Primary Controller Set',
+                    f'{ctrl.name} is now the primary controller for setting energy.'
+                )
+            else:
+                qtw.QMessageBox.warning(
+                    self, 'No Settings File',
+                    'This controller does not have a settings file. '
+                    'Please save its settings first.'
+                )
+
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
         camera = viewer.camera
@@ -638,6 +719,15 @@ class Measure(ViPErLEEDPluginBase):                                             
         force_detect_action = devices_menu.addAction('Refresh now')
         force_detect_action.triggered.connect(self.update_device_lists)
         self._ctrls['menus']['force_detect'] = force_detect_action
+
+        # Add primary controller selection action
+        select_primary_action = devices_menu.addAction(
+            'Select Primary Controller...'
+            )
+        select_primary_action.triggered.connect(
+            self._on_select_primary_controller
+            )
+        self._ctrls['menus']['select_primary'] = select_primary_action
 
         # Tools
         tools_menu = self._ctrls['menus']['tools']
@@ -1079,7 +1169,122 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _on_set_energy(self):
         """Set energy on primary controller."""
-                                                                                # TODO: implement
+        ctrl_path_str = self.system_settings.get(
+            'DEVICES', 'primary_controller', fallback=''
+        )
+        if not ctrl_path_str:
+            qtw.QMessageBox.warning(
+                self, 'No Controller Available',
+                'No primary controller configured. Please select one from '
+                'the "Devices" menu using "Select Primary Controller...".'
+            )
+            self._switch_button_enable(True)
+            return
+
+        ctrl_path = Path(ctrl_path_str)
+        if not ctrl_path.is_file():
+            qtw.QMessageBox.warning(
+                self, 'Controller File Missing',
+                f'The primary controller settings file no longer exists:\n{ctrl_path}\n'
+                'Please select a new primary controller from the "Devices" menu.'
+            )
+            self._switch_button_enable(True)
+            return
+
+        try:
+            energy = float(self._ctrls['energy_input'].text())
+        except ValueError:
+            qtw.QMessageBox.warning(
+                self, 'Invalid Energy',
+                'Please enter a valid number for the energy.'
+            )
+            self._switch_button_enable(True)
+            return
+
+        # Create controller and wait for response
+        self._set_energy_in_progress(ctrl_path, energy)
+
+    def _set_energy_in_progress(self, ctrl_path, energy):
+        """Set energy with proper async handling."""
+        try:
+            ctrl_settings = ViPErLEEDSettings()
+            ctrl_settings.read(ctrl_path)
+            ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
+            ctrl_settings.prepare_aliases(ctrl_cls_name)
+            ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
+            address = ctrl_settings.get('controller', 'address')
+            primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
+                                    sets_energy=True)
+        except (NoSettingsError, ValueError, KeyError) as err:
+            qtw.QMessageBox.warning(
+                self, 'Failed to Load Controller',
+                f'Could not load the last used controller:\n{err}'
+            )
+            self._switch_button_enable(True)
+            return
+
+        # Create event loop to wait for completion
+        loop = qtc.QEventLoop()
+
+        def on_finished():
+            primary_ctrl.disconnect_()
+            primary_ctrl.deleteLater()
+            loop.quit()
+            self._switch_button_enable(True)
+
+        def on_error(error_info):
+            loop.quit()
+            self._switch_button_enable(True)
+            qtw.QMessageBox.warning(
+                self, 'Error',
+                f'Failed to set energy:\n{error_info}'
+            )
+
+        # Connect to serial's connection_changed to know when done
+        primary_ctrl.error_occurred.connect(on_error)
+
+        was_connected = primary_ctrl.connected
+        if not was_connected:
+            primary_ctrl.connect_()
+            if not primary_ctrl.connected:
+                qtw.QMessageBox.warning(
+                    self, 'Connection Failed',
+                    'Could not connect to the controller. '
+                    'Please check that the device is available.'
+                )
+                primary_ctrl.deleteLater()
+                self._switch_button_enable(True)
+                return
+
+        # Set up timeout in case no response arrives
+        timeout_timer = qtc.QTimer()
+        timeout_timer.setSingleShot(True)
+        timeout_timer.setInterval(5000)  # 5 second timeout
+        timeout_timer.timeout.connect(lambda: (
+            primary_ctrl.disconnect_(),
+            primary_ctrl.deleteLater(),
+            self._switch_button_enable(True),
+            qtw.QMessageBox.warning(
+                self, 'Timeout',
+                'No response from controller. Check connection.'
+            ),
+            loop.quit()
+        ))
+
+        # Connect to busy_changed - when it goes False, operation is complete
+        primary_ctrl.serial.busy_changed.connect(
+            lambda busy: (
+                timeout_timer.stop(),
+                on_finished()
+            ) if not busy else None,
+            type=qtc.Qt.QueuedConnection
+        )
+
+        timeout_timer.start()
+        primary_ctrl.set_energy(energy, 0, trigger_meas=False)
+
+        # Wait for completion (blocks UI but necessary for sync operation)
+        loop.exec()
 
     @qtc.pyqtSlot()
     def _on_settings_accepted(self):
@@ -1092,6 +1297,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         # We will report errors coming from devices separately from the
         # one coming from the measurement. Disconnect the signals from
         # one another here.
+
+        # Save the primary controller path for convenience
+        if settings_ok and self.measurement.primary_controller:
+            ctrl_settings_file = self.measurement.primary_controller.settings.last_file
+            self.system_settings.set('DEVICES', 'primary_controller',
+                                     ctrl_settings_file.as_posix())
+            self.system_settings.update_file()
+
         for device in self.measurement.devices:
             base.safe_disconnect(device.error_occurred,
                                  self.measurement.error_occurred)
@@ -1307,3 +1520,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.menuBar().setEnabled(idle)
         self.statusBar().showMessage('Ready' if idle else 'Busy')
         self._update_force_detect_button_state()
+
+        has_stored_controller = bool(
+            self.system_settings.get('DEVICES', 'primary_controller',
+                                     fallback='')
+            )
+        self._ctrls['set_energy'].setEnabled(idle and has_stored_controller)
+        self._ctrls['energy_input'].setEnabled(idle and has_stored_controller)
