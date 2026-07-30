@@ -262,8 +262,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls = {
             'measure': qtw.QPushButton('New Measurement'),
             'abort': qtw.QPushButton('Abort'),
-            'energy_input': qtw.QLineEdit(''),                                  # TODO: QDoubleSpinBox?
-            'set_energy': qtw.QPushButton('Set energy'),
+            'energy_input': qtw.QDoubleSpinBox(),
+            'set_energy': qtw.QCheckBox('Set energy'),
             'menus': {
                 'file': qtw.QMenu('&File'),
                 'devices': qtw.QMenu('&Devices'),
@@ -648,8 +648,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setCentralWidget(qtw.QWidget())
         self.centralWidget().setLayout(qtw.QGridLayout())
 
-        self._ctrls['energy_input'].setValidator(QDoubleValidatorNoDot())
-        self._ctrls['energy_input'].validator().setLocale(qtc.QLocale.c())
+        self._ctrls['energy_input'].setLocale(qtc.QLocale.c())
+        self._ctrls['energy_input'].setDecimals(1)
+        self._ctrls['energy_input'].setRange(0.0, 1000.0)
+        self._ctrls['energy_input'].setSingleStep(0.5)
+        self._ctrls['energy_input'].setValue(0.0)
         self._ctrls['set_energy'].setEnabled(False)
         self._ctrls['energy_input'].setEnabled(False)
 
@@ -757,7 +760,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['measure'].clicked.connect(
             self._on_new_measurement_pressed
             )
-        self._ctrls['set_energy'].clicked.connect(self._on_set_energy)
+        self._ctrls['energy_input'].editingFinished.connect(
+            self._on_energy_changed
+            )
 
         # DIALOGS
         connect_dialogs = (
@@ -1077,6 +1082,37 @@ class Measure(ViPErLEEDPluginBase):                                             
         plot.data_points.nr_steps_done += 1
         plot.plot_new_data()
 
+    @qtc.pyqtSlot()
+    def _on_energy_changed(self):
+        """Set energy on primary controller energy is changed."""
+        if self._ctrls['set_energy'].checkState() != qtc.Qt.Checked:
+            return
+
+        ctrl_path_str = self.system_settings.get(
+            'DEVICES', 'primary_controller', fallback=''
+        )
+        if not ctrl_path_str:
+            qtw.QMessageBox.warning(
+                self, 'No Controller Available',
+                'No primary controller configured. Please select one from '
+                'the "Devices" menu using "Select Primary Controller...".'
+            )
+            self._ctrls['set_energy'].setChecked(False)
+            return
+
+        ctrl_path = Path(ctrl_path_str)
+        if not ctrl_path.is_file():
+            qtw.QMessageBox.warning(
+                self, 'Controller File Missing',
+                f'The primary controller settings file no longer exists:\n{ctrl_path}\n'
+                'Please select a new primary controller from the "Devices" menu.'
+            )
+            self._ctrls['set_energy'].setChecked(False)
+            return
+
+        energy = self._ctrls['energy_input'].value()
+        self._set_energy_in_progress(ctrl_path, energy)
+
     @qtc.pyqtSlot(tuple)
     def _on_error_occurred(self, error_info):
         """React to an error."""
@@ -1167,43 +1203,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             viewer.stop_on_close = True
             viewer.interactions_enabled = True
 
-    def _on_set_energy(self):
-        """Set energy on primary controller."""
-        ctrl_path_str = self.system_settings.get(
-            'DEVICES', 'primary_controller', fallback=''
-        )
-        if not ctrl_path_str:
-            qtw.QMessageBox.warning(
-                self, 'No Controller Available',
-                'No primary controller configured. Please select one from '
-                'the "Devices" menu using "Select Primary Controller...".'
-            )
-            self._switch_button_enable(True)
-            return
-
-        ctrl_path = Path(ctrl_path_str)
-        if not ctrl_path.is_file():
-            qtw.QMessageBox.warning(
-                self, 'Controller File Missing',
-                f'The primary controller settings file no longer exists:\n{ctrl_path}\n'
-                'Please select a new primary controller from the "Devices" menu.'
-            )
-            self._switch_button_enable(True)
-            return
-
-        try:
-            energy = float(self._ctrls['energy_input'].text())
-        except ValueError:
-            qtw.QMessageBox.warning(
-                self, 'Invalid Energy',
-                'Please enter a valid number for the energy.'
-            )
-            self._switch_button_enable(True)
-            return
-
-        # Create controller and wait for response
-        self._set_energy_in_progress(ctrl_path, energy)
-
     def _set_energy_in_progress(self, ctrl_path, energy):
         """Set energy with proper async handling."""
         try:
@@ -1220,7 +1219,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 self, 'Failed to Load Controller',
                 f'Could not load the last used controller:\n{err}'
             )
-            self._switch_button_enable(True)
+            self._ctrls['set_energy'].setChecked(False)
             return
 
         # Create event loop to wait for completion
@@ -1230,11 +1229,10 @@ class Measure(ViPErLEEDPluginBase):                                             
             primary_ctrl.disconnect_()
             primary_ctrl.deleteLater()
             loop.quit()
-            self._switch_button_enable(True)
 
         def on_error(error_info):
+            self._ctrls['set_energy'].setChecked(False)
             loop.quit()
-            self._switch_button_enable(True)
             qtw.QMessageBox.warning(
                 self, 'Error',
                 f'Failed to set energy:\n{error_info}'
@@ -1253,7 +1251,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                     'Please check that the device is available.'
                 )
                 primary_ctrl.deleteLater()
-                self._switch_button_enable(True)
+                self._ctrls['set_energy'].setChecked(False)
                 return
 
         # Set up timeout in case no response arrives
@@ -1263,7 +1261,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         timeout_timer.timeout.connect(lambda: (
             primary_ctrl.disconnect_(),
             primary_ctrl.deleteLater(),
-            self._switch_button_enable(True),
+            self._ctrls['set_energy'].setChecked(False),
             qtw.QMessageBox.warning(
                 self, 'Timeout',
                 'No response from controller. Check connection.'
