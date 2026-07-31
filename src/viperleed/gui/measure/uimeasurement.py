@@ -227,9 +227,9 @@ from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.serial.abc import SerialABC
 from viperleed.gui.measure.widgets.cameraviewer import CameraViewer
 from viperleed.gui.measure.widgets.measurement_plot import MeasurementPlot
+from viperleed.gui.measure.widgets.spinboxes import SteppingDoubleSpinBox
 from viperleed.gui.pluginsbase import ViPErLEEDPluginBase
 from viperleed.gui.widgets.lib import AllGUIFonts
-from viperleed.gui.widgets.lib import QDoubleValidatorNoDot
 from viperleed.gui.widgets.lib import move_to_front
 
 
@@ -262,7 +262,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls = {
             'measure': qtw.QPushButton('New Measurement'),
             'abort': qtw.QPushButton('Abort'),
-            'energy_input': qtw.QDoubleSpinBox(),
+            'energy_input': SteppingDoubleSpinBox(),
             'set_energy': qtw.QCheckBox('Set energy'),
             'menus': {
                 'file': qtw.QMenu('&File'),
@@ -446,7 +446,9 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot()
     def update_device_lists(self):
         """Request update of entries in 'Devices' menu."""
-        if not self._device_search_allowed():
+        if self._ctrls['set_energy'].checkState() == qtc.Qt.Checked:
+            return
+        if not self._device_search_allowed() :
             return
         self._device_search_in_progress = True
         self._update_force_detect_button_state()
@@ -648,11 +650,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setCentralWidget(qtw.QWidget())
         self.centralWidget().setLayout(qtw.QGridLayout())
 
-        self._ctrls['energy_input'].setLocale(qtc.QLocale.c())
         self._ctrls['energy_input'].setDecimals(1)
         self._ctrls['energy_input'].setRange(0.0, 1000.0)
         self._ctrls['energy_input'].setSingleStep(0.5)
         self._ctrls['energy_input'].setValue(0.0)
+        self._ctrls['energy_input'].setSuffix(' eV')
         self._ctrls['set_energy'].setEnabled(False)
         self._ctrls['energy_input'].setEnabled(False)
 
@@ -761,6 +763,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._on_new_measurement_pressed
             )
         self._ctrls['energy_input'].editingFinished.connect(
+            self._on_energy_changed
+            )
+        self._ctrls['energy_input'].stepped.connect(
             self._on_energy_changed
             )
 
