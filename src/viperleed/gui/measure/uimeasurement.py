@@ -1132,7 +1132,14 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _on_set_energy_toggled(self, state):
         """Handle toggling of the set energy checkbox."""
         if state != qtc.Qt.Checked:
-            # Checkbox unchecked, clean up the persistent controller.
+            # Checkbox unchecked, set energy to zero before cleaning up.
+            ctrl_path_str = self.system_settings.get(
+                'DEVICES', 'primary_controller', fallback=''
+            )
+            if ctrl_path_str:
+                ctrl_path = Path(ctrl_path_str)
+                if ctrl_path.is_file():
+                    self._set_energy_in_progress(ctrl_path, 0.0)
             self._cleanup_primary_controller()
         # When checked, controller will be created on first energy change.
 
