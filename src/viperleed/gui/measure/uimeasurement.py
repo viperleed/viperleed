@@ -338,6 +338,9 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         self._timestamps = {'start': -1, 'prepared': -1, 'finished': -1}
 
+        # Keep primary controller alive while "Set energy" is checked
+        self._primary_controller = None
+
     @property
     def system_settings(self):
         """Return a ViPErLEEDSettings with system settings."""
@@ -396,6 +399,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         self._dialogs['sys_settings'].close()
         self._dialogs['firmware_upgrade'].close()
+        self._cleanup_primary_controller()
         super().closeEvent(event)
 
     def _stop_device_search_triggers(self):
@@ -407,6 +411,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             base.safe_disconnect(self.detect_devices_requested,
                                  self._device_detection_worker.detect_devices)
             self._device_detection_worker.stop()
+
+        # Clean up persistent primary controller
+        self._cleanup_primary_controller()
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
         """Allow copying (Ctrl+C) device name to clipboard when visible."""
@@ -768,6 +775,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['energy_input'].stepped.connect(
             self._on_energy_changed
             )
+        self._ctrls['set_energy'].stateChanged.connect(
+            self._on_set_energy_toggled
+            )
 
         # DIALOGS
         connect_dialogs = (
@@ -1118,6 +1128,78 @@ class Measure(ViPErLEEDPluginBase):                                             
         energy = self._ctrls['energy_input'].value()
         self._set_energy_in_progress(ctrl_path, energy)
 
+    @qtc.pyqtSlot(int)
+    def _on_set_energy_toggled(self, state):
+        """Handle toggling of the set energy checkbox."""
+        if state != qtc.Qt.Checked:
+            # Checkbox unchecked, clean up the persistent controller.
+            self._cleanup_primary_controller()
+        # When checked, controller will be created on first energy change.
+
+    def _get_primary_controller(self, ctrl_path):
+        """Get or create persistent primary controller instance.
+
+        Parameters
+        ----------
+        ctrl_path : Path
+            Path to the controller settings file.
+
+        Returns
+        -------
+        ControllerABC or None
+            The controller instance, or None if creation failed.
+        """
+        # If we already have a controller for this path, reuse it.
+        if self._primary_controller is not None:
+            ctrl_settings = self._primary_controller.settings
+            if (ctrl_settings.last_file and
+                ctrl_settings.last_file == ctrl_path):
+                # Same controller, ensure it's connected.
+                if not self._primary_controller.connected:
+                    self._primary_controller.connect_()
+                return self._primary_controller
+            else:
+                # Different controller, clean up the old one.
+                self._cleanup_primary_controller()
+
+        # Create new controller instance.
+        try:
+            ctrl_settings = ViPErLEEDSettings()
+            ctrl_settings.read(ctrl_path)
+            ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
+            ctrl_settings.prepare_aliases(ctrl_cls_name)
+            ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
+            address = ctrl_settings.get('controller', 'address')
+            primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
+                                    sets_energy=True)
+        except (NoSettingsError, ValueError, KeyError) as err:
+            qtw.QMessageBox.warning(
+                self, 'Failed to Load Controller',
+                f'Could not load the last used controller:\n{err}'
+            )
+            return None
+
+        # Connect and store the controller.
+        primary_ctrl.connect_()
+        if not primary_ctrl.connected:
+            qtw.QMessageBox.warning(
+                self, 'Connection Failed',
+                'Could not connect to the controller. '
+                'Please check that the device is available.'
+            )
+            primary_ctrl.deleteLater()
+            return None
+
+        self._primary_controller = primary_ctrl
+        return primary_ctrl
+
+    def _cleanup_primary_controller(self):
+        """Clean up the persistent primary controller."""
+        if self._primary_controller is not None:
+            self._primary_controller.disconnect_()
+            self._primary_controller.deleteLater()
+            self._primary_controller = None
+
     @qtc.pyqtSlot(tuple)
     def _on_error_occurred(self, error_info):
         """React to an error."""
@@ -1210,20 +1292,8 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _set_energy_in_progress(self, ctrl_path, energy):
         """Set energy with proper async handling."""
-        try:
-            ctrl_settings = ViPErLEEDSettings()
-            ctrl_settings.read(ctrl_path)
-            ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
-            ctrl_settings.prepare_aliases(ctrl_cls_name)
-            ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
-            address = ctrl_settings.get('controller', 'address')
-            primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
-                                    sets_energy=True)
-        except (NoSettingsError, ValueError, KeyError) as err:
-            qtw.QMessageBox.warning(
-                self, 'Failed to Load Controller',
-                f'Could not load the last used controller:\n{err}'
-            )
+        primary_ctrl = self._get_primary_controller(ctrl_path)
+        if primary_ctrl is None:
             self._ctrls['set_energy'].setChecked(False)
             return
 
@@ -1231,8 +1301,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         loop = qtc.QEventLoop()
 
         def on_finished():
-            primary_ctrl.disconnect_()
-            primary_ctrl.deleteLater()
             loop.quit()
 
         def on_error(error_info):
@@ -1246,26 +1314,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Connect to serial's connection_changed to know when done
         primary_ctrl.error_occurred.connect(on_error)
 
-        was_connected = primary_ctrl.connected
-        if not was_connected:
-            primary_ctrl.connect_()
-            if not primary_ctrl.connected:
-                qtw.QMessageBox.warning(
-                    self, 'Connection Failed',
-                    'Could not connect to the controller. '
-                    'Please check that the device is available.'
-                )
-                primary_ctrl.deleteLater()
-                self._ctrls['set_energy'].setChecked(False)
-                return
-
         # Set up timeout in case no response arrives
         timeout_timer = qtc.QTimer()
         timeout_timer.setSingleShot(True)
         timeout_timer.setInterval(5000)  # 5 second timeout
         timeout_timer.timeout.connect(lambda: (
-            primary_ctrl.disconnect_(),
-            primary_ctrl.deleteLater(),
             self._ctrls['set_energy'].setChecked(False),
             qtw.QMessageBox.warning(
                 self, 'Timeout',
