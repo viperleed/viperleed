@@ -676,6 +676,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs['sys_settings'].setModal(True)
         self._dialogs['measurement_selection'].setModal(True)
 
+        # Set minimum width to at least fit top menus.
+        min_w = max(self.sizeHint().width(), self.menuBar().sizeHint().width())
+        self.setMinimumWidth(min_w)
+
     def _compose_error_box(self):
         """Prepare the message box shown when errors happen."""
         err_box = self._dialogs['error_box']
