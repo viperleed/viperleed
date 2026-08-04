@@ -106,8 +106,9 @@ class EnergySetter(qtw.QWidget):
         if not primary_path.is_file():
             qtw.QMessageBox.warning(
                 self, 'Controller File Missing',
-                f'The primary controller settings file no longer exists:\n{primary_path}\n'
-                'Please select a new primary controller from the "Devices" menu.'
+                'The primary controller settings file no longer exists:'
+                f'\n{primary_path}\n Please select a new primary '
+                'controller from the "Devices" menu.'
             )
             self.set_energy.setChecked(False)
             return
@@ -198,7 +199,7 @@ class EnergySetter(qtw.QWidget):
             self.set_energy.setChecked(False)
             return
 
-        # Create event loop to wait for completion
+        # Create event loop to wait for completion.
         loop = qtc.QEventLoop()
 
         def on_finished():
@@ -213,10 +214,10 @@ class EnergySetter(qtw.QWidget):
                 f'Failed to set energy:\n{error_info}'
             )
 
-        # Connect to serial's connection_changed to know when done
+        # Connect to serial's connection_changed to know when done.
         primary_ctrl.error_occurred.connect(on_error)
 
-        # Set up timeout in case no response arrives
+        # Set up timeout in case no response arrives.
         timeout_timer = qtc.QTimer()
         timeout_timer.setSingleShot(True)
         timeout_timer.setInterval(5000)  # 5 second timeout
@@ -229,7 +230,7 @@ class EnergySetter(qtw.QWidget):
             loop.quit()
         ))
 
-        # Connect to busy_changed - when it goes False, operation is complete
+        # Connect to busy_changed - when it goes False, operation is complete.
         primary_ctrl.serial.busy_changed.connect(
             lambda busy: (
                 timeout_timer.stop(),
