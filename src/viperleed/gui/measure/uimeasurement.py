@@ -401,6 +401,9 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         self._dialogs['sys_settings'].close()
         self._dialogs['firmware_upgrade'].close()
+
+        if self._ctrls['energy_setter'].set_energy.isChecked():
+            self._ctrls['energy_setter'].set_energy.setChecked(False)
         self._ctrls['energy_setter'].cleanup_primary_controller()
         super().closeEvent(event)
 
