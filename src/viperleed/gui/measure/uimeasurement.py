@@ -514,16 +514,11 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot()
     def _on_select_primary_controller(self):
         """Show dialog to select primary controller for energy setting."""
-        # Collect all available controllers from device detection
-        controllers = {}
-        try:
-            detected = base.get_devices('controller')
-            for name, (cls, info) in detected.items():
-                controllers[name] = (cls, info)
-        except DefaultSettingsError:
-            pass
+        # Get already detected controllers from the Devices menu
+        controllers_menu = self._ctrls['menus']['devices'].actions()[1].menu()
+        controller_actions = controllers_menu.actions()
 
-        if not controllers:
+        if not controller_actions:
             qtw.QMessageBox.warning(
                 self, 'No Controllers Available',
                 'No controllers detected. Please ensure at least one '
@@ -531,28 +526,15 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
             return
 
-        # Get current primary controller path
-        current_primary_path = self.system_settings.get(
-            'DEVICES', 'primary_controller', fallback=''
-            )
-
         # Create selection dialog
         dialog = qtw.QDialog(self)
         dialog.setWindowTitle('Select Primary Controller')
-        dialog.setModal(True)
         layout = qtw.QVBoxLayout(dialog)
-
         label = qtw.QLabel('Select the controller to use for setting energy:')
         layout.addWidget(label)
-
         combo = qtw.QComboBox()
-        combo.setEditable(False)
-        for i, (name, (cls, info)) in enumerate(controllers.items()):
-            combo.addItem(name)
-            # Mark current primary
-            ctrl_path = info.more.get('settings_path', '')
-            if (str(ctrl_path) == current_primary_path):
-                combo.setCurrentIndex(i)
+        for action in controller_actions:
+            combo.addItem(action.text())
         layout.addWidget(combo)
 
         # Buttons
@@ -565,15 +547,15 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         if dialog.exec() != qtw.QDialog.Accepted:
             return
-        selected_name = combo.currentText()
-        cls, info = controllers[selected_name]
+        selected_index = combo.currentIndex()
+        selected_action = controller_actions[selected_index]
+        cls, info = selected_action.data()
         address = info.more['address']
 
         try:
             ctrl = self._make_device(cls, info, address=address)
         except DefaultSettingsError:
             return
-
         if not ctrl:
             return
 
@@ -585,7 +567,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._ctrls['energy_setter'].primary_path = ctrl_path.as_posix()
             qtw.QMessageBox.information(
                 self, 'Primary Controller Set',
-                f'{ctrl.name} is now the controller setting energies.'
+                f'{selected_action.text()} is now the controller setting energies.'
                 )
         else:
             qtw.QMessageBox.warning(
