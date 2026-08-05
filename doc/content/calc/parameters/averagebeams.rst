@@ -6,6 +6,13 @@
 AVERAGE_BEAMS
 =============
 
+.. warning::
+   This parameter is currently parsed, but not fully functional. Turning beam
+   averaging off entirely performs as described below, but specifying a beam
+   incidence angle different from :ref:`BEAMINCIDENCE` does **not** affect beam
+   averaging. Averaging will be performed as if beam incidence was perpendicular
+   to the surface.
+
 AVERAGE_BEAMS can be used to turn averaging of symmetry-equivalent beams
 off, or to make it follow a different averaging scheme than would be 
 dictated by :ref:`BEAMINCIDENCE`. This can be useful to 

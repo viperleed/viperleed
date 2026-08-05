@@ -25,6 +25,8 @@ from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.constants import LOG_VERBOSE
+from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
@@ -34,10 +36,6 @@ from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.cli_base import ViPErLEEDCLI
-
-
-LOG_VERBOSE = 5
-LOG_VERY_VERBOSE = 1
 
 
 class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):

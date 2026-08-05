@@ -230,12 +230,15 @@ class Bookkeeper:
     @property
     def _has_archived_folder(self):
         """Return whether a history folder already exists for this calc run."""
-        # NB: it's enough to check for the tensor number and the log
-        # timestamp. We don't need to explicitly check also a job
-        # number, as those are always "fresh" since we FIRST create
-        # the contents of the main folder, and only LATER move the
-        # workhistory ones (in _archive_to_history_and_add_info_entry).
-        archived_name = rf't{self.tensor_number:03d}.*_{self.timestamp}'
+        # NB: It's enough to check the log timestamp, as it should be
+        # a unique identifier. It is incorrect to include the tensor
+        # number, as users may delete Tensors (they're large), but that
+        # would be misinterpreted as requiring archiving (see #476).
+        # We don't need to explicitly check also a job number, as those
+        # are always "fresh" since we FIRST create the contents of the
+        # main folder, and only LATER move the workhistory ones (in
+        # _archive_to_history_and_add_info_entry).
+        archived_name = rf'.*_{self.timestamp}'
         return self.history.has_subfolder(archived_name)
 
     def _add_history_info_entry(self, tensor_nums):

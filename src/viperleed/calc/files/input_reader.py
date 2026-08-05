@@ -24,6 +24,8 @@ from contextlib import AbstractContextManager
 import logging
 from pathlib import Path
 
+from viperleed.calc.constants import LOG_VERY_VERBOSE
+
 _LOGGER = logging.getLogger(__name__)
 
 # TODO: Add subclasses for the InputReaders as suggested by @michele-riva in
@@ -60,10 +62,11 @@ class InputReader(Iterator):
             try:
                 return self._read_one_line(line)
             except ShouldSkipLineError:
-                if self.noisy:
-                    line = line.rstrip('\n')
-                    _LOGGER.debug(f'Skipping line {self._current_line} '
-                                  f'in input file: {line!r}.')
+                line = line.rstrip('\n')
+                if self.noisy and line:
+                    _LOGGER.log(LOG_VERY_VERBOSE,
+                                f'Skipping line {self._current_line} '
+                                f'in input file: {line!r}.')
                 continue
         raise StopIteration
 

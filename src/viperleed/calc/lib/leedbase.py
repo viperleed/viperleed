@@ -319,7 +319,11 @@ def fortran_compile(pre="", filename="", post="",
     """Assembles pre+filename+post to a filename, tries to execute via
     subprocess.run, raises an exception if it fails."""
     fc = pre+" "+filename+" "+post
-    fcl = fc.split()
+    if os.name == 'nt':
+        # Better not split on Windows, as there can be spaces in paths
+        fcl = fc
+    else:
+        fcl = fc.split()
     sep = ""
     if os.path.isfile(logname):
         sep = "\n\n"

@@ -444,6 +444,10 @@ class ParametersFileEditor(AbstractContextManager):
             )
         if should_write_old_line:
             self._write_param_file.write(raw_line)
+            try:  # Do not write twice identical values
+                modified.already_written = True
+            except AttributeError:
+                assert modified is None
             return
 
         commented_line = self._get_comment_line_for(modified, raw_line)

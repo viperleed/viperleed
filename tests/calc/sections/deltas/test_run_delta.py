@@ -1,7 +1,9 @@
-"""Tests for viperleed.calc section deltas."""
+"""Tests for module deltas of viperleed.calc.sections.
+
+This module collects tests for the run_delta function.
+"""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -14,56 +16,24 @@ from pytest_cases import fixture
 
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.sections.deltas import compile_delta
 from viperleed.calc.sections.deltas import run_delta
 
-from ...helpers import filesystem_from_dict
-from ...helpers import filesystem_to_dict
-from .test_refcalc import TestCompileRefcalc
-from .test_refcalc import TestRunRefcalc
-
-
-class TestDeltasAg100:
-    """Test the successful outcome of a delta-amplitude calculation."""
-
-    def test_successful_run(self, delta_files_ag100):
-        """Check that delta-amplitude calculation exits without errors."""
-        assert not delta_files_ag100.failed
-        assert delta_files_ag100.records is not None
-        assert delta_files_ag100.records.get_last_state_for_section('delta')
-
-    def test_delta_input_written(self, delta_files_ag100):
-        """Check that an input file was correctly written."""
-        assert delta_files_ag100.expected_file_exists('delta-input')
-
-    def test_deltas_zip_created(self, delta_files_ag100):
-        """Check that an archive with delta-amplitude files was created."""
-        assert delta_files_ag100.expected_file_exists('Deltas/Deltas_001.zip')
-
-
-# Notice that the compile_delta and compile_refcalc functions are
-# virtually identical, except for a few error messages and a few
-# variable names. There is no need to add more tests. When doing
-# #43, the tests can be given to the base-class method!
-class TestCompileDelta(TestCompileRefcalc):
-    """Tests for the compile_delta function."""
-
-    compile_func = compile_delta
-    compiler_cls_name = 'DeltaCompileTask'
-    default_sources = 'delta.f', 'lib.tleed.f', 'lib.delta.f', 'GLOBAL'
-    section_name = 'delta-amplitudes'
+from ....helpers import filesystem_from_dict
+from ....helpers import filesystem_to_dict
+from ..refcalc.test_run_refcalc import TestRunRefcalc as _TestRefcalc
 
 
 class TestRunDelta:
     """Tests for the run_delta function."""
 
     @fixture(name='runtask')
-    def factory_runtask(self, mocker):
+    def factory_runtask(self, mocker, tmp_path):
         """Return a fake DeltaRunTask."""
         comptask = mocker.MagicMock(
             exename='test_exe',
             foldername='test_folder',
             )
+        comptask.exec_dir = tmp_path/comptask.foldername
         runtask = mocker.MagicMock(
             comptask=comptask,
             deltaname='test_delta',
@@ -71,6 +41,7 @@ class TestRunDelta:
             deltalogname='test_delta.log',
             din='test input',
             foldername='calculating_test_delta',
+            io_dir=tmp_path,
             )
         runtask.name = 'test_name'
         return runtask
@@ -114,10 +85,10 @@ class TestRunDelta:
     # only because of slight differences in the error messages
     # returned/logged (typically 'delta' and variations instead
     # of 'refcalc' and such).
-    test_fails_to_mkdir = TestRunRefcalc.test_fails_to_mkdir
-    test_fails_to_cleanup = TestRunRefcalc.test_fails_to_cleanup
-    test_success = TestRunRefcalc.test_success
-    test_work_exists_warning = TestRunRefcalc.test_work_exists_warning
+    test_fails_to_mkdir = _TestRefcalc.test_fails_to_mkdir
+    test_fails_to_cleanup = _TestRefcalc.test_fails_to_cleanup
+    test_success = _TestRefcalc.test_success
+    test_work_exists_warning = _TestRefcalc.test_work_exists_warning
 
     def test_collects_files(self, runtask, run, tmp_path, mocker):
         """Check that files are collected in the right place."""

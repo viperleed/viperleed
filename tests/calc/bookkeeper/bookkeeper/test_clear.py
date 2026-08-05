@@ -12,6 +12,7 @@ __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 from copy import deepcopy
+import shutil
 
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -21,6 +22,7 @@ from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
 
 from .run_bookkeeper_base import _TestBookkeeperRunBase
 
@@ -144,6 +146,16 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
             domains_after_calc_execution,
             caplog,
             )
+
+    def test_issue_476(self, after_archive):
+        """Ensure Issue #476 does not occur anymore."""
+        # Delete the Tensors folder
+        bookkeeper, *_ = after_archive
+        shutil.rmtree(bookkeeper.cwd/DEFAULT_TENSORS)
+
+        # Make sure bookkeeper does not think it should archive again
+        bookkeeper.update_from_cwd(silent=True)
+        assert not bookkeeper.archiving_required
 
     @parametrize(mode=(Mode.ARCHIVE, Mode.CLEAR, Mode.DISCARD))
     def test_one_domain_already_processed(self,

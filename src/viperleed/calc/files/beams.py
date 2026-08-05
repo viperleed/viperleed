@@ -33,11 +33,14 @@ logger = logging.getLogger(__name__)
 
 def averageBeams(beams, weights=None):
     """Takes a list of percentages and a list of lists of Beam objects.
-    Returns a new list of Beam objects with weighted averaged intensities."""
+    Returns a new list of Beam objects with weighted averaged intensities.
+    Weights will be renormalized such that they sum to 1."""
     if beams is None:
         raise ValueError("averageBeams: No beams passed.")
     if weights is None or len(weights) == 0:
-        weights = [1/len(beams)] * len(beams)
+        _weights = np.repeat([1/len(beams)], len(beams))
+    else:
+        _weights = np.asarray(weights) / sum(weights)
     avbeams = copy.deepcopy(beams[0])
     for (i, b) in enumerate(avbeams):
         if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
@@ -52,9 +55,9 @@ def averageBeams(beams, weights=None):
             raise ValueError(_err)
             return []
         for en in b.intens:
-            b.intens[en] *= weights[0]
+            b.intens[en] *= _weights[0]
             for j in range(1, len(beams)):
-                b.intens[en] += beams[j][i].intens[en] * weights[j]
+                b.intens[en] += beams[j][i].intens[en] * _weights[j]
     return avbeams
 
 
@@ -391,12 +394,17 @@ def checkEXPBEAMS(sl, rp, domains=False):
         rp.expbeams.remove(b)
 
 
-def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
+def readAUXEXPBEAMS(
+    filename="AUXEXPBEAMS",
+    interactive=False,
+    fortran_format='12F6.2'):
     """Reads beams from an AUXEXPBEAMS file, which already has the formatting
     required by TensErLEED. Returns a list of Beam objects. Only works if the
     comment lines are of format *( h k )*, including the stars, with h and k
     separated by whitespace. If 'interactive' is True, then the user will be
-    asked to clarify labels that cannot be read."""
+    asked to clarify labels that cannot be read.
+
+    Some very old versions may use '5(F8.2,F8.3)' as fortran_format."""
     expbeams = []
     try:
         with open(filename, 'r') as rf:
@@ -405,7 +413,7 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
         logger.error("Error reading AUXEXPBEAMS.")
         raise
     read = False
-    rf62x12 = ff.FortranRecordReader('12F6.2')
+    fortran_reader = ff.FortranRecordReader(fortran_format)
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s+(?P<k>[-0-9/]+)')
     for line in lines:
         if "*" in line:
@@ -462,7 +470,7 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                              "beams or scaling factor in line:\n"+line)
                 return []
         elif read:
-            newvals = rf62x12.read(line)
+            newvals = fortran_reader.read(line)
             i = 0
             while i+1 < len(newvals):
                 if newvals[i] is None:

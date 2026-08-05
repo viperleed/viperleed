@@ -47,6 +47,13 @@ polar angle theta, the second as the azimuth phi.
    (\ :math:`\phi`) relative to the coordinate system of the 
    :ref:`POSCAR` file.
 
+.. warning::
+   The beam incidence does currently **not** affect beam averaging. Averaging
+   will be performed as if beam incidence was perpendicular to the surface
+   unless otherwise specified. This can be circumvented by disabling averaging
+   using :ref:`AVERAGEBEAMS`, and ensuring that experimental beams are correctly
+   averaged, with labels identical to the ones in :ref:`IVBEAMS`.
+
 .. hint::
    -  In general, unless the experiment was performed at large off-normal 
       incidence (>2°), keeping the default value should lead to the correct 

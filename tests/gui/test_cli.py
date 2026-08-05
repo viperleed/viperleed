@@ -15,10 +15,12 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.gui.cli import _SANITY_TO_ERR_MSG
 from viperleed.gui.cli import ViPErLEEDGUICLI
 from viperleed.gui.cli import commandline_main
 from viperleed.gui.cli import gui_main
 from viperleed.gui.cli import import_graphics_modules
+from viperleed.gui.detect_graphics import PyQtSanity
 
 _MODULE = 'viperleed.gui.cli'
 
@@ -34,22 +36,29 @@ class TestCheckCanRunGui:
         }
 
     @parametrize(install=_install.values(), ids=_install)
-    def test_missing_dependencies(self, install, mocker, capsys):
+    @parametrize(sanity=PyQtSanity)
+    def test_missing_dependencies(self, install, sanity, mocker, capsys):
         """Check complaints when dependencies are missing."""
-        mocker.patch(f'{_MODULE}.has_pyqt', return_value=True)
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
         missing_dict = {'base_one': ('dep_one', 'dep_two'),
                         'base_two': ('dep_three', 'dep_four')}
-        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
-                     return_value=missing_dict)
+        mock_find_deps = mocker.patch(
+            f'{_MODULE}.find_missing_qt_dependencies',
+            return_value=missing_dict,
+            )
         mock_find_install = mocker.patch(
             f'{_MODULE}.Qt5DependencyFinder.find_install_for_libs',
-            return_value=install
+            return_value=install,
             )
 
         cli = ViPErLEEDGUICLI()
         with pytest.raises(SystemExit):
             cli.check_can_run_gui()
         missing = ('dep_one', 'dep_two', 'dep_three', 'dep_four')
+        if sanity is PyQtSanity.NOT_FOUND:
+            mock_find_deps.assert_not_called()
+            return
+        mock_find_deps.assert_called_once()
         mock_find_install.assert_called_once_with(missing)
 
         expect_err = self._err_msg + '''\
@@ -64,45 +73,67 @@ Try again after installing them'''
         stderr = capsys.readouterr().err.strip()
         assert stderr.endswith(expect_err)
 
+    _mock_abi_msg = '''
+If you are executing viperleed in a conda environment, try one of the
+following:
+    1. Creating a new, clean environment without Qt by calling
+       conda create with the --no-default-packages flag, then
+            pip install "viperleed[GUI]"
+       there.
+    2. Deactivating the current environment first, if you have 
+       installed viperleed globally.
+If none of the above works, or you're not in a conda environment, please
+open an issue under https://github.com/viperleed/viperleed/issues.'''
     _can_run = {
-        'normal gui': (
-            {'has_pyqt': True,
-             'has_graphics': True,
-             'find_missing_qt_dependencies': {}},
-             '',
-             ),
-        'no qt': (
-            {'has_pyqt': False,
-             'has_graphics': True,
-             'find_missing_qt_dependencies': {}},
-            'PyQt5 is not installed.',
-            ),
+        'normal gui': (PyQtSanity.OK, ''),
+        'no qt': (PyQtSanity.NOT_FOUND, 'PyQt5 is not installed.'),
         'no graphics': (
-            {'has_pyqt': True,
-             'has_graphics': False,
-             'find_missing_qt_dependencies': {}},
+            PyQtSanity.NO_DISPLAY,
             ('the system appears to have no graphics capability (i.e., '
              'no monitor was detected). Try once more if this is the first '
-             'time you execute the GUI, or have just updated viperleed.'),
+             'time you execute the GUI, or if you just updated viperleed.'),
+            ),
+        'import fail': (
+            PyQtSanity.IMPORT_ERROR,
+            'PyQt5 was found, but it could not be loaded.' + _mock_abi_msg,
+            ),
+        'runtime crash': (
+            PyQtSanity.RUNTIME_CRASH,
+            'PyQt5 was found, but the GUI crashed at startup.' + _mock_abi_msg,
             ),
         }
 
-    @parametrize('mocks,err_msg', _can_run.values(), ids=_can_run)
-    def test_result(self, mocks, err_msg, mocker, capsys):
+    @parametrize('sanity,err_msg', _can_run.values(), ids=_can_run)
+    def test_result(self, sanity, err_msg, mocker, capsys):
         """Check the expected outcome."""
-        for mock_name in ('has_pyqt', 'has_graphics'):
-            mocker.patch(f'{_MODULE}.{mock_name}',
-                         return_value=mocks[mock_name])
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
+        find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
         cli = ViPErLEEDGUICLI()
         context = pytest.raises(SystemExit) if err_msg else nullcontext()
         with context:
             cli.check_can_run_gui()
         stderr = capsys.readouterr().err.strip()
-        if not err_msg:
+        if sanity is PyQtSanity.OK:
             assert not stderr
         else:
             expect = self._err_msg + err_msg
             assert stderr.endswith(expect)
+        if sanity is PyQtSanity.NOT_FOUND:
+            find_deps.assert_not_called()
+        else:
+            find_deps.assert_called_once()
+
+    def test_sanity_invalid(self, mocker):
+        """Check that an invalid sanity fails with a KeyError."""
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value='invalid')
+        cli = ViPErLEEDGUICLI()
+        with pytest.raises(KeyError):
+            cli.check_can_run_gui()
+
+    @parametrize(sanity=PyQtSanity)
+    def test_sanity_msg(self, sanity):
+        """Ensure there is a message for each PyQtSanity."""
+        assert sanity in _SANITY_TO_ERR_MSG
 
 
 # pylint: disable-next=too-few-public-methods  # It's parameterized

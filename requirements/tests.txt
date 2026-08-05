@@ -7,3 +7,4 @@ pytest-cases>=3.8.1
 pytest-cov>=2.5
 pytest-mock>=3
 pytest-subtests
+pytest-timeout
