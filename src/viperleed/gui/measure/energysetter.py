@@ -24,6 +24,25 @@ from viperleed.gui.measure.widgets.spinboxes import SteppingDoubleSpinBox
 from viperleed.gui.widgets.lib import AllGUIFonts
 
 
+class EnergySetterErrors(base.ViPErLEEDErrorEnum):
+    """Class for errors occurring in the EnergySetter widget."""
+
+    NO_PRIMARY_CONTROLLER = (2000, 'No primary controller configured. Please '
+                             'select one from the "Devices" menu using '
+                             '"Select Primary Controller...".')
+    CONTROLLER_FILE_MISSING = (2001, 'The primary controller settings file '
+                               'no longer exists:\n{}\nPlease select a new '
+                               'primary controller from the "Devices" menu.')
+    CONTROLLER_LOAD_FAILED = (2002, 'Could not load the last used '
+                              'controller:\n{}')
+    CONTROLLER_CONNECTION_FAILED = (2003, 'Could not connect to the '
+                                    'controller. Please check that the '
+                                    'device is available.')
+    SET_ENERGY_FAILED = (2004, 'Failed to set energy:\n{}')
+    SET_ENERGY_TIMEOUT = (2005, 'No response from controller. Check '
+                          'connection.')
+
+
 class EnergySetter(qtw.QWidget):
     """Widget for setting LEED energy without data acquisition.
 
@@ -41,6 +60,12 @@ class EnergySetter(qtw.QWidget):
         self.set_energy = qtw.QCheckBox('Set energy')
         self.primary_path = ''
         self._primary_controller = None
+        self._pending_energy = None     # Store energy value during operation
+        self._operation_in_progress = False
+
+        self._timeout_timer = qtc.QTimer(self)
+        self._timeout_timer.setSingleShot(True)
+        self._timeout_timer.setInterval(5000)
 
         self._compose()
         self._connect()
@@ -73,18 +98,30 @@ class EnergySetter(qtw.QWidget):
         self.set_energy.stateChanged.connect(self._on_set_energy_toggled)
         self.energy_input.editingFinished.connect(self._on_energy_changed)
         self.energy_input.valueChanged.connect(self._on_energy_changed)
+        self._timeout_timer.timeout.connect(self._on_timeout)
 
     @qtc.pyqtSlot(int)
     def _on_set_energy_toggled(self, state):
         """Handle checkbox state change."""
         if state != qtc.Qt.Checked:
+            if not self._primary_controller:
+                return
             # Checkbox unchecked, set energy to zero before cleaning up.
-            if self.primary_path:
-                primary_path = Path(self.primary_path)
-                if primary_path.is_file():
-                    self._set_energy(primary_path, 0.0)
-        self.cleanup_primary_controller()
-        # When checked, controller will be created on first energy change.
+            self._set_energy(0.0)
+
+        if not self.primary_path:
+            base.emit_error(self, EnergySetterErrors.NO_PRIMARY_CONTROLLER)
+            self.set_energy.setChecked(False)
+            return
+
+        primary_path = Path(self.primary_path)
+        if not primary_path.is_file():
+            base.emit_error(self, EnergySetterErrors.CONTROLLER_FILE_MISSING,
+                            primary_path)
+            self.set_energy.setChecked(False)
+            return
+
+        self._primary_controller = self._get_primary_controller()
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(float)
@@ -93,36 +130,15 @@ class EnergySetter(qtw.QWidget):
         if self.set_energy.checkState() != qtc.Qt.Checked:
             return
 
-        if not self.primary_path:
-            qtw.QMessageBox.warning(
-                self, 'No Controller Available',
-                'No primary controller configured. Please select one from '
-                'the "Devices" menu using "Select Primary Controller...".'
-            )
-            self.set_energy.setChecked(False)
-            return
-
-        primary_path = Path(self.primary_path)
-        if not primary_path.is_file():
-            qtw.QMessageBox.warning(
-                self, 'Controller File Missing',
-                'The primary controller settings file no longer exists:'
-                f'\n{primary_path}\n Please select a new primary '
-                'controller from the "Devices" menu.'
-            )
-            self.set_energy.setChecked(False)
+        if self._operation_in_progress:
+            self._pending_energy = self.energy_input.value()
             return
 
         energy = self.energy_input.value()
-        self._set_energy(primary_path, energy)
+        self._set_energy(energy)
 
-    def _get_primary_controller(self, primary_path):
+    def _get_primary_controller(self):
         """Get or create persistent primary controller instance.
-
-        Parameters
-        ----------
-        primary_path : Path
-            Path to the controller settings file.
 
         Returns
         -------
@@ -133,7 +149,7 @@ class EnergySetter(qtw.QWidget):
         if self._primary_controller is not None:
             ctrl_settings = self._primary_controller.settings
             if (ctrl_settings.last_file and
-                ctrl_settings.last_file == primary_path):
+                ctrl_settings.last_file == self.primary_path):
                 # Same controller, ensure it's connected.
                 if not self._primary_controller.connected:
                     self._primary_controller.connect_()
@@ -145,7 +161,7 @@ class EnergySetter(qtw.QWidget):
         # Create new controller instance.
         try:
             ctrl_settings = ViPErLEEDSettings()
-            ctrl_settings.read(primary_path)
+            ctrl_settings.read(self.primary_path)
             ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
             ctrl_settings.prepare_aliases(ctrl_cls_name)
             ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
@@ -153,40 +169,62 @@ class EnergySetter(qtw.QWidget):
             primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
                                     sets_energy=True)
         except (NoSettingsError, ValueError, KeyError) as err:
-            qtw.QMessageBox.warning(
-                self, 'Failed to Load Controller',
-                f'Could not load the last used controller:\n{err}'
-            )
+            base.emit_error(self, EnergySetterErrors.CONTROLLER_LOAD_FAILED,
+                            err)
             return None
 
         # Connect and store the controller.
+        base.safe_connect(primary_ctrl.error_occurred, self._on_error,
+                          type=qtc.Qt.UniqueConnection)
+        base.safe_connect(primary_ctrl.serial.busy_changed,
+                          self._on_ctrl_finished, type=qtc.Qt.QueuedConnection)
         primary_ctrl.connect_()
         if not primary_ctrl.connected:
-            qtw.QMessageBox.warning(
-                self, 'Connection Failed',
-                'Could not connect to the controller. '
-                'Please check that the device is available.'
-            )
-            primary_ctrl.deleteLater()
+            base.emit_error(self,
+                            EnergySetterErrors.CONTROLLER_CONNECTION_FAILED)
+            self.cleanup_primary_controller()
             return None
 
-        self._primary_controller = primary_ctrl
         return primary_ctrl
 
     def cleanup_primary_controller(self):
         """Clean up the persistent primary controller."""
-        if self._primary_controller is not None:
-            self._primary_controller.disconnect_()
-            self._primary_controller.deleteLater()
-            self._primary_controller = None
+        if self._primary_controller is None:
+            return
+        base.safe_disconnect(self._primary_controller.error_occurred,
+                             self._on_error,)
+        base.safe_disconnect(self._primary_controller.serial.busy_changed,
+                             self._on_ctrl_finished)
+        self._primary_controller.disconnect_()
+        self._primary_controller.deleteLater()
+        self._primary_controller = None
 
-    def _set_energy(self, ctrl_path, energy):
+    @qtc.pyqtSlot(tuple)
+    def _on_error(self, error_info):
+        """Handle controller errors."""
+        self.error_occurred.emit(error_info)
+        self._flush()
+
+    @qtc.pyqtSlot()
+    def _on_timeout(self):
+        """Handle timeout."""
+        base.emit_error(self, EnergySetterErrors.SET_ENERGY_TIMEOUT)
+        self._flush()
+
+    def _flush(self):
+        """Reset on error."""
+        self._timeout_timer.stop()
+        self.cleanup_primary_controller()
+        with qtc.QSignalBlocker(self.set_energy):
+            self.set_energy.setChecked(False)
+        self._operation_in_progress = False
+        self._pending_energy = None
+
+    def _set_energy(self, energy):
         """Set energy on the primary controller.
 
         Parameters
         ----------
-        ctrl_path : Path
-            Path to the controller settings file.
         energy : float
             Energy value in eV.
 
@@ -194,55 +232,27 @@ class EnergySetter(qtw.QWidget):
         -------
         None.
         """
-        primary_ctrl = self._get_primary_controller(ctrl_path)
-        if primary_ctrl is None:
+        self._operation_in_progress = True
+        if self._primary_controller is None:
+            self._operation_in_progress = False
             self.set_energy.setChecked(False)
             return
+        self._timeout_timer.start()
+        self._primary_controller.set_energy(energy, 0, trigger_meas=False)
 
-        # Create event loop to wait for completion.
-        loop = qtc.QEventLoop()
+    @qtc.pyqtSlot(bool)
+    def _on_ctrl_finished(self, busy):
+        """Clean up after energy has been set."""
+        if busy:
+            return
+        self._operation_in_progress = False
+        self._timeout_timer.stop()
 
-        def on_finished():
-            loop.quit()
-
-        def on_error(error_info):
-            self.set_energy.setChecked(False)
-            loop.quit()
-            self.error_occurred.emit(error_info)
-            qtw.QMessageBox.warning(
-                self, 'Error',
-                f'Failed to set energy:\n{error_info}'
-            )
-
-        # Connect to serial's connection_changed to know when done.
-        primary_ctrl.error_occurred.connect(on_error)
-
-        # Set up timeout in case no response arrives.
-        timeout_timer = qtc.QTimer()
-        timeout_timer.setSingleShot(True)
-        timeout_timer.setInterval(5000)  # 5 second timeout
-        timeout_timer.timeout.connect(lambda: (
-            self.set_energy.setChecked(False),
-            qtw.QMessageBox.warning(
-                self, 'Timeout',
-                'No response from controller. Check connection.'
-            ),
-            loop.quit()
-        ))
-
-        # Connect to busy_changed - when it goes False, operation is complete.
-        primary_ctrl.serial.busy_changed.connect(
-            lambda busy: (
-                timeout_timer.stop(),
-                on_finished()
-            ) if not busy else None,
-            type=qtc.Qt.QueuedConnection
-        )
-
-        timeout_timer.start()
-        primary_ctrl.set_energy(energy, 0, trigger_meas=False)
-
-        loop.exec()
+        # If a new energy value was queued during the operation, process it.
+        if self._pending_energy is not None and self.set_energy.isChecked():
+            energy = self._pending_energy
+            self._pending_energy = None
+            self._set_energy(energy)
 
     def set_enabled(self, enable):
         """Switch enabled status of buttons."""

@@ -783,6 +783,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._device_detection_worker.error_occurred.connect(
             self._on_error_occurred
             )
+        self._ctrls['energy_setter'].error_occurred.connect(
+            self._on_error_occurred
+            )
 
         # TIMERS
         slots = (
@@ -1355,6 +1358,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 source = 'bad pixels finder dialog'
             elif isinstance(sender, DeviceDetectionWorker):
                 source = 'device detection'
+            elif isinstance(sender, EnergySetter):
+                source = 'energy setting'
             else:
                 source = 'system or unknown'
 
