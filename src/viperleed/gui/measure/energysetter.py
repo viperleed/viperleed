@@ -256,8 +256,13 @@ class EnergySetter(qtw.QWidget):
         self._operation_in_progress = False
         self._timeout_timer.stop()
 
+        # If set energy is no longer toggled, we want to disconnect the ctrl.
+        if not self.set_energy.isChecked():
+            self.cleanup_primary_controller()
+            return
+
         # If a new energy value was queued during the operation, process it.
-        if self._pending_energy is not None and self.set_energy.isChecked():
+        if self._pending_energy is not None:
             energy = self._pending_energy
             self._pending_energy = None
             self._set_energy(energy)
