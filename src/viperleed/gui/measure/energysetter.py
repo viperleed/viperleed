@@ -153,6 +153,13 @@ class EnergySetter(qtw.QWidget):
         -------
         ControllerABC or None
             The controller instance, or None if creation failed.
+
+        Emits
+        -----
+        EnergySetterErrors.CONTROLLER_LOAD_FAILED
+            If making the primary controller failed.
+        EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
+            If connecting the primary controller failed.
         """
         # If we already have a controller for this path, reuse it.
         if self._primary_controller is not None:
@@ -163,21 +170,13 @@ class EnergySetter(qtw.QWidget):
                 if not self._primary_controller.connected:
                     self._primary_controller.connect_()
                 return self._primary_controller
-            else:
-                # Different controller, clean up the old one.
-                self.cleanup_primary_controller()
+            # Different controller, clean up the old one.
+            self.cleanup_primary_controller()
 
         # Create new controller instance.
         try:
-            ctrl_settings = ViPErLEEDSettings()
-            ctrl_settings.read(self.primary_path)
-            ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
-            ctrl_settings.prepare_aliases(ctrl_cls_name)
-            ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
-            address = ctrl_settings.get('controller', 'address')
-            primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
-                                    sets_energy=True)
-        except (NoSettingsError, ValueError, KeyError) as err:
+            primary_ctrl = self._make_primary()
+        except (NoSettingsError, ValueError) as err:
             base.emit_error(self, EnergySetterErrors.CONTROLLER_LOAD_FAILED,
                             err)
             return None
@@ -194,6 +193,31 @@ class EnergySetter(qtw.QWidget):
             self.cleanup_primary_controller()
             return None
 
+        return primary_ctrl
+
+    def _make_primary(self):
+        """Make and return a new primary controller.
+
+        Returns
+        -------
+        primary_ctrl : ControllerABC
+            A controller capable of setting the energy.
+
+        Raises
+        ------
+        NoSettingsError
+            If the settings file cannot be read.
+        ValueError
+            If ctrl_cls_name was not found.
+        """
+        ctrl_settings = ViPErLEEDSettings()
+        ctrl_settings.read(self.primary_path)
+        ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
+        ctrl_settings.prepare_aliases(ctrl_cls_name)
+        ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
+        address = ctrl_settings.get('controller', 'address')
+        primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
+                                sets_energy=True)
         return primary_ctrl
 
     def cleanup_primary_controller(self):
