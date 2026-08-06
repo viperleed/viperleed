@@ -81,7 +81,10 @@ class EnergySetter(qtw.QWidget):
     @primary_path.setter
     def primary_path(self, primary):
         """Set the path to the primary controller."""
-        self._primary_path = Path(primary)
+        if primary:
+            self._primary_path = Path(primary)
+        else:
+            self._primary_path = None
 
     def _compose(self):
         """Set up the user interface."""
