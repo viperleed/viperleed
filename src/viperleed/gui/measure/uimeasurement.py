@@ -713,7 +713,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         force_detect_action.triggered.connect(self.update_device_lists)
         self._ctrls['menus']['force_detect'] = force_detect_action
 
-        # Add primary controller selection action
+        # Add primary controller selection action.
         select_primary_action = devices_menu.addAction(
             'Select Primary Controller...'
             )

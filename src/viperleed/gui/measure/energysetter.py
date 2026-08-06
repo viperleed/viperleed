@@ -38,19 +38,17 @@ class EnergySetterErrors(base.ViPErLEEDErrorEnum):
     CONTROLLER_CONNECTION_FAILED = (2003, 'Could not connect to the '
                                     'controller. Please check that the '
                                     'device is available.')
-    SET_ENERGY_FAILED = (2004, 'Failed to set energy:\n{}')
-    SET_ENERGY_TIMEOUT = (2005, 'No response from controller. Check '
+    SET_ENERGY_TIMEOUT = (2004, 'No response from controller. Check '
                           'connection.')
 
 
 class EnergySetter(qtw.QWidget):
-    """Widget for setting LEED energy without data acquisition.
+    """Widget for setting LEED energies without data acquisition.
 
     This widget provides a checkbox and energy input field that allow
-    users to set the beam energy on the primary controller without
-    starting a measurement.
-
+    users to set the beam energy.
     """
+
     error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, **kwargs):
