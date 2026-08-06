@@ -58,7 +58,7 @@ class EnergySetter(qtw.QWidget):
         super().__init__(**kwargs)
         self.energy_input = SteppingDoubleSpinBox()
         self.set_energy = qtw.QCheckBox('Set energy')
-        self.primary_path = ''
+        self._primary_path = None
         self._primary_controller = None
         self._pending_energy = None     # Store energy value during operation
         self._operation_in_progress = False
@@ -74,6 +74,16 @@ class EnergySetter(qtw.QWidget):
     def setting_energy(self):
         """Return whether the energy setter is setting energies or not."""
         return self.set_energy.checkState() == qtc.Qt.Checked
+
+    @property
+    def primary_path(self):
+        """Return the path to the primary controller settings."""
+        return self._primary_path
+
+    @primary_path.setter
+    def primary_path(self, primary):
+        """Set the primary path to the primary controller."""
+        self._primary_path = Path(primary)
 
     def _compose(self):
         """Set up the user interface."""
@@ -103,21 +113,20 @@ class EnergySetter(qtw.QWidget):
     @qtc.pyqtSlot(int)
     def _on_set_energy_toggled(self, state):
         """Handle checkbox state change."""
+        self.energy_input.setEnabled(state == qtc.Qt.Checked)
         if state != qtc.Qt.Checked:
-            if not self._primary_controller:
-                return
             # Checkbox unchecked, set energy to zero before cleaning up.
             self._set_energy(0.0)
+            self.energy_input.setValue(0.0)
 
         if not self.primary_path:
             base.emit_error(self, EnergySetterErrors.NO_PRIMARY_CONTROLLER)
             self.set_energy.setChecked(False)
             return
 
-        primary_path = Path(self.primary_path)
-        if not primary_path.is_file():
+        if not self.primary_path.is_file():
             base.emit_error(self, EnergySetterErrors.CONTROLLER_FILE_MISSING,
-                            primary_path)
+                            self.primary_path)
             self.set_energy.setChecked(False)
             return
 
@@ -213,12 +222,11 @@ class EnergySetter(qtw.QWidget):
 
     def _flush(self):
         """Reset on error."""
-        self._timeout_timer.stop()
-        self.cleanup_primary_controller()
-        with qtc.QSignalBlocker(self.set_energy):
-            self.set_energy.setChecked(False)
+        self.set_energy.setChecked(False)
         self._operation_in_progress = False
         self._pending_energy = None
+        self._timeout_timer.stop()
+        self.cleanup_primary_controller()
 
     def _set_energy(self, energy):
         """Set energy on the primary controller.
@@ -256,5 +264,6 @@ class EnergySetter(qtw.QWidget):
 
     def set_enabled(self, enable):
         """Switch enabled status of buttons."""
-        self.set_energy.setEnabled(enable and bool(self.primary_path))
-        self.energy_input.setEnabled(enable and bool(self.primary_path))
+        enable &= bool(self.primary_path)
+        self.set_energy.setEnabled(enable)
+        self.energy_input.setEnabled(enable and self.set_energy.isChecked())
