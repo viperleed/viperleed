@@ -112,7 +112,20 @@ class EnergySetter(qtw.QWidget):
 
     @qtc.pyqtSlot(int)
     def _on_set_energy_toggled(self, state):
-        """Handle checkbox state change."""
+        """Handle checkbox state change.
+
+        Parameters
+        ----------
+        state : qtc.Qt.CheckState
+            The checked state of the QCheckBox.
+
+        Emits
+        -----
+        EnergySetterErrors.NO_PRIMARY_CONTROLLER
+            If no primary path was given.
+        EnergySetterErrors.CONTROLLER_FILE_MISSING
+            If the primary path does not point to a file.
+        """
         self.energy_input.setEnabled(state == qtc.Qt.Checked)
         if state != qtc.Qt.Checked:
             # Checkbox unchecked, set energy to zero before cleaning up.
@@ -175,7 +188,7 @@ class EnergySetter(qtw.QWidget):
 
         # Create new controller instance.
         try:
-            primary_ctrl = self._make_primary()
+            primary_ctrl = self._make_primary_controller()
         except (NoSettingsError, ValueError) as err:
             base.emit_error(self, EnergySetterErrors.CONTROLLER_LOAD_FAILED,
                             err)
@@ -195,7 +208,7 @@ class EnergySetter(qtw.QWidget):
 
         return primary_ctrl
 
-    def _make_primary(self):
+    def _make_primary_controller(self):
         """Make and return a new primary controller.
 
         Returns
@@ -234,13 +247,29 @@ class EnergySetter(qtw.QWidget):
 
     @qtc.pyqtSlot(tuple)
     def _on_error(self, error_info):
-        """Handle controller errors."""
+        """Handle controller errors.
+
+        Parameters
+        ----------
+        error_info : tuple
+
+        Emits
+        -----
+        error_occurred
+            With error_info on the error that occurred.
+        """
         self.error_occurred.emit(error_info)
         self._flush()
 
     @qtc.pyqtSlot()
     def _on_timeout(self):
-        """Handle timeout."""
+        """Handle timeout.
+
+        Emits
+        -----
+        EnergySetterErrors.SET_ENERGY_TIMEOUT
+            When a timeout happened.
+        """
         base.emit_error(self, EnergySetterErrors.SET_ENERGY_TIMEOUT)
         self._flush()
 
