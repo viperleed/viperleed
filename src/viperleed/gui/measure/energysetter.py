@@ -60,7 +60,7 @@ class EnergySetter(qtw.QWidget):
         self.set_energy = qtw.QCheckBox('Set energy')
         self._primary_path = None
         self._primary_controller = None
-        self._pending_energy = None     # Store energy value during operation
+        self._pending_energy = None
         self._operation_in_progress = False
 
         self._timeout_timer = qtc.QTimer(self)
@@ -82,7 +82,7 @@ class EnergySetter(qtw.QWidget):
 
     @primary_path.setter
     def primary_path(self, primary):
-        """Set the primary path to the primary controller."""
+        """Set the path to the primary controller."""
         self._primary_path = Path(primary)
 
     def _compose(self):
@@ -268,7 +268,7 @@ class EnergySetter(qtw.QWidget):
             self._set_energy(energy)
 
     def set_enabled(self, enable):
-        """Switch enabled status of buttons."""
+        """Switch enabled status of widgets."""
         enable &= bool(self.primary_path)
         self.set_energy.setEnabled(enable)
         self.energy_input.setEnabled(enable and self.set_energy.isChecked())
