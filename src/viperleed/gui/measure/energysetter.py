@@ -165,7 +165,7 @@ class EnergySetter(qtw.QWidget):
 
         Returns
         -------
-        ControllerABC or None
+        primary_ctrl : ControllerABC or None
             The controller instance, or None if creation failed.
 
         Emits
