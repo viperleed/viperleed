@@ -51,14 +51,12 @@ class _FakeController:
 
     def set_energy(self, energy, ramp_time, trigger_meas):
         """Set energy on the controller."""
-        pass
 
     def deleteLater(self):  # pylint: disable=invalid-name
         """Schedule for deletion."""
-        pass
 
 
-class _FakeControllerSettings:
+class _FakeControllerSettings:  # pylint: disable=too-few-public-methods
     """Fake controller settings object."""
 
     def __init__(self):
@@ -301,7 +299,9 @@ def test_get_primary_controller_creates_new(mocker):
     """Check that new controller is created when needed."""
     setter = EnergySetter()
     setter.primary_path = Path('/test/path.ini')
-    setter._make_primary_controller = mocker.Mock(return_value=_FakeController())
+    setter._make_primary_controller = mocker.Mock(
+        return_value=_FakeController()
+        )
 
     result = setter._get_primary_controller()
 
@@ -317,7 +317,9 @@ def test_get_primary_controller_cleanup_on_different_path(mocker):
     setter._primary_controller = old_ctrl
     setter.primary_path = Path('/new/path.ini')
     setter.cleanup_primary_controller = mocker.Mock()
-    setter._make_primary_controller = mocker.Mock(return_value=_FakeController())
+    setter._make_primary_controller = mocker.Mock(
+        return_value=_FakeController()
+        )
 
     setter._get_primary_controller()
 
@@ -329,7 +331,9 @@ def test_get_primary_controller_load_failed(mocker):
     setter = EnergySetter()
     setter.primary_path = Path('/test/path.ini')
     setter.error_occurred = _FakeSignal()
-    setter._make_primary_controller = mocker.Mock(side_effect=ValueError('test'))
+    setter._make_primary_controller = mocker.Mock(
+        side_effect=ValueError('test')
+        )
 
     result = setter._get_primary_controller()
 
@@ -355,7 +359,9 @@ def test_make_primary_controller(mocker, tmp_path):
     """Check controller creation from settings file."""
     setter = EnergySetter()
     test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\ncontroller_class = TestCtrl\naddress = COM1\n')
+    test_path.write_text(
+        '[controller]\ncontroller_class = TestCtrl\naddress = COM1\n'
+        )
     setter.primary_path = test_path
 
     fake_settings = mocker.Mock()
