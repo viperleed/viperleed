@@ -10,10 +10,10 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import sys
-import pytest
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
+from pytest import fixture
 
 from viperleed.gui.measure.energysetter import EnergySetter
 
@@ -87,7 +87,7 @@ class _FakeSerial:
         self.busy_changed.emit(busy)
 
 
-@pytest.fixture
+@fixture
 def setter(tmp_path):
     """Create setter with primary path."""
     setter = EnergySetter()
@@ -97,9 +97,9 @@ def setter(tmp_path):
     return setter
 
 
-@pytest.fixture
+@fixture
 def ctrl_setter(mocker, setter):
-    """Create setter which create a fake primary.."""
+    """Create setter with mocked primary controller."""
     fake_ctrl = _FakeController()
     setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
     return setter
@@ -222,13 +222,11 @@ def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     ctrl_setter._set_energy.assert_called_once_with(50.0)
 
 
-def test_get_primary_controller_reuses_existing():
+def test_get_primary_controller_reuses_existing(setter):
     """Check that existing controller is reused when path matches."""
-    setter = EnergySetter()
     fake_ctrl = _FakeController()
-    fake_ctrl.settings.last_file = Path('/test/path.ini')
+    fake_ctrl.settings.last_file = setter.primary_path
     setter._primary_controller = fake_ctrl
-    setter.primary_path = Path('/test/path.ini')
 
     result = setter._get_primary_controller()
 
@@ -236,10 +234,8 @@ def test_get_primary_controller_reuses_existing():
     assert fake_ctrl.connected
 
 
-def test_get_primary_controller_creates_new(mocker):
+def test_get_primary_controller_creates_new(mocker, setter):
     """Check that new controller is created when needed."""
-    setter = EnergySetter()
-    setter.primary_path = Path('/test/path.ini')
     setter._make_primary_controller = mocker.Mock(
         return_value=_FakeController()
         )
@@ -250,13 +246,11 @@ def test_get_primary_controller_creates_new(mocker):
     assert result is not None
 
 
-def test_get_primary_controller_cleanup_on_different_path(mocker):
+def test_get_primary_controller_cleanup_on_different_path(mocker, setter):
     """Check old controller is cleaned up when path changes."""
-    setter = EnergySetter()
     old_ctrl = _FakeController()
     old_ctrl.settings.last_file = Path('/old/path.ini')
     setter._primary_controller = old_ctrl
-    setter.primary_path = Path('/new/path.ini')
     setter.cleanup_primary_controller = mocker.Mock()
     setter._make_primary_controller = mocker.Mock(
         return_value=_FakeController()
@@ -267,10 +261,8 @@ def test_get_primary_controller_cleanup_on_different_path(mocker):
     setter.cleanup_primary_controller.assert_called_once()
 
 
-def test_get_primary_controller_load_failed(mocker):
+def test_get_primary_controller_load_failed(mocker, setter):
     """Check error emitted when controller creation fails."""
-    setter = EnergySetter()
-    setter.primary_path = Path('/test/path.ini')
     setter.error_occurred = _FakeSignal()
     setter._make_primary_controller = mocker.Mock(
         side_effect=ValueError('test')
@@ -282,10 +274,8 @@ def test_get_primary_controller_load_failed(mocker):
     assert setter.error_occurred.emitted == 1
 
 
-def test_get_primary_controller_connection_failed(mocker):
+def test_get_primary_controller_connection_failed(mocker, setter):
     """Check error emitted when controller connection fails."""
-    setter = EnergySetter()
-    setter.primary_path = Path('/test/path.ini')
     setter.error_occurred = _FakeSignal()
     fake_ctrl = _FakeController(connected=False)
     setter._make_primary_controller = mocker.Mock(return_value=fake_ctrl)

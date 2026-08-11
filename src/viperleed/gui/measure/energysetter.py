@@ -239,7 +239,7 @@ class EnergySetter(qtw.QWidget):
         if self._primary_controller is None:
             return
         base.safe_disconnect(self._primary_controller.error_occurred,
-                             self._on_error,)
+                             self._on_error)
         base.safe_disconnect(self._primary_controller.serial.busy_changed,
                              self._on_ctrl_finished)
         self._primary_controller.disconnect_()
