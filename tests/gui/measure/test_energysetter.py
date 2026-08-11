@@ -414,7 +414,8 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
     """Check ctrl finished cleans up when not setting."""
     setter = EnergySetter()
     setter._operation_in_progress = True
-    setter.set_energy = mocker.Mock(isChecked=lambda: False)
+    setter.set_energy = mocker.Mock()
+    setter.set_energy.isChecked.return_value = False
     setter.cleanup_primary_controller = mocker.Mock()
     setter._timeout_timer = mocker.Mock()
 
@@ -430,7 +431,8 @@ def test_on_ctrl_finished_pending_energy(mocker):
     setter = EnergySetter()
     setter._operation_in_progress = True
     setter._pending_energy = 75.0
-    setter.set_energy = mocker.Mock(isChecked=lambda: True)
+    setter.set_energy = mocker.Mock()
+    setter.set_energy.isChecked.return_value = True
     setter._set_energy = mocker.Mock()
 
     setter._on_ctrl_finished(False)
@@ -444,7 +446,8 @@ def test_on_ctrl_finished_no_pending(mocker):
     setter = EnergySetter()
     setter._operation_in_progress = True
     setter._pending_energy = None
-    setter.set_energy = mocker.Mock(isChecked=lambda: True)
+    setter.set_energy = mocker.Mock()
+    setter.set_energy.isChecked.return_value = True
     setter._timeout_timer = mocker.Mock()
     setter._set_energy = mocker.Mock()
 
