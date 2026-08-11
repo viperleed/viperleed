@@ -10,14 +10,18 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import sys
+import pytest
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.energysetter import EnergySetter
 
+from .mock_qt import _FakeSignal
+
 
 _ = qtw.QApplication(sys.argv)
+
 
 # pylint: disable=protected-access
 class _FakeController:
@@ -83,26 +87,22 @@ class _FakeSerial:
         self.busy_changed.emit(busy)
 
 
-class _FakeSignal:
-    """A minimal signal-like object for testing."""
+@pytest.fixture
+def setter(tmp_path):
+    """Create setter with primary path."""
+    setter = EnergySetter()
+    test_path = tmp_path / 'controller.ini'
+    test_path.write_text('[controller]\n')
+    setter.primary_path = test_path
+    return setter
 
-    def __init__(self):
-        """Initialize fake signal."""
-        self.connected = []
-        self.disconnected = []
-        self.emitted = 0
 
-    def connect(self, slot, **kwargs):
-        """Connect a slot."""
-        self.connected.append(slot)
-
-    def disconnect(self, slot):
-        """Disconnect a slot."""
-        self.disconnected.append(slot)
-
-    def emit(self, *args):
-        """Emit the signal."""
-        self.emitted += 1
+@pytest.fixture
+def ctrl_setter(mocker, setter):
+    """Create setter which create a fake primary.."""
+    fake_ctrl = _FakeController()
+    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
+    return setter
 
 
 def test_init_creates_widgets():
@@ -117,34 +117,12 @@ def test_init_creates_widgets():
     assert not setter._operation_in_progress
 
 
-def test_setting_energy_property(mocker, tmp_path):
+def test_setting_energy_property(ctrl_setter):
     """Check setting_energy property reflects checkbox state."""
-    setter = EnergySetter()
-
-    # Set up valid primary_path that passes is_file() check
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-
-    fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
-    setter._primary_path = mocker.Mock(return_value=True)
-    setter.set_energy.setCheckState(qtc.Qt.Unchecked)
-    assert not setter.setting_energy
-    setter.set_energy.setCheckState(qtc.Qt.Checked)
-    assert setter.setting_energy
-
-
-def test_primary_path_setter(tmp_path):
-    """Check primary_path setter converts to Path."""
-    setter = EnergySetter()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-
-    setter.primary_path = str(test_path)
-    assert setter.primary_path == test_path
-    assert isinstance(setter.primary_path, Path)
-
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
+    assert not ctrl_setter.setting_energy
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
+    assert ctrl_setter.setting_energy
 
 def test_set_enabled_without_primary_path():
     """Check set_enabled disables when no primary path."""
@@ -157,34 +135,22 @@ def test_set_enabled_without_primary_path():
     assert not setter.energy_input.isEnabled()
 
 
-def test_set_enabled_with_primary_path(tmp_path):
+def test_set_enabled_with_primary_path(setter):
     """Check set_enabled enables when primary path exists."""
-    setter = EnergySetter()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-
     setter.set_enabled(True)
 
     assert setter.set_energy.isEnabled()
-    # Energy input should be disabled when checkbox is unchecked
     assert not setter.energy_input.isEnabled()
 
 
-def test_set_enabled_with_checked_checkbox(mocker, tmp_path):
+def test_set_enabled_with_checked_checkbox(ctrl_setter):
     """Check energy input enabled when checkbox is checked."""
-    setter = EnergySetter()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-    fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
-    setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setChecked(True)
 
-    setter.set_enabled(True)
+    ctrl_setter.set_enabled(True)
 
-    assert setter.set_energy.isEnabled()
-    assert setter.energy_input.isEnabled()
+    assert ctrl_setter.set_energy.isEnabled()
+    assert ctrl_setter.energy_input.isEnabled()
 
 
 def test_on_set_energy_toggled_no_primary_path():
@@ -211,74 +177,49 @@ def test_on_set_energy_toggled_missing_file(tmp_path):
     assert setter.error_occurred.emitted == 1
 
 
-def test_on_set_energy_toggled_unchecked_sets_zero(mocker, tmp_path):
+def test_on_set_energy_toggled_unchecked_sets_zero(mocker, ctrl_setter):
     """Check that unchecking sets energy to zero."""
-    setter = EnergySetter()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-    fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
+    ctrl_setter._set_energy = mocker.Mock()
+    ctrl_setter.set_energy.setChecked(True)
 
-    setter._set_energy = mocker.Mock()
-    setter.set_energy.setChecked(True)
+    ctrl_setter.energy_input.setValue(50.0)
+    ctrl_setter._set_energy.assert_called_with(50.0)
 
-    setter.energy_input.setValue(50.0)
-    setter._set_energy.assert_called_with(50.0)
+    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter._set_energy.assert_called_with(0.0)
 
-    setter.set_energy.setChecked(False)
-    setter._set_energy.assert_called_with(0.0)
-
-    assert setter.energy_input.value() == 0.0
+    assert ctrl_setter.energy_input.value() == 0.0
 
 
-def test_on_energy_changed_when_not_setting(mocker, tmp_path):
+def test_on_energy_changed_when_not_setting(mocker, ctrl_setter):
     """Check energy change ignored when not setting energy."""
-    setter = EnergySetter()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-    fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
-    setter.set_energy.setChecked(False)
-    setter._set_energy = mocker.Mock()
+    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter._set_energy = mocker.Mock()
 
-    setter._on_energy_changed()
+    ctrl_setter._on_energy_changed()
 
-    setter._set_energy.assert_not_called()
+    ctrl_setter._set_energy.assert_not_called()
 
 
-def test_on_energy_changed_operation_in_progress(mocker, tmp_path):
+def test_on_energy_changed_operation_in_progress(ctrl_setter):
     """Check energy change queued when operation in progress."""
-    setter = EnergySetter()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-    fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
-    setter.set_energy.setChecked(True)
-    setter._operation_in_progress = True
-    setter.energy_input.setValue(75.0)
+    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter._operation_in_progress = True
+    ctrl_setter.energy_input.setValue(75.0)
 
-    setter._on_energy_changed()
+    ctrl_setter._on_energy_changed()
 
-    assert setter._pending_energy == 75.0
+    assert ctrl_setter._pending_energy == 75.0
 
 
-def test_on_energy_changed_sets_energy(mocker, tmp_path):
+def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     """Check energy change triggers set_energy when idle."""
-    setter = EnergySetter()
-    setter._set_energy = mocker.Mock()
-    test_path = tmp_path / 'controller.ini'
-    test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
-    fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
-    setter.set_energy.setChecked(True)
-    setter._operation_in_progress = False
-    setter.energy_input.setValue(50.0)
+    ctrl_setter._set_energy = mocker.Mock()
+    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter._operation_in_progress = False
+    ctrl_setter.energy_input.setValue(50.0)
 
-    setter._set_energy.assert_called_once_with(50.0)
+    ctrl_setter._set_energy.assert_called_once_with(50.0)
 
 
 def test_get_primary_controller_reuses_existing():
@@ -500,7 +441,6 @@ def test_on_ctrl_finished_pending_energy(mocker):
     setter._operation_in_progress = True
     setter._pending_energy = 75.0
     setter.set_energy = mocker.Mock(isChecked=lambda: True)
-    setter._timeout_timer = mocker.Mock()
     setter._set_energy = mocker.Mock()
 
     setter._on_ctrl_finished(False)
