@@ -24,6 +24,7 @@ _ = qtw.QApplication(sys.argv)
 
 
 # pylint: disable=protected-access
+# pylint: disable=redefined-outer-name
 class _FakeController:
     """A minimal controller-like object for testing."""
 
@@ -124,6 +125,7 @@ def test_setting_energy_property(ctrl_setter):
     ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
     assert ctrl_setter.setting_energy
 
+
 def test_set_enabled_without_primary_path():
     """Check set_enabled disables when no primary path."""
     setter = EnergySetter()
@@ -188,6 +190,7 @@ def test_on_set_energy_toggled_unchecked_sets_zero(mocker, ctrl_setter):
     ctrl_setter.set_energy.setChecked(False)
     ctrl_setter._set_energy.assert_called_with(0.0)
 
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert ctrl_setter.energy_input.value() == 0.0
 
 
@@ -209,6 +212,7 @@ def test_on_energy_changed_operation_in_progress(ctrl_setter):
 
     ctrl_setter._on_energy_changed()
 
+    # pylint: disable-next=magic-value-comparison
     assert ctrl_setter._pending_energy == 75.0
 
 
