@@ -78,7 +78,7 @@ If you are executing viperleed in a conda environment, try one of the
 following:
     1. Creating a new, clean environment without Qt by calling
        conda create with the --no-default-packages flag, then
-            pip install 'viperleed[GUI]'
+            pip install "viperleed[GUI]"
        there.
     2. Deactivating the current environment first, if you have
        installed viperleed globally.
