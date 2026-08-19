@@ -256,11 +256,11 @@ class AboutViPErLEED(qtw.QWidget):
             'Lutz Hammer',
             'Tilman Ki\u00dflinger',
             'Florian D\u00f6rr',
-            'Alexander M. Imre',
+            'Alexandra Mia Imre',
             # 'Bernhard Mayr',
             # 'Christoph Pfungen',
             # 'Stefan Mitterhofer',
-            )
+        )
 
         txt = qtw.QLabel(
             f'{__copyright__}<p>'
