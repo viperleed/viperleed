@@ -360,6 +360,54 @@ class TestViPErLEEDSettings:
         )
         assert not invalid
 
+    def test_duplicate_comments_not_stored(self):
+        """Check that duplicate comment lines are not stored twice."""
+        parser = ViPErLEEDSettings()
+        comment_line = '# Duplicate comment'
+        # pylint: disable-next=protected-access
+        parser._ViPErLEEDSettings__store_if_comment(comment_line,
+                                                    'TestSection')
+        # pylint: disable-next=protected-access
+        parser._ViPErLEEDSettings__store_if_comment(comment_line,
+                                                    'TestSection')
+
+        # pylint: disable-next=protected-access
+        comments = parser._ViPErLEEDSettings__comments['TestSection']
+        assert comments.count(comment_line) == 1
+
+    def test_comment_prefixes_regex_created(self):
+        """Check that comment prefixes regex is created correctly."""
+        parser = ViPErLEEDSettings()
+        # pylint: disable-next=protected-access
+        assert parser._ViPErLEEDSettings__prefixes is not None
+        # pylint: disable-next=protected-access
+        assert hasattr(parser._ViPErLEEDSettings__prefixes, 'pattern')
+
+    def test_comments_stored_by_section(self):
+        """Check that comments are stored under the correct section."""
+        parser = ViPErLEEDSettings()
+        before_sec = '# Comment before section'
+        in_sec = '# Comment in section'
+        # pylint: disable-next=protected-access
+        parser._ViPErLEEDSettings__store_if_comment(before_sec, None)
+        # pylint: disable-next=protected-access
+        parser._ViPErLEEDSettings__store_if_comment(in_sec, 'MySection')
+
+        # pylint: disable-next=protected-access
+        comments = parser._ViPErLEEDSettings__comments
+        assert before_sec in comments[None]
+        assert in_sec in comments['MySection']
+
+    def test_comment_regex_matches_both_prefixes(self):
+        """Check that both # and ; prefixes are matched."""
+        parser = ViPErLEEDSettings()
+        # pylint: disable-next=protected-access
+        pattern = parser._ViPErLEEDSettings__prefixes
+
+        assert pattern.match('# comment') is not None
+        assert pattern.match('; comment') is not None
+        assert pattern.match('not a comment') is None
+
     def test_invalid_admissible_value(self):
         """Check reporting when an option is not in admissible_values."""
         parser = ViPErLEEDSettings()
@@ -386,3 +434,22 @@ class TestViPErLEEDSettings:
         parser = ViPErLEEDSettings()
         invalid = parser.misses_settings(('MissingSec',))
         assert invalid == ['MissingSec']
+
+    @parametrize('line,expected', [
+        ('# This is a comment', True),
+        ('; This is also a comment', True),
+        ('  # Comment with leading spaces', True),
+        ('  ; Comment with leading spaces', True),
+        ('not a comment', False),
+        ('option = value # inline', False),  # inline comments not supported
+        ('', False),
+        ('#', True),
+        (';', True),
+    ])
+    def test_store_if_comment(self, line, expected):
+        """Check correct identification of comment lines."""
+        parser = ViPErLEEDSettings()
+        # pylint: disable-next=protected-access
+        result = parser._ViPErLEEDSettings__store_if_comment(line,
+                                                             'TestSection')
+        assert result == expected
