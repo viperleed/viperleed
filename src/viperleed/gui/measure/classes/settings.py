@@ -723,7 +723,7 @@ class ViPErLEEDSettings(AliasConfigParser):
             pattern = '|'.join(fr'^\s*({p})' for p in escaped)
             self.__prefixes = re.compile(pattern)
             return
-        self.__prefixes = self._comments.pattern
+        self.__prefixes = self._comments.pattern    # pylint: disable=no-member
 
     def __store_if_comment(self, line, sectname):
         """Store a line as comment if it is one.
@@ -745,7 +745,7 @@ class ViPErLEEDSettings(AliasConfigParser):
             True if the line was a comment (whether it was stored
             or not).
         """
-        if self.__prefixes.match(line):
+        if self.__prefixes.match(line.strip()):
             if line not in self.__comments[sectname]:
                 self.__comments[sectname].append(line)
             return True
