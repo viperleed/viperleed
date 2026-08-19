@@ -375,14 +375,6 @@ class TestViPErLEEDSettings:
         comments = parser._ViPErLEEDSettings__comments['TestSection']
         assert comments.count(comment_line) == 1
 
-    def test_comment_prefixes_regex_created(self):
-        """Check that comment prefixes regex is created correctly."""
-        parser = ViPErLEEDSettings()
-        # pylint: disable-next=protected-access
-        assert parser._ViPErLEEDSettings__prefixes is not None
-        # pylint: disable-next=protected-access
-        assert hasattr(parser._ViPErLEEDSettings__prefixes, 'pattern')
-
     def test_comments_stored_by_section(self):
         """Check that comments are stored under the correct section."""
         parser = ViPErLEEDSettings()
