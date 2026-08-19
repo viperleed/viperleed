@@ -29,6 +29,7 @@ from collections.abc import Sequence
 import copy
 import os
 from pathlib import Path
+import re
 import sys
 
 from wrapt import synchronized  # thread-safety decorator
@@ -722,10 +723,17 @@ class ViPErLEEDSettings(AliasConfigParser):
             True if the line was a comment (whether it was stored
             or not).
         """
+        prefixes = None
         try:
             prefixes = self._comment_prefixes  # < PY3_13
         except AttributeError:
-            prefixes = self._prefixes.full
+            try:
+                prefixes = self._prefixes.full # = PY3_13
+            except AttributeError:
+                pass
+        if not prefixes:
+            prefixes = re.findall(r'\^\(\\?(.?)\)',
+                                  self._comments.pattern.pattern) # > PY3_13
         for prefix in prefixes:
             if line.strip().startswith(prefix):
                 if line not in self.__comments[sectname]:
