@@ -394,11 +394,11 @@ class TestViPErLEEDSettings:
         """Check that both # and ; prefixes are matched."""
         parser = ViPErLEEDSettings()
         # pylint: disable-next=protected-access
-        pattern = parser._ViPErLEEDSettings__prefixes
+        pattern = parser._ViPErLEEDSettings__comment_re
 
-        assert pattern.match('# comment') is not None
-        assert pattern.match('; comment') is not None
-        assert pattern.match('not a comment') is None
+        assert pattern.match('# comment')
+        assert pattern.match('; comment')
+        assert not pattern.match('not a comment')
 
     def test_invalid_admissible_value(self):
         """Check reporting when an option is not in admissible_values."""

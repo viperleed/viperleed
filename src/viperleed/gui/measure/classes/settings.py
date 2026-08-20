@@ -315,7 +315,7 @@ class ViPErLEEDSettings(AliasConfigParser):
         # when the content of the config was read from an archive.
         self._last_file = ''
         self.__base_dir = ''
-        self.__store_comment_prefixes()
+        self.__comment_re = self._make_comment_regex()
 
     def __str__(self):
         """Return a simple string representation of self."""
@@ -704,8 +704,8 @@ class ViPErLEEDSettings(AliasConfigParser):
             fp.write(f'{key}{value}\n')
         fp.write('\n')
 
-    def __store_comment_prefixes(self):
-        """Extract and store the comment prefixes of self."""
+    def _make_comment_regex(self):
+        """Extract and return the comment prefixes of self."""
         # Note that we currently pass kwargs['comment_prefixes'] = '#;'
         # on __init__, which means the comment prefixes will always be
         # # and ; at the time of writing (Py 3.15 and before).
@@ -719,11 +719,10 @@ class ViPErLEEDSettings(AliasConfigParser):
                 pass
         if prefixes:
             # Build regex pattern to match comment lines
-            escaped = [re.escape(p) for p in prefixes]
-            pattern = '|'.join(fr'^\s*({p})' for p in escaped)
-            self.__prefixes = re.compile(pattern)
-            return
-        self.__prefixes = self._comments.pattern    # pylint: disable=no-member
+            escaped = (re.escape(p) for p in prefixes)
+            pattern = '|'.join(fr'^\s*{p}' for p in escaped)
+            return re.compile(pattern)
+        return self._comments.pattern   # pylint: disable=no-member
 
     def __store_if_comment(self, line, sectname):
         """Store a line as comment if it is one.
@@ -745,7 +744,7 @@ class ViPErLEEDSettings(AliasConfigParser):
             True if the line was a comment (whether it was stored
             or not).
         """
-        if self.__prefixes.match(line.strip()):
+        if self.__comment_re.match(line.strip()):
             if line not in self.__comments[sectname]:
                 self.__comments[sectname].append(line)
             return True
