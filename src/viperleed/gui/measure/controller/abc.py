@@ -1193,7 +1193,7 @@ class MeasureControllerABC(ControllerABC):
         tip = ("<nobr>The number of measurements the controller should"
                "</nobr> average over before returning a value to the PC.")
         handler.add_option('measurement_settings', 'nr_samples',
-                           handler_widget=widget, display_name='No. samples',
+                           handler_widget=widget, display_name='Nr. samples',
                            tooltip=tip)
         return handler
 
