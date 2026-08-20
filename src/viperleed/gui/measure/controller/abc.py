@@ -695,7 +695,7 @@ class ControllerABC(DeviceABC):
              '</nobr> to reach a stable value after a new energy has '
              'been set. This should be calibrated for a typical step '
              'size (e.g., 0.5 eV).'),
-            ('first_settle_time', '1st energy settle time',
+            ('first_settle_time', 'E start settle time',
              '<nobr>The time interval required for the true beam '
              'energy</nobr> to reach a stable value when the first energy '
              'of a ramp is set. This is usually significantly longer than '
