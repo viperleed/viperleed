@@ -7,7 +7,7 @@ text file. The file is structured like a .ini file, where each
 structure. Section 'DEFAULT' has the default values for parameters
 that may be missing from the other structures. NB: the contents of
 the DEFAULT section may be overwritten with up-to-date defaults,
-as defined in this module in the <defaults> dictionary.
+as defined in this module in the DEFAULTS dictionary.
 """
 
 __authors__ = (
@@ -34,15 +34,14 @@ from viperleed.gui.helpers import string_matrix_to_numpy
 
 warnings.simplefilter('always', DeprecationWarning)
 
-defaults = {'screenAperture': '110',
+DEFAULTS = {'screenAperture': '110',
             'bulk3Dsym': 'None',
             'beamIncidence': '(0, 0)'}
 
-param_names = ('eMax', 'surfBasis', 'SUPERLATTICE', 'bulkGroup', 'surfGroup',
+_PARAM_NAMES = ('eMax', 'surfBasis', 'SUPERLATTICE', 'bulkGroup', 'surfGroup',
                'bulk3Dsym', 'beamIncidence', 'screenAperture', 'name')
-param_names_map = {k.lower(): k for k in param_names}
-
-comment_chars = ('#', '!', '%')
+_PARAM_NAMES_MAP = {k.lower(): k for k in _PARAM_NAMES}
+COMMENT_CHARS = ('#', '!', '%')
 
 
 class LEEDParser(  # pylint: disable=too-many-ancestors
@@ -51,13 +50,13 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
 
     def __init__(self):
         """Initialize LEEDParser instance."""
-        super().__init__(comment_prefixes=comment_chars,
-                         inline_comment_prefixes=comment_chars,
+        super().__init__(comment_prefixes=COMMENT_CHARS,
+                         inline_comment_prefixes=COMMENT_CHARS,
                          strict=False)
-        self['DEFAULT'] = defaults
+        self['DEFAULT'] = DEFAULTS
 
-    @staticmethod
-    def write_structures(structures, fname):
+    @classmethod
+    def write_structures(cls, structures, fname):
         """Write structures to file.
 
         A DEFAULT section will also be created.
@@ -78,7 +77,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         -------
         None.
         """
-        parser = LEEDParser()
+        parser = cls()
         parser.read_structures(structures)
         parser.write(fname)
 
@@ -151,7 +150,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
     def clear(self):
         """Clear the parser, but keep the defaults."""
         super().clear()
-        self['DEFAULT'] = defaults
+        self['DEFAULT'] = DEFAULTS
 
     # Disabled because of bug in pylint:
     # pylint: disable=missing-param-doc,missing-type-doc
@@ -279,7 +278,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         str
             The key in self to be used for storing option
         """
-        return param_names_map[optionstr.lower()]
+        return _PARAM_NAMES_MAP[optionstr.lower()]
 
     def read(self, filenames, encoding=None):
         """Read the contents of files into self.
@@ -326,7 +325,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                               DeprecationWarning)
         super().read(filenames, encoding)
 
-        self['DEFAULT'] = defaults
+        self['DEFAULT'] = DEFAULTS
 
     def read_dict(self, dictionary, source='<dict>'):
         """Read a dictionary of structures."""
@@ -339,7 +338,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         for structure in dictionary.values():
             extras.extend((structure, k)
                           for k in structure
-                          if k.lower() not in param_names_map)
+                          if k.lower() not in _PARAM_NAMES_MAP)
         for structure, k in extras:
             structure.pop(k)
 
@@ -351,7 +350,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                         and isinstance(value, np.ndarray)):
                     structure[key] = array_to_string(value)
                 elif self.optionxform(key) == 'bulk3Dsym':
-                    structure[key] = str(value)
+                    structure[key] = str(value) if value else ''
 
         super().read_dict(dictionary, source)
 

@@ -373,7 +373,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
 
                     # Check if the reason why the beam was not found is that
                     # it would lie outside the LEED screen
-                    b = leed.bulk_basis
+                    b = leed.bulk_basis                                         # TODO: maybe leed.bulk_basis()? Or leed.bulk.basis?
                     g = np.linalg.norm(np.dot(beam, b)) * 1e10  # 1/m
                     el_m = 9.109e-31    # kg
                     el_q = 1.60218e-19  # C
@@ -584,22 +584,6 @@ def check_multi_leed_params(leed_parameters):                                   
             raise ValueError("Inconsistent symmetry operations of bulk lattices"
                              " in the input parameters")
     return (leed_parameters, leed_patterns)
-
-
-def catch_gui_crash():
-    """
-    Function that allows to catch exceptions that cause the GUI to crash and
-    to print them to terminal
-    """
-    sys._excepthook = sys.excepthook
-    def exception_hook(exctype, value, traceback):
-        print("########## Caught an exception! ##########")
-        # TODO: here one would like to rather open a parent-less
-        # QMessageBox reporting the exception. Perhaps even log
-        # the event to disk (or have the option in the message).
-        sys._excepthook(exctype, value, traceback)
-        sys.exit(1)
-    sys.excepthook = exception_hook
 
 
 def check_py_version(version_to_check, check_what='earlier'):
