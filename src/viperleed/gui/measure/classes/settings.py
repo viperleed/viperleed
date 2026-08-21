@@ -29,6 +29,7 @@ from collections.abc import Sequence
 import copy
 import os
 from pathlib import Path
+import re
 import sys
 
 from wrapt import synchronized  # thread-safety decorator
@@ -314,6 +315,7 @@ class ViPErLEEDSettings(AliasConfigParser):
         # when the content of the config was read from an archive.
         self._last_file = ''
         self.__base_dir = ''
+        self.__comment_re = self._make_comment_regex()
 
     def __str__(self):
         """Return a simple string representation of self."""
@@ -702,6 +704,26 @@ class ViPErLEEDSettings(AliasConfigParser):
             fp.write(f'{key}{value}\n')
         fp.write('\n')
 
+    def _make_comment_regex(self):
+        """Return a regular expression for matching comments."""
+        # Note that we currently pass kwargs['comment_prefixes'] = '#;'
+        # on __init__, which means the comment prefixes will always be
+        # # and ; at the time of writing (Py 3.15 and before).
+        prefixes = None
+        try:
+            prefixes = self._comment_prefixes  # < PY3_13
+        except AttributeError:
+            try:
+                prefixes = self._prefixes.full # = PY3_13
+            except AttributeError:
+                pass
+        if prefixes:
+            # Build regex pattern to match comment lines
+            escaped = (re.escape(p) for p in prefixes)
+            pattern = '|'.join(fr'^\s*{p}' for p in escaped)
+            return re.compile(pattern)
+        return self._comments.pattern   # pylint: disable=no-member
+
     def __store_if_comment(self, line, sectname):
         """Store a line as comment if it is one.
 
@@ -722,15 +744,10 @@ class ViPErLEEDSettings(AliasConfigParser):
             True if the line was a comment (whether it was stored
             or not).
         """
-        try:
-            prefixes = self._comment_prefixes  # < PY3_13
-        except AttributeError:
-            prefixes = self._prefixes.full
-        for prefix in prefixes:
-            if line.strip().startswith(prefix):
-                if line not in self.__comments[sectname]:
-                    self.__comments[sectname].append(line)
-                return True
+        if self.__comment_re.match(line.strip()):
+            if line not in self.__comments[sectname]:
+                self.__comments[sectname].append(line)
+            return True
         return False
 
 
