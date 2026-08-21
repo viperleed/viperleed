@@ -705,7 +705,7 @@ class ViPErLEEDSettings(AliasConfigParser):
         fp.write('\n')
 
     def _make_comment_regex(self):
-        """Extract and return the comment prefixes of self."""
+        """Return a regular expression for matching comments."""
         # Note that we currently pass kwargs['comment_prefixes'] = '#;'
         # on __init__, which means the comment prefixes will always be
         # # and ; at the time of writing (Py 3.15 and before).
