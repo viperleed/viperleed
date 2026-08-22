@@ -105,10 +105,11 @@ def plot_iv(data, filename, labels=[], annotations=[],
                              "length.")
 
     if labels and len(labels) != n_beams:
-        raise ValueError("Number of labels does not match number of beams.")
+        raise ValueError(f"Number of labels ({len(labels)}) does not match "
+                         f"number of beams ({n_beams}).")
     if annotations and len(annotations) != n_beams:
-        raise ValueError("Number of annotations does not match number of "
-                         "beams.")
+        raise ValueError(f"Number of annotations ({len(annotations)}) does "
+                         f"not match number of beams ({n_beams}).")
 
     # set formatting parameters
     if formatting is None:
@@ -324,7 +325,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
             # pylint: disable-next=possibly-used-before-assignment
             pdf = PdfPages(filename)
         except PermissionError:
-            logger.error(f"writeRfactorPdf: Cannot open file {filename}. "
+            logger.error(f"plot_iv: Cannot open file {filename}. "
                          "Aborting.")
             return
 

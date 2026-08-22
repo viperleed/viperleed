@@ -19,7 +19,9 @@
 .. |POSCAR|       replace:: :file:`POSCAR`
 .. |R-factor|     replace:: :math:`R`\ -factor
 .. |R factor|     replace:: :math:`R` factor
+.. |R factors|    replace:: :math:`R` factors
 .. |RP|           replace:: :math:`R_\mathrm{P}`
+.. |RS|           replace:: :math:`R_\mathrm{S}`
 .. |SUPP|         replace:: :file:`SUPP`
 .. |V0i|          replace:: :math:`V_{0\mathrm{i}}`
 .. |V0r|          replace:: :math:`V_{0\mathrm{r}}`

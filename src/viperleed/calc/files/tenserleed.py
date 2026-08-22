@@ -37,6 +37,7 @@ KNOWN_TL_VERSIONS = (
     '1.7.5',
     '1.7.6',
     '2.0.0',
+    '2.1.0',
     )
 
 OLD_TL_VERSION_NAMES = {

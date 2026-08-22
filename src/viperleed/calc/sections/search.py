@@ -762,7 +762,7 @@ def search(sl, rp):
                             )
                         if content:
                             newData = iosearch.readSDTL_blocks(
-                                content, whichR=rp.SEARCH_BEAMS,
+                                content, which_beams=rp.SEARCH_BEAMS,
                                 n_expect=rp.SEARCH_POPULATION
                                 )
                     elif (search_eval_timer.has_reached_deadline()              # TODO: nicer with a QTimer timeout

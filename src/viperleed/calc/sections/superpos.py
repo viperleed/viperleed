@@ -246,7 +246,7 @@ def _best_config_from_sdtl(rp):                                                 
 
     if sdtl is not None:
         sdtl = readSDTL_blocks("\n".join(sdtl),
-                               whichR=rp.SEARCH_BEAMS,
+                               which_beams=rp.SEARCH_BEAMS,
                                n_expect=rp.SEARCH_POPULATION)
     if not sdtl:
         logger.error("Superpos: No data found in SD.TL")

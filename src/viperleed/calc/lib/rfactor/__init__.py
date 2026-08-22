@@ -1,0 +1,36 @@
+"""Module R-factor."""
+
+__authors__ = ('Alexandra M. Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-02-21'
+__license__ = 'GPLv3+'
+
+
+from .pendry import r_pendry
+from .r_1 import r_1
+from .r_2 import r_2
+from .smooth import r_s
+from .zannazi_jona import r_zjj
+
+_R_FACTOR_SYNONYMS = {
+    r_pendry: ('pendry', 'r_p', 'r_pendry', 'rp', 'pendry r-factor', 'p'),
+    r_1: ('r1', 'r_1', 'r1 factor'),
+    r_2: ('r2', 'r_2', 'r2 factor'),
+    r_s: ('s', 'rs', 'r_s', 'r_smooth', 'smooth', 'schmid'),
+    r_zjj: (
+        'zj',
+        'zj factor',
+        'zannazi',
+        'zannazi jona',
+        'zannazi-jona',
+    ),
+}
+
+def select_rfactor(name):
+    """Select R-factor function by name using synonyms."""
+    _rfactor_name = name.lower().strip()
+    for func, synonyms in _R_FACTOR_SYNONYMS.items():
+        if _rfactor_name in synonyms:
+            return func
+    err_msg = f'Unknown R-factor name: {name}'
+    raise ValueError(err_msg)
