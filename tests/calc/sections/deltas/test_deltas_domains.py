@@ -11,7 +11,7 @@ test_calculate_for_real.py.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-07-05'
 __license__ = 'GPLv3+'
 

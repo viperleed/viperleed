@@ -1,9 +1,9 @@
 """Tests for viperleed.calc.files.displacements."""
 
 __authors__ = (
-    'Michele Riva (@michele-riva)',
+    'Michele Riva (@michele-riv2019-2026
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-06-08'
 __license__ = 'GPLv3+'
 
