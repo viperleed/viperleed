@@ -747,23 +747,13 @@ class ViPErinoController(MeasureControllerABC):
         self.send_message(cmd)
         self.time_stamp = time.perf_counter()
 
-    @qtc.pyqtSlot(object)
-    def on_data_ready(self, data):
-        """Receive and store data from the serial."""
-        # We may receive two types of data: hardware&firmware
-        # information (a dictionary) and actual measurements
-        if isinstance(data, dict):
-            # Got hardware info
-            with self.lock:
-                self.hardware = data
-            # Now that we have info, we can check the box ID and whether
-            # the quantities that we should measure can be measured.
-            self._check_box_id()
-            self.__check_measurements_possible()
-            self.hardware_info_arrived.emit()
-            return
+    def is_measurement_data(self, data):
+        """Return whether data are measurement values."""
+        return isinstance(data, list)
 
-        # Otherwise it is a list of data: [ADC0, ADC1, LM35]
+    def process_measurement_data(self, data):
+        """Process incoming measurement data."""
+        # Data are expected as a list of values: [ADC0, ADC1, LM35].
         # The order is the same as stored in the config file under
         # controller/measurement_devices. The ADC channels chosen
         # via set_measurements() determine which value was measured
@@ -779,6 +769,17 @@ class ViPErinoController(MeasureControllerABC):
         if self.measures(QuantityInfo.TEMPERATURE):
             self.__convert_thermocouple_voltages()
         self.measurements_done()
+
+    def process_hardware_information(self, data):
+        """Process incoming hardware and firmware information."""
+        # Got hardware info
+        with self.lock:
+            self.hardware = data
+        # Now that we have info, we can check the box ID and whether
+        # the quantities that we should measure can be measured.
+        self._check_box_id()
+        self.__check_measurements_possible()
+        self.hardware_info_arrived.emit()
 
     @qtc.pyqtSlot()
     @ensure_connected
