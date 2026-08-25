@@ -93,19 +93,19 @@ class EnergySetter(qtw.QWidget):
 
     def _compose(self):
         """Set up the user interface."""
-        layout = qtw.QGridLayout(self)
+        layout = qtw.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         for widget in (self.set_energy, self.energy_input):
             widget.setFont(AllGUIFonts().buttonFont)
             widget.ensurePolished()
             widget.setEnabled(False)
-        layout.addWidget(self.set_energy, 0, 0)
+        layout.addWidget(self.set_energy)
         self.energy_input.setDecimals(1)
         self.energy_input.setRange(0.0, 1000.0)
         self.energy_input.setSingleStep(0.5)
         self.energy_input.setValue(0.0)
         self.energy_input.setSuffix(' eV')
-        layout.addWidget(self.energy_input, 0, 1)
+        layout.addWidget(self.energy_input)
 
         self.setLayout(layout)
 
