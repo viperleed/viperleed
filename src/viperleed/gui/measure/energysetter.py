@@ -184,8 +184,9 @@ class EnergySetter(qtw.QWidget):
             if (ctrl_settings.last_file and
                 ctrl_settings.last_file == self.path):
                 # Same controller, ensure it's connected.
-                if not self._controller.connected:
-                    self._controller.connect_()
+                if not self._connect_controller(self._controller):
+                    self.cleanup_controller()
+                    return None
                 return self._controller
             # Different controller, clean up the old one.
             self.cleanup_controller()
@@ -203,14 +204,25 @@ class EnergySetter(qtw.QWidget):
                           type=qtc.Qt.UniqueConnection)
         base.safe_connect(ctrl.serial.busy_changed,
                           self._on_ctrl_finished, type=qtc.Qt.QueuedConnection)
+        if not self._connect_controller(ctrl):
+            return None
+
+        return ctrl
+
+    def _connect_controller(self, ctrl):
+        """Attempt to connect the controller.
+
+        Returns
+        -------
+        connected : bool
+            True if the controller is connected.
+        """
         ctrl.connect_()
         if not ctrl.connected:
             base.emit_error(self,
                             EnergySetterErrors.CONTROLLER_CONNECTION_FAILED)
-            self.cleanup_controller()
-            return None
-
-        return ctrl
+            return False
+        return True
 
     def _make_controller(self):
         """Make and return a new controller.
