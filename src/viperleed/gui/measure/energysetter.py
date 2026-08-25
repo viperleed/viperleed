@@ -27,9 +27,8 @@ from viperleed.gui.widgets.lib import AllGUIFonts
 class EnergySetterErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the EnergySetter widget."""
 
-    NO_CONTROLLER = (2000, 'No controller configured. Please '
-                             'select one from the "Devices" menu using '
-                             '"Select Controller...".')
+    NO_CONTROLLER = (2000, 'No controller configured. Please select one '
+                     'from the "Devices" menu using "Select Controller...".')
     CONTROLLER_FILE_MISSING = (2001, 'The controller settings file no '
                                'longer exists:\n{}\nPlease select a new'
                                ' controller from the "Devices" menu.')
