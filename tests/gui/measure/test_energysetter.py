@@ -90,19 +90,19 @@ class _FakeSerial:
 
 @fixture
 def setter(tmp_path):
-    """Create setter with primary path."""
+    """Create setter with path."""
     setter = EnergySetter()
     test_path = tmp_path / 'controller.ini'
     test_path.write_text('[controller]\n')
-    setter.primary_path = test_path
+    setter.path = test_path
     return setter
 
 
 @fixture
 def ctrl_setter(mocker, setter):
-    """Create setter with mocked primary controller."""
+    """Create setter with mocked controller."""
     fake_ctrl = _FakeController()
-    setter._get_primary_controller = mocker.Mock(return_value=fake_ctrl)
+    setter._get_controller = mocker.Mock(return_value=fake_ctrl)
     return setter
 
 
@@ -112,8 +112,8 @@ def test_init_creates_widgets():
 
     assert setter.energy_input is not None
     assert setter.set_energy is not None
-    assert setter.primary_path is None
-    assert setter._primary_controller is None
+    assert setter.path is None
+    assert setter._controller is None
     assert setter._pending_energy is None
     assert not setter._operation_in_progress
 
@@ -126,10 +126,10 @@ def test_setting_energy_property(ctrl_setter):
     assert ctrl_setter.setting_energy
 
 
-def test_set_enabled_without_primary_path():
-    """Check set_enabled disables when no primary path."""
+def test_set_enabled_without_path():
+    """Check set_enabled disables when no path."""
     setter = EnergySetter()
-    setter.primary_path = None
+    setter.path = None
 
     setter.set_enabled(True)
 
@@ -137,8 +137,8 @@ def test_set_enabled_without_primary_path():
     assert not setter.energy_input.isEnabled()
 
 
-def test_set_enabled_with_primary_path(setter):
-    """Check set_enabled enables when primary path exists."""
+def test_set_enabled_with_path(setter):
+    """Check set_enabled enables when path exists."""
     setter.set_enabled(True)
 
     assert setter.set_energy.isEnabled()
@@ -155,10 +155,10 @@ def test_set_enabled_with_checked_checkbox(ctrl_setter):
     assert ctrl_setter.energy_input.isEnabled()
 
 
-def test_on_set_energy_toggled_no_primary_path():
-    """Check error emitted when toggling without primary path."""
+def test_on_set_energy_toggled_no_path():
+    """Check error emitted when toggling without path."""
     setter = EnergySetter()
-    setter.primary_path = None
+    setter.path = None
     setter.error_occurred = _FakeSignal()
 
     setter._on_set_energy_toggled(qtc.Qt.Checked)
@@ -168,9 +168,9 @@ def test_on_set_energy_toggled_no_primary_path():
 
 
 def test_on_set_energy_toggled_missing_file(tmp_path):
-    """Check error emitted when primary path file is missing."""
+    """Check error emitted when path file is missing."""
     setter = EnergySetter()
-    setter.primary_path = tmp_path / 'nonexistent.ini'
+    setter.path = tmp_path / 'nonexistent.ini'
     setter.error_occurred = _FakeSignal()
 
     setter._on_set_energy_toggled(qtc.Qt.Checked)
@@ -226,78 +226,78 @@ def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     ctrl_setter._set_energy.assert_called_once_with(50.0)
 
 
-def test_get_primary_controller_reuses_existing(setter):
+def test_get_controller_reuses_existing(setter):
     """Check that existing controller is reused when path matches."""
     fake_ctrl = _FakeController()
-    fake_ctrl.settings.last_file = setter.primary_path
-    setter._primary_controller = fake_ctrl
+    fake_ctrl.settings.last_file = setter.path
+    setter._controller = fake_ctrl
 
-    result = setter._get_primary_controller()
+    result = setter._get_controller()
 
     assert result is fake_ctrl
     assert fake_ctrl.connected
 
 
-def test_get_primary_controller_creates_new(mocker, setter):
+def test_get_controller_creates_new(mocker, setter):
     """Check that new controller is created when needed."""
-    setter._make_primary_controller = mocker.Mock(
+    setter._make_controller = mocker.Mock(
         return_value=_FakeController()
         )
 
-    result = setter._get_primary_controller()
+    result = setter._get_controller()
 
-    setter._make_primary_controller.assert_called_once()
+    setter._make_controller.assert_called_once()
     assert result is not None
 
 
-def test_get_primary_controller_cleanup_on_different_path(mocker, setter):
+def test_get_controller_cleanup_on_different_path(mocker, setter):
     """Check old controller is cleaned up when path changes."""
     old_ctrl = _FakeController()
     old_ctrl.settings.last_file = Path('/old/path.ini')
-    setter._primary_controller = old_ctrl
-    setter.cleanup_primary_controller = mocker.Mock()
-    setter._make_primary_controller = mocker.Mock(
+    setter._controller = old_ctrl
+    setter.cleanup_controller = mocker.Mock()
+    setter._make_controller = mocker.Mock(
         return_value=_FakeController()
         )
 
-    setter._get_primary_controller()
+    setter._get_controller()
 
-    setter.cleanup_primary_controller.assert_called_once()
+    setter.cleanup_controller.assert_called_once()
 
 
-def test_get_primary_controller_load_failed(mocker, setter):
+def test_get_controller_load_failed(mocker, setter):
     """Check error emitted when controller creation fails."""
     setter.error_occurred = _FakeSignal()
-    setter._make_primary_controller = mocker.Mock(
+    setter._make_controller = mocker.Mock(
         side_effect=ValueError('test')
         )
 
-    result = setter._get_primary_controller()
+    result = setter._get_controller()
 
     assert result is None
     assert setter.error_occurred.emitted == 1
 
 
-def test_get_primary_controller_connection_failed(mocker, setter):
+def test_get_controller_connection_failed(mocker, setter):
     """Check error emitted when controller connection fails."""
     setter.error_occurred = _FakeSignal()
     fake_ctrl = _FakeController(connected=False)
-    setter._make_primary_controller = mocker.Mock(return_value=fake_ctrl)
+    setter._make_controller = mocker.Mock(return_value=fake_ctrl)
 
-    result = setter._get_primary_controller()
+    result = setter._get_controller()
 
     assert result is None
     assert setter.error_occurred.emitted == 1
 
 
-def test_make_primary_controller(mocker, tmp_path):
+def test_make_controller(mocker, tmp_path):
     """Check controller creation from settings file."""
     setter = EnergySetter()
     test_path = tmp_path / 'controller.ini'
     test_path.write_text(
         '[controller]\ncontroller_class = TestCtrl\naddress = COM1\n'
         )
-    setter.primary_path = test_path
+    setter.path = test_path
 
     fake_settings = mocker.Mock()
     fake_cls = mocker.Mock(return_value=_FakeController())
@@ -306,33 +306,33 @@ def test_make_primary_controller(mocker, tmp_path):
     mocker.patch('viperleed.gui.measure.energysetter.base.class_from_name',
                  return_value=fake_cls)
 
-    result = setter._make_primary_controller()
+    result = setter._make_controller()
 
     fake_settings.read.assert_called_once_with(test_path)
     fake_cls.assert_called()
     assert result is not None
 
 
-def test_cleanup_primary_controller(mocker):
+def test_cleanup_controller(mocker):
     """Check controller cleanup disconnects signals."""
     setter = EnergySetter()
     fake_ctrl = _FakeController()
-    setter._primary_controller = fake_ctrl
+    setter._controller = fake_ctrl
     mocker.patch('viperleed.gui.measure.energysetter.base.safe_disconnect')
 
-    setter.cleanup_primary_controller()
+    setter.cleanup_controller()
 
-    assert setter._primary_controller is None
+    assert setter._controller is None
     assert not fake_ctrl.connected
 
 
-def test_cleanup_primary_controller_none():
+def test_cleanup_controller_none():
     """Check cleanup handles None controller gracefully."""
     setter = EnergySetter()
-    setter._primary_controller = None
+    setter._controller = None
 
     # Should not raise
-    setter.cleanup_primary_controller()
+    setter.cleanup_controller()
 
 
 def test_on_error(mocker):
@@ -367,7 +367,7 @@ def test_flush_resets_state(mocker):
     setter._operation_in_progress = True
     setter._pending_energy = 50.0
     setter._timeout_timer = mocker.Mock()
-    setter.cleanup_primary_controller = mocker.Mock()
+    setter.cleanup_controller = mocker.Mock()
 
     setter._flush()
 
@@ -375,13 +375,13 @@ def test_flush_resets_state(mocker):
     assert not setter._operation_in_progress
     assert setter._pending_energy is None
     setter._timeout_timer.stop.assert_called_once()
-    setter.cleanup_primary_controller.assert_called_once()
+    setter.cleanup_controller.assert_called_once()
 
 
 def test_set_energy_starts_timeout(mocker):
     """Check set_energy starts timeout timer."""
     setter = EnergySetter()
-    setter._primary_controller = _FakeController()
+    setter._controller = _FakeController()
     setter._timeout_timer = mocker.Mock()
 
     setter._set_energy(50.0)
@@ -393,7 +393,7 @@ def test_set_energy_starts_timeout(mocker):
 def test_set_energy_no_controller(mocker):
     """Check set_energy handles missing controller."""
     setter = EnergySetter()
-    setter._primary_controller = None
+    setter._controller = None
     setter.set_energy = mocker.Mock()
 
     setter._set_energy(50.0)
@@ -420,14 +420,14 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
     setter._operation_in_progress = True
     setter.set_energy = mocker.Mock()
     setter.set_energy.isChecked.return_value = False
-    setter.cleanup_primary_controller = mocker.Mock()
+    setter.cleanup_controller = mocker.Mock()
     setter._timeout_timer = mocker.Mock()
 
     setter._on_ctrl_finished(False)
 
     assert not setter._operation_in_progress
     setter._timeout_timer.stop.assert_called_once()
-    setter.cleanup_primary_controller.assert_called_once()
+    setter.cleanup_controller.assert_called_once()
 
 
 def test_on_ctrl_finished_pending_energy(mocker):

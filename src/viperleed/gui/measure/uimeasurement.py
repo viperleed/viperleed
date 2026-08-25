@@ -332,11 +332,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setWindowTitle(TITLE)
         self.setAcceptDrops(True)
 
-        # Extract primary settings path for energy setting.
-        primary_path = self._dialogs['sys_settings'].settings.get(
-            'DEVICES', 'primary_controller', fallback=''
+        # Extract controller settings path for energy setting.
+        _path = self._dialogs['sys_settings'].settings.get(
+            'DEVICES', 'controller', fallback=''
             )
-        self._ctrls['energy_setter'].primary_path = primary_path
+        self._ctrls['energy_setter'].path = _path
 
         self._compose()
         self._connect()
@@ -404,7 +404,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         if self._ctrls['energy_setter'].set_energy.isChecked():
             self._ctrls['energy_setter'].set_energy.setChecked(False)
-        self._ctrls['energy_setter'].cleanup_primary_controller()
+        self._ctrls['energy_setter'].cleanup_controller()
         super().closeEvent(event)
 
     def _stop_device_search_triggers(self):
@@ -512,8 +512,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._update_force_detect_button_state()
 
     @qtc.pyqtSlot()
-    def _on_select_primary_controller(self):
-        """Show dialog to select primary controller for energy setting."""
+    def _on_select_controller(self):
+        """Show dialog to select controller for energy setting."""
         # Get already detected controllers from the Devices menu
         controllers_menu = self._ctrls['menus']['devices'].actions()[1].menu()
         controller_actions = controllers_menu.actions()
@@ -528,7 +528,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Create selection dialog
         dialog = qtw.QDialog(self)
-        dialog.setWindowTitle('Select Primary Controller')
+        dialog.setWindowTitle('Select Controller')
         layout = qtw.QVBoxLayout(dialog)
         label = qtw.QLabel('Select the controller to use for setting energy:')
         layout.addWidget(label)
@@ -559,15 +559,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         if not ctrl:
             return
 
-        ctrl_path = ctrl.settings.last_file
-        if ctrl_path and ctrl_path.is_file():
-            self.system_settings.set('DEVICES', 'primary_controller',
-                                     ctrl_path.as_posix())
+        _path = ctrl.settings.last_file
+        if _path and _path.is_file():
+            self.system_settings.set('DEVICES', 'controller', _path.as_posix())
             self.system_settings.update_file()
-            self._ctrls['energy_setter'].primary_path = ctrl_path.as_posix()
+            self._ctrls['energy_setter'].path = _path.as_posix()
             qtw.QMessageBox.information(
-                self, 'Primary Controller Set',
-                f'{selected_action.text()} is now the controller setting energies.'
+                self, 'Controller Set', f'{selected_action.text()} '
+                'is now the controller setting energies.'
                 )
         else:
             qtw.QMessageBox.warning(
@@ -713,14 +712,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         force_detect_action.triggered.connect(self.update_device_lists)
         self._ctrls['menus']['force_detect'] = force_detect_action
 
-        # Add primary controller selection action.
-        select_primary_action = devices_menu.addAction(
-            'Select Primary Controller...'
+        # Add controller selection action.
+        select_action = devices_menu.addAction(
+            'Select Controller...'
             )
-        select_primary_action.triggered.connect(
-            self._on_select_primary_controller
+        select_action.triggered.connect(
+            self._on_select_controller
             )
-        self._ctrls['menus']['select_primary'] = select_primary_action
+        self._ctrls['menus']['select_ctrl'] = select_action
 
         # Tools
         tools_menu = self._ctrls['menus']['tools']
@@ -1174,12 +1173,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         # one coming from the measurement. Disconnect the signals from
         # one another here.
 
-        # Save the primary controller path for convenience
+        # Save the controller path for convenience
         if settings_ok and self.measurement.primary_controller:
             _path = self.measurement.primary_controller.settings.last_file
-            self.system_settings.set('DEVICES', 'primary_controller',
-                                     _path.as_posix())
-            self._ctrls['energy_setter'].primary_path = _path.as_posix()
+            self.system_settings.set('DEVICES', 'controller', _path.as_posix())
+            self._ctrls['energy_setter'].path = _path.as_posix()
             self.system_settings.update_file()
 
         for device in self.measurement.devices:

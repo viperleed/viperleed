@@ -27,12 +27,12 @@ from viperleed.gui.widgets.lib import AllGUIFonts
 class EnergySetterErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the EnergySetter widget."""
 
-    NO_PRIMARY_CONTROLLER = (2000, 'No primary controller configured. Please '
+    NO_CONTROLLER = (2000, 'No controller configured. Please '
                              'select one from the "Devices" menu using '
-                             '"Select Primary Controller...".')
-    CONTROLLER_FILE_MISSING = (2001, 'The primary controller settings file '
-                               'no longer exists:\n{}\nPlease select a new '
-                               'primary controller from the "Devices" menu.')
+                             '"Select Controller...".')
+    CONTROLLER_FILE_MISSING = (2001, 'The controller settings file no '
+                               'longer exists:\n{}\nPlease select a new'
+                               ' controller from the "Devices" menu.')
     CONTROLLER_LOAD_FAILED = (2002, 'Could not load the last used '
                               'controller:\n{}')
     CONTROLLER_CONNECTION_FAILED = (2003, 'Could not connect to the '
@@ -56,8 +56,8 @@ class EnergySetter(qtw.QWidget):
         super().__init__(**kwargs)
         self.energy_input = SteppingDoubleSpinBox()
         self.set_energy = qtw.QCheckBox('Set energy')
-        self._primary_path = None
-        self._primary_controller = None
+        self._path = None
+        self._controller = None
         self._pending_energy = None
         self._operation_in_progress = False
 
@@ -74,17 +74,17 @@ class EnergySetter(qtw.QWidget):
         return self.set_energy.checkState() == qtc.Qt.Checked
 
     @property
-    def primary_path(self):
-        """Return the path to the primary controller settings."""
-        return self._primary_path
+    def path(self):
+        """Return the path to the controller settings."""
+        return self._path
 
-    @primary_path.setter
-    def primary_path(self, primary):
-        """Set the path to the primary controller."""
-        if primary:
-            self._primary_path = Path(primary)
+    @path.setter
+    def path(self, ctrl):
+        """Set the path to the controller."""
+        if ctrl:
+            self._path = Path(ctrl)
         else:
-            self._primary_path = None
+            self._path = None
 
     def _compose(self):
         """Set up the user interface."""
@@ -122,10 +122,10 @@ class EnergySetter(qtw.QWidget):
 
         Emits
         -----
-        EnergySetterErrors.NO_PRIMARY_CONTROLLER
-            If no primary path was given.
+        EnergySetterErrors.NO_CONTROLLER
+            If no ctrl path was given.
         EnergySetterErrors.CONTROLLER_FILE_MISSING
-            If the primary path does not point to a file.
+            If the ctrl path does not point to a file.
         """
         self.energy_input.setEnabled(state == qtc.Qt.Checked)
         if state != qtc.Qt.Checked:
@@ -133,18 +133,18 @@ class EnergySetter(qtw.QWidget):
             self._set_energy(0.0)
             self.energy_input.setValue(0.0)
 
-        if not self.primary_path:
-            base.emit_error(self, EnergySetterErrors.NO_PRIMARY_CONTROLLER)
+        if not self.path:
+            base.emit_error(self, EnergySetterErrors.NO_CONTROLLER)
             self.set_energy.setChecked(False)
             return
 
-        if not self.primary_path.is_file():
+        if not self.path.is_file():
             base.emit_error(self, EnergySetterErrors.CONTROLLER_FILE_MISSING,
-                            self.primary_path)
+                            self.path)
             self.set_energy.setChecked(False)
             return
 
-        self._primary_controller = self._get_primary_controller()
+        self._controller = self._get_controller()
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(float)
@@ -160,61 +160,61 @@ class EnergySetter(qtw.QWidget):
         energy = self.energy_input.value()
         self._set_energy(energy)
 
-    def _get_primary_controller(self):
-        """Get or create persistent primary controller instance.
+    def _get_controller(self):
+        """Get or create persistent controller instance.
 
         Returns
         -------
-        primary_ctrl : ControllerABC or None
+        ctrl : ControllerABC or None
             The controller instance, or None if creation failed.
 
         Emits
         -----
         EnergySetterErrors.CONTROLLER_LOAD_FAILED
-            If making the primary controller failed.
+            If making the controller failed.
         EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
-            If connecting the primary controller failed.
+            If connecting the controller failed.
         """
         # If we already have a controller for this path, reuse it.
-        if self._primary_controller is not None:
-            ctrl_settings = self._primary_controller.settings
+        if self._controller is not None:
+            ctrl_settings = self._controller.settings
             if (ctrl_settings.last_file and
-                ctrl_settings.last_file == self.primary_path):
+                ctrl_settings.last_file == self.path):
                 # Same controller, ensure it's connected.
-                if not self._primary_controller.connected:
-                    self._primary_controller.connect_()
-                return self._primary_controller
+                if not self._controller.connected:
+                    self._controller.connect_()
+                return self._controller
             # Different controller, clean up the old one.
-            self.cleanup_primary_controller()
+            self.cleanup_controller()
 
         # Create new controller instance.
         try:
-            primary_ctrl = self._make_primary_controller()
+            ctrl = self._make_controller()
         except (NoSettingsError, ValueError) as err:
             base.emit_error(self, EnergySetterErrors.CONTROLLER_LOAD_FAILED,
                             err)
             return None
 
         # Connect and store the controller.
-        base.safe_connect(primary_ctrl.error_occurred, self._on_error,
+        base.safe_connect(ctrl.error_occurred, self._on_error,
                           type=qtc.Qt.UniqueConnection)
-        base.safe_connect(primary_ctrl.serial.busy_changed,
+        base.safe_connect(ctrl.serial.busy_changed,
                           self._on_ctrl_finished, type=qtc.Qt.QueuedConnection)
-        primary_ctrl.connect_()
-        if not primary_ctrl.connected:
+        ctrl.connect_()
+        if not ctrl.connected:
             base.emit_error(self,
                             EnergySetterErrors.CONTROLLER_CONNECTION_FAILED)
-            self.cleanup_primary_controller()
+            self.cleanup_controller()
             return None
 
-        return primary_ctrl
+        return ctrl
 
-    def _make_primary_controller(self):
-        """Make and return a new primary controller.
+    def _make_controller(self):
+        """Make and return a new controller.
 
         Returns
         -------
-        primary_ctrl : ControllerABC
+        ctrl : ControllerABC
             A controller capable of setting the energy.
 
         Raises
@@ -225,26 +225,26 @@ class EnergySetter(qtw.QWidget):
             If ctrl_cls_name was not found.
         """
         ctrl_settings = ViPErLEEDSettings()
-        ctrl_settings.read(self.primary_path)
+        ctrl_settings.read(self.path)
         ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
         ctrl_settings.prepare_aliases(ctrl_cls_name)
         ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
         address = ctrl_settings.get('controller', 'address')
-        primary_ctrl = ctrl_cls(settings=ctrl_settings, address=address,
+        ctrl = ctrl_cls(settings=ctrl_settings, address=address,
                                 sets_energy=True)
-        return primary_ctrl
+        return ctrl
 
-    def cleanup_primary_controller(self):
-        """Clean up the persistent primary controller."""
-        if self._primary_controller is None:
+    def cleanup_controller(self):
+        """Clean up the persistent controller."""
+        if self._controller is None:
             return
-        base.safe_disconnect(self._primary_controller.error_occurred,
+        base.safe_disconnect(self._controller.error_occurred,
                              self._on_error)
-        base.safe_disconnect(self._primary_controller.serial.busy_changed,
+        base.safe_disconnect(self._controller.serial.busy_changed,
                              self._on_ctrl_finished)
-        self._primary_controller.disconnect_()
-        self._primary_controller.deleteLater()
-        self._primary_controller = None
+        self._controller.disconnect_()
+        self._controller.deleteLater()
+        self._controller = None
 
     @qtc.pyqtSlot(tuple)
     def _on_error(self, error_info):
@@ -280,10 +280,10 @@ class EnergySetter(qtw.QWidget):
         self._operation_in_progress = False
         self._pending_energy = None
         self._timeout_timer.stop()
-        self.cleanup_primary_controller()
+        self.cleanup_controller()
 
     def _set_energy(self, energy):
-        """Set energy on the primary controller.
+        """Set energy on the controller.
 
         Parameters
         ----------
@@ -295,12 +295,12 @@ class EnergySetter(qtw.QWidget):
         None.
         """
         self._operation_in_progress = True
-        if self._primary_controller is None:
+        if self._controller is None:
             self._operation_in_progress = False
             self.set_energy.setChecked(False)
             return
         self._timeout_timer.start()
-        self._primary_controller.set_energy(energy, 0, trigger_meas=False)
+        self._controller.set_energy(energy, 0, trigger_meas=False)
 
     @qtc.pyqtSlot(bool)
     def _on_ctrl_finished(self, busy):
@@ -312,7 +312,7 @@ class EnergySetter(qtw.QWidget):
 
         # If set energy is no longer toggled, we want to disconnect the ctrl.
         if not self.set_energy.isChecked():
-            self.cleanup_primary_controller()
+            self.cleanup_controller()
             return
 
         # If a new energy value was queued during the operation, process it.
@@ -323,6 +323,6 @@ class EnergySetter(qtw.QWidget):
 
     def set_enabled(self, enable):
         """Switch enabled status of widgets."""
-        enable &= bool(self.primary_path)
+        enable &= bool(self.path)
         self.set_energy.setEnabled(enable)
         self.energy_input.setEnabled(enable and self.set_energy.isChecked())
