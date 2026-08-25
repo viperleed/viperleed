@@ -55,10 +55,16 @@ class EnergySetter(qtw.QWidget):
         super().__init__(**kwargs)
         self.energy_input = SteppingDoubleSpinBox()
         self.set_energy = qtw.QCheckBox('Set energy')
+        # Path to the settings of the controller
+        # that is supposed to set the energy.
         self._path = None
+        # Controller object that sets the energy.
         self._controller = None
-        self._pending_energy = None
+        # Tracks if the EnergySetter is busy setting an energy.
         self._operation_in_progress = False
+        # Stores the last requested energy if setting
+        # the energy was not possible at that time.
+        self._pending_energy = None
 
         self._timeout_timer = qtc.QTimer(self)
         self._timeout_timer.setSingleShot(True)
