@@ -185,6 +185,7 @@ def test_on_set_energy_toggled_unchecked_sets_zero(mocker, ctrl_setter):
     ctrl_setter.set_energy.setChecked(True)
 
     ctrl_setter.energy_input.setValue(50.0)
+    ctrl_setter.energy_input.editingFinished.emit()
     ctrl_setter._set_energy.assert_called_with(50.0)
 
     ctrl_setter.set_energy.setChecked(False)
@@ -222,6 +223,7 @@ def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     ctrl_setter.set_energy.setChecked(True)
     ctrl_setter._operation_in_progress = False
     ctrl_setter.energy_input.setValue(50.0)
+    ctrl_setter.energy_input.editingFinished.emit()
 
     ctrl_setter._set_energy.assert_called_once_with(50.0)
 

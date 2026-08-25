@@ -113,7 +113,7 @@ class EnergySetter(qtw.QWidget):
         """Connect internal signals and slots."""
         self.set_energy.stateChanged.connect(self._on_set_energy_toggled)
         self.energy_input.editingFinished.connect(self._on_energy_changed)
-        self.energy_input.valueChanged.connect(self._on_energy_changed)
+        self.energy_input.stepped.connect(self._on_energy_changed)
         self._timeout_timer.timeout.connect(self._on_timeout)
 
     @qtc.pyqtSlot(int)
@@ -152,8 +152,7 @@ class EnergySetter(qtw.QWidget):
         self._controller = self._get_controller()
 
     @qtc.pyqtSlot()
-    @qtc.pyqtSlot(float)
-    def _on_energy_changed(self, *_):
+    def _on_energy_changed(self):
         """Handle energy value change."""
         if self.set_energy.checkState() != qtc.Qt.Checked:
             return
@@ -162,8 +161,7 @@ class EnergySetter(qtw.QWidget):
             self._pending_energy = self.energy_input.value()
             return
 
-        energy = self.energy_input.value()
-        self._set_energy(energy)
+        self._set_energy(self.energy_input.value())
 
     def _get_controller(self):
         """Get or create persistent controller instance.
@@ -195,9 +193,9 @@ class EnergySetter(qtw.QWidget):
         # Create new controller instance.
         try:
             ctrl = self._make_controller()
-        except (NoSettingsError, ValueError) as err:
+        except (NoSettingsError, ValueError) as exc:
             base.emit_error(self, EnergySetterErrors.CONTROLLER_LOAD_FAILED,
-                            err)
+                            exc)
             return None
 
         # Connect and store the controller.
