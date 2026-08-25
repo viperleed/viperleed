@@ -231,7 +231,7 @@ class EnergySetter(qtw.QWidget):
         ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
         address = ctrl_settings.get('controller', 'address')
         ctrl = ctrl_cls(settings=ctrl_settings, address=address,
-                                sets_energy=True)
+                        sets_energy=True)
         return ctrl
 
     def cleanup_controller(self):
