@@ -286,8 +286,7 @@ class EnergySetter(qtw.QWidget):
         EnergySetterErrors.SET_ENERGY_TIMEOUT
             When a timeout happened.
         """
-        base.emit_error(self, EnergySetterErrors.SET_ENERGY_TIMEOUT)
-        self._flush()
+        self._on_error(EnergySetterErrors.SET_ENERGY_TIMEOUT)
 
     def _flush(self):
         """Reset on error."""
