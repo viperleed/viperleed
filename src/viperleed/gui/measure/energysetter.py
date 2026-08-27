@@ -139,6 +139,7 @@ class EnergySetter(qtw.QWidget):
             # Checkbox unchecked, set energy to zero before cleaning up.
             self._set_energy(0.0)
             self.energy_input.setValue(0.0)
+            return
 
         if not self.path:
             base.emit_error(self, EnergySetterErrors.NO_CONTROLLER)
