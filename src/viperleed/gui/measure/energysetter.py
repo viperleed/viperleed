@@ -176,34 +176,17 @@ class EnergySetter(qtw.QWidget):
         Emits
         -----
         EnergySetterErrors.CONTROLLER_LOAD_FAILED
-            If making the controller failed.
+            If making the controller or loading settings failed.
         EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
             If connecting the controller failed.
         """
         # If we already have a controller for this path, reuse it.
         if self._controller is not None:
-            ctrl_settings = self._controller.settings
-            if (ctrl_settings.last_file and
-                ctrl_settings.last_file == self.path):
+            if (self._controller.settings.last_file and
+                self._controller.settings.last_file == self.path):
                 # Same controller, ensure that the settings
                 # are ok and it is connected.
-                try:
-                    settings_ok = ctrl_settings.read_again()
-                except (SettingsError, configparser.Error):
-                    settings_ok = False
-                if not settings_ok:
-                    base.emit_error(self,
-                        EnergySetterErrors.CONTROLLER_LOAD_FAILED,
-                        'Controller settings corrupted.')
-                    self.cleanup_controller()
-                    return None
-                if not self._controller.set_settings(ctrl_settings):
-                    base.emit_error(self,
-                        EnergySetterErrors.CONTROLLER_LOAD_FAILED,
-                        'Could not set controller settings.')
-                    self.cleanup_controller()
-                    return None
-                if not self._connect_controller(self._controller):
+                if not self._reload_ctrl_settings():
                     self.cleanup_controller()
                     return None
                 return self._controller
@@ -228,6 +211,37 @@ class EnergySetter(qtw.QWidget):
 
         return ctrl
 
+    def _reload_ctrl_settings(self):
+        """Reload the settings of the controller.
+
+        Returns
+        -------
+        reload_ok : bool
+            True if reloading the settings worked.
+
+        Emits
+        -----
+        EnergySetterErrors.CONTROLLER_LOAD_FAILED
+            If loading settings failed.
+        """
+        try:
+            settings_ok = self._controller.settings.read_again()
+        except (SettingsError, configparser.Error):
+            settings_ok = False
+        if not settings_ok:
+            base.emit_error(self,
+                EnergySetterErrors.CONTROLLER_LOAD_FAILED,
+                'Controller settings corrupted.')
+            return False
+        if not self._controller.set_settings(self._controller.settings):
+            base.emit_error(self,
+                EnergySetterErrors.CONTROLLER_LOAD_FAILED,
+                'Could not set controller settings.')
+            return False
+        if not self._connect_controller(self._controller):
+            return False
+        return True
+
     def _connect_controller(self, ctrl):
         """Attempt to connect the controller.
 
@@ -235,6 +249,11 @@ class EnergySetter(qtw.QWidget):
         -------
         connected : bool
             True if the controller is connected.
+
+        Emits
+        -----
+        EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
+            If connecting the controller failed.
         """
         ctrl.connect_()
         if not ctrl.connected:

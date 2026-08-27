@@ -116,6 +116,7 @@ def fake_controller(mocker, setter):
 
     fake_ctrl = _FakeController(connected=True)
     fake_ctrl._settings = fake_settings
+    # pylint: disable-next=attribute-defined-outside-init
     fake_ctrl.set_settings = mocker.Mock(return_value=True)
     return fake_ctrl
 
