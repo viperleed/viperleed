@@ -12,6 +12,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-07-31'
 __license__ = 'GPLv3+'
 
+import configparser
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
@@ -19,6 +20,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.settings import NoSettingsError
+from viperleed.gui.measure.classes.settings import SettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.widgets.spinboxes import SteppingDoubleSpinBox
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -183,7 +185,24 @@ class EnergySetter(qtw.QWidget):
             ctrl_settings = self._controller.settings
             if (ctrl_settings.last_file and
                 ctrl_settings.last_file == self.path):
-                # Same controller, ensure it's connected.
+                # Same controller, ensure that the settings
+                # are ok and it is connected.
+                try:
+                    settings_ok = ctrl_settings.read_again()
+                except (SettingsError, configparser.Error):
+                    settings_ok = False
+                if not settings_ok:
+                    base.emit_error(self,
+                        EnergySetterErrors.CONTROLLER_LOAD_FAILED,
+                        'Controller settings corrupted.')
+                    self.cleanup_controller()
+                    return None
+                if not self._controller.set_settings(ctrl_settings):
+                    base.emit_error(self,
+                        EnergySetterErrors.CONTROLLER_LOAD_FAILED,
+                        'Could not set controller settings.')
+                    self.cleanup_controller()
+                    return None
                 if not self._connect_controller(self._controller):
                     self.cleanup_controller()
                     return None

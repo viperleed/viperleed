@@ -16,6 +16,7 @@ from PyQt5 import QtWidgets as qtw
 from pytest import fixture
 
 from viperleed.gui.measure.energysetter import EnergySetter
+from viperleed.gui.measure.classes.settings import SettingsError
 
 from .mock_qt import _FakeSignal
 
@@ -104,6 +105,19 @@ def ctrl_setter(mocker, setter):
     fake_ctrl = _FakeController()
     setter._get_controller = mocker.Mock(return_value=fake_ctrl)
     return setter
+
+
+@fixture
+def fake_controller(mocker, setter):
+    """Return a controller whose settings are mocked."""
+    fake_settings = mocker.Mock()
+    fake_settings.last_file = setter.path
+    fake_settings.read_again.return_value = True
+
+    fake_ctrl = _FakeController(connected=True)
+    fake_ctrl._settings = fake_settings
+    fake_ctrl.set_settings = mocker.Mock(return_value=True)
+    return fake_ctrl
 
 
 def test_init_creates_widgets():
@@ -228,16 +242,84 @@ def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     ctrl_setter._set_energy.assert_called_once_with(50.0)
 
 
-def test_get_controller_reuses_existing(setter):
+def test_get_controller_reuses_existing(fake_controller, setter):
     """Check that existing controller is reused when path matches."""
-    fake_ctrl = _FakeController()
-    fake_ctrl.settings.last_file = setter.path
-    setter._controller = fake_ctrl
+    fake_settings = fake_controller.settings
+    setter._controller = fake_controller
 
     result = setter._get_controller()
 
-    assert result is fake_ctrl
-    assert fake_ctrl.connected
+    assert result is fake_controller
+    fake_settings.read_again.assert_called_once()
+    fake_controller.set_settings.assert_called_once_with(fake_settings)
+    assert fake_controller.connected
+
+
+def test_get_controller_read_again_failed(mocker, fake_controller, setter):
+    """Check controller is cleaned up when re-reading settings fails."""
+    fake_settings = fake_controller.settings
+    fake_settings.read_again.return_value = False
+    setter._controller = fake_controller
+    setter.error_occurred = _FakeSignal()
+    setter.cleanup_controller = mocker.Mock()
+
+    result = setter._get_controller()
+
+    assert result is None
+    fake_settings.read_again.assert_called_once()
+    assert setter.error_occurred.emitted == 1
+    setter.cleanup_controller.assert_called_once()
+
+
+def test_get_controller_read_again_raises(mocker, fake_controller, setter):
+    """Check controller cleaned up when read_again raises an error."""
+    fake_settings = fake_controller.settings
+    fake_settings.read_again.side_effect = SettingsError('corrupted')
+    setter._controller = fake_controller
+    setter.error_occurred = _FakeSignal()
+    setter.cleanup_controller = mocker.Mock()
+
+    result = setter._get_controller()
+
+    assert result is None
+    fake_settings.read_again.assert_called_once()
+    assert setter.error_occurred.emitted == 1
+    setter.cleanup_controller.assert_called_once()
+
+
+def test_get_controller_set_settings_failed(mocker, fake_controller, setter):
+    """Check controller is cleaned up when set_settings fails."""
+    fake_settings = fake_controller.settings
+    fake_controller.set_settings.return_value = False
+    setter._controller = fake_controller
+    setter.error_occurred = _FakeSignal()
+    setter.cleanup_controller = mocker.Mock()
+
+    result = setter._get_controller()
+
+    assert result is None
+    fake_settings.read_again.assert_called_once()
+    fake_controller.set_settings.assert_called_once_with(fake_settings)
+    assert setter.error_occurred.emitted == 1
+    setter.cleanup_controller.assert_called_once()
+
+
+def test_get_controller_reuse_connection_failed(mocker, fake_controller,
+                                                setter):
+    """Check controller cleaned up when reconnection fails."""
+    fake_settings = fake_controller.settings
+    fake_controller._connected = False
+    setter._controller = fake_controller
+    setter.error_occurred = _FakeSignal()
+    setter.cleanup_controller = mocker.Mock()
+
+    result = setter._get_controller()
+
+    assert result is None
+    fake_settings.read_again.assert_called_once()
+    fake_controller.set_settings.assert_called_once_with(fake_settings)
+    assert setter.error_occurred.emitted == 1
+    setter.cleanup_controller.assert_called_once()
 
 
 def test_get_controller_creates_new(mocker, setter):
