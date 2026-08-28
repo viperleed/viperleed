@@ -76,11 +76,6 @@ class EnergySetter(qtw.QWidget):
         self._connect()
 
     @property
-    def setting_energy(self):
-        """Return whether the energy setter is setting energies or not."""
-        return self.set_energy.checkState() == qtc.Qt.Checked
-
-    @property
     def path(self):
         """Return the path to the controller settings."""
         return self._path
@@ -92,6 +87,11 @@ class EnergySetter(qtw.QWidget):
             self._path = Path(ctrl)
         else:
             self._path = None
+
+    @property
+    def setting_energy(self):
+        """Return whether the energy setter is setting energies or not."""
+        return self.set_energy.checkState() == qtc.Qt.Checked
 
     def _compose(self):
         """Set up the user interface."""
@@ -118,53 +118,33 @@ class EnergySetter(qtw.QWidget):
         self.energy_input.stepped.connect(self._on_energy_changed)
         self._timeout_timer.timeout.connect(self._on_timeout)
 
-    @qtc.pyqtSlot(int)
-    def _on_set_energy_toggled(self, state):
-        """Handle checkbox state change.
+    def _connect_controller(self, ctrl):
+        """Attempt to connect the controller.
 
-        Parameters
-        ----------
-        state : qtc.Qt.CheckState
-            The checked state of the QCheckBox.
+        Returns
+        -------
+        connected : bool
+            True if the controller is connected.
 
         Emits
         -----
-        EnergySetterErrors.NO_CONTROLLER
-            If no ctrl path was given.
-        EnergySetterErrors.CONTROLLER_FILE_MISSING
-            If the ctrl path does not point to a file.
+        EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
+            If connecting the controller failed.
         """
-        self.energy_input.setEnabled(state == qtc.Qt.Checked)
-        if state != qtc.Qt.Checked:
-            # Checkbox unchecked, set energy to zero before cleaning up.
-            self._set_energy(0.0)
-            self.energy_input.setValue(0.0)
-            return
+        ctrl.connect_()
+        if not ctrl.connected:
+            base.emit_error(self,
+                            EnergySetterErrors.CONTROLLER_CONNECTION_FAILED)
+            return False
+        return True
 
-        if not self.path:
-            base.emit_error(self, EnergySetterErrors.NO_CONTROLLER)
-            self.set_energy.setChecked(False)
-            return
-
-        if not self.path.is_file():
-            base.emit_error(self, EnergySetterErrors.CONTROLLER_FILE_MISSING,
-                            self.path)
-            self.set_energy.setChecked(False)
-            return
-
-        self._controller = self._get_controller()
-
-    @qtc.pyqtSlot()
-    def _on_energy_changed(self):
-        """Handle energy value change."""
-        if self.set_energy.checkState() != qtc.Qt.Checked:
-            return
-
-        if self._operation_in_progress:
-            self._pending_energy = self.energy_input.value()
-            return
-
-        self._set_energy(self.energy_input.value())
+    def _flush(self):
+        """Reset on error."""
+        self.set_energy.setChecked(False)
+        self._operation_in_progress = False
+        self._pending_energy = None
+        self._timeout_timer.stop()
+        self.cleanup_controller()
 
     def _get_controller(self):
         """Get or create persistent controller instance.
@@ -212,6 +192,151 @@ class EnergySetter(qtw.QWidget):
 
         return ctrl
 
+    def _get_controller_address(self, ctrl_cls, ctrl_settings):
+        """Return the address of the used controller.
+
+        Parameters
+        ----------
+        ctrl_cls : type
+            Controller class, used for device detection.
+        ctrl_settings : ViPErLEEDSettings
+            The controller settings.
+
+        Returns
+        -------
+        address : str
+            The address to use for the controller. An empty string
+            makes ControllerABC fall back on the value stored in
+            ``controller/address``.
+        """
+        devices = ctrl_cls().list_devices()
+        controller_name = ctrl_settings.get('controller', 'device_name',
+                                            fallback=None)
+        for device in devices:
+            detected_name = (device.more.get('name') or '')
+            if detected_name and detected_name == controller_name:
+                return device.more.get('address', '')
+        return ''
+
+    def _make_controller(self):
+        """Make and return a new controller.
+
+        Returns
+        -------
+        ctrl : ControllerABC
+            A controller capable of setting the energy.
+
+        Raises
+        ------
+        NoSettingsError
+            If the settings file cannot be read.
+        ValueError
+            If ctrl_cls_name was not found.
+        """
+        ctrl_settings = ViPErLEEDSettings()
+        ctrl_settings.read(self.path)
+        ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
+        ctrl_settings.prepare_aliases(ctrl_cls_name)
+        ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
+        address = self._get_controller_address(ctrl_cls, ctrl_settings)
+        ctrl = ctrl_cls(settings=ctrl_settings, address=address,
+                        sets_energy=True)
+        return ctrl
+
+    @qtc.pyqtSlot(bool)
+    def _on_ctrl_finished(self, busy):
+        """Clean up after energy has been set."""
+        if busy:
+            return
+        self._operation_in_progress = False
+        self._timeout_timer.stop()
+
+        # If set energy is no longer toggled, we want to disconnect the ctrl.
+        if not self.set_energy.isChecked():
+            self.cleanup_controller()
+            return
+
+        # If a new energy value was queued during the operation, process it.
+        if self._pending_energy is not None:
+            energy = self._pending_energy
+            self._pending_energy = None
+            self._set_energy(energy)
+
+    @qtc.pyqtSlot()
+    def _on_energy_changed(self):
+        """Handle energy value change."""
+        if self.set_energy.checkState() != qtc.Qt.Checked:
+            return
+
+        if self._operation_in_progress:
+            self._pending_energy = self.energy_input.value()
+            return
+
+        self._set_energy(self.energy_input.value())
+
+    @qtc.pyqtSlot(tuple)
+    def _on_error(self, error_info):
+        """Handle controller errors.
+
+        Parameters
+        ----------
+        error_info : tuple
+
+        Emits
+        -----
+        error_occurred
+            With error_info on the error that occurred.
+        """
+        self.error_occurred.emit(error_info)
+        self._flush()
+
+    @qtc.pyqtSlot(int)
+    def _on_set_energy_toggled(self, state):
+        """Handle checkbox state change.
+
+        Parameters
+        ----------
+        state : qtc.Qt.CheckState
+            The checked state of the QCheckBox.
+
+        Emits
+        -----
+        EnergySetterErrors.NO_CONTROLLER
+            If no ctrl path was given.
+        EnergySetterErrors.CONTROLLER_FILE_MISSING
+            If the ctrl path does not point to a file.
+        """
+        self.energy_input.setEnabled(state == qtc.Qt.Checked)
+        if state != qtc.Qt.Checked:
+            # Checkbox unchecked, set energy to zero before cleaning up.
+            self._set_energy(0.0)
+            self.energy_input.setValue(0.0)
+            return
+
+        if not self.path:
+            base.emit_error(self, EnergySetterErrors.NO_CONTROLLER)
+            self.set_energy.setChecked(False)
+            return
+
+        if not self.path.is_file():
+            base.emit_error(self, EnergySetterErrors.CONTROLLER_FILE_MISSING,
+                            self.path)
+            self.set_energy.setChecked(False)
+            return
+
+        self._controller = self._get_controller()
+
+    @qtc.pyqtSlot()
+    def _on_timeout(self):
+        """Handle timeout.
+
+        Emits
+        -----
+        EnergySetterErrors.SET_ENERGY_TIMEOUT
+            When a timeout happened.
+        """
+        self._on_error(EnergySetterErrors.SET_ENERGY_TIMEOUT)
+
     def _reload_ctrl_settings(self):
         """Reload the settings of the controller.
 
@@ -243,124 +368,6 @@ class EnergySetter(qtw.QWidget):
             return False
         return True
 
-    def _connect_controller(self, ctrl):
-        """Attempt to connect the controller.
-
-        Returns
-        -------
-        connected : bool
-            True if the controller is connected.
-
-        Emits
-        -----
-        EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
-            If connecting the controller failed.
-        """
-        ctrl.connect_()
-        if not ctrl.connected:
-            base.emit_error(self,
-                            EnergySetterErrors.CONTROLLER_CONNECTION_FAILED)
-            return False
-        return True
-
-    def _make_controller(self):
-        """Make and return a new controller.
-
-        Returns
-        -------
-        ctrl : ControllerABC
-            A controller capable of setting the energy.
-
-        Raises
-        ------
-        NoSettingsError
-            If the settings file cannot be read.
-        ValueError
-            If ctrl_cls_name was not found.
-        """
-        ctrl_settings = ViPErLEEDSettings()
-        ctrl_settings.read(self.path)
-        ctrl_cls_name = ctrl_settings.get('controller', 'controller_class')
-        ctrl_settings.prepare_aliases(ctrl_cls_name)
-        ctrl_cls = base.class_from_name('controller', ctrl_cls_name)
-        address = self._get_controller_address(ctrl_cls, ctrl_settings)
-        ctrl = ctrl_cls(settings=ctrl_settings, address=address,
-                        sets_energy=True)
-        return ctrl
-
-    def _get_controller_address(self, ctrl_cls, ctrl_settings):
-        """Return the address of the used controller.
-
-        Parameters
-        ----------
-        ctrl_cls : type
-            Controller class, used for device detection.
-        ctrl_settings : ViPErLEEDSettings
-            The controller settings.
-
-        Returns
-        -------
-        address : str
-            The address to use for the controller. An empty string
-            makes ControllerABC fall back on the value stored in
-            ``controller/address``.
-        """
-        devices = ctrl_cls().list_devices()
-        controller_name = ctrl_settings.get('controller', 'device_name',
-                                            fallback=None)
-        for device in devices:
-            detected_name = (device.more.get('name') or '')
-            if detected_name and detected_name == controller_name:
-                return device.more.get('address', '')
-        return ''
-
-    def cleanup_controller(self):
-        """Clean up the persistent controller."""
-        if self._controller is None:
-            return
-        base.safe_disconnect(self._controller.error_occurred,
-                             self._on_error)
-        base.safe_disconnect(self._controller.serial.busy_changed,
-                             self._on_ctrl_finished)
-        self._controller.disconnect_()
-        self._controller.deleteLater()
-        self._controller = None
-
-    @qtc.pyqtSlot(tuple)
-    def _on_error(self, error_info):
-        """Handle controller errors.
-
-        Parameters
-        ----------
-        error_info : tuple
-
-        Emits
-        -----
-        error_occurred
-            With error_info on the error that occurred.
-        """
-        self.error_occurred.emit(error_info)
-        self._flush()
-
-    @qtc.pyqtSlot()
-    def _on_timeout(self):
-        """Handle timeout.
-
-        Emits
-        -----
-        EnergySetterErrors.SET_ENERGY_TIMEOUT
-            When a timeout happened.
-        """
-        self._on_error(EnergySetterErrors.SET_ENERGY_TIMEOUT)
-
-    def _flush(self):
-        """Reset on error."""
-        self.set_energy.setChecked(False)
-        self._operation_in_progress = False
-        self._pending_energy = None
-        self._timeout_timer.stop()
-        self.cleanup_controller()
-
     def _set_energy(self, energy):
         """Set energy on the controller.
 
@@ -381,24 +388,17 @@ class EnergySetter(qtw.QWidget):
         self._timeout_timer.start()
         self._controller.set_energy(energy, 0, trigger_meas=False)
 
-    @qtc.pyqtSlot(bool)
-    def _on_ctrl_finished(self, busy):
-        """Clean up after energy has been set."""
-        if busy:
+    def cleanup_controller(self):
+        """Clean up the persistent controller."""
+        if self._controller is None:
             return
-        self._operation_in_progress = False
-        self._timeout_timer.stop()
-
-        # If set energy is no longer toggled, we want to disconnect the ctrl.
-        if not self.set_energy.isChecked():
-            self.cleanup_controller()
-            return
-
-        # If a new energy value was queued during the operation, process it.
-        if self._pending_energy is not None:
-            energy = self._pending_energy
-            self._pending_energy = None
-            self._set_energy(energy)
+        base.safe_disconnect(self._controller.error_occurred,
+                             self._on_error)
+        base.safe_disconnect(self._controller.serial.busy_changed,
+                             self._on_ctrl_finished)
+        self._controller.disconnect_()
+        self._controller.deleteLater()
+        self._controller = None
 
     def set_enabled(self, enable):
         """Switch enabled status of widgets."""
