@@ -381,7 +381,9 @@ def test_make_controller(mocker, tmp_path):
     setter.path = test_path
 
     fake_settings = mocker.Mock()
-    fake_cls = mocker.Mock(return_value=_FakeController())
+    fake_ctrl = mocker.Mock()
+    fake_ctrl.list_devices.return_value = []
+    fake_cls = mocker.Mock(return_value=fake_ctrl)
     mocker.patch('viperleed.gui.measure.energysetter.ViPErLEEDSettings',
                  return_value=fake_settings)
     mocker.patch('viperleed.gui.measure.energysetter.base.class_from_name',
