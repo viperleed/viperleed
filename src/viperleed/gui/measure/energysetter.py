@@ -253,7 +253,8 @@ class EnergySetter(qtw.QWidget):
 
         # If set energy is no longer toggled, we want to disconnect the ctrl.
         if not self.set_energy.isChecked():
-            self.cleanup_controller()
+            if self._controller:
+                self._controller.disconnect_()
             return
 
         # If a new energy value was queued during the operation, process it.
@@ -359,6 +360,12 @@ class EnergySetter(qtw.QWidget):
                 EnergySetterErrors.CONTROLLER_LOAD_FAILED,
                 'Controller settings corrupted.')
             return False
+
+        ctrl_cls = self._controller.__class__
+        address = self._get_controller_address(ctrl_cls,
+                                               self._controller.settings)
+        if address:
+            self._controller.address = address
         if not self._controller.set_settings(self._controller.settings):
             base.emit_error(self,
                 EnergySetterErrors.CONTROLLER_LOAD_FAILED,

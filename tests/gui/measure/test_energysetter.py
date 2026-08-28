@@ -61,6 +61,10 @@ class _FakeController:
     def deleteLater(self):  # pylint: disable=invalid-name
         """Schedule for deletion."""
 
+    def list_devices(self):
+        """Return a list of available devices."""
+        return []
+
 
 class _FakeControllerSettings:  # pylint: disable=too-few-public-methods
     """Fake controller settings object."""
@@ -505,12 +509,13 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
     setter.set_energy.isChecked.return_value = False
     setter.cleanup_controller = mocker.Mock()
     setter._timeout_timer = mocker.Mock()
+    setter._controller = mocker.Mock()
 
     setter._on_ctrl_finished(False)
 
     assert not setter._operation_in_progress
     setter._timeout_timer.stop.assert_called_once()
-    setter.cleanup_controller.assert_called_once()
+    setter._controller.disconnect_.assert_called_once()
 
 
 def test_on_ctrl_finished_pending_energy(mocker):
