@@ -251,8 +251,15 @@ class EnergySetter(qtw.QWidget):
         self._operation_in_progress = False
         self._timeout_timer.stop()
 
-        # If set energy is no longer toggled, we want to disconnect the ctrl.
+        # If the setter was switched off, the energy must be set to zero.
         if not self.set_energy.isChecked():
+            if self._pending_energy == 0.0:
+                # The setter was un-toggled while an energy step
+                # was in flight. Now set the energy to zero.
+                self._pending_energy = None
+                self._set_energy(0.0)
+                return
+            # Energy is zero, disconnect the controller.
             if self._controller:
                 self._controller.disconnect_()
             return
@@ -309,8 +316,13 @@ class EnergySetter(qtw.QWidget):
         """
         self.energy_input.setEnabled(state == qtc.Qt.Checked)
         if state != qtc.Qt.Checked:
-            # Checkbox unchecked, set energy to zero before cleaning up.
-            self._set_energy(0.0)
+            # Checkbox unchecked. If an energy step is in flight, defer
+            # setting the energy to zero until the current energy step is
+            # completed. Otherwise set the energy to zero.
+            if self._operation_in_progress:
+                self._pending_energy = 0.0
+            else:
+                self._set_energy(0.0)
             self.energy_input.setValue(0.0)
             return
 
