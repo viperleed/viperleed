@@ -535,7 +535,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         dialog = qtw.QDialog(self)
         dialog.setWindowTitle('Select Controller')
         layout = qtw.QVBoxLayout(dialog)
-        label = qtw.QLabel('Select the controller to use for setting energy:')
+        label = qtw.QLabel('Select the controller to use '
+                           'for manual energy setting:')
         layout.addWidget(label)
         combo = qtw.QComboBox()
         for action in controller_actions:
