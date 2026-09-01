@@ -393,18 +393,23 @@ class Measure(ViPErLEEDPluginBase):                                             
                 camera.stop()
                 retry_later = True
 
+        if self._ctrls['energy_setter'].set_energy.isChecked():
+            self._ctrls['energy_setter'].set_energy.setChecked(False)
+        if self._ctrls['energy_setter'].is_busy:
+            retry_later = True
+        else:
+            self._ctrls['energy_setter'].cleanup_controller()
+
         if retry_later and self._glob['n_retry_close'] <= 50:
             self._glob['n_retry_close'] += 1
             self._timers['retry_close'].start()
             event.ignore()
             return
 
+        self._ctrls['energy_setter'].cleanup_controller()
         self._dialogs['sys_settings'].close()
         self._dialogs['firmware_upgrade'].close()
 
-        if self._ctrls['energy_setter'].set_energy.isChecked():
-            self._ctrls['energy_setter'].set_energy.setChecked(False)
-        self._ctrls['energy_setter'].cleanup_controller()
         super().closeEvent(event)
 
     def _stop_device_search_triggers(self):

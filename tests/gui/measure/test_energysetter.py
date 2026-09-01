@@ -305,6 +305,23 @@ def test_init_creates_widgets():
     assert not setter._operation_in_progress
 
 
+def test_is_busy_independent_of_checkbox(ctrl_setter):
+    """Check is_busy is not tied to the checkbox state."""
+    ctrl_setter._operation_in_progress = True
+    ctrl_setter.set_energy.setChecked(False)
+    assert not ctrl_setter.setting_energy
+    assert ctrl_setter.is_busy
+
+
+def test_is_busy_property(ctrl_setter):
+    """Check is_busy reflects an in-flight operation."""
+    assert not ctrl_setter.is_busy
+    ctrl_setter._operation_in_progress = True
+    assert ctrl_setter.is_busy
+    ctrl_setter._operation_in_progress = False
+    assert not ctrl_setter.is_busy
+
+
 def test_make_controller(mocker, tmp_path):
     """Check controller creation from settings file."""
     setter = EnergySetter()

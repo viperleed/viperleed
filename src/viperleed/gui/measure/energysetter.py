@@ -76,6 +76,11 @@ class EnergySetter(qtw.QWidget):
         self._connect()
 
     @property
+    def is_busy(self):
+        """Return whether an operation is in flight."""
+        return self._operation_in_progress
+
+    @property
     def path(self):
         """Return the path to the controller settings."""
         return self._path
