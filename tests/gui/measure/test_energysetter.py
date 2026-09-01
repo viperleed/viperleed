@@ -352,7 +352,7 @@ def test_on_ctrl_finished_busy(mocker):
     setter._operation_in_progress = True
     setter._timeout_timer = mocker.Mock()
 
-    setter._on_ctrl_finished(True)
+    setter._on_ctrl_finished(busy=True)
 
     assert setter._operation_in_progress
     setter._timeout_timer.stop.assert_not_called()
@@ -368,7 +368,7 @@ def test_on_ctrl_finished_no_pending(mocker):
     setter._timeout_timer = mocker.Mock()
     setter._set_energy = mocker.Mock()
 
-    setter._on_ctrl_finished(False)
+    setter._on_ctrl_finished(busy=False)
 
     assert not setter._operation_in_progress
     setter._timeout_timer.stop.assert_called_once()
@@ -385,7 +385,7 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
     setter._timeout_timer = mocker.Mock()
     setter._controller = mocker.Mock()
 
-    setter._on_ctrl_finished(False)
+    setter._on_ctrl_finished(busy=False)
 
     assert not setter._operation_in_progress
     setter._timeout_timer.stop.assert_called_once()
@@ -401,7 +401,7 @@ def test_on_ctrl_finished_pending_energy(mocker):
     setter.set_energy.isChecked.return_value = True
     setter._set_energy = mocker.Mock()
 
-    setter._on_ctrl_finished(False)
+    setter._on_ctrl_finished(busy=False)
 
     assert setter._pending_energy is None
     setter._set_energy.assert_called_once_with(75.0)
@@ -413,7 +413,7 @@ def test_on_ctrl_finished_queued_zero_waits_for_completion(ctrl_setter):
     ctrl_setter._pending_energy = 0.0
     ctrl_setter._controller = _FakeController()
 
-    ctrl_setter._on_ctrl_finished(False)
+    ctrl_setter._on_ctrl_finished(busy=False)
 
     assert ctrl_setter._pending_energy is None
     assert ctrl_setter._operation_in_progress
@@ -425,7 +425,7 @@ def test_on_ctrl_finished_zero_applied_then_disconnects(ctrl_setter):
     ctrl = _FakeController()
     ctrl_setter._controller = ctrl
 
-    ctrl_setter._on_ctrl_finished(False)
+    ctrl_setter._on_ctrl_finished(busy=False)
 
     assert not ctrl_setter._operation_in_progress
     assert not ctrl.connected
