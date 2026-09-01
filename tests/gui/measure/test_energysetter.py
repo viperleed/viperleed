@@ -315,8 +315,7 @@ def test_make_controller(mocker, tmp_path):
     setter.path = test_path
 
     fake_settings = mocker.Mock()
-    fake_ctrl = mocker.Mock()
-    fake_ctrl.list_devices.return_value = []
+    fake_ctrl = _FakeController()
     fake_cls = mocker.Mock(return_value=fake_ctrl)
     mocker.patch('viperleed.gui.measure.energysetter.ViPErLEEDSettings',
                  return_value=fake_settings)
@@ -391,37 +390,27 @@ def test_on_ctrl_finished_pending_energy(mocker):
     setter._set_energy.assert_called_once_with(75.0)
 
 
-def test_on_ctrl_finished_queued_zero_waits_for_completion(mocker):
+def test_on_ctrl_finished_queued_zero_waits_for_completion(ctrl_setter):
     """Check that a deferred zeroing is sent and kept busy afterwards."""
-    setter = EnergySetter()
-    setter._operation_in_progress = True
-    setter._pending_energy = 0.0
-    setter._controller = _FakeController()
-    setter.set_energy = mocker.Mock()
-    setter.set_energy.isChecked.return_value = False
-    setter._timeout_timer = mocker.Mock()
+    ctrl_setter._operation_in_progress = True
+    ctrl_setter._pending_energy = 0.0
+    ctrl_setter._controller = _FakeController()
 
-    setter._on_ctrl_finished(False)
+    ctrl_setter._on_ctrl_finished(False)
 
-    assert setter._pending_energy is None
-    assert setter._operation_in_progress
-    assert setter._controller.connected
+    assert ctrl_setter._pending_energy is None
+    assert ctrl_setter._operation_in_progress
+    assert ctrl_setter._controller.connected
 
 
-def test_on_ctrl_finished_zero_applied_then_disconnects(mocker):
+def test_on_ctrl_finished_zero_applied_then_disconnects(ctrl_setter):
     """Check the setter disconnects after the deferred zero was applied."""
-    setter = EnergySetter()
-    setter._operation_in_progress = False
-    setter._pending_energy = None
     ctrl = _FakeController()
-    setter._controller = ctrl
-    setter.set_energy = mocker.Mock()
-    setter.set_energy.isChecked.return_value = False
-    setter._timeout_timer = mocker.Mock()
+    ctrl_setter._controller = ctrl
 
-    setter._on_ctrl_finished(False)
+    ctrl_setter._on_ctrl_finished(False)
 
-    assert not setter._operation_in_progress
+    assert not ctrl_setter._operation_in_progress
     assert not ctrl.connected
 
 
