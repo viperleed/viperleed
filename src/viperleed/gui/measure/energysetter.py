@@ -93,6 +93,7 @@ class EnergySetter(qtw.QWidget):
         else:
             self._path = None
         self.set_enabled(True)
+        self._update_hint()
 
     @property
     def setting_energy(self):
@@ -123,6 +124,14 @@ class EnergySetter(qtw.QWidget):
         self.energy_input.editingFinished.connect(self._on_energy_changed)
         self.energy_input.stepped.connect(self._on_energy_changed)
         self._timeout_timer.timeout.connect(self._on_timeout)
+
+    def _update_hint(self):
+        """Update the tooltip of the EnergySetter widget."""
+        if not self.path:
+            self.setToolTip('Please select a controller in the '
+                            '"Devices" menu to set an energy.')
+        else:
+            self.setToolTip('')
 
     def _connect_controller(self, ctrl):
         """Attempt to connect the controller.
