@@ -577,9 +577,9 @@ class Measure(ViPErLEEDPluginBase):                                             
                 )
         else:
             qtw.QMessageBox.warning(
-                self, 'No Settings File',
-                'This controller does not have a settings file. '
-                'Please save its settings first.'
+                self, 'Broken Settings File',
+                'The settings file for this controller is corrupted. '
+                'Please fix or re-create the settings first.'
                 )
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):

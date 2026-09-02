@@ -260,7 +260,7 @@ class EnergySetter(qtw.QWidget):
 
         # If the setter was switched off, the energy must be set to zero.
         if not self.set_energy.isChecked():
-            if self._pending_energy == 0.0:
+            if self._pending_energy == 0.0:     # pylint: disable=C1805
                 # The setter was un-toggled while an energy step
                 # was in flight. Now set the energy to zero.
                 self._pending_energy = None
