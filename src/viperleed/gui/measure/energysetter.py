@@ -125,14 +125,6 @@ class EnergySetter(qtw.QWidget):
         self.energy_input.stepped.connect(self._on_energy_changed)
         self._timeout_timer.timeout.connect(self._on_timeout)
 
-    def _update_hint(self):
-        """Update the tooltip of the EnergySetter widget."""
-        if not self.path:
-            self.setToolTip('Please select a controller in the '
-                            '"Devices" menu to set an energy.')
-        else:
-            self.setToolTip('')
-
     def _connect_controller(self, ctrl):
         """Attempt to connect the controller.
 
@@ -421,6 +413,14 @@ class EnergySetter(qtw.QWidget):
             return
         self._timeout_timer.start()
         self._controller.set_energy(energy, 0, trigger_meas=False)
+
+    def _update_hint(self):
+        """Update the tooltip of the EnergySetter widget."""
+        if not self.path:
+            self.setToolTip('Please select a controller in the '
+                            '"Devices" menu to set an energy.')
+        else:
+            self.setToolTip('')
 
     def cleanup_controller(self):
         """Clean up the persistent controller."""
