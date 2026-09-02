@@ -92,6 +92,7 @@ class EnergySetter(qtw.QWidget):
             self._path = Path(path)
         else:
             self._path = None
+        self.set_enabled(True)
 
     @property
     def setting_energy(self):
