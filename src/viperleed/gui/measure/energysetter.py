@@ -86,10 +86,10 @@ class EnergySetter(qtw.QWidget):
         return self._path
 
     @path.setter
-    def path(self, ctrl):
+    def path(self, path):
         """Set the path to the controller."""
-        if ctrl:
-            self._path = Path(ctrl)
+        if path:
+            self._path = Path(path)
         else:
             self._path = None
 

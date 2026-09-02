@@ -571,8 +571,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             self.system_settings.update_file()
             self._ctrls['energy_setter'].path = _path.as_posix()
             qtw.QMessageBox.information(
-                self, 'Controller Set', f'{selected_action.text()} '
-                'is now the controller setting energies.'
+                self, 'Controller Set', f'{selected_action.text()} is '
+                'now the controller setting energies. Energies will '
+                'be calibrated according to the selected settings.'
                 )
         else:
             qtw.QMessageBox.warning(
