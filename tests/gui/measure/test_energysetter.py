@@ -109,7 +109,7 @@ def setter(tmp_path):
 def ctrl_setter(mocker, setter):
     """Create setter with mocked controller."""
     fake_ctrl = _FakeController()
-    setter._get_controller = mocker.Mock(return_value=fake_ctrl)
+    mocker.patch.object(setter, '_get_controller', return_value=fake_ctrl)
     return setter
 
 
@@ -183,7 +183,7 @@ def test_get_controller_connection_failed(mocker, setter):
     """Check error emitted when controller connection fails."""
     setter.error_occurred = _FakeSignal()
     fake_ctrl = _FakeController(connected=False)
-    setter._make_controller = mocker.Mock(return_value=fake_ctrl)
+    mocker.patch.object(setter, '_make_controller', return_value=fake_ctrl)
 
     result = setter._get_controller()
 
@@ -447,7 +447,6 @@ def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     """Check energy change triggers set_energy when idle."""
     ctrl_setter._set_energy = mocker.Mock()
     ctrl_setter.set_energy.setChecked(True)
-    ctrl_setter._operation_in_progress = False
     ctrl_setter.energy_input.setValue(50.0)
     ctrl_setter.energy_input.editingFinished.emit()
 
