@@ -566,7 +566,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             qtw.QMessageBox.warning(
                 self, 'Broken Settings File',
                 'The settings file for this controller is corrupted. '
-                'Please fix or re-create the settings first.'
+                'Please fix or re-create the settings first. To create '
+                'a new settings file, delete the old settings and '
+                'select the controller in the devices menu.'
                 )
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
