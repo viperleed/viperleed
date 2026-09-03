@@ -197,6 +197,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed.gui.dialogs.errors import DialogDismissedError
+from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
@@ -531,30 +532,16 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
             return
 
-        # Create selection dialog
-        dialog = qtw.QDialog(self)
-        dialog.setWindowTitle('Select Controller')
-        layout = qtw.QVBoxLayout(dialog)
-        label = qtw.QLabel('Select the controller to use '
-                           'for manual energy setting:')
-        layout.addWidget(label)
-        combo = qtw.QComboBox()
-        for action in controller_actions:
-            combo.addItem(action.text())
-        layout.addWidget(combo)
-
-        # Buttons
-        buttons = qtw.QDialogButtonBox(
-            qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel
-        )
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
-
-        if dialog.exec() != qtw.QDialog.Accepted:
+        # Let the user choose one of the detected controllers.
+        names = [act.text() for act in controller_actions]
+        dropdown = DropdownDialog(
+            'Select Controller',
+            'Select the controller to use for manual energy setting:',
+            names, parent=self,
+            )
+        if dropdown.exec() != dropdown.Apply:
             return
-        selected_index = combo.currentIndex()
-        selected_action = controller_actions[selected_index]
+        selected_action = controller_actions[names.index(dropdown.selection)]
         cls, info = selected_action.data()
         address = info.more['address']
 
