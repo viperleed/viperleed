@@ -1162,7 +1162,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         # We will report errors coming from devices separately from the
         # one coming from the measurement. Disconnect the signals from
         # one another here.
-
         for device in self.measurement.devices:
             base.safe_disconnect(device.error_occurred,
                                  self.measurement.error_occurred)
