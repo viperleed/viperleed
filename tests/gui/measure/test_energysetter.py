@@ -21,6 +21,8 @@ from viperleed.gui.measure.classes.settings import SettingsError
 from .mock_qt import _FakeSignal
 
 
+_MODULE = 'viperleed.gui.measure.energysetter'
+
 _ = qtw.QApplication(sys.argv)
 
 
@@ -333,10 +335,8 @@ def test_make_controller(mocker, tmp_path):
     fake_settings = mocker.Mock()
     fake_ctrl = _FakeController()
     fake_cls = mocker.Mock(return_value=fake_ctrl)
-    mocker.patch('viperleed.gui.measure.energysetter.ViPErLEEDSettings',
-                 return_value=fake_settings)
-    mocker.patch('viperleed.gui.measure.energysetter.base.class_from_name',
-                 return_value=fake_cls)
+    mocker.patch(f'{_MODULE}.ViPErLEEDSettings', return_value=fake_settings)
+    mocker.patch(f'{_MODULE}.base.class_from_name', return_value=fake_cls)
 
     result = setter._make_controller()
 
