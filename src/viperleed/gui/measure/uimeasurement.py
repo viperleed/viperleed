@@ -638,10 +638,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setCentralWidget(qtw.QWidget())
         self.centralWidget().setLayout(qtw.QGridLayout())
 
-        self._ctrls['measure'].setFont(AllGUIFonts().buttonFont)
-        self._ctrls['measure'].ensurePolished()
-        self._ctrls['abort'].setFont(AllGUIFonts().buttonFont)
-        self._ctrls['abort'].ensurePolished()
+        font = AllGUIFonts().buttonFont
+        for ctrl in ('measure', 'abort'):
+            self._ctrls[ctrl].setFont(font)
+            self._ctrls[ctrl].ensurePolished()
 
         layout = self.centralWidget().layout()
 
