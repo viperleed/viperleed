@@ -125,12 +125,11 @@ def fake_controller(mocker, setter):
     return fake_ctrl
 
 
-def test_cleanup_controller(mocker):
+def test_cleanup_controller():
     """Check controller cleanup disconnects signals."""
     setter = EnergySetter()
     fake_ctrl = _FakeController()
     setter._controller = fake_ctrl
-    mocker.patch('viperleed.gui.measure.energysetter.base.safe_disconnect')
 
     setter.cleanup_controller()
 
