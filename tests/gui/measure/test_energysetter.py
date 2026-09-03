@@ -431,8 +431,9 @@ def test_on_ctrl_finished_zero_applied_then_disconnects(ctrl_setter):
     assert not ctrl.connected
 
 
-def test_on_energy_changed_operation_in_progress(ctrl_setter):
+def test_on_energy_changed_operation_in_progress(mocker, ctrl_setter):
     """Check energy change queued when operation in progress."""
+    ctrl_setter._set_energy = mocker.Mock()
     ctrl_setter.set_energy.setChecked(True)
     ctrl_setter._operation_in_progress = True
     ctrl_setter.energy_input.setValue(75.0)
@@ -441,6 +442,7 @@ def test_on_energy_changed_operation_in_progress(ctrl_setter):
 
     # pylint: disable-next=magic-value-comparison
     assert ctrl_setter._pending_energy == 75.0
+    ctrl_setter._set_energy.assert_not_called()
 
 
 def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
