@@ -1163,13 +1163,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         # one coming from the measurement. Disconnect the signals from
         # one another here.
 
-        # Save the controller path for convenience
-        if settings_ok and self.measurement.primary_controller:
-            _path = self.measurement.primary_controller.settings.last_file
-            self.system_settings.set('DEVICES', 'controller', _path.as_posix())
-            self._ctrls['energy_setter'].path = _path.as_posix()
-            self.system_settings.update_file()
-
         for device in self.measurement.devices:
             base.safe_disconnect(device.error_occurred,
                                  self.measurement.error_occurred)
