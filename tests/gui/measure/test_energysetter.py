@@ -267,6 +267,7 @@ def test_get_controller_reuse_connection_failed(mocker, fake_controller,
 def test_get_controller_reuses_existing(fake_controller, setter):
     """Check that existing controller is reused when path matches."""
     fake_settings = fake_controller.settings
+    fake_controller.disconnect_()
     setter._controller = fake_controller
 
     result = setter._get_controller()
