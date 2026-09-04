@@ -439,3 +439,20 @@ class EnergySetter(qtw.QWidget):
         enable &= bool(self.path)
         self.set_energy.setEnabled(enable)
         self.energy_input.setEnabled(enable and self.set_energy.isChecked())
+
+    @qtc.pyqtSlot(float)
+    def show_energy(self, energy):
+        """Display an externally-driven energy value without setting it.
+
+        Parameters
+        ----------
+        energy : float
+            Energy value in eV to display.
+
+        Returns
+        -------
+        None.
+        """
+        self.energy_input.blockSignals(True)
+        self.energy_input.setValue(energy)
+        self.energy_input.blockSignals(False)

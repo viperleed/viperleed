@@ -803,6 +803,8 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Measurement events and start/stopping
         connect(measurement.new_data_available, self._on_data_received)
+        connect(measurement.energy_changed,
+                self._ctrls['energy_setter'].show_energy)
         connect(measurement.prepared, self._on_measurement_prepared)
         connect(measurement.finished, self._on_measurement_finished)
         connect(measurement.finished, self._print_done)
