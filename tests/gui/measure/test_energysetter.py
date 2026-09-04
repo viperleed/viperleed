@@ -95,8 +95,8 @@ class _FakeSerial:
         self.busy_changed.emit(busy)
 
 
-@fixture
-def setter(tmp_path):
+@fixture(name='setter')
+def fixture_setter(tmp_path):
     """Create setter with path."""
     setter = EnergySetter()
     test_path = tmp_path / 'controller.ini'
@@ -105,16 +105,16 @@ def setter(tmp_path):
     return setter
 
 
-@fixture
-def ctrl_setter(mocker, setter):
+@fixture(name='ctrl_setter')
+def fixture_ctrl_setter(mocker, setter):
     """Create setter with mocked controller."""
     fake_ctrl = _FakeController()
     mocker.patch.object(setter, '_get_controller', return_value=fake_ctrl)
     return setter
 
 
-@fixture
-def fake_controller(mocker, setter):
+@fixture(name='fake_controller')
+def fixture_fake_controller(mocker, setter):
     """Return a controller whose settings are mocked."""
     fake_settings = mocker.Mock()
     fake_settings.last_file = setter.path
