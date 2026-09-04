@@ -27,7 +27,6 @@ _ = qtw.QApplication(sys.argv)
 
 
 # pylint: disable=protected-access
-# pylint: disable=redefined-outer-name
 class _FakeController:
     """A minimal controller-like object for testing."""
 
@@ -154,16 +153,16 @@ def test_flush_resets_state(mocker):
     setter.set_energy.setChecked(True)
     setter._operation_in_progress = True
     setter._pending_energy = 50.0
-    setter._timeout_timer = mocker.Mock()
-    setter.cleanup_controller = mocker.Mock()
+    mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
 
     setter._flush()
 
     assert not setter.set_energy.isChecked()
     assert not setter._operation_in_progress
     assert setter._pending_energy is None
-    setter._timeout_timer.stop.assert_called_once()
-    setter.cleanup_controller.assert_called_once()
+    mock_timeout_timer.stop.assert_called_once()
+    mock_cleanup.assert_called_once()
 
 
 def test_get_controller_cleanup_on_different_path(mocker, setter):
@@ -171,12 +170,13 @@ def test_get_controller_cleanup_on_different_path(mocker, setter):
     old_ctrl = _FakeController()
     old_ctrl.settings.last_file = Path('/old/path.ini')
     setter._controller = old_ctrl
-    setter.cleanup_controller = mocker.Mock()
-    setter._make_controller = mocker.Mock(return_value=_FakeController())
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
+    _ = mocker.patch.object(setter, '_make_controller',
+                            return_value=_FakeController())
 
     setter._get_controller()
 
-    setter.cleanup_controller.assert_called_once()
+    mock_cleanup.assert_called_once()
 
 
 def test_get_controller_connection_failed(mocker, setter):
@@ -193,20 +193,20 @@ def test_get_controller_connection_failed(mocker, setter):
 
 def test_get_controller_creates_new(mocker, setter):
     """Check that new controller is created when needed."""
-    setter._make_controller = mocker.Mock(
-        return_value=_FakeController()
-        )
+    mock_make = mocker.patch.object(setter, '_make_controller',
+                                    return_value=_FakeController())
 
     result = setter._get_controller()
 
-    setter._make_controller.assert_called_once()
+    mock_make.assert_called_once()
     assert result is not None
 
 
 def test_get_controller_load_failed(mocker, setter):
     """Check error emitted when controller creation fails."""
     setter.error_occurred = _FakeSignal()
-    setter._make_controller = mocker.Mock(side_effect=ValueError('test'))
+    _ = mocker.patch.object(setter, '_make_controller',
+                            side_effect=ValueError('test'))
 
     result = setter._get_controller()
 
@@ -220,14 +220,14 @@ def test_get_controller_read_again_failed(mocker, fake_controller, setter):
     fake_settings.read_again.return_value = False
     setter._controller = fake_controller
     setter.error_occurred = _FakeSignal()
-    setter.cleanup_controller = mocker.Mock()
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
 
     result = setter._get_controller()
 
     assert result is None
     fake_settings.read_again.assert_called_once()
     assert setter.error_occurred.emitted == 1
-    setter.cleanup_controller.assert_called_once()
+    mock_cleanup.assert_called_once()
 
 
 def test_get_controller_read_again_raises(mocker, fake_controller, setter):
@@ -236,14 +236,14 @@ def test_get_controller_read_again_raises(mocker, fake_controller, setter):
     fake_settings.read_again.side_effect = SettingsError('corrupted')
     setter._controller = fake_controller
     setter.error_occurred = _FakeSignal()
-    setter.cleanup_controller = mocker.Mock()
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
 
     result = setter._get_controller()
 
     assert result is None
     fake_settings.read_again.assert_called_once()
     assert setter.error_occurred.emitted == 1
-    setter.cleanup_controller.assert_called_once()
+    mock_cleanup.assert_called_once()
 
 
 def test_get_controller_reuse_connection_failed(mocker, fake_controller,
@@ -253,7 +253,7 @@ def test_get_controller_reuse_connection_failed(mocker, fake_controller,
     fake_controller._connect_result = False
     setter._controller = fake_controller
     setter.error_occurred = _FakeSignal()
-    setter.cleanup_controller = mocker.Mock()
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
 
     result = setter._get_controller()
 
@@ -261,7 +261,7 @@ def test_get_controller_reuse_connection_failed(mocker, fake_controller,
     fake_settings.read_again.assert_called_once()
     fake_controller.set_settings.assert_called_once_with(fake_settings)
     assert setter.error_occurred.emitted == 1
-    setter.cleanup_controller.assert_called_once()
+    mock_cleanup.assert_called_once()
 
 
 def test_get_controller_reuses_existing(fake_controller, setter):
@@ -284,7 +284,7 @@ def test_get_controller_set_settings_failed(mocker, fake_controller, setter):
     fake_controller.set_settings.return_value = False
     setter._controller = fake_controller
     setter.error_occurred = _FakeSignal()
-    setter.cleanup_controller = mocker.Mock()
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
 
     result = setter._get_controller()
 
@@ -292,7 +292,7 @@ def test_get_controller_set_settings_failed(mocker, fake_controller, setter):
     fake_settings.read_again.assert_called_once()
     fake_controller.set_settings.assert_called_once_with(fake_settings)
     assert setter.error_occurred.emitted == 1
-    setter.cleanup_controller.assert_called_once()
+    mock_cleanup.assert_called_once()
 
 
 def test_init_creates_widgets():
@@ -350,12 +350,12 @@ def test_on_ctrl_finished_busy(mocker):
     """Check ctrl finished ignores busy state."""
     setter = EnergySetter()
     setter._operation_in_progress = True
-    setter._timeout_timer = mocker.Mock()
+    mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
 
     setter._on_ctrl_finished(busy=True)
 
     assert setter._operation_in_progress
-    setter._timeout_timer.stop.assert_not_called()
+    mock_timeout_timer.stop.assert_not_called()
 
 
 def test_on_ctrl_finished_no_pending(mocker):
@@ -363,33 +363,32 @@ def test_on_ctrl_finished_no_pending(mocker):
     setter = EnergySetter()
     setter._operation_in_progress = True
     setter._pending_energy = None
-    setter.set_energy = mocker.Mock()
-    setter.set_energy.isChecked.return_value = True
-    setter._timeout_timer = mocker.Mock()
-    setter._set_energy = mocker.Mock()
+    mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
+    mock_set_energy_btn.isChecked.return_value = True
+    mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
+    mock_set_energy = mocker.patch.object(setter, '_set_energy')
 
     setter._on_ctrl_finished(busy=False)
 
     assert not setter._operation_in_progress
-    setter._timeout_timer.stop.assert_called_once()
-    setter._set_energy.assert_not_called()
+    mock_timeout_timer.stop.assert_called_once()
+    mock_set_energy.assert_not_called()
 
 
 def test_on_ctrl_finished_not_setting_cleanup(mocker):
     """Check ctrl finished cleans up when not setting."""
     setter = EnergySetter()
     setter._operation_in_progress = True
-    setter.set_energy = mocker.Mock()
-    setter.set_energy.isChecked.return_value = False
-    setter.cleanup_controller = mocker.Mock()
-    setter._timeout_timer = mocker.Mock()
-    setter._controller = mocker.Mock()
+    mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
+    mock_set_energy_btn.isChecked.return_value = False
+    mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
+    mock_controller = mocker.patch.object(setter, '_controller')
 
     setter._on_ctrl_finished(busy=False)
 
     assert not setter._operation_in_progress
-    setter._timeout_timer.stop.assert_called_once()
-    setter._controller.disconnect_.assert_called_once()
+    mock_timeout_timer.stop.assert_called_once()
+    mock_controller.disconnect_.assert_called_once()
 
 
 def test_on_ctrl_finished_pending_energy(mocker):
@@ -397,14 +396,14 @@ def test_on_ctrl_finished_pending_energy(mocker):
     setter = EnergySetter()
     setter._operation_in_progress = True
     setter._pending_energy = 75.0
-    setter.set_energy = mocker.Mock()
-    setter.set_energy.isChecked.return_value = True
-    setter._set_energy = mocker.Mock()
+    mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
+    mock_set_energy_btn.isChecked.return_value = True
+    mock_set_energy = mocker.patch.object(setter, '_set_energy')
 
     setter._on_ctrl_finished(busy=False)
 
     assert setter._pending_energy is None
-    setter._set_energy.assert_called_once_with(75.0)
+    mock_set_energy.assert_called_once_with(75.0)
 
 
 def test_on_ctrl_finished_queued_zero_waits_for_completion(ctrl_setter):
@@ -433,7 +432,7 @@ def test_on_ctrl_finished_zero_applied_then_disconnects(ctrl_setter):
 
 def test_on_energy_changed_operation_in_progress(mocker, ctrl_setter):
     """Check energy change queued when operation in progress."""
-    ctrl_setter._set_energy = mocker.Mock()
+    mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
     ctrl_setter.set_energy.setChecked(True)
     ctrl_setter._operation_in_progress = True
     ctrl_setter.energy_input.setValue(75.0)
@@ -442,40 +441,40 @@ def test_on_energy_changed_operation_in_progress(mocker, ctrl_setter):
 
     # pylint: disable-next=magic-value-comparison
     assert ctrl_setter._pending_energy == 75.0
-    ctrl_setter._set_energy.assert_not_called()
+    mock_set_energy.assert_not_called()
 
 
 def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
     """Check energy change triggers set_energy when idle."""
-    ctrl_setter._set_energy = mocker.Mock()
+    mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
     ctrl_setter.set_energy.setChecked(True)
     ctrl_setter.energy_input.setValue(50.0)
     ctrl_setter.energy_input.editingFinished.emit()
 
-    ctrl_setter._set_energy.assert_called_once_with(50.0)
+    mock_set_energy.assert_called_once_with(50.0)
 
 
 def test_on_energy_changed_when_not_setting(mocker, ctrl_setter):
     """Check energy change ignored when not setting energy."""
     ctrl_setter.set_energy.setChecked(False)
-    ctrl_setter._set_energy = mocker.Mock()
+    mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
 
     ctrl_setter._on_energy_changed()
 
-    ctrl_setter._set_energy.assert_not_called()
+    mock_set_energy.assert_not_called()
 
 
 def test_on_error(mocker):
     """Check error handler emits error and flushes."""
     setter = EnergySetter()
     setter.error_occurred = _FakeSignal()
-    setter._flush = mocker.Mock()
+    mock_flush = mocker.patch.object(setter, '_flush')
     error_info = (2000, 'test error')
 
     setter._on_error(error_info)
 
     assert setter.error_occurred.emitted == 1
-    setter._flush.assert_called_once()
+    mock_flush.assert_called_once()
 
 
 def test_on_set_energy_toggled_missing_file(tmp_path):
@@ -517,15 +516,15 @@ def test_on_set_energy_toggled_unchecked_in_flight_queues_zero(ctrl_setter):
 
 def test_on_set_energy_toggled_unchecked_sets_zero(mocker, ctrl_setter):
     """Check that unchecking sets energy to zero."""
-    ctrl_setter._set_energy = mocker.Mock()
+    mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
     ctrl_setter.set_energy.setChecked(True)
 
     ctrl_setter.energy_input.setValue(50.0)
     ctrl_setter.energy_input.editingFinished.emit()
-    ctrl_setter._set_energy.assert_called_with(50.0)
+    mock_set_energy.assert_called_with(50.0)
 
     ctrl_setter.set_energy.setChecked(False)
-    ctrl_setter._set_energy.assert_called_with(0.0)
+    mock_set_energy.assert_called_with(0.0)
 
     # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert ctrl_setter.energy_input.value() == 0.0
@@ -535,12 +534,12 @@ def test_on_timeout(mocker):
     """Check timeout handler emits timeout error."""
     setter = EnergySetter()
     setter.error_occurred = _FakeSignal()
-    setter._flush = mocker.Mock()
+    mock_flush = mocker.patch.object(setter, '_flush')
 
     setter._on_timeout()
 
     assert setter.error_occurred.emitted == 1
-    setter._flush.assert_called_once()
+    mock_flush.assert_called_once()
 
 
 def test_set_enabled_with_checked_checkbox(ctrl_setter):
@@ -580,24 +579,24 @@ def test_set_energy_no_controller(mocker):
     """Check set_energy handles missing controller."""
     setter = EnergySetter()
     setter._controller = None
-    setter.set_energy = mocker.Mock()
+    mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
 
     setter._set_energy(50.0)
 
     assert not setter._operation_in_progress
-    setter.set_energy.setChecked.assert_called_once_with(False)
+    mock_set_energy_btn.setChecked.assert_called_once_with(False)
 
 
 def test_set_energy_starts_timeout(mocker):
     """Check set_energy starts timeout timer."""
     setter = EnergySetter()
     setter._controller = _FakeController()
-    setter._timeout_timer = mocker.Mock()
+    mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
 
     setter._set_energy(50.0)
 
     assert setter._operation_in_progress
-    setter._timeout_timer.start.assert_called_once()
+    mock_timeout_timer.start.assert_called_once()
 
 
 def test_setting_energy_property(ctrl_setter):
