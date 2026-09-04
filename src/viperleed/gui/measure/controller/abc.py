@@ -695,7 +695,7 @@ class ControllerABC(DeviceABC):
              '</nobr> to reach a stable value after a new energy has '
              'been set. This should be calibrated for a typical step '
              'size (e.g., 0.5 eV).'),
-            ('first_settle_time', '1st energy settle time',
+            ('first_settle_time', 'E start settle time',
              '<nobr>The time interval required for the true beam '
              'energy</nobr> to reach a stable value when the first energy '
              'of a ramp is set. This is usually significantly longer than '
@@ -1193,7 +1193,7 @@ class MeasureControllerABC(ControllerABC):
         tip = ("<nobr>The number of measurements the controller should"
                "</nobr> average over before returning a value to the PC.")
         handler.add_option('measurement_settings', 'nr_samples',
-                           handler_widget=widget, display_name='No. samples',
+                           handler_widget=widget, display_name='Nr. samples',
                            tooltip=tip)
         return handler
 

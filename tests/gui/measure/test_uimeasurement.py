@@ -116,8 +116,10 @@ def test_device_search_allowed_states(mocker):
 def test_update_device_lists_blocks_reentry(mocker):
     """Check that a second search is blocked while one is in progress."""
     signal = _FakeSignal()
+    energy_setter = mocker.Mock(setting_energy=False)
     fake = mocker.Mock(_device_search_in_progress=False,
-                       detect_devices_requested=signal)
+                       detect_devices_requested=signal,
+                       _ctrls={'energy_setter': energy_setter})
     fake._device_search_allowed = mocker.Mock(side_effect=[True, False])
 
     Measure.update_device_lists(fake)

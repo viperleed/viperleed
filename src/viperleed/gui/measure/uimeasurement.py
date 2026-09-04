@@ -197,6 +197,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed.gui.dialogs.errors import DialogDismissedError
+from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
@@ -223,13 +224,13 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     MeasurementSettingsDialog,
     SettingsDialog,
     )
+from viperleed.gui.measure.energysetter import EnergySetter
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.serial.abc import SerialABC
 from viperleed.gui.measure.widgets.cameraviewer import CameraViewer
 from viperleed.gui.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.gui.pluginsbase import ViPErLEEDPluginBase
 from viperleed.gui.widgets.lib import AllGUIFonts
-from viperleed.gui.widgets.lib import QDoubleValidatorNoDot
 from viperleed.gui.widgets.lib import move_to_front
 
 
@@ -262,8 +263,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls = {
             'measure': qtw.QPushButton('New Measurement'),
             'abort': qtw.QPushButton('Abort'),
-            'energy_input': qtw.QLineEdit(''),                                  # TODO: QDoubleSpinBox?
-            'set_energy': qtw.QPushButton('Set energy'),
+            'energy_setter': EnergySetter(),
             'menus': {
                 'file': qtw.QMenu('&File'),
                 'devices': qtw.QMenu('&Devices'),
@@ -333,6 +333,12 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setWindowTitle(TITLE)
         self.setAcceptDrops(True)
 
+        # Extract controller settings path for energy setting.
+        _path = self._dialogs['sys_settings'].settings.get(
+            'DEVICES', 'controller', fallback=''
+            )
+        self._ctrls['energy_setter'].path = _path
+
         self._compose()
         self._connect()
 
@@ -388,14 +394,23 @@ class Measure(ViPErLEEDPluginBase):                                             
                 camera.stop()
                 retry_later = True
 
+        if self._ctrls['energy_setter'].set_energy.isChecked():
+            self._ctrls['energy_setter'].set_energy.setChecked(False)
+        if self._ctrls['energy_setter'].is_busy:
+            retry_later = True
+        else:
+            self._ctrls['energy_setter'].cleanup_controller()
+
         if retry_later and self._glob['n_retry_close'] <= 50:
             self._glob['n_retry_close'] += 1
             self._timers['retry_close'].start()
             event.ignore()
             return
 
+        self._ctrls['energy_setter'].cleanup_controller()
         self._dialogs['sys_settings'].close()
         self._dialogs['firmware_upgrade'].close()
+
         super().closeEvent(event)
 
     def _stop_device_search_triggers(self):
@@ -446,6 +461,8 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot()
     def update_device_lists(self):
         """Request update of entries in 'Devices' menu."""
+        if self._ctrls['energy_setter'].setting_energy:
+            return
         if not self._device_search_allowed():
             return
         self._device_search_in_progress = True
@@ -499,6 +516,60 @@ class Measure(ViPErLEEDPluginBase):                                             
         finally:
             self._device_search_in_progress = False
             self._update_force_detect_button_state()
+
+    @qtc.pyqtSlot()
+    def _on_select_controller(self):
+        """Show dialog to select controller for energy setting."""
+        # Get already detected controllers from the Devices menu
+        controllers_menu = self._ctrls['menus']['devices'].actions()[1].menu()
+        controller_actions = controllers_menu.actions()
+
+        if not controller_actions:
+            qtw.QMessageBox.warning(
+                self, 'No Controllers Available',
+                'No controllers detected. Please ensure at least one '
+                'controller is connected and properly configured.'
+            )
+            return
+
+        # Let the user choose one of the detected controllers.
+        names = [act.text() for act in controller_actions]
+        dropdown = DropdownDialog(
+            'Select Controller',
+            'Select the controller to use for manual energy setting:',
+            names, parent=self,
+            )
+        if dropdown.exec() != dropdown.Apply:
+            return
+        selected_action = controller_actions[names.index(dropdown.selection)]
+        cls, info = selected_action.data()
+        address = info.more['address']
+
+        try:
+            ctrl = self._make_device(cls, info, address=address)
+        except DefaultSettingsError:
+            return
+        if not ctrl:
+            return
+
+        _path = ctrl.settings.last_file
+        if _path and _path.is_file():
+            self.system_settings.set('DEVICES', 'controller', _path.as_posix())
+            self.system_settings.update_file()
+            self._ctrls['energy_setter'].path = _path.as_posix()
+            qtw.QMessageBox.information(
+                self, 'Controller Set', f'{selected_action.text()} is '
+                'now the controller setting energies. Energies will '
+                'be calibrated according to the controller settings.'
+                )
+        else:
+            qtw.QMessageBox.warning(
+                self, 'Broken Settings File',
+                'The settings file for this controller is corrupted. '
+                'Please fix or re-create the settings first. To create '
+                'a new settings file, delete the old settings and '
+                'select the controller in the devices menu.'
+                )
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
@@ -567,13 +638,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setCentralWidget(qtw.QWidget())
         self.centralWidget().setLayout(qtw.QGridLayout())
 
-        self._ctrls['energy_input'].setValidator(QDoubleValidatorNoDot())
-        self._ctrls['energy_input'].validator().setLocale(qtc.QLocale.c())
-        self._ctrls['set_energy'].setEnabled(False)
-        self._ctrls['energy_input'].setEnabled(False)
-
         font = AllGUIFonts().buttonFont
-        for ctrl in ('measure', 'abort', 'set_energy', 'energy_input'):
+        for ctrl in ('measure', 'abort'):
             self._ctrls[ctrl].setFont(font)
             self._ctrls[ctrl].ensurePolished()
 
@@ -581,8 +647,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         layout.addWidget(self._ctrls['measure'], 1, 1, 1, 1)
         layout.addWidget(self._ctrls['abort'], 1, 2, 1, 1)
-        layout.addWidget(self._ctrls['set_energy'], 2, 1, 1, 1)
-        layout.addWidget(self._ctrls['energy_input'], 2, 2, 1, 1)
+        layout.addWidget(self._ctrls['energy_setter'], 2, 1, 1, 2)
         self._compose_menu()
         self._compose_error_box()
         self._switch_button_enable(True)
@@ -590,6 +655,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Take care of dialogs and other windows
         self._dialogs['sys_settings'].setModal(True)
         self._dialogs['measurement_selection'].setModal(True)
+
+        # Set minimum width to at least fit top menus.
+        min_w = max(self.sizeHint().width(), self.menuBar().sizeHint().width())
+        self.setMinimumWidth(min_w)
 
     def _compose_error_box(self):
         """Prepare the message box shown when errors happen."""
@@ -639,6 +708,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         force_detect_action.triggered.connect(self.update_device_lists)
         self._ctrls['menus']['force_detect'] = force_detect_action
 
+        select_action = devices_menu.addAction('Select controller...')
+        select_action.triggered.connect(self._on_select_controller)
+
         # Tools
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)
@@ -667,7 +739,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['measure'].clicked.connect(
             self._on_new_measurement_pressed
             )
-        self._ctrls['set_energy'].clicked.connect(self._on_set_energy)
 
         # DIALOGS
         connect_dialogs = (
@@ -701,6 +772,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._device_detection_worker.error_occurred.connect(
             self._on_error_occurred
             )
+        self._ctrls['energy_setter'].error_occurred.connect(
+            self._on_error_occurred
+            )
 
         # TIMERS
         slots = (
@@ -729,6 +803,8 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Measurement events and start/stopping
         connect(measurement.new_data_available, self._on_data_received)
+        connect(measurement.energy_changed,
+                self._ctrls['energy_setter'].show_energy)
         connect(measurement.prepared, self._on_measurement_prepared)
         connect(measurement.finished, self._on_measurement_finished)
         connect(measurement.finished, self._print_done)
@@ -1077,10 +1153,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             viewer.stop_on_close = True
             viewer.interactions_enabled = True
 
-    def _on_set_energy(self):
-        """Set energy on primary controller."""
-                                                                                # TODO: implement
-
     @qtc.pyqtSlot()
     def _on_settings_accepted(self):
         print('\n\nSTARTING\n')
@@ -1268,6 +1340,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 source = 'bad pixels finder dialog'
             elif isinstance(sender, DeviceDetectionWorker):
                 source = 'device detection'
+            elif isinstance(sender, EnergySetter):
+                source = 'energy setting'
             else:
                 source = 'system or unknown'
 
@@ -1307,3 +1381,4 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.menuBar().setEnabled(idle)
         self.statusBar().showMessage('Ready' if idle else 'Busy')
         self._update_force_detect_button_state()
+        self._ctrls['energy_setter'].set_enabled(idle)
