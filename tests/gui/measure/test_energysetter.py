@@ -31,10 +31,10 @@ _ = qtw.QApplication(sys.argv)
 class _FakeController:
     """A minimal controller-like object for testing."""
 
-    def __init__(self, connected=True):
+    def __init__(self, connect_result=True):
         """Initialize fake controller."""
         self.connected = True
-        self._connected = connected
+        self._connect_result = connect_result
         self.error_occurred = _FakeSignal()
         self._settings = _FakeControllerSettings()
         self._serial = _FakeSerial()
@@ -51,7 +51,7 @@ class _FakeController:
 
     def connect_(self):
         """Connect the controller."""
-        self.connected = self._connected
+        self.connected = self._connect_result
 
     def disconnect_(self):
         """Disconnect the controller."""
@@ -120,7 +120,7 @@ def fake_controller(mocker, setter):
     fake_settings.last_file = setter.path
     fake_settings.read_again.return_value = True
 
-    fake_ctrl = _FakeController(connected=True)
+    fake_ctrl = _FakeController(connect_result=True)
     fake_ctrl._settings = fake_settings
     # pylint: disable-next=attribute-defined-outside-init
     fake_ctrl.set_settings = mocker.Mock(return_value=True)
@@ -182,7 +182,7 @@ def test_get_controller_cleanup_on_different_path(mocker, setter):
 def test_get_controller_connection_failed(mocker, setter):
     """Check error emitted when controller connection fails."""
     setter.error_occurred = _FakeSignal()
-    fake_ctrl = _FakeController(connected=False)
+    fake_ctrl = _FakeController(connect_result=False)
     mocker.patch.object(setter, '_make_controller', return_value=fake_ctrl)
 
     result = setter._get_controller()
@@ -250,7 +250,7 @@ def test_get_controller_reuse_connection_failed(mocker, fake_controller,
                                                 setter):
     """Check controller cleaned up when reconnection fails."""
     fake_settings = fake_controller.settings
-    fake_controller._connected = False
+    fake_controller._connect_result = False
     setter._controller = fake_controller
     setter.error_occurred = _FakeSignal()
     setter.cleanup_controller = mocker.Mock()
