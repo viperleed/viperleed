@@ -555,6 +555,10 @@ def test_set_enabled_with_checked_checkbox(ctrl_setter):
 
 def test_set_enabled_with_path(setter):
     """Check set_enabled enables when path exists."""
+    setter.set_enabled(False)
+
+    assert not setter.set_energy.isEnabled()
+
     setter.set_enabled(True)
 
     assert setter.set_energy.isEnabled()
