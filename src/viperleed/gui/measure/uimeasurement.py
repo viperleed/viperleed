@@ -398,9 +398,6 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._ctrls['energy_setter'].set_energy.setChecked(False)
         if self._ctrls['energy_setter'].is_busy:
             retry_later = True
-        else:
-            self._ctrls['energy_setter'].cleanup_controller()
-
         if retry_later and self._glob['n_retry_close'] <= 50:
             self._glob['n_retry_close'] += 1
             self._timers['retry_close'].start()
