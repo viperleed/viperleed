@@ -1,4 +1,4 @@
-"""Tests for module energysetter of viperleed.gui.measure."""
+"""Tests for module energysetter of viperleed.gui.measure.widgets."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -15,13 +15,13 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 from pytest import fixture
 
-from viperleed.gui.measure.energysetter import EnergySetter
+from viperleed.gui.measure.widgets.energysetter import EnergySetter
 from viperleed.gui.measure.classes.settings import SettingsError
 
-from .mock_qt import _FakeSignal
+from ..mock_qt import _FakeSignal
 
 
-_MODULE = 'viperleed.gui.measure.energysetter'
+_MODULE = 'viperleed.gui.measure.widgets.energysetter'
 
 _ = qtw.QApplication(sys.argv)
 

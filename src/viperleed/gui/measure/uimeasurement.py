@@ -224,7 +224,7 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     MeasurementSettingsDialog,
     SettingsDialog,
     )
-from viperleed.gui.measure.energysetter import EnergySetter
+from viperleed.gui.measure.widgets.energysetter import EnergySetter
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.serial.abc import SerialABC
 from viperleed.gui.measure.widgets.cameraviewer import CameraViewer

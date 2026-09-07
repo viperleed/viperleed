@@ -1,4 +1,4 @@
-"""Module energysetter of viperleed.gui.measure.
+"""Module energysetter of viperleed.gui.measure.widgets.
 
 Defines the EnergySetter widget for setting LEED energy without
 starting a measurement.
