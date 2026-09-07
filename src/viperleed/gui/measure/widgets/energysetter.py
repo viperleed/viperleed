@@ -19,7 +19,6 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.widgets.spinboxes import SteppingDoubleSpinBox
@@ -184,7 +183,7 @@ class EnergySetter(qtw.QWidget):
         # Create new controller instance.
         try:
             ctrl = self._make_controller()
-        except (NoSettingsError, ValueError) as exc:
+        except (SettingsError, configparser.Error, ValueError) as exc:
             base.emit_error(self, EnergySetterErrors.CONTROLLER_LOAD_FAILED,
                             exc)
             return None
@@ -195,6 +194,11 @@ class EnergySetter(qtw.QWidget):
         base.safe_connect(ctrl.serial.busy_changed,
                           self._on_ctrl_finished, type=qtc.Qt.QueuedConnection)
         if not self._connect_controller(ctrl):
+            base.safe_disconnect(ctrl.error_occurred, self._on_error)
+            base.safe_disconnect(ctrl.serial.busy_changed,
+                                 self._on_ctrl_finished)
+            ctrl.disconnect_()
+            ctrl.deleteLater()
             return None
 
         return ctrl
@@ -235,8 +239,12 @@ class EnergySetter(qtw.QWidget):
 
         Raises
         ------
-        NoSettingsError
-            If the settings file cannot be read.
+        SettingsError
+            If the settings file cannot be read (e.g. the file
+            is missing or corrupted).
+        configparser.Error
+            If the settings file can be read but is malformed or
+            missing required data.
         ValueError
             If ctrl_cls_name was not found.
         """
