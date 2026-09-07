@@ -461,8 +461,6 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot()
     def update_device_lists(self):
         """Request update of entries in 'Devices' menu."""
-        if self._ctrls['energy_setter'].setting_energy:
-            return
         if not self._device_search_allowed():
             return
         self._device_search_in_progress = True
@@ -471,6 +469,10 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _device_search_allowed(self):
         """Return whether a new device search can be started."""
+        if self._ctrls['energy_setter'].setting_energy:
+            return False
+        if self._ctrls['energy_setter'].is_busy:
+            return False
         if self._device_search_in_progress:
             return False
         if self.measurement and self.measurement.running:
