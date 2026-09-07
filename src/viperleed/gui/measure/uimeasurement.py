@@ -569,6 +569,11 @@ class Measure(ViPErLEEDPluginBase):                                             
                 'a new settings file, delete the old settings and '
                 'select the controller in the devices menu.'
                 )
+        try:
+            ctrl.disconnect_()
+        except (TypeError, AttributeError):
+            pass
+        ctrl.deleteLater()
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
