@@ -30,9 +30,9 @@ class EnergySetterErrors(base.ViPErLEEDErrorEnum):
 
     NO_CONTROLLER = (2000, 'No controller configured. Please select one '
                      'from the "Devices" menu using "Select Controller...".')
-    CONTROLLER_FILE_MISSING = (2001, 'The controller settings file no '
-                               'longer exists:\n{}\nPlease select a new'
-                               ' controller from the "Devices" menu.')
+    SETTINGS_FILE_MISSING = (2001, 'The controller settings file no '
+                             'longer exists:\n{}\nPlease select a new'
+                             ' controller from the "Devices" menu.')
     CONTROLLER_LOAD_FAILED = (2002, 'Could not load the last used '
                               'controller:\n{}')
     CONTROLLER_CONNECTION_FAILED = (2003, 'Could not connect to the '
@@ -326,7 +326,7 @@ class EnergySetter(qtw.QWidget):
         -----
         EnergySetterErrors.NO_CONTROLLER
             If no ctrl path was given.
-        EnergySetterErrors.CONTROLLER_FILE_MISSING
+        EnergySetterErrors.SETTINGS_FILE_MISSING
             If the ctrl path does not point to a file.
         """
         self.energy_input.setEnabled(state == qtc.Qt.Checked)
@@ -347,7 +347,7 @@ class EnergySetter(qtw.QWidget):
             return
 
         if not self.path.is_file():
-            base.emit_error(self, EnergySetterErrors.CONTROLLER_FILE_MISSING,
+            base.emit_error(self, EnergySetterErrors.SETTINGS_FILE_MISSING,
                             self.path)
             self.set_energy.setChecked(False)
             return
