@@ -27,6 +27,7 @@ from viperleed.gui.measure.classes.abc import DeviceABCErrors
 from viperleed.gui.measure.classes.abc import NO_HARDWARE_INTERFACE
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
+from viperleed.gui.measure.classes.energyramp import START_E_NAME
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.gui.measure.hardwarebase import disconnected_signal
@@ -695,7 +696,7 @@ class ControllerABC(DeviceABC):
              '</nobr> to reach a stable value after a new energy has '
              'been set. This should be calibrated for a typical step '
              'size (e.g., 0.5 eV).'),
-            ('first_settle_time', 'E start settle time',
+            ('first_settle_time', START_E_NAME + ' settle time',
              '<nobr>The time interval required for the true beam '
              'energy</nobr> to reach a stable value when the first energy '
              'of a ramp is set. This is usually significantly longer than '
