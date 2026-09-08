@@ -335,7 +335,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Extract controller settings path for energy setting.
         _path = self._dialogs['sys_settings'].settings.get(
-            'DEVICES', 'controller', fallback=''
+            'DEVICES', 'default_controller', fallback=''
             )
         self._ctrls['energy_setter'].path = _path
 
@@ -553,7 +553,8 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         _path = ctrl.settings.last_file
         if _path and _path.is_file():
-            self.system_settings.set('DEVICES', 'controller', _path.as_posix())
+            self.system_settings.set('DEVICES', 'default_controller',
+                                     _path.as_posix())
             self.system_settings.update_file()
             self._ctrls['energy_setter'].path = _path.as_posix()
             qtw.QMessageBox.information(
