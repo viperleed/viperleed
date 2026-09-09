@@ -49,7 +49,11 @@ class EnergySetter(qtw.QWidget):
     users to set the beam energy.
     """
 
+    # Emitted whenever an error has been detected. Contains
+    # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
+    # Emitted whenever the busy state of the setter changes.
+    # Contains the new busy state of the setter.
     busy_changed = qtc.pyqtSignal(bool)
 
     def __init__(self, **kwargs):
