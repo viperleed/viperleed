@@ -220,8 +220,7 @@ class EnergySetter(qtw.QWidget):
             return None
 
         # Connect and store the controller.
-        base.safe_connect(ctrl.error_occurred, self._on_error,
-                          type=qtc.Qt.UniqueConnection)
+        base.safe_connect(ctrl.error_occurred, self._on_error)
         base.safe_connect(ctrl.serial.busy_changed,
                           self._on_ctrl_finished, type=qtc.Qt.QueuedConnection)
         if not self._connect_controller(ctrl):
