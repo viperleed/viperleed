@@ -1389,4 +1389,4 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.menuBar().setEnabled(idle)
         self.statusBar().showMessage('Ready' if idle else 'Busy')
         self._update_force_detect_button_state()
-        self._ctrls['energy_setter'].set_enabled(idle)
+        self._ctrls['energy_setter'].setEnabled(idle)

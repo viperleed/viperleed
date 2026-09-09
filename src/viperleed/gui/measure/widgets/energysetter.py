@@ -120,7 +120,7 @@ class EnergySetter(qtw.QWidget):
             self._path = Path(path)
         else:
             self._path = None
-        self.set_enabled(True)
+        self.setEnabled(True)
         self._update_hint()
 
     @property
@@ -472,8 +472,9 @@ class EnergySetter(qtw.QWidget):
         self._controller.deleteLater()
         self._controller = None
 
-    def set_enabled(self, enable):
+    def setEnabled(self, enable):   # pylint: disable=invalid-name
         """Switch enabled status of widgets."""
+        super().setEnabled(enable)
         enable &= bool(self.path)
         self.set_energy.setEnabled(enable)
         self.energy_input.setEnabled(enable and self.set_energy.isChecked())

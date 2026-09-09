@@ -546,30 +546,30 @@ def test_set_enabled_with_checked_checkbox(ctrl_setter):
     """Check energy input enabled when checkbox is checked."""
     ctrl_setter.set_energy.setChecked(True)
 
-    ctrl_setter.set_enabled(True)
+    ctrl_setter.setEnabled(True)
 
     assert ctrl_setter.set_energy.isEnabled()
     assert ctrl_setter.energy_input.isEnabled()
 
 
 def test_set_enabled_with_path(setter):
-    """Check set_enabled enables when path exists."""
-    setter.set_enabled(False)
+    """Check setEnabled enables when path exists."""
+    setter.setEnabled(False)
 
     assert not setter.set_energy.isEnabled()
 
-    setter.set_enabled(True)
+    setter.setEnabled(True)
 
     assert setter.set_energy.isEnabled()
     assert not setter.energy_input.isEnabled()
 
 
 def test_set_enabled_without_path():
-    """Check set_enabled disables when no path."""
+    """Check setEnabled disables when no path."""
     setter = EnergySetter()
     setter.path = None
 
-    setter.set_enabled(True)
+    setter.setEnabled(True)
 
     assert not setter.set_energy.isEnabled()
     assert not setter.energy_input.isEnabled()
