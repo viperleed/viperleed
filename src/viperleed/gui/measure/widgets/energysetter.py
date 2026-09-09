@@ -250,7 +250,7 @@ class EnergySetter(qtw.QWidget):
         controller_name = ctrl_settings.get('controller', 'device_name',
                                             fallback=None)
         for device in devices:
-            detected_name = (device.more.get('name') or '')
+            detected_name = device.more.get('name', '')
             if detected_name and detected_name == controller_name:
                 return device.more.get('address', '')
         return ''
