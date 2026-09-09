@@ -219,16 +219,12 @@ class EnergySetter(qtw.QWidget):
                             exc)
             return None
 
-        # Connect and store the controller.
+        # Connect the controller.
         base.safe_connect(ctrl.error_occurred, self._on_error)
         base.safe_connect(ctrl.serial.busy_changed,
                           self._on_ctrl_finished, type=qtc.Qt.QueuedConnection)
         if not self._connect_controller(ctrl):
-            base.safe_disconnect(ctrl.error_occurred, self._on_error)
-            base.safe_disconnect(ctrl.serial.busy_changed,
-                                 self._on_ctrl_finished)
-            ctrl.disconnect_()
-            ctrl.deleteLater()
+            self.cleanup_controller(ctrl=ctrl)
             return None
 
         return ctrl
@@ -460,17 +456,18 @@ class EnergySetter(qtw.QWidget):
         else:
             self.setToolTip('')
 
-    def cleanup_controller(self):
+    def cleanup_controller(self, ctrl=None):
         """Clean up the persistent controller."""
-        if self._controller is None:
+        if not ctrl:
+            ctrl = self._controller
+            self._controller = None
+        if not ctrl:
             return
-        base.safe_disconnect(self._controller.error_occurred,
-                             self._on_error)
-        base.safe_disconnect(self._controller.serial.busy_changed,
+        base.safe_disconnect(ctrl.error_occurred, self._on_error)
+        base.safe_disconnect(ctrl.serial.busy_changed,
                              self._on_ctrl_finished)
-        self._controller.disconnect_()
-        self._controller.deleteLater()
-        self._controller = None
+        ctrl.disconnect_()
+        ctrl.deleteLater()
 
     def setEnabled(self, enable):   # pylint: disable=invalid-name
         """Switch enabled status of widgets."""
