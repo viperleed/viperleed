@@ -532,16 +532,16 @@ class Measure(ViPErLEEDPluginBase):                                             
             return
 
         # Let the user choose one of the detected controllers.
-        names = [act.text() for act in controller_actions]
+        ctrl_name_to_data = {act.text(): act.data()
+                             for act in controller_actions}
         dropdown = DropdownDialog(
             'Select Controller',
             'Select the controller to use for manual energy setting:',
-            names, parent=self,
+            list(ctrl_name_to_data), parent=self,
             )
         if dropdown.exec() != dropdown.Apply:
             return
-        selected_action = controller_actions[names.index(dropdown.selection)]
-        cls, info = selected_action.data()
+        cls, info = ctrl_name_to_data[dropdown.selection]
         address = info.more['address']
 
         try:
@@ -558,7 +558,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             self.system_settings.update_file()
             self._ctrls['energy_setter'].path = _path.as_posix()
             qtw.QMessageBox.information(
-                self, 'Controller Set', f'{selected_action.text()} is '
+                self, 'Controller Set', f'{dropdown.selection} is '
                 'now the controller setting energies. Energies will '
                 'be calibrated according to the controller settings.'
                 )
