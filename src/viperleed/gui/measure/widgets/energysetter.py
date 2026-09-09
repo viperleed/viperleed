@@ -457,7 +457,7 @@ class EnergySetter(qtw.QWidget):
             self.setToolTip('')
 
     def cleanup_controller(self, ctrl=None):
-        """Clean up the persistent controller."""
+        """Clean up the persistent or a given controller."""
         if not ctrl:
             ctrl = self._controller
             self._controller = None
