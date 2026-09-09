@@ -86,7 +86,7 @@ class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
 def test_device_search_allowed_states(mocker):
     """Check that running searches and measurements block new searches."""
     fake_measure = mocker.MagicMock(running=False)
-    energy_setter = mocker.MagicMock(setting_energy=False, is_busy=False)
+    energy_setter = mocker.MagicMock(setting_energy=False, busy=False)
     camera_viewer = mocker.MagicMock()
     camera_viewer.isVisible.return_value = False
     ctrl_dialog = mocker.MagicMock()

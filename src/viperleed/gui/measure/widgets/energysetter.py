@@ -50,6 +50,7 @@ class EnergySetter(qtw.QWidget):
     """
 
     error_occurred = qtc.pyqtSignal(tuple)
+    busy_changed = qtc.pyqtSignal(bool)
 
     def __init__(self, **kwargs):
         """Initialize the EnergySetter widget."""
@@ -62,7 +63,7 @@ class EnergySetter(qtw.QWidget):
         # Controller object that sets the energy.
         self._controller = None
         # Tracks if the EnergySetter is busy setting an energy.
-        self._operation_in_progress = False
+        self._busy = False
         # Stores the last requested energy if setting
         # the energy was not possible at that time.
         self._pending_energy = None
@@ -75,9 +76,33 @@ class EnergySetter(qtw.QWidget):
         self._connect()
 
     @property
-    def is_busy(self):
+    def busy(self):
         """Return whether an operation is in flight."""
-        return self._operation_in_progress
+        return self._busy
+
+    @busy.setter
+    def busy(self, is_busy):
+        """Set whether an operation is in flight."""
+        self.set_busy(is_busy)
+
+    def set_busy(self, is_busy):
+        """Set the in-flight state, emitting busy_changed on change.
+
+        Parameters
+        ----------
+        is_busy : bool
+            True if the setter is busy setting an energy.
+
+        Emits
+        -----
+        busy_changed
+            If the busy state of the instance changed.
+        """
+        was_busy = self.busy
+        is_busy = bool(is_busy)
+        self._busy = is_busy
+        if was_busy != is_busy:
+            self.busy_changed.emit(self.busy)
 
     @property
     def path(self):
@@ -147,7 +172,7 @@ class EnergySetter(qtw.QWidget):
     def _flush(self):
         """Reset on error."""
         self.set_energy.setChecked(False)
-        self._operation_in_progress = False
+        self.busy = False
         self._pending_energy = None
         self._timeout_timer.stop()
         self.cleanup_controller()
@@ -263,7 +288,7 @@ class EnergySetter(qtw.QWidget):
         """Clean up after energy has been set."""
         if busy:
             return
-        self._operation_in_progress = False
+        self.busy = False
         self._timeout_timer.stop()
 
         # If the setter was switched off, the energy must be set to zero.
@@ -291,7 +316,7 @@ class EnergySetter(qtw.QWidget):
         if self.set_energy.checkState() != qtc.Qt.Checked:
             return
 
-        if self._operation_in_progress:
+        if self.busy:
             self._pending_energy = self.energy_input.value()
             return
 
@@ -334,7 +359,7 @@ class EnergySetter(qtw.QWidget):
             # Checkbox unchecked. If an energy step is in flight, defer
             # setting the energy to zero until the current energy step is
             # completed. Otherwise set the energy to zero.
-            if self._operation_in_progress:
+            if self.busy:
                 self._pending_energy = 0.0
             else:
                 self._set_energy(0.0)
@@ -414,11 +439,11 @@ class EnergySetter(qtw.QWidget):
         -------
         None.
         """
-        self._operation_in_progress = True
         if self._controller is None:
-            self._operation_in_progress = False
+            self.busy = False
             self.set_energy.setChecked(False)
             return
+        self.busy = True
         self._timeout_timer.start()
         self._controller.set_energy(energy, 0, trigger_meas=False)
 

@@ -151,7 +151,7 @@ def test_flush_resets_state(mocker):
     """Check flush resets all state."""
     setter = EnergySetter()
     setter.set_energy.setChecked(True)
-    setter._operation_in_progress = True
+    setter.busy = True
     setter._pending_energy = 50.0
     mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
     mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
@@ -159,7 +159,7 @@ def test_flush_resets_state(mocker):
     setter._flush()
 
     assert not setter.set_energy.isChecked()
-    assert not setter._operation_in_progress
+    assert not setter.busy
     assert setter._pending_energy is None
     mock_timeout_timer.stop.assert_called_once()
     mock_cleanup.assert_called_once()
@@ -304,24 +304,24 @@ def test_init_creates_widgets():
     assert setter.path is None
     assert setter._controller is None
     assert setter._pending_energy is None
-    assert not setter._operation_in_progress
+    assert not setter.busy
 
 
-def test_is_busy_independent_of_checkbox(ctrl_setter):
-    """Check is_busy is not tied to the checkbox state."""
-    ctrl_setter._operation_in_progress = True
+def test_busy_independent_of_checkbox(ctrl_setter):
+    """Check busy is not tied to the checkbox state."""
+    ctrl_setter.busy = True
     ctrl_setter.set_energy.setChecked(False)
     assert not ctrl_setter.setting_energy
-    assert ctrl_setter.is_busy
+    assert ctrl_setter.busy
 
 
-def test_is_busy_property(ctrl_setter):
-    """Check is_busy reflects an in-flight operation."""
-    assert not ctrl_setter.is_busy
-    ctrl_setter._operation_in_progress = True
-    assert ctrl_setter.is_busy
-    ctrl_setter._operation_in_progress = False
-    assert not ctrl_setter.is_busy
+def test_busy_property(ctrl_setter):
+    """Check busy reflects an in-flight operation."""
+    assert not ctrl_setter.busy
+    ctrl_setter.busy = True
+    assert ctrl_setter.busy
+    ctrl_setter.busy = False
+    assert not ctrl_setter.busy
 
 
 def test_make_controller(mocker, tmp_path):
@@ -349,19 +349,19 @@ def test_make_controller(mocker, tmp_path):
 def test_on_ctrl_finished_busy(mocker):
     """Check ctrl finished ignores busy state."""
     setter = EnergySetter()
-    setter._operation_in_progress = True
+    setter.busy = True
     mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
 
     setter._on_ctrl_finished(busy=True)
 
-    assert setter._operation_in_progress
+    assert setter.busy
     mock_timeout_timer.stop.assert_not_called()
 
 
 def test_on_ctrl_finished_no_pending(mocker):
     """Check ctrl finished when no pending energy."""
     setter = EnergySetter()
-    setter._operation_in_progress = True
+    setter.busy = True
     setter._pending_energy = None
     mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
     mock_set_energy_btn.isChecked.return_value = True
@@ -370,7 +370,7 @@ def test_on_ctrl_finished_no_pending(mocker):
 
     setter._on_ctrl_finished(busy=False)
 
-    assert not setter._operation_in_progress
+    assert not setter.busy
     mock_timeout_timer.stop.assert_called_once()
     mock_set_energy.assert_not_called()
 
@@ -378,7 +378,7 @@ def test_on_ctrl_finished_no_pending(mocker):
 def test_on_ctrl_finished_not_setting_cleanup(mocker):
     """Check ctrl finished cleans up when not setting."""
     setter = EnergySetter()
-    setter._operation_in_progress = True
+    setter.busy = True
     mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
     mock_set_energy_btn.isChecked.return_value = False
     mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
@@ -386,7 +386,7 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
 
     setter._on_ctrl_finished(busy=False)
 
-    assert not setter._operation_in_progress
+    assert not setter.busy
     mock_timeout_timer.stop.assert_called_once()
     mock_controller.disconnect_.assert_called_once()
 
@@ -394,7 +394,7 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
 def test_on_ctrl_finished_pending_energy(mocker):
     """Check ctrl finished processes pending energy."""
     setter = EnergySetter()
-    setter._operation_in_progress = True
+    setter.busy = True
     setter._pending_energy = 75.0
     mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
     mock_set_energy_btn.isChecked.return_value = True
@@ -408,14 +408,14 @@ def test_on_ctrl_finished_pending_energy(mocker):
 
 def test_on_ctrl_finished_queued_zero_waits_for_completion(ctrl_setter):
     """Check that a deferred zeroing is sent and kept busy afterwards."""
-    ctrl_setter._operation_in_progress = True
+    ctrl_setter.busy = True
     ctrl_setter._pending_energy = 0.0
     ctrl_setter._controller = _FakeController()
 
     ctrl_setter._on_ctrl_finished(busy=False)
 
     assert ctrl_setter._pending_energy is None
-    assert ctrl_setter._operation_in_progress
+    assert ctrl_setter.busy
     assert ctrl_setter._controller.connected
 
 
@@ -426,15 +426,15 @@ def test_on_ctrl_finished_zero_applied_then_disconnects(ctrl_setter):
 
     ctrl_setter._on_ctrl_finished(busy=False)
 
-    assert not ctrl_setter._operation_in_progress
+    assert not ctrl_setter.busy
     assert not ctrl.connected
 
 
-def test_on_energy_changed_operation_in_progress(mocker, ctrl_setter):
-    """Check energy change queued when operation in progress."""
+def test_on_energy_changed_when_busy(mocker, ctrl_setter):
+    """Check energy change queued when the setter is busy."""
     mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
     ctrl_setter.set_energy.setChecked(True)
-    ctrl_setter._operation_in_progress = True
+    ctrl_setter.busy = True
     ctrl_setter.energy_input.setValue(75.0)
 
     ctrl_setter._on_energy_changed()
@@ -501,9 +501,9 @@ def test_on_set_energy_toggled_no_path():
     assert setter.error_occurred.emitted == 1
 
 
-def test_on_set_energy_toggled_unchecked_in_flight_queues_zero(ctrl_setter):
-    """Check that unchecking during an operation defers the zeroing."""
-    ctrl_setter._operation_in_progress = True
+def test_on_set_energy_toggled_unchecked_while_busy_queues_zero(ctrl_setter):
+    """Check that unchecking while busy defers the zeroing."""
+    ctrl_setter.busy = True
     ctrl_setter.set_energy.setChecked(True)
 
     ctrl_setter.set_energy.setChecked(False)
@@ -583,7 +583,7 @@ def test_set_energy_no_controller(mocker):
 
     setter._set_energy(50.0)
 
-    assert not setter._operation_in_progress
+    assert not setter.busy
     mock_set_energy_btn.setChecked.assert_called_once_with(False)
 
 
@@ -595,7 +595,7 @@ def test_set_energy_starts_timeout(mocker):
 
     setter._set_energy(50.0)
 
-    assert setter._operation_in_progress
+    assert setter.busy
     mock_timeout_timer.start.assert_called_once()
 
 

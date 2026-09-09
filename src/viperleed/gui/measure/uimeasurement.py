@@ -396,7 +396,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         if self._ctrls['energy_setter'].set_energy.isChecked():
             self._ctrls['energy_setter'].set_energy.setChecked(False)
-        if self._ctrls['energy_setter'].is_busy:
+        if self._ctrls['energy_setter'].busy:
             retry_later = True
         if retry_later and self._glob['n_retry_close'] <= 50:
             self._glob['n_retry_close'] += 1
@@ -468,7 +468,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Return whether a new device search can be started."""
         if self._ctrls['energy_setter'].setting_energy:
             return False
-        if self._ctrls['energy_setter'].is_busy:
+        if self._ctrls['energy_setter'].busy:
             return False
         if self._device_search_in_progress:
             return False
@@ -779,6 +779,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
         self._ctrls['energy_setter'].error_occurred.connect(
             self._on_error_occurred
+            )
+        self._ctrls['energy_setter'].busy_changed.connect(
+            self._update_force_detect_button_state
             )
 
         # TIMERS
