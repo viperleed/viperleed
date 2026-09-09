@@ -15,6 +15,18 @@ from PyQt5 import QtGui as qtg
 from PyQt5 import QtWidgets as qtw
 
 
+class SteppingDoubleSpinBox(qtw.QDoubleSpinBox):
+    """A QDoubleSpinBox that emits a signal after stepBy execution."""
+
+    stepped = qtc.pyqtSignal()
+
+    @qtc.pyqtSlot(int)
+    def stepBy(self, steps):    # pylint: disable=invalid-name
+        """Modify value by `steps` increments and emit stepped signal."""
+        super().stepBy(steps)
+        self.stepped.emit()
+
+
 class TolerantCommaSpinBox(qtw.QDoubleSpinBox):
     """A QDoubleSpinBox that tolerates both '.' and ',' as separators.
 
