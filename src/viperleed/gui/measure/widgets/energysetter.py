@@ -135,6 +135,8 @@ class EnergySetter(qtw.QWidget):
         for widget in (self.set_energy, self.energy_input):
             widget.setFont(AllGUIFonts().buttonFont)
             widget.ensurePolished()
+            # Disable widgets as a controller object for
+            # energy setting still has to be created.
             widget.setEnabled(False)
         layout.addWidget(self.set_energy)
         self.energy_input.setDecimals(1)
