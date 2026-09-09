@@ -601,7 +601,7 @@ def test_set_energy_starts_timeout(mocker):
 
 def test_setting_energy_property(ctrl_setter):
     """Check setting_energy property reflects checkbox state."""
-    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
+    ctrl_setter.set_energy.setChecked(False)
     assert not ctrl_setter.setting_energy
-    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
+    ctrl_setter.set_energy.setChecked(True)
     assert ctrl_setter.setting_energy
