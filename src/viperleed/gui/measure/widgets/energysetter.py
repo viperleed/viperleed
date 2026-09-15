@@ -403,6 +403,8 @@ class EnergySetter(qtw.QWidget):
             return
 
         self._controller = self._get_controller()
+        if self._controller is None:
+            self.set_energy.setChecked(False)
 
     @qtc.pyqtSlot()
     def _on_timeout(self):

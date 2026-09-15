@@ -393,6 +393,29 @@ def test_on_set_energy_toggled_no_path():
     assert setter.error_occurred.emitted == 1
 
 
+def test_on_set_energy_toggled_ctrl_creation_failed_unchecks(mocker, setter):
+    """Check checkbox is reset when controller creation fails."""
+    setter.error_occurred = _FakeSignal()
+    mocker.patch.object(setter, '_get_controller', return_value=None)
+
+    setter.set_energy.setChecked(True)
+
+    assert not setter.setting_energy
+    assert not setter.error_occurred.emitted
+
+
+def test_on_set_energy_toggled_ctrl_load_failed_unchecks(mocker, setter):
+    """Check checkbox reset when controller loading fails."""
+    setter.error_occurred = _FakeSignal()
+    mocker.patch.object(setter, '_make_controller',
+                        side_effect=ValueError('test'))
+
+    setter.set_energy.setChecked(True)
+
+    assert not setter.setting_energy
+    assert setter.error_occurred.emitted == 1
+
+
 def test_on_set_energy_toggled_unchecked_while_busy_queues_zero(ctrl_setter):
     """Check that unchecking while busy defers the zeroing."""
     ctrl_setter.busy = True
