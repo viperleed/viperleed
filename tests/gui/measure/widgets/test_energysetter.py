@@ -17,7 +17,6 @@ from pytest import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.measure.widgets.energysetter import EnergySetter
-from viperleed.gui.measure.classes.settings import SettingsError
 
 from ..mock_qt import _FakeSignal
 
@@ -166,16 +165,14 @@ def test_flush_resets_state(mocker):
     mock_cleanup.assert_called_once()
 
 
-def test_get_controller_cleanup_on_different_path(mocker, setter):
+def test_get_controller_cleanup_on_different_path(mocker, setter, tmp_path):
     """Check old controller is cleaned up when path changes."""
     old_ctrl = _FakeController()
     old_ctrl.settings.last_file = Path('/old/path.ini')
     setter._controller = old_ctrl
     mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-    mocker.patch.object(setter, '_make_controller',
-                        return_value=_FakeController())
 
-    setter._get_controller()
+    setter.path = tmp_path / 'new_controller.ini'
 
     mock_cleanup.assert_called_once()
 
@@ -213,87 +210,6 @@ def test_get_controller_load_failed(mocker, setter):
 
     assert result is None
     assert setter.error_occurred.emitted == 1
-
-
-def test_get_controller_read_again_failed(mocker, fake_controller, setter):
-    """Check controller is cleaned up when re-reading settings fails."""
-    fake_settings = fake_controller.settings
-    fake_settings.read_again.return_value = False
-    setter._controller = fake_controller
-    setter.error_occurred = _FakeSignal()
-    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-
-    result = setter._get_controller()
-
-    assert result is None
-    fake_settings.read_again.assert_called_once()
-    assert setter.error_occurred.emitted == 1
-    mock_cleanup.assert_called_once()
-
-
-def test_get_controller_read_again_raises(mocker, fake_controller, setter):
-    """Check controller cleaned up when read_again raises an error."""
-    fake_settings = fake_controller.settings
-    fake_settings.read_again.side_effect = SettingsError('corrupted')
-    setter._controller = fake_controller
-    setter.error_occurred = _FakeSignal()
-    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-
-    result = setter._get_controller()
-
-    assert result is None
-    fake_settings.read_again.assert_called_once()
-    assert setter.error_occurred.emitted == 1
-    mock_cleanup.assert_called_once()
-
-
-def test_get_controller_reuse_connection_failed(mocker, fake_controller,
-                                                setter):
-    """Check controller cleaned up when reconnection fails."""
-    fake_settings = fake_controller.settings
-    fake_controller._connect_result = False
-    setter._controller = fake_controller
-    setter.error_occurred = _FakeSignal()
-    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-
-    result = setter._get_controller()
-
-    assert result is None
-    fake_settings.read_again.assert_called_once()
-    fake_controller.set_settings.assert_called_once_with(fake_settings)
-    assert setter.error_occurred.emitted == 1
-    mock_cleanup.assert_called_once()
-
-
-def test_get_controller_reuses_existing(fake_controller, setter):
-    """Check that existing controller is reused when path matches."""
-    fake_settings = fake_controller.settings
-    fake_controller.disconnect_()
-    setter._controller = fake_controller
-
-    result = setter._get_controller()
-
-    assert result is fake_controller
-    fake_settings.read_again.assert_called_once()
-    fake_controller.set_settings.assert_called_once_with(fake_settings)
-    assert fake_controller.connected
-
-
-def test_get_controller_set_settings_failed(mocker, fake_controller, setter):
-    """Check controller is cleaned up when set_settings fails."""
-    fake_settings = fake_controller.settings
-    fake_controller.set_settings.return_value = False
-    setter._controller = fake_controller
-    setter.error_occurred = _FakeSignal()
-    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-
-    result = setter._get_controller()
-
-    assert result is None
-    fake_settings.read_again.assert_called_once()
-    fake_controller.set_settings.assert_called_once_with(fake_settings)
-    assert setter.error_occurred.emitted == 1
-    mock_cleanup.assert_called_once()
 
 
 def test_init_creates_widgets():

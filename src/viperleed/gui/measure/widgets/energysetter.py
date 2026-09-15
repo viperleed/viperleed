@@ -120,13 +120,14 @@ class EnergySetter(qtw.QWidget):
             self._path = Path(path)
         else:
             self._path = None
+        self.cleanup_controller()
         self.setEnabled(True)
         self._update_hint()
 
     @property
     def setting_energy(self):
         """Return whether the energy setter is setting energies or not."""
-        return self.set_energy.checkState() == qtc.Qt.Checked
+        return self.set_energy.isChecked()
 
     def cleanup_controller(self, ctrl=None):
         """Clean up the persistent or a given controller."""
@@ -219,7 +220,7 @@ class EnergySetter(qtw.QWidget):
         self.cleanup_controller()
 
     def _get_controller(self):
-        """Get or create persistent controller instance.
+        """Create persistent controller instance.
 
         Returns
         -------
@@ -233,20 +234,9 @@ class EnergySetter(qtw.QWidget):
         EnergySetterErrors.CONTROLLER_CONNECTION_FAILED
             If connecting the controller failed.
         """
-        # If we already have a controller for this path, reuse it.
-        if self._controller is not None:
-            if (self._controller.settings.last_file and
-                self._controller.settings.last_file == self.path):
-                # Same controller, ensure that the settings
-                # are ok and it is connected.
-                if not self._reload_ctrl_settings():
-                    self.cleanup_controller()
-                    return None
-                return self._controller
-            # Different controller, clean up the old one.
-            self.cleanup_controller()
-
-        # Create new controller instance.
+        # Create new controller instance. Do not add an option to keep a
+        # controller object alive beyond unchecking of the EnergySetter
+        # as establishing the connection is the main time cost.
         try:
             ctrl = self._make_controller()
         except (SettingsError, configparser.Error, ValueError) as exc:
@@ -335,9 +325,8 @@ class EnergySetter(qtw.QWidget):
                 self._pending_energy = None
                 self._set_energy(0.0)
                 return
-            # Energy is zero, disconnect the controller.
-            if self._controller:
-                self._controller.disconnect_()
+            # Energy is zero, delete the controller.
+            self.cleanup_controller()
             return
 
         # If a new energy value was queued during the operation, process it.
@@ -425,43 +414,6 @@ class EnergySetter(qtw.QWidget):
             When a timeout happened.
         """
         self._on_error(EnergySetterErrors.SET_ENERGY_TIMEOUT)
-
-    def _reload_ctrl_settings(self):
-        """Reload the settings of the controller.
-
-        Returns
-        -------
-        reload_ok : bool
-            True if reloading the settings worked.
-
-        Emits
-        -----
-        EnergySetterErrors.CONTROLLER_LOAD_FAILED
-            If loading settings failed.
-        """
-        try:
-            settings_ok = self._controller.settings.read_again()
-        except (SettingsError, configparser.Error):
-            settings_ok = False
-        if not settings_ok:
-            base.emit_error(self,
-                EnergySetterErrors.CONTROLLER_LOAD_FAILED,
-                'Controller settings corrupted.')
-            return False
-
-        ctrl_cls = self._controller.__class__
-        address = self._get_controller_address(ctrl_cls,
-                                               self._controller.settings)
-        if address:
-            self._controller.address = address
-        if not self._controller.set_settings(self._controller.settings):
-            base.emit_error(self,
-                EnergySetterErrors.CONTROLLER_LOAD_FAILED,
-                'Could not set controller settings.')
-            return False
-        if not self._connect_controller(self._controller):
-            return False
-        return True
 
     def _set_energy(self, energy):
         """Set energy on the controller.
