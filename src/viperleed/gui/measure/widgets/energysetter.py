@@ -314,7 +314,7 @@ class EnergySetter(qtw.QWidget):
     @qtc.pyqtSlot()
     def _on_energy_changed(self):
         """Handle energy value change."""
-        if self.set_energy.checkState() != qtc.Qt.Checked:
+        if not self.set_energy.isChecked():
             return
 
         if self.busy:
