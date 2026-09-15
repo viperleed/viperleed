@@ -14,6 +14,7 @@ import sys
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 from pytest import fixture
+from pytest_cases import parametrize
 
 from viperleed.gui.measure.widgets.energysetter import EnergySetter
 from viperleed.gui.measure.classes.settings import SettingsError
@@ -444,12 +445,13 @@ def test_on_energy_changed_when_busy(mocker, ctrl_setter):
     mock_set_energy.assert_not_called()
 
 
-def test_on_energy_changed_sets_energy(mocker, ctrl_setter):
+@parametrize('signal', ['editingFinished', 'stepped'])
+def test_on_energy_changed_sets_energy(mocker, ctrl_setter, signal):
     """Check energy change triggers set_energy when idle."""
     mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
     ctrl_setter.set_energy.setChecked(True)
     ctrl_setter.energy_input.setValue(50.0)
-    ctrl_setter.energy_input.editingFinished.emit()
+    getattr(ctrl_setter.energy_input, signal).emit()
 
     mock_set_energy.assert_called_once_with(50.0)
 
