@@ -120,7 +120,7 @@ class EnergySetter(qtw.QWidget):
             self._path = Path(path)
         else:
             self._path = None
-        self.cleanup_controller()
+        self._flush()
         self.setEnabled(True)
         self._update_hint()
 
