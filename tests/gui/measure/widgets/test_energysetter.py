@@ -9,7 +9,7 @@ __created__ = '2026-08-06'
 __license__ = 'GPLv3+'
 
 from PyQt5 import QtCore as qtc
-import pytest
+from pytest import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.measure.widgets.energysetter import EnergySetter
@@ -83,7 +83,8 @@ class _FakeSerial:
         self._busy = busy
         self.busy_changed.emit(busy)
 
-@pytest.fixture(name='setter')
+
+@fixture(name='setter')
 def fixture_setter(tmp_path):
     """Create setter with path."""
     setter = EnergySetter()
@@ -93,7 +94,7 @@ def fixture_setter(tmp_path):
     return setter
 
 
-@pytest.fixture(name='ctrl_setter')
+@fixture(name='ctrl_setter')
 def fixture_ctrl_setter(mocker, setter):
     """Create setter with mocked controller."""
     fake_ctrl = _FakeController()
@@ -101,7 +102,16 @@ def fixture_ctrl_setter(mocker, setter):
     return setter
 
 
-@pytest.mark.usefixtures('qtbot')
+@fixture(scope='session', autouse=True)
+def _ensure_qapp(qapp):
+    """Ensure a QApplication exists for widget construction.
+
+    Providing this as an autouse session fixture guarantees that
+    tests constructing Qt widgets work regardless of test order.
+    """
+    return qapp
+
+
 def test_busy_independent_of_checkbox(ctrl_setter):
     """Check busy is not tied to the checkbox state."""
     ctrl_setter.busy = True
