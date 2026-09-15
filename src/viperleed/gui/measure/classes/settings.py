@@ -29,6 +29,7 @@ from collections.abc import Sequence
 import copy
 import os
 from pathlib import Path
+import re
 import sys
 
 from wrapt import synchronized  # thread-safety decorator
@@ -314,6 +315,7 @@ class ViPErLEEDSettings(AliasConfigParser):
         # when the content of the config was read from an archive.
         self._last_file = ''
         self.__base_dir = ''
+        self.__comment_re = self._make_comment_regex()
 
     def __str__(self):
         """Return a simple string representation of self."""
@@ -437,30 +439,37 @@ class ViPErLEEDSettings(AliasConfigParser):
         """
         invalid_settings = []
         for setting in required_settings:
-            if not setting or len(setting) > 3:
-                raise TypeError(f'Invalid mandatory setting {setting}. '
-                                f'with length {len(setting)}. Expected '
-                                'length <= 3.')
-            # (<section>,)
-            if len(setting) == 1:
-                if not self.has_section(setting[0]):
-                    invalid_settings.append(setting[0])
+            length = len(setting)
+            if not setting or length > 3:
+                raise TypeError(f'Invalid mandatory setting {setting}. with '
+                                f'length {length}. Expected length <= 3.')
+
+            # First, check if settings are broken without reporting yet.
+            settings_broken = False
+            section, option, admissible = tuple(setting) + (None,) * (3-length)
+            if not self.has_section(section):
+                settings_broken = True
+            elif length > 1 and not self.has_option(section, option):
+                settings_broken = True
+            elif length > 2 and self[section][option] not in admissible:
+                settings_broken = True
+
+            if not settings_broken:
                 continue
 
-            # (<section>, <option>) or (<section>, <option>, <admissible>)
-            section, option = setting[:2]
-            if not self.has_option(section, option):
+            # Then report broken settings. This two-step approach ensures
+            # the entire setting is reported regardless of which part failed.
+            # (<section>,)
+            if length == 1:
+                invalid_settings.append(section)
+                continue
+            # (<section>, <option>)
+            if length == 2:
                 invalid_settings.append(f'{section}/{option}')
                 continue
-
             # (<section>, <option>, <admissible>)
-            if len(setting) == 3:
-                admissible_values = setting[2]
-                if self[section][option] not in admissible_values:
-                    invalid_settings.append(
-                        '/'.join(setting[:2])
-                        + ' not one of ' + ', '.join(admissible_values)
-                        )
+            invalid_settings.append('/'.join(setting[:2]) + ' not one of ' +
+                                    ', '.join(admissible))
         return invalid_settings
 
     def read(self, filenames, encoding=None):
@@ -695,6 +704,26 @@ class ViPErLEEDSettings(AliasConfigParser):
             fp.write(f'{key}{value}\n')
         fp.write('\n')
 
+    def _make_comment_regex(self):
+        """Return a regular expression for matching comments."""
+        # Note that we currently pass kwargs['comment_prefixes'] = '#;'
+        # on __init__, which means the comment prefixes will always be
+        # # and ; at the time of writing (Py 3.15 and before).
+        prefixes = None
+        try:
+            prefixes = self._comment_prefixes  # < PY3_13
+        except AttributeError:
+            try:
+                prefixes = self._prefixes.full # = PY3_13
+            except AttributeError:
+                pass
+        if prefixes:
+            # Build regex pattern to match comment lines
+            escaped = (re.escape(p) for p in prefixes)
+            pattern = '|'.join(fr'^\s*{p}' for p in escaped)
+            return re.compile(pattern)
+        return self._comments.pattern   # pylint: disable=no-member
+
     def __store_if_comment(self, line, sectname):
         """Store a line as comment if it is one.
 
@@ -715,15 +744,10 @@ class ViPErLEEDSettings(AliasConfigParser):
             True if the line was a comment (whether it was stored
             or not).
         """
-        try:
-            prefixes = self._comment_prefixes  # < PY3_13
-        except AttributeError:
-            prefixes = self._prefixes.full
-        for prefix in prefixes:
-            if line.strip().startswith(prefix):
-                if line not in self.__comments[sectname]:
-                    self.__comments[sectname].append(line)
-                return True
+        if self.__comment_re.match(line.strip()):
+            if line not in self.__comments[sectname]:
+                self.__comments[sectname].append(line)
+            return True
         return False
 
 
@@ -753,6 +777,7 @@ class SystemSettings(ViPErLEEDSettings):
         ('PATHS', 'arduino_cli'),
         ('PATHS', 'drivers'),
         ('PATHS', 'firmware'),
+        ('DEVICES', 'live_detection'),
         )
 
     def __new__(cls, *args, **kwargs):
@@ -869,10 +894,18 @@ class SystemSettings(ViPErLEEDSettings):
 
         # We're missing settings. Let's add them back...
         for missing in invalid:
-            section, option = missing.split('/')
+            # 1. Strip off the value-error suffix if present
+            clean_keys, *_ = missing.split(' not one of ')
+            if '/' in clean_keys:
+                section, option = clean_keys.split('/')
+            else:
+                # Only section is missing, no option
+                section = clean_keys
+                option = None
             if section not in self:
                 self.add_section(section)
-            self.set(section, option, '')
+            if option:
+                self.set(section, option, '')
 
         if invalid:
             # ...and save changes

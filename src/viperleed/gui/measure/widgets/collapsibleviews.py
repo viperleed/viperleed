@@ -19,14 +19,16 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.classes.abc import QMetaABC
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
     SettingsTag,
     )
-from viperleed.gui.measure.hardwarebase import get_default_path
 from viperleed.gui.measure.hardwarebase import disconnected_slot
+from viperleed.gui.measure.hardwarebase import emit_error
+from viperleed.gui.measure.hardwarebase import get_default_path
 from viperleed.gui.measure.hardwarebase import make_device
 from viperleed.gui.measure.hardwarebase import safe_connect
 from viperleed.gui.measure.hardwarebase import safe_disconnect
@@ -43,6 +45,10 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     # quantities measured by the device and the settings file
     # the device takes its settings from.)
     settings_changed = qtc.pyqtSignal()
+
+    # This signal is emitted when an error occurs when trying
+    # to set or get hardware settings.
+    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, parent=None):
         """Initialise widget."""
@@ -460,7 +466,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         with disconnected_slot(self._check_if_quantities_changed,
                                self._quantity_selector.settings_changed,
                                type=qtc.Qt.UniqueConnection):
-            self._quantity_selector.set_quantities(quantities)
+            self._set_quantities(quantities)
 
     @qtc.pyqtSlot()
     def _build_device_settings_widgets(self):
@@ -474,7 +480,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         layout = self._frame.layout().itemAt(2).widget().layout()
         self._quantity_selector = QuantitySelector(settings)
         if self._quantities_to_set:
-            self._quantity_selector.set_quantities(self._quantities_to_set)
+            self._set_quantities(self._quantities_to_set)
         safe_connect(self._quantity_selector.settings_changed,
                      self._check_if_quantities_changed,
                      type=qtc.Qt.UniqueConnection)
@@ -531,3 +537,11 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         ctrl.ready_to_show_settings.connect(ctrl.disconnect_)
         ctrl.ready_to_show_settings.connect(self._check_if_primary_changed)
         ctrl.prepare_to_show_settings()
+
+    def _set_quantities(self, quantities):
+        """Set the quantities to measure."""
+        try:
+            self._quantity_selector.set_quantities(quantities)
+        except ValueError as err:
+            emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                       'controller/measurement_devices', str(err))

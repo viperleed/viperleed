@@ -230,7 +230,7 @@ class Thermocouple:
         """Initialize instance."""
         if type_ not in _COEFFICIENTS:
             raise ValueError(
-                f"Unkown thermocouple type {type_}. Make sure its "
+                f"Unknown thermocouple type {type_}. Make sure its "
                 "coefficients are present in thermocouple_coefficients.txt"
                 )
         self.__type = type_
@@ -301,7 +301,7 @@ class Thermocouple:
             for the known coefficients.
         """
         min_v, max_v = self.__voltage_range
-        if cj_temperature:
+        if cj_temperature is not None:
             voltage += self.mvolt_at(cj_temperature)
 
         if voltage < min_v or voltage > max_v:

@@ -8,18 +8,24 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-04-18'
 __license__ = 'GPLv3+'
 
-from abc import abstractmethod
 from ast import literal_eval
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.classes.abc import QMetaABC
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.classes.energyramp import ABRUPT
+from viperleed.gui.measure.classes.energyramp import ALL_ENERGY_RAMPS
+from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
+from viperleed.gui.measure.classes.energyramp import END_E_NAME
+from viperleed.gui.measure.classes.energyramp import LINEAR
+from viperleed.gui.measure.classes.energyramp import START_E_NAME
+from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
@@ -29,6 +35,7 @@ from viperleed.gui.measure.widgets.collapsiblelists import (
     CollapsibleCameraList,
     CollapsibleControllerList,
     )
+from viperleed.gui.measure.widgets.fieldinfo import InfoComboBox
 from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
@@ -37,17 +44,21 @@ from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
 from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 
-DELTA_E_NAME = '\u0394E'
-START_E_NAME = 'E start'
-END_E_NAME = 'E end'
 MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
-N_COLUMNS = 2
-N_HEADER_ROWS = 2
+RAMP_N_FOOTER_ROWS = 1
+RAMP_N_HEADER_ROWS = 1
+STEP_N_COLUMNS = 2
+STEP_N_HEADER_ROWS = 2
+ALLOWED_ENERGY_RAMPS = {
+    'IVVideo': (LinearEnergyRamp,),
+    'MeasureEnergyCalibration': (LinearEnergyRamp,),
+    }
+ABRUPT_PROFILE = (ABRUPT, )
 
 
 class DeviceEditor(SettingsDialogSectionBase):
-    """Class for selecting devices and editing their settings."""
+    """Section for selecting devices and editing their settings."""
 
     error_occurred = qtc.pyqtSignal(tuple)
 
@@ -77,10 +88,10 @@ class DeviceEditor(SettingsDialogSectionBase):
         None.
         """
         self._settings = settings
-        kwargs.setdefault('display_name', 'Device configuration')
+        kwargs.setdefault('display_name', 'Device Configuration')
         kwargs.setdefault('tags', SettingsTag.REGULAR)
         kwargs.setdefault('tooltip', 'This section lists devices, allows their'
-                          'selection, and the editing of their settings.')
+                          ' selection, and the editing of their settings.')
         super().__init__(**kwargs)
         self._controllers = CollapsibleControllerList()
         self._cameras = CollapsibleCameraList()
@@ -190,6 +201,178 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras.set_cameras_from_settings(self._settings)
 
 
+class EnergyRampEditor(SettingsDialogSectionBase):
+    """Section for editing energy-ramp related settings."""
+
+    error_occurred = qtc.pyqtSignal(tuple)
+
+    def __init__(self, settings, **kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings of the loaded measurement.
+        **kwargs : object
+            Keyword arguments passed on to SettingsDialogSectionBase
+            'display_name' : Displayed name of section.
+            'tags' : Tags associated with the section.
+            'tooltip' : Tooltip displayed with the section.
+
+        Returns
+        -------
+        None.
+        """
+        self._settings = settings
+        kwargs.setdefault('display_name', 'Energies')
+        kwargs.setdefault('tags', SettingsTag.REGULAR)
+        kwargs.setdefault(
+            'tooltip',
+            'Which energies to measure and how to move between them.'
+            )
+        super().__init__(**kwargs)
+        self._step_profile = StepProfileViewer()
+        self._ramp_type = InfoComboBox()
+        self._energy_options = tuple()
+        self._compose_and_connect()
+        self._set_energy_ramp_options()
+
+    def are_settings_ok(self):
+        """Return whether the energy ramp is acceptable."""
+        ramp = self._ramp_type.combo_box.currentData()
+        try:
+            return ramp.ramp_settings_ok(self._energy_options)
+        except AttributeError:
+            return False, 'Set a valid energy ramp type.'
+
+    def _compose_and_connect(self):
+        """Compose widgets and connect relevant signals."""
+        layout = qtw.QFormLayout()
+        tip = 'The shape of the energy ramp.'
+        label = InfoLabel(label_text='Energy ramp', tooltip=tip)
+        layout.addRow(label, self._ramp_type)
+        meas_cls = self._settings['measurement_settings']['measurement_class']
+        for ramp_cls in ALLOWED_ENERGY_RAMPS.get(meas_cls, ALL_ENERGY_RAMPS):
+            self._ramp_type.combo_box.addItem(ramp_cls.display_name,
+                                              userData=ramp_cls)
+        tip = '<nobr>How to move from </nobr>one energy to the next one.'
+        label = InfoLabel(label_text='Step profile', tooltip=tip)
+        layout.addRow(label, self._step_profile)
+        self.central_widget.setLayout(layout)
+        # There is no connection between currentIndexChanged and
+        # settings_changed. It is emitted in _set_energy_ramp_options.
+        self._ramp_type.combo_box.currentIndexChanged.connect(
+            self._set_energy_ramp_options
+            )
+        self._step_profile.settings_changed.connect(self.settings_changed)
+        self.settings_changed.connect(self._store_energy_ramp_settings)
+
+    def _edit_energy_info(self):
+        """Set info texts to reflect the minimum energy."""
+        try:
+            min_energy = self._settings.getfloat('energies', 'min_energy')
+        except (TypeError, ValueError):
+            return
+        _energy_info_map = {'start_energy': (START_E_NAME, 'starts'),
+                            'end_energy': (END_E_NAME, 'ends')}
+        for opt in self._energy_options:
+            name = opt.option_name
+            if name in _energy_info_map:
+                pub_name, verb = _energy_info_map[name]
+                with qtc.QSignalBlocker(opt.handler_widget):
+                    opt.handler_widget.soft_minimum = min_energy
+                opt.set_info_text('<nobr>The energy at which the measurement '
+                                  f'{verb}. </nobr>The minimum '
+                                  f'{pub_name} is {min_energy} eV.')
+
+    @qtc.pyqtSlot(int)
+    def _set_energy_ramp_options(self, *_):
+        """Add the widget of the selected energy ramp."""
+        n_rows_remain = RAMP_N_HEADER_ROWS + RAMP_N_FOOTER_ROWS
+        while self.central_widget.layout().rowCount() > n_rows_remain:
+            self.central_widget.layout().removeRow(RAMP_N_HEADER_ROWS)
+        selected_ramp = self._ramp_type.combo_box.currentData()
+        self._energy_options = selected_ramp.get_settings_widgets()
+        if self._settings.has_option('energies', 'min_energy'):
+            self._edit_energy_info()
+        for i, option in enumerate(self._energy_options):
+            self.central_widget.layout().insertRow(i + RAMP_N_HEADER_ROWS,
+                                                   *option)
+            option.value_changed.connect(self.settings_ok_changed)
+            option.value_changed.connect(self.settings_changed)
+        self._update_energy_ramp_options()
+        self.settings_ok_changed.emit()
+        self.settings_changed.emit()
+
+    @qtc.pyqtSlot()
+    def _store_energy_ramp_settings(self):
+        """Store the selected energy-ramp settings."""
+        self._settings.set('energies', 'ramp_type',
+                           self._ramp_type.combo_box.currentData().__name__)
+        self._settings.set('energies', 'step_profile',
+                           self._step_profile.get_())
+        for option in self._energy_options:
+            self._settings.set('energies', option.option_name, option.get_())
+
+    @qtc.pyqtSlot()
+    def update_widgets(self):
+        """Update widgets from settings."""
+        # When updating the widgets from settings, we have to block
+        # signals to avoid overwriting the partially loaded settings.
+        error = None
+        with qtc.QSignalBlocker(self):
+            ramp_type = self._settings['energies'].get('ramp_type', '')
+            current_index = self._ramp_type.combo_box.currentIndex()
+            index = -1
+            for i in range(self._ramp_type.combo_box.count()):
+                ramp_cls = self._ramp_type.combo_box.itemData(i)
+                if getattr(ramp_cls, '__name__', '') == ramp_type:
+                    index = i
+                    break
+            if index != -1:
+                self._ramp_type.combo_box.setCurrentIndex(index)
+            if index == current_index:
+                # Already done automatically upon index change
+                # in _set_energy_ramp_options.
+                self._update_energy_ramp_options()
+            step_profile = self._settings['energies'].get('step_profile',
+                                                          fallback=None)
+            if step_profile:
+                try:
+                    self._step_profile.set_(step_profile)
+                except ValueError as err:
+                    error = err
+                    self._settings.set('energies', 'step_profile',
+                                       str(ABRUPT_PROFILE))
+                    self._step_profile.set_(ABRUPT_PROFILE)
+        if error:
+            base.emit_error(self,
+                            QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energies/step_profile',
+                            f'Invalid step profile: {error}')
+        # By now, all widgets are up to date. We can signal that
+        # something may have changed.
+        self.settings_ok_changed.emit()
+        self.settings_changed.emit()
+
+    def _update_energy_ramp_options(self):
+        """Update the energy ramp options to reflect the current settings."""
+        for option in self._energy_options:
+            try:
+                value = self._settings['energies'].getfloat(option.option_name,
+                                                            fallback=None)
+            except (TypeError, ValueError):
+                base.emit_error(
+                    self, QObjectSettingsErrors.INVALID_SETTINGS,
+                    f'energies/{option.option_name}',
+                    f'Invalid numeric value for {option.option_name}'
+                    )
+                continue
+            if value is not None:
+                with qtc.QSignalBlocker(option.handler_widget):
+                    option.handler_widget.setValue(value)
+
+
 class StepProfileViewer(ButtonWithLabel):
     """Viewer of the current step-profile type.
 
@@ -209,6 +392,8 @@ class StepProfileViewer(ButtonWithLabel):
 
     def get_(self):
         """Return the value to be stored in the config."""
+        if not self.profile_editor.profile:
+            return str(ABRUPT_PROFILE)
         return str(self.profile_editor.profile)
 
     def set_(self, value):
@@ -218,9 +403,12 @@ class StepProfileViewer(ButtonWithLabel):
         except ValueError:
             # Value is already a string and cannot be converted.
             pass
+        except (SyntaxError, TypeError):
+            # Value is a malformed string.
+            value = ABRUPT_PROFILE
 
         if not value:
-            value = AbruptEnergyStepEditor().profile
+            value = ABRUPT_PROFILE
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
@@ -299,6 +487,8 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         name = (first if isinstance(first, str)
                 else FractionalEnergyStepEditor.name)
         index = self.pick_profile.findText(self._format_profile_name(name))
+        if index == -1:
+            raise ValueError('Unknown profile type.')
         self.pick_profile.setCurrentIndex(index)
         self.pick_profile.currentData().set_profile(profile_data)
         self._profile_description.setText(
@@ -417,14 +607,14 @@ class EnergyStepProfileShapeEditor(qtw.QWidget):
 class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Abrupt step."""
 
-    name = 'abrupt'
+    name = ABRUPT
     description = ('An abrupt energy step that immediately goes from\n'
                    'the current energy to the next desired energy.')
 
     def __init__(self):
         """Initialise object."""
         super().__init__()
-        self.profile = ('abrupt', )
+        self.profile = ABRUPT_PROFILE
 
     def set_profile(self, *_):
         """Do nothing."""
@@ -439,7 +629,7 @@ class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
 class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Editor for selecting settings of a linear energy profile."""
 
-    name = 'linear'
+    name = LINEAR
     description = ('A linear energy step that goes from the \ncurrent '
                    'energy to the next desired energy\nin equidistant '
                    'intermediate steps.')
@@ -470,22 +660,23 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         -------
         None.
         """
-        if not profile[0] == self.name or len(profile) != 3:
-            raise ValueError('Unsuitable settings for a linear profile.')       # TODO: Catch error on the outside.
+        if not len(profile) == 3:
+            raise ValueError('Unsuitable settings for a linear profile.')
         self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
+        self.update_profile()
 
     def update_profile(self):
         """Set the profile to the selected values."""
         self.profile = (self.name, self._controls['n_steps'].value(),
                         self._controls['duration'].value())
         if any(value == 0 for value in self.profile):
-            self.profile = AbruptEnergyStepEditor().profile
+            self.profile = ABRUPT_PROFILE
 
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
+        step_num_info = ('<nobr>The number of intermediate steps. </nobr>'
                          f'Cannot be more than {MAX_NUM_STEPS}.')
         duration_info = ('<nobr>How long to wait until </nobr>'
                          'the next intermediate step.')
@@ -526,7 +717,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     @property
     def n_steps(self):
         """Return the number of intermediate steps."""
-        return max(0, self.layout().rowCount() - N_HEADER_ROWS)
+        return max(0, self.layout().rowCount() - STEP_N_HEADER_ROWS)
 
     def set_profile(self, profile):
         """Set fractional profile.
@@ -544,10 +735,10 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         """
         while self.n_steps > 0:
             self._remove_step()
-        self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
             self._add_step(fraction, duration)
         self._update_button_states()
+        self.update_profile()
 
     def update_profile(self):
         """Set the profile to the selected values."""
@@ -556,13 +747,13 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         # The first two elements in the layout are the add/remove
         # buttons and the labels. After that, each step is a separate
         # item with two widgets.
-        for index in range(N_HEADER_ROWS, layout.count()):
+        for index in range(STEP_N_HEADER_ROWS, layout.count()):
             item = layout.itemAt(index)
             profile.append(item.itemAt(0).widget().value())
             profile.append(item.itemAt(1).widget().value())
         self.profile = tuple(profile)
         if not self.profile or not any(self.profile):
-            self.profile = AbruptEnergyStepEditor().profile
+            self.profile = ABRUPT_PROFILE
 
     @qtc.pyqtSlot()
     def _add_step(self, fraction=None, duration=None):
@@ -601,7 +792,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        info = ('<nobr>The energies to set given as a fraction</nobr> '
+        info = ('<nobr>The energies to set given as a fraction </nobr>'
                 f'of {DELTA_E_NAME}. Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
                 'equivalent to the current energy and one to the next '
@@ -622,7 +813,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _emit_step_count_reduced(self):
         """Emit the step_count_reduced signal once both widgets are deleted."""
         self._n_widgets_removed += 1
-        if self._n_widgets_removed < N_COLUMNS:
+        if self._n_widgets_removed < STEP_N_COLUMNS:
             return
         self.step_count_reduced.emit()
         self._n_widgets_removed = 0
