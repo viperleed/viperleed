@@ -86,12 +86,14 @@ class _FakeDevicesMenu:  # pylint: disable=too-few-public-methods
 def test_device_search_allowed_states(mocker):
     """Check that running searches and measurements block new searches."""
     fake_measure = mocker.MagicMock(running=False)
+    energy_setter = mocker.MagicMock(setting_energy=False, busy=False)
     camera_viewer = mocker.MagicMock()
     camera_viewer.isVisible.return_value = False
     ctrl_dialog = mocker.MagicMock()
     ctrl_dialog.isVisible.return_value = False
     fake = mocker.MagicMock(_device_search_in_progress=False,
                             measurement=fake_measure,
+                            _ctrls={'energy_setter': energy_setter},
                             _dialogs={
                                 'camera_viewers': [camera_viewer],
                                 'device_settings': {'ctrl': ctrl_dialog}})
@@ -116,8 +118,10 @@ def test_device_search_allowed_states(mocker):
 def test_update_device_lists_blocks_reentry(mocker):
     """Check that a second search is blocked while one is in progress."""
     signal = _FakeSignal()
+    energy_setter = mocker.Mock(setting_energy=False)
     fake = mocker.Mock(_device_search_in_progress=False,
-                       detect_devices_requested=signal)
+                       detect_devices_requested=signal,
+                       _ctrls={'energy_setter': energy_setter})
     fake._device_search_allowed = mocker.Mock(side_effect=[True, False])
 
     Measure.update_device_lists(fake)
