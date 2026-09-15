@@ -12,8 +12,7 @@ from pathlib import Path
 import sys
 
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
-from pytest import fixture
+import pytest
 from pytest_cases import parametrize
 
 from viperleed.gui.measure.widgets.energysetter import EnergySetter
@@ -22,8 +21,6 @@ from ..mock_qt import _FakeSignal
 
 
 _MODULE = 'viperleed.gui.measure.widgets.energysetter'
-
-_ = qtw.QApplication(sys.argv)
 
 
 # pylint: disable=protected-access
@@ -93,8 +90,7 @@ class _FakeSerial:
         self._busy = busy
         self.busy_changed.emit(busy)
 
-
-@fixture(name='setter')
+@pytest.fixture(name='setter')
 def fixture_setter(tmp_path):
     """Create setter with path."""
     setter = EnergySetter()
@@ -104,7 +100,7 @@ def fixture_setter(tmp_path):
     return setter
 
 
-@fixture(name='ctrl_setter')
+@pytest.fixture(name='ctrl_setter')
 def fixture_ctrl_setter(mocker, setter):
     """Create setter with mocked controller."""
     fake_ctrl = _FakeController()
@@ -112,7 +108,7 @@ def fixture_ctrl_setter(mocker, setter):
     return setter
 
 
-@fixture(name='fake_controller')
+@pytest.fixture(name='fake_controller')
 def fixture_fake_controller(mocker, setter):
     """Return a controller whose settings are mocked."""
     fake_settings = mocker.Mock()
@@ -125,7 +121,7 @@ def fixture_fake_controller(mocker, setter):
     fake_ctrl.set_settings = mocker.Mock(return_value=True)
     return fake_ctrl
 
-
+@pytest.mark.usefixtures('qtbot')
 def test_cleanup_controller():
     """Check controller cleanup disconnects signals."""
     setter = EnergySetter()
