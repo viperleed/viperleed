@@ -9,7 +9,6 @@ __created__ = '2026-08-06'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
-import sys
 
 from PyQt5 import QtCore as qtc
 import pytest
