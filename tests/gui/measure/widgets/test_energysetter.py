@@ -8,8 +8,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-08-06'
 __license__ = 'GPLv3+'
 
-from pathlib import Path
-
 from PyQt5 import QtCore as qtc
 import pytest
 from pytest_cases import parametrize
@@ -66,10 +64,6 @@ class _FakeController:
 class _FakeControllerSettings:  # pylint: disable=too-few-public-methods
     """Fake controller settings object."""
 
-    def __init__(self):
-        """Initialize fake settings."""
-        self.last_file = None
-
 
 class _FakeSerial:
     """Fake serial interface."""
@@ -108,6 +102,23 @@ def fixture_ctrl_setter(mocker, setter):
 
 
 @pytest.mark.usefixtures('qtbot')
+def test_busy_independent_of_checkbox(ctrl_setter):
+    """Check busy is not tied to the checkbox state."""
+    ctrl_setter.busy = True
+    ctrl_setter.set_energy.setChecked(False)
+    assert not ctrl_setter.setting_energy
+    assert ctrl_setter.busy
+
+
+def test_busy_property(ctrl_setter):
+    """Check busy reflects an in-flight operation."""
+    assert not ctrl_setter.busy
+    ctrl_setter.busy = True
+    assert ctrl_setter.busy
+    ctrl_setter.busy = False
+    assert not ctrl_setter.busy
+
+
 def test_cleanup_controller():
     """Check controller cleanup disconnects signals."""
     setter = EnergySetter()
@@ -144,18 +155,6 @@ def test_flush_resets_state(mocker):
     assert not setter.busy
     assert setter._pending_energy is None
     mock_timeout_timer.stop.assert_called_once()
-    mock_cleanup.assert_called_once()
-
-
-def test_get_controller_cleanup_on_different_path(mocker, setter, tmp_path):
-    """Check old controller is cleaned up when path changes."""
-    old_ctrl = _FakeController()
-    old_ctrl.settings.last_file = Path('/old/path.ini')
-    setter._controller = old_ctrl
-    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-
-    setter.path = tmp_path / 'new_controller.ini'
-
     mock_cleanup.assert_called_once()
 
 
@@ -204,23 +203,6 @@ def test_init_creates_widgets():
     assert setter._controller is None
     assert setter._pending_energy is None
     assert not setter.busy
-
-
-def test_busy_independent_of_checkbox(ctrl_setter):
-    """Check busy is not tied to the checkbox state."""
-    ctrl_setter.busy = True
-    ctrl_setter.set_energy.setChecked(False)
-    assert not ctrl_setter.setting_energy
-    assert ctrl_setter.busy
-
-
-def test_busy_property(ctrl_setter):
-    """Check busy reflects an in-flight operation."""
-    assert not ctrl_setter.busy
-    ctrl_setter.busy = True
-    assert ctrl_setter.busy
-    ctrl_setter.busy = False
-    assert not ctrl_setter.busy
 
 
 def test_make_controller(mocker, tmp_path):
@@ -278,16 +260,16 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
     """Check ctrl finished cleans up when not setting."""
     setter = EnergySetter()
     setter.busy = True
+    setter._controller = _FakeController()
     mock_set_energy_btn = mocker.patch.object(setter, 'set_energy')
     mock_set_energy_btn.isChecked.return_value = False
     mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
-    mock_controller = mocker.patch.object(setter, '_controller')
 
     setter._on_ctrl_finished(busy=False)
 
     assert not setter.busy
+    assert setter._controller is None
     mock_timeout_timer.stop.assert_called_once()
-    mock_controller.disconnect_.assert_called_once()
 
 
 def test_on_ctrl_finished_pending_energy(mocker):
@@ -440,6 +422,17 @@ def test_on_timeout(mocker):
 
     assert setter.error_occurred.emitted == 1
     mock_flush.assert_called_once()
+
+
+def test_path_setter_cleans_up_controller(mocker, setter, tmp_path):
+    """Check controller is cleaned up when path changes."""
+    old_ctrl = _FakeController()
+    setter._controller = old_ctrl
+    mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
+
+    setter.path = tmp_path / 'new_controller.ini'
+
+    mock_cleanup.assert_called_once()
 
 
 def test_set_enabled_with_checked_checkbox(ctrl_setter):
