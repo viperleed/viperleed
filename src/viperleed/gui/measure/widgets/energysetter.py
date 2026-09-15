@@ -161,9 +161,7 @@ class EnergySetter(qtw.QWidget):
         -------
         None.
         """
-        self.energy_input.blockSignals(True)
         self.energy_input.setValue(energy)
-        self.energy_input.blockSignals(False)
 
     def _compose(self):
         """Set up the user interface."""
