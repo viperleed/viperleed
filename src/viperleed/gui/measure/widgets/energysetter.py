@@ -128,6 +128,43 @@ class EnergySetter(qtw.QWidget):
         """Return whether the energy setter is setting energies or not."""
         return self.set_energy.checkState() == qtc.Qt.Checked
 
+    def cleanup_controller(self, ctrl=None):
+        """Clean up the persistent or a given controller."""
+        if not ctrl:
+            ctrl = self._controller
+            self._controller = None
+        if not ctrl:
+            return
+        base.safe_disconnect(ctrl.error_occurred, self._on_error)
+        base.safe_disconnect(ctrl.serial.busy_changed,
+                             self._on_ctrl_finished)
+        ctrl.disconnect_()
+        ctrl.deleteLater()
+
+    def setEnabled(self, enable):   # pylint: disable=invalid-name
+        """Switch enabled status of widgets."""
+        super().setEnabled(enable)
+        enable &= bool(self.path)
+        self.set_energy.setEnabled(enable)
+        self.energy_input.setEnabled(enable and self.set_energy.isChecked())
+
+    @qtc.pyqtSlot(float)
+    def show_energy(self, energy):
+        """Display an externally-driven energy value without setting it.
+
+        Parameters
+        ----------
+        energy : float
+            Energy value in eV to display.
+
+        Returns
+        -------
+        None.
+        """
+        self.energy_input.blockSignals(True)
+        self.energy_input.setValue(energy)
+        self.energy_input.blockSignals(False)
+
     def _compose(self):
         """Set up the user interface."""
         layout = qtw.QHBoxLayout(self)
@@ -455,40 +492,3 @@ class EnergySetter(qtw.QWidget):
                             '"Devices" menu to set an energy.')
         else:
             self.setToolTip('')
-
-    def cleanup_controller(self, ctrl=None):
-        """Clean up the persistent or a given controller."""
-        if not ctrl:
-            ctrl = self._controller
-            self._controller = None
-        if not ctrl:
-            return
-        base.safe_disconnect(ctrl.error_occurred, self._on_error)
-        base.safe_disconnect(ctrl.serial.busy_changed,
-                             self._on_ctrl_finished)
-        ctrl.disconnect_()
-        ctrl.deleteLater()
-
-    def setEnabled(self, enable):   # pylint: disable=invalid-name
-        """Switch enabled status of widgets."""
-        super().setEnabled(enable)
-        enable &= bool(self.path)
-        self.set_energy.setEnabled(enable)
-        self.energy_input.setEnabled(enable and self.set_energy.isChecked())
-
-    @qtc.pyqtSlot(float)
-    def show_energy(self, energy):
-        """Display an externally-driven energy value without setting it.
-
-        Parameters
-        ----------
-        energy : float
-            Energy value in eV to display.
-
-        Returns
-        -------
-        None.
-        """
-        self.energy_input.blockSignals(True)
-        self.energy_input.setValue(energy)
-        self.energy_input.blockSignals(False)
