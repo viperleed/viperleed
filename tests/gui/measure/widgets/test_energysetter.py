@@ -171,8 +171,8 @@ def test_get_controller_cleanup_on_different_path(mocker, setter):
     old_ctrl.settings.last_file = Path('/old/path.ini')
     setter._controller = old_ctrl
     mock_cleanup = mocker.patch.object(setter, 'cleanup_controller')
-    _ = mocker.patch.object(setter, '_make_controller',
-                            return_value=_FakeController())
+    mocker.patch.object(setter, '_make_controller',
+                        return_value=_FakeController())
 
     setter._get_controller()
 
@@ -205,8 +205,8 @@ def test_get_controller_creates_new(mocker, setter):
 def test_get_controller_load_failed(mocker, setter):
     """Check error emitted when controller creation fails."""
     setter.error_occurred = _FakeSignal()
-    _ = mocker.patch.object(setter, '_make_controller',
-                            side_effect=ValueError('test'))
+    mocker.patch.object(setter, '_make_controller',
+                        side_effect=ValueError('test'))
 
     result = setter._get_controller()
 
