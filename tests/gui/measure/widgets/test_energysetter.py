@@ -107,19 +107,6 @@ def fixture_ctrl_setter(mocker, setter):
     return setter
 
 
-@pytest.fixture(name='fake_controller')
-def fixture_fake_controller(mocker, setter):
-    """Return a controller whose settings are mocked."""
-    fake_settings = mocker.Mock()
-    fake_settings.last_file = setter.path
-    fake_settings.read_again.return_value = True
-
-    fake_ctrl = _FakeController(connect_result=True)
-    fake_ctrl._settings = fake_settings
-    # pylint: disable-next=attribute-defined-outside-init
-    fake_ctrl.set_settings = mocker.Mock(return_value=True)
-    return fake_ctrl
-
 @pytest.mark.usefixtures('qtbot')
 def test_cleanup_controller():
     """Check controller cleanup disconnects signals."""
