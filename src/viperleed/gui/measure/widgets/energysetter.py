@@ -60,6 +60,8 @@ class EnergySetter(qtw.QWidget):
         """Initialize the EnergySetter widget."""
         super().__init__(**kwargs)
         self.energy_input = SteppingDoubleSpinBox()
+        # Note that we use setCheckState rather than setChecked in order
+        # to ensure that the set_energy.stateChanged signal is emitted.
         self.set_energy = qtw.QCheckBox('Set energy')
         # Path to the settings of the controller
         # that is supposed to set the energy.
@@ -131,8 +133,8 @@ class EnergySetter(qtw.QWidget):
 
     def cleanup_controller(self, ctrl=None):
         """Clean up the persistent or a given controller."""
-        # Keep ctrl alive: after a disconnect the serial can still
-        # deliver events (e.g., second errorOccurred) to this
+        # Keep self._controller alive: after a disconnect the serial can
+        # still deliver events (e.g., second errorOccurred) to this
         # controller. Freeing the C++ object then would crash the GUI.
         if not ctrl:
             ctrl = self._controller
@@ -214,7 +216,7 @@ class EnergySetter(qtw.QWidget):
 
     def _flush(self):
         """Reset on error."""
-        self.set_energy.setChecked(False)
+        self.set_energy.setCheckState(False)
         self.busy = False
         self._pending_energy = None
         self._timeout_timer.stop()
@@ -394,18 +396,18 @@ class EnergySetter(qtw.QWidget):
 
         if not self.path:
             base.emit_error(self, EnergySetterErrors.NO_CONTROLLER)
-            self.set_energy.setChecked(False)
+            self._flush()
             return
 
         if not self.path.is_file():
             base.emit_error(self, EnergySetterErrors.SETTINGS_FILE_MISSING,
                             self.path)
-            self.set_energy.setChecked(False)
+            self._flush()
             return
 
         self._controller = self._get_controller()
         if self._controller is None:
-            self.set_energy.setChecked(False)
+            self._flush()
 
     @qtc.pyqtSlot()
     def _on_timeout(self):
@@ -432,7 +434,7 @@ class EnergySetter(qtw.QWidget):
         """
         if self._controller is None:
             self.busy = False
-            self.set_energy.setChecked(False)
+            self.set_energy.setCheckState(False)
             return
         self.busy = True
         self._timeout_timer.start()
