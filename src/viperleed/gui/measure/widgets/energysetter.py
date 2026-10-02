@@ -131,16 +131,17 @@ class EnergySetter(qtw.QWidget):
 
     def cleanup_controller(self, ctrl=None):
         """Clean up the persistent or a given controller."""
+        # Keep ctrl alive: after a disconnect the serial can still
+        # deliver events (e.g., second errorOccurred) to this
+        # controller. Freeing the C++ object then would crash the GUI.
         if not ctrl:
             ctrl = self._controller
-            self._controller = None
         if not ctrl:
             return
         base.safe_disconnect(ctrl.error_occurred, self._on_error)
         base.safe_disconnect(ctrl.serial.busy_changed,
                              self._on_ctrl_finished)
         ctrl.disconnect_()
-        ctrl.deleteLater()
 
     def setEnabled(self, enable):   # pylint: disable=invalid-name
         """Switch enabled status of widgets."""
