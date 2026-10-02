@@ -115,7 +115,7 @@ def _ensure_qapp(qapp):
 def test_busy_independent_of_checkbox(ctrl_setter):
     """Check busy is not tied to the checkbox state."""
     ctrl_setter.busy = True
-    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
     assert not ctrl_setter.setting_energy
     assert ctrl_setter.busy
 
@@ -152,7 +152,7 @@ def test_cleanup_controller_none():
 def test_flush_resets_state(mocker):
     """Check flush resets all state."""
     setter = EnergySetter()
-    setter.set_energy.setChecked(True)
+    setter.set_energy.setCheckState(qtc.Qt.Checked)
     setter.busy = True
     setter._pending_energy = 50.0
     mock_timeout_timer = mocker.patch.object(setter, '_timeout_timer')
@@ -322,7 +322,7 @@ def test_on_ctrl_finished_zero_applied_then_disconnects(ctrl_setter):
 def test_on_energy_changed_when_busy(mocker, ctrl_setter):
     """Check energy change queued when the setter is busy."""
     mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
-    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
     ctrl_setter.busy = True
     ctrl_setter.energy_input.setValue(75.0)
 
@@ -337,7 +337,7 @@ def test_on_energy_changed_when_busy(mocker, ctrl_setter):
 def test_on_energy_changed_sets_energy(mocker, ctrl_setter, signal):
     """Check energy change triggers set_energy when idle."""
     mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
-    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
     ctrl_setter.energy_input.setValue(50.0)
     getattr(ctrl_setter.energy_input, signal).emit()
 
@@ -346,7 +346,7 @@ def test_on_energy_changed_sets_energy(mocker, ctrl_setter, signal):
 
 def test_on_energy_changed_when_not_setting(mocker, ctrl_setter):
     """Check energy change ignored when not setting energy."""
-    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
     mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
 
     ctrl_setter._on_energy_changed()
@@ -396,7 +396,7 @@ def test_on_set_energy_toggled_ctrl_creation_failed_unchecks(mocker, setter):
     setter.error_occurred = _FakeSignal()
     mocker.patch.object(setter, '_get_controller', return_value=None)
 
-    setter.set_energy.setChecked(True)
+    setter.set_energy.setCheckState(qtc.Qt.Checked)
 
     assert not setter.setting_energy
     assert not setter.error_occurred.emitted
@@ -408,7 +408,7 @@ def test_on_set_energy_toggled_ctrl_load_failed_unchecks(mocker, setter):
     mocker.patch.object(setter, '_make_controller',
                         side_effect=ValueError('test'))
 
-    setter.set_energy.setChecked(True)
+    setter.set_energy.setCheckState(qtc.Qt.Checked)
 
     assert not setter.setting_energy
     assert setter.error_occurred.emitted == 1
@@ -417,9 +417,9 @@ def test_on_set_energy_toggled_ctrl_load_failed_unchecks(mocker, setter):
 def test_on_set_energy_toggled_unchecked_while_busy_queues_zero(ctrl_setter):
     """Check that unchecking while busy defers the zeroing."""
     ctrl_setter.busy = True
-    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
 
-    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
 
     # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert ctrl_setter._pending_energy == 0.0
@@ -430,13 +430,13 @@ def test_on_set_energy_toggled_unchecked_while_busy_queues_zero(ctrl_setter):
 def test_on_set_energy_toggled_unchecked_sets_zero(mocker, ctrl_setter):
     """Check that unchecking sets energy to zero."""
     mock_set_energy = mocker.patch.object(ctrl_setter, '_set_energy')
-    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
 
     ctrl_setter.energy_input.setValue(50.0)
     ctrl_setter.energy_input.editingFinished.emit()
     mock_set_energy.assert_called_with(50.0)
 
-    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
     mock_set_energy.assert_called_with(0.0)
 
     # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
@@ -468,7 +468,7 @@ def test_path_setter_cleans_up_controller(mocker, setter, tmp_path):
 
 def test_set_enabled_with_checked_checkbox(ctrl_setter):
     """Check energy input enabled when checkbox is checked."""
-    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
 
     ctrl_setter.setEnabled(True)
 
@@ -508,7 +508,9 @@ def test_set_energy_no_controller(mocker):
     setter._set_energy(50.0)
 
     assert not setter.busy
-    mock_set_energy_btn.setChecked.assert_called_once_with(False)
+    mock_set_energy_btn.setCheckState.assert_called_once_with(
+        qtc.Qt.Unchecked
+        )
 
 
 def test_set_energy_starts_timeout(mocker):
@@ -525,7 +527,7 @@ def test_set_energy_starts_timeout(mocker):
 
 def test_setting_energy_property(ctrl_setter):
     """Check setting_energy property reflects checkbox state."""
-    ctrl_setter.set_energy.setChecked(False)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Unchecked)
     assert not ctrl_setter.setting_energy
-    ctrl_setter.set_energy.setChecked(True)
+    ctrl_setter.set_energy.setCheckState(qtc.Qt.Checked)
     assert ctrl_setter.setting_energy
