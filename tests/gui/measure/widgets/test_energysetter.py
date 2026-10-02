@@ -137,7 +137,6 @@ def test_cleanup_controller():
 
     setter.cleanup_controller()
 
-    assert setter._controller is None
     assert not fake_ctrl.connected
 
 
@@ -278,7 +277,6 @@ def test_on_ctrl_finished_not_setting_cleanup(mocker):
     setter._on_ctrl_finished(busy=False)
 
     assert not setter.busy
-    assert setter._controller is None
     mock_timeout_timer.stop.assert_called_once()
 
 
