@@ -216,7 +216,7 @@ class EnergySetter(qtw.QWidget):
 
     def _flush(self):
         """Reset on error."""
-        self.set_energy.setCheckState(False)
+        self.set_energy.setCheckState(qtc.Qt.Unchecked)
         self.busy = False
         self._pending_energy = None
         self._timeout_timer.stop()
@@ -434,7 +434,7 @@ class EnergySetter(qtw.QWidget):
         """
         if self._controller is None:
             self.busy = False
-            self.set_energy.setCheckState(False)
+            self.set_energy.setCheckState(qtc.Qt.Unchecked)
             return
         self.busy = True
         self._timeout_timer.start()
