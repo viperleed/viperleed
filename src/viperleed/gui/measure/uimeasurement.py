@@ -783,6 +783,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['energy_setter'].busy_changed.connect(
             self._update_force_detect_button_state
             )
+        self._ctrls['energy_setter'].toggled.connect(
+            self._update_force_detect_button_state
+            )
 
         # TIMERS
         slots = (
