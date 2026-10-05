@@ -1237,6 +1237,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         CameraViewer.clear_cache()
         self._dialogs['camera_viewers'] = []
 
+        self._ctrls['energy_setter'].path = self.system_settings.get(
+            'DEVICES', 'default_controller', fallback=''
+            )
+
     def _on_sys_settings_triggered(self):
         """React to a user clicking on 'Settings'."""
         # Update from file, then .open (which updates widgets)
