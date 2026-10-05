@@ -394,8 +394,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 camera.stop()
                 retry_later = True
 
-        if self._ctrls['energy_setter'].set_energy.isChecked():
-            self._ctrls['energy_setter'].set_energy.setChecked(False)
+        if self._ctrls['energy_setter'].isChecked():
+            self._ctrls['energy_setter'].setChecked(False)
         if self._ctrls['energy_setter'].busy:
             retry_later = True
         if retry_later and self._glob['n_retry_close'] <= 50:
@@ -466,7 +466,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _device_search_allowed(self):
         """Return whether a new device search can be started."""
-        if self._ctrls['energy_setter'].setting_energy:
+        if self._ctrls['energy_setter'].isChecked():
             return False
         if self._ctrls['energy_setter'].busy:
             return False

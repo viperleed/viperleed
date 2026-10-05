@@ -42,11 +42,12 @@ class EnergySetterErrors(base.ViPErLEEDErrorEnum):
                           'connection.')
 
 
-class EnergySetter(qtw.QWidget):
+class EnergySetter(qtw.QGroupBox):
     """Widget for setting LEED energies without data acquisition.
 
-    This widget provides a checkbox and energy input field that allow
-    users to set the beam energy.
+    This widget provides a checkable group box and an energy input
+    field that allow users to set the beam energy. Checking the group
+    box title enables energy setting.
     """
 
     # Emitted whenever an error has been detected. Contains
@@ -60,9 +61,6 @@ class EnergySetter(qtw.QWidget):
         """Initialize the EnergySetter widget."""
         super().__init__(**kwargs)
         self.energy_input = SteppingDoubleSpinBox()
-        # Note that we use setCheckState rather than setChecked in order
-        # to ensure that the set_energy.stateChanged signal is emitted.
-        self.set_energy = qtw.QCheckBox('Set energy')
         # Path to the settings of the controller
         # that is supposed to set the energy.
         self._path = None
@@ -126,11 +124,6 @@ class EnergySetter(qtw.QWidget):
         self.setEnabled(True)
         self._update_hint()
 
-    @property
-    def setting_energy(self):
-        """Return whether the energy setter is setting energies or not."""
-        return self.set_energy.isChecked()
-
     def cleanup_controller(self, ctrl=None):
         """Clean up the persistent or a given controller."""
         # Keep self._controller alive: after a disconnect the serial can
@@ -147,10 +140,8 @@ class EnergySetter(qtw.QWidget):
 
     def setEnabled(self, enable):   # pylint: disable=invalid-name
         """Switch enabled status of widgets."""
-        super().setEnabled(enable)
         enable &= bool(self.path)
-        self.set_energy.setEnabled(enable)
-        self.energy_input.setEnabled(enable and self.set_energy.isChecked())
+        super().setEnabled(enable)
 
     @qtc.pyqtSlot(float)
     def show_energy(self, energy):
@@ -169,27 +160,29 @@ class EnergySetter(qtw.QWidget):
 
     def _compose(self):
         """Set up the user interface."""
+        self.setTitle('Set energy')
+        self.setCheckable(True)
+        self.setFont(AllGUIFonts().buttonFont)
+
         layout = qtw.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        for widget in (self.set_energy, self.energy_input):
-            widget.setFont(AllGUIFonts().buttonFont)
-            widget.ensurePolished()
-            # Disable widgets as a controller object for
-            # energy setting still has to be created.
-            widget.setEnabled(False)
-        layout.addWidget(self.set_energy)
         self.energy_input.setDecimals(1)
         self.energy_input.setRange(0.0, 1000.0)
         self.energy_input.setSingleStep(0.5)
         self.energy_input.setValue(0.0)
         self.energy_input.setSuffix(' eV')
+        self.energy_input.setFont(AllGUIFonts().buttonFont)
         layout.addWidget(self.energy_input)
-
         self.setLayout(layout)
+
+        # Disable the whole group box: its children (the energy input)
+        # are disabled automatically. A controller object for energy
+        # setting still has to be created (i.e., a path has to be set).
+        self.setEnabled(False)
 
     def _connect(self):
         """Connect internal signals and slots."""
-        self.set_energy.stateChanged.connect(self._on_set_energy_toggled)
+        self.toggled.connect(self._on_set_energy_toggled)
         self.energy_input.editingFinished.connect(self._on_energy_changed)
         self.energy_input.stepped.connect(self._on_energy_changed)
         self._timeout_timer.timeout.connect(self._on_timeout)
@@ -216,7 +209,7 @@ class EnergySetter(qtw.QWidget):
 
     def _flush(self):
         """Reset on error."""
-        self.set_energy.setCheckState(qtc.Qt.Unchecked)
+        self.setChecked(False)
         self.busy = False
         self._pending_energy = None
         self._timeout_timer.stop()
@@ -321,7 +314,7 @@ class EnergySetter(qtw.QWidget):
         self._timeout_timer.stop()
 
         # If the setter was switched off, the energy must be set to zero.
-        if not self.set_energy.isChecked():
+        if not self.isChecked():
             if self._pending_energy == 0.0:     # pylint: disable=C1805
                 # The setter was un-toggled while an energy step
                 # was in flight. Now set the energy to zero.
@@ -341,7 +334,7 @@ class EnergySetter(qtw.QWidget):
     @qtc.pyqtSlot()
     def _on_energy_changed(self):
         """Handle energy value change."""
-        if not self.set_energy.isChecked():
+        if not self.isChecked():
             return
 
         if self.busy:
@@ -366,14 +359,14 @@ class EnergySetter(qtw.QWidget):
         self.error_occurred.emit(error_info)
         self._flush()
 
-    @qtc.pyqtSlot(int)
-    def _on_set_energy_toggled(self, state):
-        """Handle checkbox state change.
+    @qtc.pyqtSlot(bool)
+    def _on_set_energy_toggled(self, checked):
+        """Handle group box check state change.
 
         Parameters
         ----------
-        state : qtc.Qt.CheckState
-            The checked state of the QCheckBox.
+        checked : bool
+            The checked state of the group box title.
 
         Emits
         -----
@@ -382,9 +375,8 @@ class EnergySetter(qtw.QWidget):
         EnergySetterErrors.SETTINGS_FILE_MISSING
             If the ctrl path does not point to a file.
         """
-        self.energy_input.setEnabled(state == qtc.Qt.Checked)
-        if state != qtc.Qt.Checked:
-            # Checkbox unchecked. If an energy step is in flight, defer
+        if not checked:
+            # Group box unchecked. If an energy step is in flight, defer
             # setting the energy to zero until the current energy step is
             # completed. Otherwise set the energy to zero.
             if self.busy:
@@ -434,7 +426,7 @@ class EnergySetter(qtw.QWidget):
         """
         if self._controller is None:
             self.busy = False
-            self.set_energy.setCheckState(qtc.Qt.Unchecked)
+            self.setChecked(False)
             return
         self.busy = True
         self._timeout_timer.start()
