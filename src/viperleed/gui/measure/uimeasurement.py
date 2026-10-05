@@ -1241,6 +1241,19 @@ class Measure(ViPErLEEDPluginBase):                                             
             'DEVICES', 'default_controller', fallback=''
             )
 
+        live_detection = self.system_settings.getboolean(
+            'DEVICES', 'live_detection', fallback=True
+            )
+        action = self._ctrls['menus']['live_detection']
+        if action.isChecked() == live_detection:
+            return
+        with qtc.QSignalBlocker(action):
+            action.setChecked(live_detection)
+        if live_detection:
+            self._timers['refresh_devices'].start()
+        else:
+            self._timers['refresh_devices'].stop()
+
     def _on_sys_settings_triggered(self):
         """React to a user clicking on 'Settings'."""
         # Update from file, then .open (which updates widgets)
