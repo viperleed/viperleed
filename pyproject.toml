@@ -165,6 +165,7 @@ classifiers = [
         'pytest-mock>=3',
         'pytest-subtests',
         'pytest-timeout',
+        'pytest-qt',
         ]
     xfail_strict = true
 
