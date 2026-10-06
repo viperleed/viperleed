@@ -9,7 +9,7 @@ The ViPErLEED electronics are designed (and tested) to work with the ErLEED elec
 However, while the ErLEED electronics enable external control over beam energy, they do not allow direct read-out of the applied voltage.
 
 When available, ViPErLEED can directly measure the beam voltage and use this value to automatically calibrate the electron energy.
-This is not strictly required, but **highly recommend** to prevent distortions of the :math:`I(V)` curves.
+This is not strictly required, but **highly recommended** in order to prevent distortions of the :math:`I(V)` curves.
 
 It is possible to make the beam voltage accessible for read out in the ErLEED electronics by making a small modification to the control unit.
 
@@ -83,7 +83,7 @@ Here, :math:`\epsilon` is the relative difference between the two :math:`R` resi
 Thus a 1% difference in the resistors at 20 V filament voltage will result in a 50 meV offset in the energy calibration.
 
 Furthermore, the smaller :math:`R` is relative to :math:`R_{\mathrm{ViPErLEED}}`, the smaller the gain error of the energy calibration will be.
-With 330 :math:`\Omega` resistors, the gain error is about :math:`1\times 10^{-5}`, or ~0.01 eV at 1000 eV.
+With 330 :math:`\Omega` resistors, the gain error is about :math:`1\times 10^{-5}`, or ~10 meV at 1000 eV.
 However, the resistors should not be chosen too small as the additional current :math:`I_{\mathrm{extra}}` (see :numref:`fig_ebeam_circuit`) drawn by the voltage divider is
 
 .. math::
@@ -202,7 +202,7 @@ Next, you need to place the custom pin on the motherboard.
 The pin is intended to read out the potential applied to the electron beam in the LEED setup.
 To do this, we can measure the voltage at the filament where the electrons originate.
 By placing a voltage divider with two equal resistors parallel to the filament, we can get a reference potential (see the schematic circuit diagram in :numref:`fig_ebeam_circuit`).
-Since the filament is essentially a short circuit, a negligible current (~20 mA) will pass through the parallel resistors.
+Since the filament is essentially a short circuit, a negligible current (~30 mA) will pass through the parallel resistors.
 
 To directly access the filament, we can conveniently place the new pin right next to the high-voltage diodes next to the filament port.
 The exact location is shown in :numref:`fig_pin_location_zoomed_out` and :numref:`fig_pin_location_zoomed_in`.
