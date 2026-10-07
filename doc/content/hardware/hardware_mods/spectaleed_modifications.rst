@@ -93,7 +93,7 @@ The high-voltage modules are mounted on the motherboard of the electronics. See 
 
 The modules are secured to the motherboard with two (grounded) bolts that can be removed from the bottom side of the unit. See :numref:`fig_ngleed_old_overview`\ (e) or :numref:`fig_ngleed_new_overview`\ (e). To extract the HV modules, it is also necessary to remove the high-voltage cables that carry their output voltage(s) toward the rear panel. :numref:`fig_ngleed_remove_hv_cables` shows an overview of the HV cables to be removed (left). It is **highly recommended** to label each cable before removing it.
 
-The cables are plugged via spade connectors onto the boards. The mating connectors soldered on the boards are easily damaged. To minimize the risk, it is advisable to use an angled tweezer, as shown in the right panel of :numref:`fig_ngleed_remove_hv_cables`. Very lightly grab the spade on the board from the sides, and fit the the tips of the tweezers in between the board and the connector of the cable. Then, use the tweezers as a lever, by rotating them around the corners of the pincers, that are lying on the board.
+The cables are plugged via spade connectors onto the boards. The mating connectors soldered on the boards are easily damaged. To minimize the risk, it is advisable to use an angled tweezer, as shown in the right panel of :numref:`fig_ngleed_remove_hv_cables`. Very lightly grab the spade on the board from the sides, and fit the tips of the tweezers in between the board and the connector of the cable. Then, use the tweezers as a lever, by rotating them around the corners of the pincers, that are lying on the board.
 
 .. _fig_ngleed_remove_hv_cables:
 .. figure:: /_static/hardware/SpectaLEED_modification/removing_hv_cables.svg
@@ -126,7 +126,7 @@ Making :math:`I_0` measurements possible
 
 .. admonition:: TL;DR
 
-    The :math:`I_0` output provided by the unmodified LEED electronics is next to meaningless. Some modifications are necessary to make it usable:.
+    The :math:`I_0` output provided by the unmodified LEED electronics is next to meaningless. Some modifications are necessary to make it usable:
 
       * On the BEAM HV module (see :numref:`fig_ngleed_i0_beam_module_mod`):
 
@@ -261,7 +261,7 @@ As can be seen in :numref:`fig_ngleed_i0_control_and_buffer`\ (b), the ``CONTROL
 
 The last processing stage occurs on the ``E0 BUFFER`` board \[visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (a)\], mounted on the side panel of the chassis, and, unfortunately, very close to the switching power supply \[top left in :numref:`fig_ngleed_i0_control_and_buffer`\ (a)\] as well as the high-voltage supplies --- in the region of the large heat sink on the motherboard. The :math:`I_0` signal reaches the ``E0 BUFFER`` board through the thinner ribbon cable of the ``CONTROL`` board \[left in :numref:`fig_ngleed_i0_control_and_buffer`\ (b)\]. After the processing on the ``E0 BUFFER`` board, the :math:`I_0` signal travels along the long ribbon cable toward the output BNC on the rear panel. As the ribbon cables are unshielded, they can easily pick up high-frequency noise: they are not the ideal choice for cables passing next to the switching power supplies. You can improve this by twisting them around, as visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (a), and by adding an iron core around (at least) the short one --- which passes right above the high-voltage transformer. You will need to untie the long ribbon cable from the support bars in order to twist it all the way toward the rear panel. Use cable ties to keep it together.
 
-The primary role of the processing of :math:`I_0` in the ``E0 BUFFER`` board is offset compensation. Offsets arise because of non-idealities of the op-amps, but should be almost negligible after the modifications described in this guide, especially the replacement of the LF411 op-amp suggested in :secref:`ngleed_i0_beam_module`. The offset correction happens in the first (inverting) unity-gain stage of the ``E0 BUFFER`` board, as visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (d). U1.B adds a correction current :math:`I_\mathrm{correction}` to the the :math:`I_0` signal coming from the ``CONTROL`` board. The circuit in the bottom part of :numref:`fig_ngleed_i0_control_and_buffer`\ (d) generates the correction from a 10 V reference:
+The primary role of the processing of :math:`I_0` in the ``E0 BUFFER`` board is offset compensation. Offsets arise because of non-idealities of the op-amps, but should be almost negligible after the modifications described in this guide, especially the replacement of the LF411 op-amp suggested in :secref:`ngleed_i0_beam_module`. The offset correction happens in the first (inverting) unity-gain stage of the ``E0 BUFFER`` board, as visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (d). U1.B adds a correction current :math:`I_\mathrm{correction}` to the :math:`I_0` signal coming from the ``CONTROL`` board. The circuit in the bottom part of :numref:`fig_ngleed_i0_control_and_buffer`\ (d) generates the correction from a 10 V reference:
 
 .. math::
     I_\mathrm{correction} = \frac{10\,\mathrm{V}}{R_1} \left(1 - \frac{R_1}{R_2} x\right),
@@ -366,7 +366,7 @@ Finally, for the modification in :secref:`ngleed_shield_mains`:
 Rewiring the low-voltage guard
 ------------------------------
 
-The following boards need rewiring and should be removed as described in :secref:`ngleed_extract_hv_board`: ``ANODE``, ``FILAMENT``, ``L1/3``, ``L2``. The ``WEHNELT`` module is also incorrectly wired, but there is no transformer on it, so it should not contribute to the noise on :math:`I_0`. As most boards look very similar to one another, we suggest to proceed with one board at a time in oder not to confuse which board is which.
+The following boards need rewiring and should be removed as described in :secref:`ngleed_extract_hv_board`: ``ANODE``, ``FILAMENT``, ``L1/3``, ``L2``. The ``WEHNELT`` module is also incorrectly wired, but there is no transformer on it, so it should not contribute to the noise on :math:`I_0`. As most boards look very similar to one another, we suggest to proceed with one board at a time in order not to confuse which board is which.
 
 :numref:`fig_swap_hvguard_on_boards` shows, for each board, suggestions of where the connections should be interrupted by **cutting** the relevant tracks and where they can be reconnected to the correct ground lines. For tips on how to cut tracks, see :secref:`ngleed_i0_beam_module`.
 
@@ -399,7 +399,7 @@ The 1 nF capacitors are ``GND``\ ed together via the stainless-steel wire surro
 
 The newly created four ends of the wire can be bent outwards in order to install two antiparallel diodes between the two grounds. The diodes will act as a transient-voltage suppressor. They are not strictly needed, but useful as they also make the assembly sturdier. They can be prepared as the 'flat-mounted' resistors in :numref:`fig_bent_resistors`: the cut-and-bent ends of the stainless-steel wire can be inserted in the hoops and securely soldered in place. As you solder the cathode of diode D2, also add an insulated wire in the top hoop. You can then connect the other end of this wire to ``HV_GND``: use the rightmost small pin at the very bottom of the high-voltage connector, labelled '1F' in the schematics of :numref:`fig_ngleed_hv_plug`.
 
-As a result of cutting the wire, the top part of the construction is only supported by the six capacitors. The bottom part, instead, is soldered to (and grounded by) the slug protruding from the shell at the bottom of the connector. To prevent inadvertent contact between the wire and the chassis --- which would render :math:`I_0` measurements impossible --- it is a good idea to (i) add an extra **insulated** support, and (ii) glue (e.g., with double-sided tape) a thin insulating sheet underneath the ``HV_GND``-connected portion of the wire. For the support, you can solder a short piece of insulated wire to one of the the solder slugs at the top of the connector (see the top-left panel of :numref:`fig_ngleed_hv_plug`). Before you glue the insulating foil, consider the modification in :secref:`ngleed_shield_mains`, as the mains plug is quite close.
+As a result of cutting the wire, the top part of the construction is only supported by the six capacitors. The bottom part, instead, is soldered to (and grounded by) the slug protruding from the shell at the bottom of the connector. To prevent inadvertent contact between the wire and the chassis --- which would render :math:`I_0` measurements impossible --- it is a good idea to (i) add an extra **insulated** support, and (ii) glue (e.g., with double-sided tape) a thin insulating sheet underneath the ``HV_GND``-connected portion of the wire. For the support, you can solder a short piece of insulated wire to one of the solder slugs at the top of the connector (see the top-left panel of :numref:`fig_ngleed_hv_plug`). Before you glue the insulating foil, consider the modification in :secref:`ngleed_shield_mains`, as the mains plug is quite close.
 
 .. _ngleed_shield_mains:
 
@@ -409,7 +409,7 @@ Shielding the mains plug
 .. todo:
     Check if this is also needed for the older units. Looks like the HV plug is far from the mains there. It may still be necessary to shield the I0.
 
-The positioning of the mains (i.e., power) fuse box and cables in the NG LEED is a bit unfortunate: it is right next to the high-voltage output as well as to the the ``HV_GND`` connection cable (black in our unit, in the foreground of the center-top panel of :numref:`fig_ngleed_hv_plug`). This means that there can be significant capacitive coupling between the mains and the high-voltage cables, in turn showing up as noise at the line frequency. While our ViPErLEED hardware has a very effective suppression of the line frequency **TODO: ref the section about the filter of the AD7705 in our box**, it is a good idea to minimize the noise in the first place.
+The positioning of the mains (i.e., power) fuse box and cables in the NG LEED is a bit unfortunate: it is right next to the high-voltage output as well as to the ``HV_GND`` connection cable (black in our unit, in the foreground of the center-top panel of :numref:`fig_ngleed_hv_plug`). This means that there can be significant capacitive coupling between the mains and the high-voltage cables, in turn showing up as noise at the line frequency. While our ViPErLEED hardware has a very effective suppression of the line frequency **TODO: ref the section about the filter of the AD7705 in our box**, it is a good idea to minimize the noise in the first place.
 
 .. _fig_ngleed_shield_mains:
 .. figure:: /_static/hardware/SpectaLEED_modification/mains_shielding.svg
@@ -479,7 +479,7 @@ Before you start with the modifications, make sure you have all required compone
 .. figure:: /_static/hardware/SpectaLEED_modification/beam_board_response_time.svg
     :align: center
 
-    Top panels: position of the components that should be replaced in the PI regulator circuit (blue) and in the supply for the HV transformer (white). The insets show detailed view of the same components. Bottom: schematic circuit diagrams of the two functional blocks.
+    Top panels: position of the components that should be replaced in the PI regulator circuit (blue) and in the supply for the HV transformer (white). The insets show a detailed view of the same components. Bottom: schematic circuit diagrams of the two functional blocks.
 
 :numref:`fig_ngleed_beam_board_response_time` can be used as a guide to identify the location of the components that will be replaced. As can be seen in the bottom-left part of :numref:`fig_ngleed_beam_board_response_time`, the PI regulator takes the desired value of the beam energy (BEAM_SET) and subtracts the down-scaled version of the current energy (BEAM_MON) to generate the control voltage
 
@@ -507,7 +507,7 @@ Modifying the ``SUPPRESSOR`` range
 
 .. admonition:: TL;DR
 
-    The factory rage of the ``SUPPRESSOR`` dial is not ideal. This can be improved as follows:
+    The factory range of the ``SUPPRESSOR`` dial is not ideal. This can be improved as follows:
 
       * Adjust potentiometer R24 as described in :secref:`ngleed_suppressor_feedback` and shown in :numref:`fig_ngleed_suppressor_feedback`.
       * Add a 100 kΩ resistor in parallel to R125, as shown in :numref:`fig_ngleed_suppressor`.
@@ -651,14 +651,14 @@ Before proceeding, make sure you have all the necessary components and tools:
 
     - **Depending on your unit**: one 5-pole male DIN-connector plug with 45° contacts (e.g., RS 491-011) **or** one 3-pole male DIN-connector plug with 90° contacts (e.g., RS 786-3439). Take a look at the ``BEAM ENERGY PROGRAMMING INPUT`` socket, right under the ``INTERNAL/EXTERNAL`` switch;
     - one cable-mount male BNC connector (e.g., RS 112-1669 \[50 Ω\] or 112-1675 \[75 Ω\]); **TODO @Michael: which connector do we mount on the ViPErLEED box?**
-    - one coaxial cable suitable for the BNC connector above. Typically RG58 (e.g., RS 176-2081 or 240-8087) for 50 Ω connectors, RG59 (e.g., RS 393-024) for 75 Ω connectors. Length: 1--2 m. The ViPErLEED interface box should be close the the NG LEED to reduce as much as possible the capacitive load on the unit;
+    - one coaxial cable suitable for the BNC connector above. Typically RG58 (e.g., RS 176-2081 or 240-8087) for 50 Ω connectors, RG59 (e.g., RS 393-024) for 75 Ω connectors. Length: 1--2 m. The ViPErLEED interface box should be close the NG LEED to reduce as much as possible the capacitive load on the unit;
     - soldering iron and solder;
     - insulation-stripping tools for coaxial cable.
 
 .. _fig_ngleed_program_cable:
 .. figure:: /_static/hardware/SpectaLEED_modification/beam_egy_cable.svg
     :align: center
-    
+
     Schematic connections needed for the cable between the ViPErLEED interface box and the NG LEED unit in order to control the beam energy for LEED-:math:`I(V)`.
 
 In order to control the LEED unit to perform LEED-:math:`I(V)` measurements, the ViPErLEED interface box generates a 0--10 V signal at the ``OUT 0--10 V`` BNC connector. **TODO: ref to section where we explain the box** This signal needs to be brought to the NG LEED unit that will nominally generate a 0--1000 V electron beam energy. You can use a simple coaxial cable assembled as suggested in :numref:`fig_ngleed_program_cable`. Notice that some NG LEED units may have a 5-pole DIN connector instead of the 3-pole one mentioned in the manual.
