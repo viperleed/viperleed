@@ -80,7 +80,7 @@ following:
        conda create with the --no-default-packages flag, then
             pip install "viperleed[GUI]"
        there.
-    2. Deactivating the current environment first, if you have 
+    2. Deactivating the current environment first, if you have
        installed viperleed globally.
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
@@ -209,7 +209,7 @@ class TestGuiMain:
         """Ensure the font database is updated."""
         gui_main()
         mocks['font_path'].assert_called_once_with('gui/fonts')
-        base_path = Path(mocks['font_path'].return_value)
+        base_path = Path(mocks['font_path'].return_value).resolve()
         font_db = mocks['qtg'].QFontDatabase.addApplicationFont
         assert font_db.mock_calls == [
             mocker.call(str(base_path/'DejaVuSans.ttf')),

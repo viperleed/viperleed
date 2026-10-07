@@ -36,7 +36,7 @@ following:
        conda create with the --no-default-packages flag, then
             pip install "viperleed[GUI]"
        there.
-    2. Deactivating the current environment first, if you have 
+    2. Deactivating the current environment first, if you have
        installed viperleed globally.
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''

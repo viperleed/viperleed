@@ -61,11 +61,11 @@ def fixture_mock_process(mocker):
 
 def test_init_dummy_qapp(mocker):
     """Check calls in _init_dummy_qapp."""
-    mock_qtwidgets = mocker.patch('importlib.import_module').return_value
-    mock_qapp = mock_qtwidgets.QApplication
     mock_suppress = mocker.patch(
         f'{_MODULE}.suppress_file_permission_warnings'
         )
+    mock_qtwidgets = mocker.patch('importlib.import_module').return_value
+    mock_qapp = mock_qtwidgets.QApplication
     with pytest.raises(SystemExit):
         _init_dummy_qapp()
     mock_suppress.assert_called_once_with()
@@ -237,8 +237,6 @@ class TestSuppressFilePermissionWarnings:
         expect_path = fallback/'viperleed-gui'
 
         mocker.patch(f'{_MODULE}._UNIX_RUNTIME_DIR', str(fails))
-        mock_qtc = mocker.patch('importlib.import_module').return_value
-        mock_qtc.QStandardPaths.writableLocation.return_value = str(fallback)
 
         mkdir = Path.mkdir
         def mkdir_raises(path, *args, **kwargs):
@@ -252,6 +250,8 @@ class TestSuppressFilePermissionWarnings:
             mkdir(path, *args, **kwargs)
 
         mocker.patch('pathlib.Path.mkdir', mkdir_raises)
+        mock_qtc = mocker.patch('importlib.import_module').return_value
+        mock_qtc.QStandardPaths.writableLocation.return_value = str(fallback)
 
         suppress_file_permission_warnings()
         assert not not_created.exists()
@@ -334,11 +334,12 @@ class TestPyQtSanityChecker:
 
 
 @fixture(name='mock_pyqt_root')
-def fixture_mock_pyqt_root(mocker):
+def fixture_mock_pyqt_root(mocker, mock_import_module):
     """Fake the existence of PyQt5's root path."""
     mock_root = '/path/to/pyqt'
-    mock_pyqt = mocker.patch('importlib.import_module').return_value
+    mock_pyqt = mocker.MagicMock()
     mock_pyqt.__file__ = f'{mock_root}/__init__.py'
+    mock_import_module(PyQt5=mock_pyqt)
     mocker.patch('pathlib.Path.exists', resturn_value=True)
     return Path(mock_root).resolve()
 
@@ -584,9 +585,12 @@ class TestQtUnixPlatformGetter:
         )
 
     @fixture(name='mock_qtc')
-    def fixture_mock_qtc(self, mocker):
+    def fixture_mock_qtc(self, mocker, mock_import_module):
         """Return a fake QtCore module."""
-        return mocker.patch('importlib.import_module').return_value
+        mock_qtc = mocker.MagicMock()
+        fake_modules = {'PyQt5.QtCore': mock_qtc}
+        mock_import_module(**fake_modules)
+        return mock_qtc
 
     @fixture
     @parametrize(version=_supported)

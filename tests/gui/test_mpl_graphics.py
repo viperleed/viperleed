@@ -62,9 +62,9 @@ class TestFindAndImportBackend:
     @parametrize('cairo_version,expect', _cairo_version.items())
     def test_import_success(self, cairo_version, expect, mocker):
         """Check the outcome of a successful backend import."""
-        mocker.patch('importlib.import_module')
         mocker.patch(f'{_MODULE}.get_cairo_version',
                      return_value=cairo_version)
+        mocker.patch('importlib.import_module')
         backend = find_and_import_backend()
         assert backend is expect
 
