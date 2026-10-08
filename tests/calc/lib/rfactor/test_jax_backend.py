@@ -31,7 +31,6 @@ _NUM_GROUPS = 3
 # agree to within a few ULPs (largest relative difference measured on
 # the Fe2O3(012) data: 2.8e-15, for per-group R2).
 _RTOL = 1e-12
-_V0_IMAG = 3.0
 
 
 @pytest.fixture(name='jax_backend')
@@ -67,6 +66,7 @@ def fixture_theo_on_full_grid(fe2o3_012_1x1_dataset):
             ),
         'theo_grid': theo_grid,
         'theo_beams': theo_beams[theo_rows],
+        'v0i': fe2o3_012_1x1_dataset['v0i'],
         }
 
 
@@ -81,7 +81,7 @@ def _r_factor_from_theo_spline(rfactor_func,
         extrapolate=False,
         )
     return rfactor_func(
-        _V0_IMAG,
+        data['v0i'],
         data['energy_step'],
         data['energies'],
         data_and_derivatives_1=data['exp_triplet'],
