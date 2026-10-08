@@ -1070,7 +1070,6 @@ def _rfactor_columns_to_spline(xy):
     for i, beam_xy in enumerate(xy):
         if len(beam_xy) == 0:
             continue
-        beam_xy = np.asarray(beam_xy, dtype=float)
         energies = beam_xy[:, 0]
         values = beam_xy[:, 1]
         indices = np.searchsorted(grid, energies)
