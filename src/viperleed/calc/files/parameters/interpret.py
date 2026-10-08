@@ -28,7 +28,6 @@ import re
 import numpy as np
 
 from viperleed import __version__
-from viperleed.calc.classes.rparams.special.base import SpecialParameterError
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
@@ -1317,7 +1316,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self._ensure_simple_assignment(assignment)
         try:
             self.rpars.R_FACTOR_TYPE = RFactorType(assignment.value)
-        except SpecialParameterError as err:
+        except ValueError as err:
             raise ParameterValueError(param, assignment.value) from err
 
     def interpret_search_convergence(self, assignment, is_updating=False):      # TODO: Issue #139

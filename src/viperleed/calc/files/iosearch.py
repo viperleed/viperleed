@@ -606,7 +606,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                "random number generator - 0: use system time, 1,...: use"
                " init\n")
     output += (
-        formatter['int'].write([int(rp.R_FACTOR_TYPE)]).ljust(16)
+        formatter['int'].write([rp.R_FACTOR_TYPE.value]).ljust(16)
         + '1: use RPe -- 2: use R2\n'
     )
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)

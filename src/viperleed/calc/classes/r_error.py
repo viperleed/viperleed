@@ -17,6 +17,7 @@ import logging
 
 import numpy as np
 
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.lib.string_utils import range_to_str
 
 
@@ -33,7 +34,8 @@ class R_Error():
 
     def __init__(self, r_type, atoms, mode, rfacs, disp_label, lin_disp,
                  v0i=None, energy_range=None):
-        self.r_type = r_type # Type of R-factor (int). Only Pendry R-factor (r_type=1) can give statistical error estimates.
+        # Only the Pendry R-factor gives statistical error estimates
+        self.r_type = r_type  # RFactorType
         self.atoms = atoms  # atoms that have been varied together
         self.mode = mode    # vib, geo, or occ
         self.rfacs = rfacs  # the r-factors from the variations
@@ -73,7 +75,7 @@ class R_Error():
                 k = "all"
             self.displacements = copy.deepcopy(d[k])
 
-        if v0i and energy_range and r_type==1:
+        if v0i and energy_range and r_type is RFactorType.PENDRY:
             self.calc_var_r(v0i, energy_range)
 
 
@@ -102,7 +104,7 @@ class R_Error():
             If v0i or energy_range are negative. This would be
             unphysical.
         """
-        if self.r_type != 1:
+        if self.r_type is not RFactorType.PENDRY:
             raise ValueError("Var(R) can only be calculated when using the "
                              "Pendry R-factor.")
         if not isinstance(v0i, float) and isinstance(energy_range, float):
@@ -136,7 +138,8 @@ class R_Error():
         """
 
         # error estimates are only available for Pendry R-factor
-        if self.r_type != 1:  #TODO: when we introduce a new R-factor, make sure to update this.
+        # TODO: update this when introducing a new R-factor
+        if self.r_type is not RFactorType.PENDRY:
             return (None, None)
         r_min = self.get_r_min
         if self.var_r is None:

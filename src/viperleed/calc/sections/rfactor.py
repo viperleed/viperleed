@@ -122,7 +122,8 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
     # select R-factor function by name
     r_func = rfactor_lib.select_rfactor(rp.R_FACTOR_TYPE.name)
-    logger.info(f'Calculating R-factor type {rp.R_FACTOR_TYPE.name}.')
+    logger.info('Calculating R-factor type %s.',
+                rp.R_FACTOR_TYPE.name.lower())
 
     (_, theo_range, iv_shift, intpol_step) = (
         iorfactor.prepare_rfactor_energy_ranges(

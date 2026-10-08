@@ -19,6 +19,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 from scipy import interpolate
 
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
@@ -45,7 +46,8 @@ def extract_var_r(errors):
     }
     for mode in var_r_info.keys():
         mode_errors = [err for err in errors
-                       if (err.mode == mode and err.r_type==1)]
+                       if (err.mode == mode
+                           and err.r_type is RFactorType.PENDRY)]
         if mode_errors:
             var_r_info[mode] = mode_errors[0].var_r
     return var_r_info
@@ -291,15 +293,19 @@ def format_col_content(content):
 
 
 @log_without_matplotlib(logger, msg='Skipping error plotting.')
-def make_errors_figs(errors, r_factor_type='pendry', formatting=None):
+def make_errors_figs(errors,
+                     r_factor_type=RFactorType.PENDRY,
+                     formatting=None):
     """Creates figures for Errors.pdf.
 
     Parameters
     ----------
     errors : list of R_Error
         contains the R-factors to be plotted
-    r_factor_type: str or RFactorType
-        which R-factor was used. Only used for labelling of axes.
+    r_factor_type : str or RFactorType, optional
+        Which R-factor was used. Only used for labelling of axes.
+        Strings are converted to RFactorType. The default is
+        RFactorType.PENDRY.
     formatting : dict, optional
         Dictionary containing formatting options for the plots.
         To be taken from rparams.PLOT_IV. The default is None.
@@ -318,16 +324,17 @@ def make_errors_figs(errors, r_factor_type='pendry', formatting=None):
     titles = {"geo": "Geometry",
               "vib": "Vibration amplitudes",
               "occ": "Site occupation"}
-    if r_factor_type == 'pendry':
+    r_factor_type = RFactorType(r_factor_type)
+    if r_factor_type is RFactorType.PENDRY:
         ylabel = 'Pendry R-factor'
         varlabel = '$R_P + var(R_P)$'
-    elif r_factor_type == 'smooth':
+    elif r_factor_type is RFactorType.SMOOTH:
         ylabel = 'Smooth R-factor'
         varlabel = '$R_S + var(R_S)$'
-    elif r_factor_type == 'r2':
+    elif r_factor_type is RFactorType.R2:
         ylabel = 'R2 R-factor'
         varlabel = '$R_2 + var(R_2)$'
-    elif r_factor_type == 'zj':
+    elif r_factor_type is RFactorType.ZJ:
         ylabel = 'Zanazzi-Jona R-factor'
         varlabel = '$R_{ZJ} + var(R_{ZJ})$'
     else:
