@@ -143,13 +143,16 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     )
 
 
+# Sorted: glob order depends on the file system, and pytest-xdist
+# workers must all collect the same test IDs in the same order.
 POSCARS_WITHOUT_INFO = [
-    _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
+    _get_poscar_info(f.name) for f in sorted(POSCAR_PATH.glob('POSCAR*'))
     if 'duplicate' not in f.name
     ]
 
 WITH_DUPLICATE_ATOMS = [
-    _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*duplicate*')
+    _get_poscar_info(f.name)
+    for f in sorted(POSCAR_PATH.glob('POSCAR*duplicate*'))
     ]
 
 
