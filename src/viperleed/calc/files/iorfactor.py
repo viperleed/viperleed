@@ -731,9 +731,11 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             layout will be adapted automatically. Numbers that are not nicely
             divisible may be rounded up, resulting in some whitespace.
             default: 2 (one column, two rows).
-    which_r : str or RFactorType
-        which R-factor type to use. Affects the Y-functions in the analysis
-        pdf. Only 'pendry' and 'smooth' are accepted.
+    which_r : str or RFactorType, optional
+        R-factor type whose Y functions are drawn in the analysis PDF.
+        Any value accepted by RFactorType. The analysis PDF is written
+        only for the Pendry and smooth R factors, and skipped for the
+        others. Default is RFactorType.PENDRY.
 
     Returns
     -------
