@@ -55,6 +55,16 @@ logger = logging.getLogger(__name__)
 # other purposes.
 _N_EXPAND_THEO = 2
 
+# Weights of the R2, Zanazzi-Jona and Pendry R factors in the WR line
+# of WEXPEL. Since TensErLEED 2.1, rfactor.f uses the smooth R factor
+# when all three weights are zero (it sets a fourth weight to one).
+_WEXPEL_R_WEIGHTS = {
+    RFactorType.PENDRY: '0.,0.,1.',
+    RFactorType.R2: '1.,0.,0.',
+    RFactorType.ZJ: '0.,1.,0.',
+    RFactorType.SMOOTH: '0.,0.,0.',
+    }
+
 
 class RfactorError(Exception):
     """Base exception for R-factor calculations."""
@@ -478,31 +488,17 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         output += '\n'
     output += '&NL2\n'
     output += ' NSSK=    0,\n'
-    if rp.R_FACTOR_TYPE is RFactorType.PENDRY:
-        output += ' WR=      0.,0.,1.,\n'
-    elif rp.R_FACTOR_TYPE is RFactorType.R2:
-        output += ' WR=      1.,0.,0.,\n'
-    elif rp.R_FACTOR_TYPE is RFactorType.ZJ:
-        output += ' WR=      0.,1.,0.,\n'
-    elif rp.R_FACTOR_TYPE is RFactorType.SMOOTH:
-        if rp.TL_VERSION < Version('2.1.0'):  # No R_S implemented
-            output += ' WR=      0.,0.,1.,\n'
-            logger.warning(
-                'Smooth R-factors are not supported outside of the search for '
-                'TensErLEED versions <2.1. Falling back on Pendry R-factor. '
-                'Resulting R-factors may differ from those calculated during '
-                'the search.'
-                )
-        else:
-            # rfactor.f changes 4th weight to 1
-            output += ' WR=      0.,0.,0.,\n'
-    else:
-        msg = (
-            f'R factor type {rp.R_FACTOR_TYPE} not supported by '
-            'TensErLEED backend.'
-        )
-        logger.error(msg)
-        raise RfactorError(msg)
+    r_factor_type = rp.R_FACTOR_TYPE
+    if (r_factor_type is RFactorType.SMOOTH
+            and rp.TL_VERSION < Version('2.1.0')):  # No R_S implemented
+        logger.warning(
+            'Smooth R-factors are not supported outside of the search for '
+            'TensErLEED versions <2.1. Falling back on Pendry R-factor. '
+            'Resulting R-factors may differ from those calculated during '
+            'the search.'
+            )
+        r_factor_type = RFactorType.PENDRY
+    output += f' WR=      {_WEXPEL_R_WEIGHTS[r_factor_type]},\n'
     output += '''\
  &END
  &NL3
