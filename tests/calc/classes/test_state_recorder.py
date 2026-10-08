@@ -54,7 +54,10 @@ class TestStateSequence:
         assert not set(dir(Sequence)) - set(dir(state_sequence))
         assert not isinstance(state_sequence, Sequence)
 
-    _mutable_seq_methods = set(dir(MutableSequence)) - set(dir(Sequence))
+    # Sorted: pytest-xdist workers must all collect the same test
+    # IDs in the same order.
+    _mutable_seq_methods = sorted(set(dir(MutableSequence))
+                                  - set(dir(Sequence)))
 
     @parametrize(method=_mutable_seq_methods)
     def test_not_a_mutable_sequence(self, state_sequence, method):
