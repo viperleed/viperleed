@@ -38,7 +38,7 @@ They relate to the real electron energy :math:`E` and the filament voltage :math
 
     Always disconnect the BEAM HV plug when measuring the beam current :math:`I_0`.
     Otherwise, the current drawn by the voltage measurement will distort the current measurement.
-    The current from the ViPErLEED interface electronics :math:`I_{\mathrm{ViPErLEED}}` is :math:`\approx6.25\,\mu\mathrm{A}/100` eV.
+    The current from the ViPErLEED interface electronics :math:`I_{\mathrm{ViPErLEED}}` is :math:`\approx6.25\,\mu\mathrm{A} per 100 eV`.
 
 Required Components
 ===================
@@ -175,13 +175,13 @@ New port
 
 
 Next, we will need to fashion a new port on the chassis of the control unit.
-Fortunately, there is ample space on the backplate, next to the existing connectors.
+Fortunately, there is ample space on the back plate, next to the existing connectors.
 We recommend placing the "Beam HV" port below the ":math:`I0_{\text{MON}}`" port, as shown in :numref:`fig_new_port_location`.
 
-Carefully punch (or drill) a hole in the backplate of the chassis in the desired location.
-This may require removing the mains plug and screen connector from the backplate.
+Carefully punch (or drill) a hole in the back plate of the chassis in the desired location.
+This may require removing the mains plug and screen connector from the back plate.
 Then, place the new SHV connector, solder the connection wire to it and place a shrink tube over the solder spot.
-Secure the coaxial connector in place by tightening the nut that came with it on the inside of the backplate.
+Secure the coaxial connector in place by tightening the nut that came with it on the inside of the back plate.
 
 Finally, re-attach the mains and screen plugs if you had to remove them.
 At this point, we highly recommend labeling the newly fashioned port appropriately (e.g., "Beam HV").
@@ -204,7 +204,7 @@ To do this, we can measure the voltage at the filament where the electrons origi
 By placing a voltage divider with two equal resistors parallel to the filament, we can get a reference potential (see the schematic circuit diagram in :numref:`fig_ebeam_circuit`).
 Since the filament is essentially a short circuit, a negligible current (~30 mA) will pass through the parallel resistors.
 
-To directly access the filament, we can conveniently place the new pin right next to the high-voltage diodes next to the filament port.
+To directly access the filament, we can conveniently place the new pin right next to the high-voltage diodes adjacent to the filament port.
 The exact location is shown in :numref:`fig_pin_location_zoomed_out` and :numref:`fig_pin_location_zoomed_in`.
 
 Using a long needle, form two hooks with the remaining wires of the resistors used to make the beam HV pin in step :ref:`section_beam_hv_pin`.
@@ -248,6 +248,6 @@ Reassembly
 
 At this point, the modification is complete and you can reassemble the control unit.
 Plug in all connectors on the motherboard and make sure they are securely connected, including the newly placed beam HV pin.
-Make sure to connect back the protective-earth connector to the chassis.
+Make sure to reconnect the protective-earth connector to the chassis.
 We also highly recommend you replace all cable ties that you cut during disassembly.
 Finally, screw the back plate and the cover plate back on.
