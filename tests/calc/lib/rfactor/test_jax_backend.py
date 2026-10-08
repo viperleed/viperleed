@@ -33,6 +33,8 @@ _NUM_GROUPS = 3
 _RTOL = 1e-12
 
 
+# A fixture, though used once, as the test must request it only after
+# computing its NumPy reference, and x64 must be reset on teardown.
 @pytest.fixture(name='jax_backend')
 def fixture_jax_backend(monkeypatch):
     """Switch dnl to JAX as viperleed-jax does, with float64 on."""
@@ -106,7 +108,9 @@ _jit_r_factor_from_theo_spline = jax.jit(
     rfactor.r_zjj,
     rfactor.r_1,
     ])
-def test_jit_matches_numpy(rfactor_func, per_group, theo_on_full_grid,
+def test_jit_matches_numpy(rfactor_func,
+                           per_group,
+                           theo_on_full_grid,
                            request):
     """Check that R under jax.jit with interpax matches NumPy."""
     group_kwargs = {}
@@ -119,10 +123,10 @@ def test_jit_matches_numpy(rfactor_func, per_group, theo_on_full_grid,
     expected = _r_factor_from_theo_spline(rfactor_func,
                                           theo_on_full_grid,
                                           **group_kwargs)
+    assert np.all(np.isfinite(expected))
     # Switch only now: the reference above must use NumPy and SciPy
     request.getfixturevalue('jax_backend')
-    jax_data = {key: jax.tree_util.tree_map(jax.numpy.asarray, value)
-                for key, value in theo_on_full_grid.items()}
+    jax_data = jax.tree_util.tree_map(jax.numpy.asarray, theo_on_full_grid)
     result = _jit_r_factor_from_theo_spline(rfactor_func,
                                             jax_data,
                                             **group_kwargs)
