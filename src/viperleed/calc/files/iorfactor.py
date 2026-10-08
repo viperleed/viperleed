@@ -751,7 +751,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     if not analysisFile:
         return
-    if which_r not in {'pendry', 'smooth'}:
+    if which_r not in ('pendry', 'smooth'):  # RFactorType is unhashable
         logger.info('Rfactor_analysis.pdf is only available for Pendry and '
                     'Smooth R-factors.')
         return
