@@ -133,6 +133,8 @@ def fe2o3_012_1x1_dataset():
         "beam_correspondence": beam_corr,
         "exp_spline": exp_spline,
         "theo_spline": theo_spline,
+        "theo_grid": theo_grid,
+        "theo_beams": theo_beams_effective,
         "exp_triplet": exp_triplet,
         "theo_triplet": theo_triplet,
     }
