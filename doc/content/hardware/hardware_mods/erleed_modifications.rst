@@ -11,10 +11,10 @@ However, while the ErLEED electronics enable external control over beam energy, 
 When available, ViPErLEED can directly measure the beam voltage and use this value to automatically calibrate the electron energy.
 This is not strictly required, but **highly recommended** in order to prevent distortions of the :math:`I(V)` curves.
 
-It is possible to make the beam voltage accessible for read out in the ErLEED electronics by making a small modification to the control unit.
+It is possible to make the beam voltage accessible for read-out in the ErLEED electronics by making a small modification to the control unit.
 
 .. warning::
-    The modifications described below **will** void any warranty unless you explicitly get a permission by the supplier.
+    The modifications described below **will** void any warranty unless you explicitly get permission from the supplier.
     The ViPErLEED developers take no responsibility for any malfunctions that may occur as a result of modifications to the LEED electronics.
 
 In order to make the beam voltage accessible, we need to measure the average potential at the filament.
@@ -117,7 +117,7 @@ Removing the back plate
 =======================
 
 To make the required modifications, it is also necessary to partially take off the back plate of the control unit.
-There is no need to completely disconnect the back plate from the rest of the electronics, but fashioning the new port, as described below will likely require tilting the plate horizontally.
+There is no need to completely disconnect the back plate from the rest of the electronics, but fashioning the new port, as described below, will likely require tilting the plate horizontally.
 
 For best accessibility, you most likely want to remove the mains plug and screen connection from the back plate (compare :numref:`fig_new_port_location`).
 Additionally, you may need to remove a number of cable ties and unplug various connections to the motherboard (e.g., connections for "ANODE", "L2", "L1/3", "FILAMENT", etc.).
@@ -147,7 +147,7 @@ First, bend the wires of the resistors around the male plug pin as shown in :num
 Then, place the pin in the loop and solder it in place. Repeat the procedure with the second resistor (see :numref:`fig_pin_from_resistors` b and c).
 Make sure the soldered spot is stable and the connection across both resistors and to the pin is intact.
 Finally, cut off protruding wires (see :numref:`fig_pin_from_resistors` c) from the resistors and place a shrink tube over the resistors and soldered spot (see :numref:`fig_pin_from_resistors` d).
-It is a good idea to check at this stage that the two resistors still have approximately the same resistance as before. It is sometimes possible to overheat the resistors while soldering or applying a shrinking tube.
+It is a good idea to check at this stage that the two resistors still have approximately the same resistance as before. It is sometimes possible to overheat the resistors while soldering or applying a shrink tube.
 
 .. _fig_pin_from_resistors:
 .. figure:: /_static/hardware/ErLEED_modification/resistors/pin_from_resistors.svg
@@ -159,7 +159,7 @@ It is a good idea to check at this stage that the two resistors still have appro
 
 To read out the beam voltage during operation, we need access to the new pin from the outside.
 For this, there needs to be a connection from the pin on the motherboard to the backside of the chassis.
-To make the connection, take the new cable, strip off ~0.5 cm of the insulation on both side, and solder the female pin plug to the cable.
+To make the connection, take the new cable, strip off ~0.5 cm of the insulation on both sides, and solder the female pin plug to the cable.
 You should be able to firmly connect the cable to the pin as shown in :numref:`fig_resistors_cable_attached`.
 
 .. _fig_resistors_cable_attached:
