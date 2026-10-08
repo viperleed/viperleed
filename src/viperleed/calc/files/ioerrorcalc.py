@@ -324,6 +324,12 @@ def make_errors_figs(errors, r_factor_type='pendry', formatting=None):
     elif r_factor_type == 'smooth':
         ylabel = 'Smooth R-factor'
         varlabel = '$R_S + var(R_S)$'
+    elif r_factor_type == 'r2':
+        ylabel = 'R2 R-factor'
+        varlabel = '$R_2 + var(R_2)$'
+    elif r_factor_type == 'zj':
+        ylabel = 'Zanazzi-Jona R-factor'
+        varlabel = '$R_{ZJ} + var(R_{ZJ})$'
     else:
         msg = f'Unknown R-factor type "{r_factor_type}"'
         raise ValueError(msg)

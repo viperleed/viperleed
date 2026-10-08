@@ -159,5 +159,9 @@ def errorcalc(sl, rp):
                                          summary_fname='Errors_summary.csv')
 
     # Errors.pdf
-    errors_figs = ioerrorcalc.make_errors_figs(errors, formatting=rp.PLOT_IV)
+    errors_figs = ioerrorcalc.make_errors_figs(
+        errors,
+        r_factor_type=rp.R_FACTOR_TYPE,
+        formatting=rp.PLOT_IV,
+        )
     ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')
