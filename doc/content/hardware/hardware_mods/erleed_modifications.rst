@@ -38,7 +38,7 @@ They relate to the real electron energy :math:`E` and the filament voltage :math
 
     Always disconnect the BEAM HV plug when measuring the beam current :math:`I_0`.
     Otherwise, the current drawn by the voltage measurement will distort the current measurement.
-    The current from the ViPErLEED interface electronics :math:`I_{\mathrm{ViPErLEED}}` is :math:`\approx6.25\,\mu\mathrm{A} per 100 eV`.
+    The current from the ViPErLEED interface electronics :math:`I_{\mathrm{ViPErLEED}}` is :math:`\approx6.25\,\mu\mathrm{A}\,per\,100\,eV`.
 
 Required Components
 ===================
