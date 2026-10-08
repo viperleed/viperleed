@@ -126,6 +126,8 @@ def fe2o3_012_1x1_dataset():
 
     return {
         "label": "fe2o3-012-1x1",
+        "exp_file": EXP_BEAMS_FILE,
+        "theo_file": THEO_BEAMS_FILE,
         "v0i": 3.0,
         "energy_step": energy_step,
         "energies": energies,
@@ -133,6 +135,8 @@ def fe2o3_012_1x1_dataset():
         "beam_correspondence": beam_corr,
         "exp_spline": exp_spline,
         "theo_spline": theo_spline,
+        "theo_grid": theo_grid,
+        "theo_beams": theo_beams_effective,
         "exp_triplet": exp_triplet,
         "theo_triplet": theo_triplet,
     }

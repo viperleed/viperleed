@@ -18,7 +18,9 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 class CachedSpline:
     """
     Proxy that caches derivative splines and last evaluation.
-    Assumes spline is pure: same x -> same y.
+    Assumes spline is pure: same x -> same y. The last evaluation is
+    reused only if called again with the very same x object, which
+    must not have been modified in place in the meantime.
     """
 
     __slots__ = ('_spline', '_deriv_cache', '_last_x', '_last_y')
@@ -30,7 +32,7 @@ class CachedSpline:
         self._last_y = None
 
     def __call__(self, x):
-        if x == self._last_x:
+        if x is self._last_x:
             return self._last_y
         y = self._spline(x)
         self._last_x = x
