@@ -483,8 +483,8 @@ class TestSuccessfulRefcalc:
          self.ase_atoms) = run_from_ase_refcalc
 
     @pytest.fixture(autouse=True)
-    @pytest.mark.usefixtures('run_refcalc')
-    def read_theobeams_from_results(self):
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
+    def read_theobeams_from_results(self, run_refcalc):  # noqa: ARG002
         """Store a list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
         # pylint: disable-next=attribute-defined-outside-init
@@ -535,8 +535,8 @@ class TestFailingRefcalc:
          self.ase_atoms) = run_from_ase_refcalc_fails
 
     @pytest.fixture(autouse=True)
-    @pytest.mark.usefixtures('run_refcalc')
-    def read_theobeams_from_results(self):
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
+    def read_theobeams_from_results(self, run_refcalc):  # noqa: ARG002
         """Store an (empty) list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
         # pylint: disable-next=attribute-defined-outside-init
