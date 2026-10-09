@@ -87,7 +87,8 @@ class TestSelectRfactorByName:
         """Check that the names from_ase accepted before still work."""
         assert select.select_rfactor_by_name(name) is func
 
-    @parametrize('name,r_factor_type', _cases(_ALIASES))
+    @parametrize('name,r_factor_type',
+                 [(n, t) for n, t in _cases(_ALIASES) if not n.isdigit()])
     def test_alias(self, name, r_factor_type):
         """Check the function selected for an R_FACTOR_TYPE alias."""
         selected = select.select_rfactor_by_name(name)
@@ -98,6 +99,12 @@ class TestSelectRfactorByName:
         """Check that names are case-insensitive and stripped."""
         expected = r_1.r_1 if '1' in name else pendry.r_pendry
         assert select.select_rfactor_by_name(name) is expected
+
+    @parametrize(name=('1', '2', '3', '4', ' 1 '))
+    def test_rejects_codes(self, name):
+        """Check that integer codes are not taken as R-factor names."""
+        with pytest.raises(ValueError, match='Unknown R-factor name'):
+            select.select_rfactor_by_name(name)
 
     def test_unknown(self):
         """Check complaints for an unknown R-factor name."""

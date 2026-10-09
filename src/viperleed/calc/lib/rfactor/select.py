@@ -61,8 +61,10 @@ def select_rfactor_by_name(name):
     Parameters
     ----------
     name : str
-        The name of the R factor. Any value accepted by RFactorType,
-        or one of 'r1', 'r_1', 'r1 factor' (case-insensitive).
+        The name of the R factor. Any name accepted by RFactorType,
+        or one of 'r1', 'r_1', 'r1 factor' (case-insensitive). The
+        integer codes that RFactorType accepts (e.g., '1') are not
+        names, and are rejected.
 
     Returns
     -------
@@ -72,12 +74,18 @@ def select_rfactor_by_name(name):
     Raises
     ------
     ValueError
-        If `name` is not a known R-factor name.
+        If `name` is not a known R-factor name, or if it is an
+        integer code.
     """
-    if name.strip().lower() in _R1_NAMES:
+    norm_name = name.strip().lower()
+    if norm_name in _R1_NAMES:
         return r_1.r_1
+    msg = f'Unknown R-factor name: {name}'
+    # RFactorType also accepts the TensErLEED integer codes. They are
+    # not names: '1' would select Pendry, yet one may read it as R1.
+    if norm_name.isdigit():
+        raise ValueError(msg)
     try:
         return select_rfactor(name)
     except ValueError:
-        msg = f'Unknown R-factor name: {name}'
         raise ValueError(msg) from None
