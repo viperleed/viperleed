@@ -354,8 +354,11 @@ two/domain_file
         assert copied == expect_copy
         assert not any(s in copied for s in expect_stay)
 
+        # Domains come in the order of the manifest sections, i.e.,
+        # that of expect_copy. The order of copied is the one of the
+        # file system, which is arbitrary.
         expect_domains = [dest/f
-                          for f, contents in copied.items()
+                          for f, contents in expect_copy.items()
                           if contents and isinstance(contents, dict)]
         assert domains == expect_domains
 
