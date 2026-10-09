@@ -55,5 +55,5 @@ class TestErrorsFigures:
 
         make_figs = io_mock.make_errors_figs
         make_figs.assert_called_once()
-        assert (make_figs.call_args.kwargs['r_factor_type']
-                is RFactorType(r_factor_type))
+        _, kwargs = make_figs.call_args  # .kwargs needs Python 3.8
+        assert kwargs['r_factor_type'] is RFactorType(r_factor_type)

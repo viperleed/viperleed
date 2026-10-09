@@ -69,7 +69,8 @@ class TestWriteRfactorPdf:
                                   analysisFile='analysis.pdf',
                                   which_r=which_r)
         write_analysis.assert_called_once()
-        assert write_analysis.call_args.kwargs['which_r'] is which_r
+        _, kwargs = write_analysis.call_args  # .kwargs needs Python 3.8
+        assert kwargs['which_r'] is which_r
 
 
 
