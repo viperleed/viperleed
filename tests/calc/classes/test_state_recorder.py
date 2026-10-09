@@ -51,7 +51,12 @@ class TestStateSequence:
 
     def test_is_sequence_like(self, state_sequence):
         """Check that state_sequence has the full Sequence interface."""
-        assert not set(dir(Sequence)) - set(dir(state_sequence))
+        # Not part of the interface: __class_getitem__ (Python >= 3.9)
+        # is for subscripting in type hints; __annotations__ appears
+        # in dir(Sequence) on Python >= 3.10 once anything reads it.
+        not_interface = {'__annotations__', '__class_getitem__'}
+        sequence_interface = set(dir(Sequence)) - not_interface
+        assert not sequence_interface - set(dir(state_sequence))
         assert not isinstance(state_sequence, Sequence)
 
     # Sorted: pytest-xdist workers must all collect the same test
