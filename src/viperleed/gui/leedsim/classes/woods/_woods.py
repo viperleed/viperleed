@@ -16,6 +16,7 @@ import re
 
 import numpy as np
 
+from viperleed.calc.lib.math_utils import angle
 from viperleed.gui.helpers import array_to_string
 from viperleed.gui.mathparse import MathParser
 from viperleed.gui.mathparse import UnsupportedMathError
@@ -128,6 +129,7 @@ class _WoodsStyle:
     def startswith(self, string):
         """Return whether self.style starts with string."""
         return self.style.startswith(string)
+
 
 class Woods:
     """Class to represent a reconstruction in Wood's notation.
@@ -906,8 +908,7 @@ class Woods:
         basis_norm = np.linalg.norm(basis, axis=1)
         transformed_norm = np.linalg.norm(transformed_basis, axis=1)
         gamma1, gamma2 = transformed_norm/basis_norm
-        alpha = np.arctan2(np.cross(basis[0], transformed_basis[0]),
-                           np.dot(basis[0], transformed_basis[0]))
+        alpha = angle(basis[0], transformed_basis[0])
         return prefix, gamma1, gamma2, np.degrees(alpha)
 
     def __set_bulk_basis(self, basis, check_matrix=True):
@@ -935,6 +936,7 @@ class Woods:
             raise ValueError(f'Invalid basis={array_to_string(basis)} for '
                              f'{self.string}. Would give an incommensurate '
                              f'matrix={exc.matrix}.') from None
+
 
 # A bit of a trick to assign examples as class attributes. This
 # class method will only do something the first time it is called

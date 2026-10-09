@@ -8,8 +8,8 @@ Part of this functionality used to be in lib.leedbase (originally
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
-    )
+    'Alexandra Mia Imre (@alexmiame)',
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-03-22'
 __license__ = 'GPLv3+'

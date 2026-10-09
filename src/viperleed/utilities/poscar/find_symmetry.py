@@ -1,8 +1,6 @@
 """ViPErLEED utility: Find Symmetry."""
 
-__authors__ = (
-    'Alexander M. Imre (@amimre)',
-    )
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'

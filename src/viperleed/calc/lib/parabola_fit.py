@@ -1,8 +1,8 @@
 """Lib parabola_fit (to be deprecated)."""
 
 __authors__ = (
-    "Florian Kraushofer (@fkraushofer)",
-    "Alexander M. Imre (@amimre)",
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexandra Mia Imre (@alexmiame)',
 )
 __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
 __created__ = "2025-07-16"

@@ -6,9 +6,9 @@ viperleed calculation from a set of input files.
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-11-12'  # Was originally tleedm.py
 __license__ = 'GPLv3+'

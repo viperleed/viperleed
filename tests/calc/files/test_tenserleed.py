@@ -1,8 +1,6 @@
 """Tests for module viperleed.calc.files.vibrocc."""
 
-__authors__ = (
-    'Alexander M. Imre (@amimre)',
-    )
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-06-18'
 __license__ = 'GPLv3+'

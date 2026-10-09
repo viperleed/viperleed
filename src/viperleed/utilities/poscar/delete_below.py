@@ -1,10 +1,10 @@
 """ViPErLEED utility: Delete atoms below a certain height."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'

@@ -5,8 +5,8 @@ Taken originally from gui.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
-    'Alexander M. Imre (@amimre)',
-    )
+    'Alexandra Mia Imre (@alexmiame)',
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-04-15'
 __license__ = 'GPLv3+'

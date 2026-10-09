@@ -2,7 +2,7 @@
 !
 ! v0.2.3
 !
-! Author: Alexander M. Imre, 2021
+! Author: Alexandra Mia Imre, 2021
 ! for license info see ViPErLEED Package
 
 ! Note: file extentsion .f90 required for f2py compatibility, but newer standard can be used.

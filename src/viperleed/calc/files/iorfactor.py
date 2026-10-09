@@ -6,9 +6,9 @@ R-factor calculation.
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
@@ -449,7 +449,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
  V01={f72.write([iv_shift.start]):>10},
  V02={f72.write([iv_shift.stop]):>10},
  VINCR={f72.write([vincr]):>8},
- ISMOTH={i3.write([rp.R_FACTOR_SMOOTH]):>7},
+ ISMOTH={i3.write([rp.R_FACTOR_SMOOTHING]):>7},
  EOT=         0,
  PLOT=        1,
  GAP=         0,
