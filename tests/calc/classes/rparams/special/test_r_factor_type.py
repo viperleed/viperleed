@@ -57,9 +57,10 @@ def test_tensorleed_code(name, code):
     assert RFactorType(name).value == code
 
 
-def test_member_is_its_own_value():
+@parametrize(member=RFactorType)
+def test_member_is_its_own_value(member):
     """Check that an RFactorType is turned into itself."""
-    assert all(RFactorType(member) is member for member in RFactorType)
+    assert RFactorType(member) is member
 
 
 def test_rparams_default():

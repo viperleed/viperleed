@@ -9,6 +9,7 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.rparams.special.r_factor_type import _ALIASES
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.lib.rfactor import pendry
 from viperleed.calc.lib.rfactor import r_1
@@ -24,18 +25,6 @@ _FUNCTIONS = {
     RFactorType.SMOOTH: smooth.r_s,
     }
 
-# All the R_FACTOR_TYPE aliases of each R-factor type
-_ALIASES = {
-    RFactorType.PENDRY: ('pendry', 'pendry_r', 'rp', 'pend', 'p',
-                         'r_pendry', 'pendry r-factor', '1'),
-    RFactorType.R2: ('R2', 'r2', 'r squared', 'r2 factor', '2'),
-    RFactorType.ZJ: ('zj', 'zanazzi jona', 'zanazzi-jona', 'zanazzi_jona',
-                     'zannazi', 'zannazi jona', 'z', 'zj factor', '3'),
-    RFactorType.SMOOTH: ('smooth', 'smoothed', 'smooth pendry',
-                         'smooth-pendry', 'schmid', 's', 'rs', 'r_smooth',
-                         '4'),
-    }
-
 # The names that from_ase.rfactor_from_csv accepted for which_r
 # before RFactorType became the only source of R-factor names
 _FROM_ASE_NAMES = {
@@ -48,6 +37,7 @@ _FROM_ASE_NAMES = {
                          'zannazi-jona'),
     }
 _R1_NAMES = _FROM_ASE_NAMES[r_1.r_1]
+_CODES = ('1', '2', '3', '4')
 
 
 def _cases(aliases):
@@ -57,20 +47,31 @@ def _cases(aliases):
             yield name, key
 
 
+# That all the R_FACTOR_TYPE aliases (_ALIASES) parse correctly is
+# checked in test_r_factor_type. Here we only check that both selection
+# functions accept all of them.
+@parametrize(select_func=(selection.select_rfactor,
+                          selection.select_rfactor_by_name))
+@parametrize('name,rfactor_type', _cases(_ALIASES))
+def test_alias(select_func, name, rfactor_type):
+    """Check the function selected for an R_FACTOR_TYPE alias."""
+    assert select_func(name) is _FUNCTIONS[rfactor_type]
+
+
 class TestSelectRfactor:
     """Tests for the select_rfactor function."""
 
-    @parametrize(r_factor_type=RFactorType)
-    def test_member(self, r_factor_type):
+    @parametrize(rfactor_type=RFactorType)
+    def test_member(self, rfactor_type):
         """Check the function selected for an RFactorType."""
-        selected = selection.select_rfactor(r_factor_type)
-        assert selected is _FUNCTIONS[r_factor_type]
+        selected = selection.select_rfactor(rfactor_type)
+        assert selected is _FUNCTIONS[rfactor_type]
 
-    @parametrize('name,r_factor_type', _cases(_ALIASES))
-    def test_alias(self, name, r_factor_type):
-        """Check the function selected for an R_FACTOR_TYPE alias."""
-        selected = selection.select_rfactor(name)
-        assert selected is _FUNCTIONS[r_factor_type]
+    @parametrize(code=_CODES)
+    def test_code(self, code):
+        """Check the function selected for a TensErLEED integer code."""
+        selected = selection.select_rfactor(code)
+        assert selected is _FUNCTIONS[RFactorType(int(code))]
 
     @parametrize(name=_R1_NAMES)
     def test_no_r1(self, name):
@@ -87,20 +88,14 @@ class TestSelectRfactorByName:
         """Check that the names from_ase accepted before still work."""
         assert selection.select_rfactor_by_name(name) is func
 
-    @parametrize('name,r_factor_type',
-                 [(n, t) for n, t in _cases(_ALIASES) if not n.isdigit()])
-    def test_alias(self, name, r_factor_type):
-        """Check the function selected for an R_FACTOR_TYPE alias."""
-        selected = selection.select_rfactor_by_name(name)
-        assert selected is _FUNCTIONS[r_factor_type]
-
-    @parametrize(name=('  RP  ', ' R1 ', 'R_1'))
-    def test_strips_and_lowercases(self, name):
+    @parametrize('name,expect', (('  RP  ', pendry.r_pendry),
+                                 (' R1 ', r_1.r_1),
+                                 ('R_1', r_1.r_1)))
+    def test_strips_and_lowercases(self, name, expect):
         """Check that names are case-insensitive and stripped."""
-        expected = r_1.r_1 if '1' in name else pendry.r_pendry
-        assert selection.select_rfactor_by_name(name) is expected
+        assert selection.select_rfactor_by_name(name) is expect
 
-    @parametrize(name=('1', '2', '3', '4', ' 1 '))
+    @parametrize(name=(*_CODES, ' 1 '))
     def test_rejects_codes(self, name):
         """Check that integer codes are not taken as R-factor names."""
         with pytest.raises(ValueError, match='Unknown R-factor name'):
