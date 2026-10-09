@@ -113,6 +113,15 @@ class TestFindTypeOrigin:
         assert origin == expect
 
 
+def _any_hint_id(value):
+    """Return a process-independent test ID for test_any_hint."""
+    # The repr of object() holds a per-process address, and
+    # pytest-xdist workers must all collect the same test IDs.
+    if value.__class__ is object:
+        return 'value=object()'
+    return f'value={value!r}'
+
+
 class TestCheckTypes:
     """Collection of tests for the check_types function."""
 
@@ -124,7 +133,7 @@ class TestCheckTypes:
 
     _many_types = ({}, set(), tuple(), 3.5, 1+2j, object(), NestedClass())
 
-    @parametrize(value=_many_types)
+    @parametrize(value=_many_types, idgen=_any_hint_id)
     def test_any_hint(self, value):
         """Check that hinting with Any never complains."""
         instance = SampleClass(attr=1, any_attr=value)

@@ -479,7 +479,9 @@ class TestFieldListMethods:
             with not_raises(FieldsScrambledError):
                 fields.check_sorted()
 
-    _insert_indices = {
+    # Fixed order, also across .pyc caches: pytest-xdist workers
+    # must all collect the same test IDs in the same order.
+    _insert_indices = (
         # We can't really use all permutations, as they would be
         # 9! == 362880 tests. Too many. Pick a few representative
         # ones, plus have the test permute them again every time
@@ -543,7 +545,7 @@ class TestFieldListMethods:
         (8, 2, 0, 5, 6, 7, 4, 1, 3),
         (8, 5, 7, 4, 2, 6, 0, 1, 3),
         (8, 7, 6, 0, 3, 2, 4, 5, 1),
-        }
+        )
 
     def _check_insert_one_at_a_time(self, items, indices):
         """Check that insertion of fields one at a time is sorted."""
