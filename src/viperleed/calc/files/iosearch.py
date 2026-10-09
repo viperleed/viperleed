@@ -428,6 +428,12 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     return output
 
 
+def _format_r_factor_type_line(r_factor_type, int_formatter):
+    """Return the search.steu line with the TensErLEED R-factor code."""
+    return (int_formatter.write([r_factor_type.value]).ljust(16)
+            + '1: use RPe -- 2: use R2\n')
+
+
 def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
     """
     Generates a PARAM and a search.steu file for the search.
@@ -605,10 +611,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += (formatter['int'].write([0]).ljust(16) + "initialisation for "
                "random number generator - 0: use system time, 1,...: use"
                " init\n")
-    output += (
-        formatter['int'].write([rp.R_FACTOR_TYPE.value]).ljust(16)
-        + '1: use RPe -- 2: use R2\n'
-    )
+    output += _format_r_factor_type_line(rp.R_FACTOR_TYPE, formatter['int'])
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
