@@ -1,4 +1,4 @@
-"""Module select of viperleed.calc.lib.rfactor.
+"""Module selection of viperleed.calc.lib.rfactor.
 
 Defines functions that pick the function computing an R factor.
 """

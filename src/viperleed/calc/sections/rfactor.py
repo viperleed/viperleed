@@ -22,7 +22,7 @@ from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
 from viperleed.calc.lib.checksums import validate_multiple_files
-from viperleed.calc.lib.rfactor.select import select_rfactor
+from viperleed.calc.lib.rfactor.selection import select_rfactor
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 logger = logging.getLogger(__name__)

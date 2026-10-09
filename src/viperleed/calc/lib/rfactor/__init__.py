@@ -1,7 +1,7 @@
 """Package rfactor of viperleed.calc.lib.
 
 Contains functions for computing R factors between I(V) curves.
-Use select.select_rfactor to pick one by RFactorType.
+Use selection.select_rfactor to pick one by RFactorType.
 """
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',)

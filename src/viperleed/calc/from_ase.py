@@ -36,7 +36,7 @@ from viperleed.calc.lib import spline_interpolation
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.matrix import rotation_matrix
-from viperleed.calc.lib.rfactor.select import select_rfactor_by_name
+from viperleed.calc.lib.rfactor.selection import select_rfactor_by_name
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 from viperleed.calc.run import run_calc
 

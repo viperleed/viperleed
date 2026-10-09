@@ -1,4 +1,4 @@
-"""Tests for module select of viperleed.calc.lib.rfactor."""
+"""Tests for module selection of viperleed.calc.lib.rfactor."""
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)')
@@ -13,7 +13,7 @@ from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.lib.rfactor import pendry
 from viperleed.calc.lib.rfactor import r_1
 from viperleed.calc.lib.rfactor import r_2
-from viperleed.calc.lib.rfactor import select
+from viperleed.calc.lib.rfactor import selection
 from viperleed.calc.lib.rfactor import smooth
 from viperleed.calc.lib.rfactor import zannazi_jona
 
@@ -63,20 +63,20 @@ class TestSelectRfactor:
     @parametrize(r_factor_type=RFactorType)
     def test_member(self, r_factor_type):
         """Check the function selected for an RFactorType."""
-        selected = select.select_rfactor(r_factor_type)
+        selected = selection.select_rfactor(r_factor_type)
         assert selected is _FUNCTIONS[r_factor_type]
 
     @parametrize('name,r_factor_type', _cases(_ALIASES))
     def test_alias(self, name, r_factor_type):
         """Check the function selected for an R_FACTOR_TYPE alias."""
-        selected = select.select_rfactor(name)
+        selected = selection.select_rfactor(name)
         assert selected is _FUNCTIONS[r_factor_type]
 
     @parametrize(name=_R1_NAMES)
     def test_no_r1(self, name):
         """Check that the R1 R factor cannot be selected."""
         with pytest.raises(ValueError, match='not a valid RFactorType'):
-            select.select_rfactor(name)
+            selection.select_rfactor(name)
 
 
 class TestSelectRfactorByName:
@@ -85,28 +85,28 @@ class TestSelectRfactorByName:
     @parametrize('name,func', _cases(_FROM_ASE_NAMES))
     def test_from_ase_names(self, name, func):
         """Check that the names from_ase accepted before still work."""
-        assert select.select_rfactor_by_name(name) is func
+        assert selection.select_rfactor_by_name(name) is func
 
     @parametrize('name,r_factor_type',
                  [(n, t) for n, t in _cases(_ALIASES) if not n.isdigit()])
     def test_alias(self, name, r_factor_type):
         """Check the function selected for an R_FACTOR_TYPE alias."""
-        selected = select.select_rfactor_by_name(name)
+        selected = selection.select_rfactor_by_name(name)
         assert selected is _FUNCTIONS[r_factor_type]
 
     @parametrize(name=('  RP  ', ' R1 ', 'R_1'))
     def test_strips_and_lowercases(self, name):
         """Check that names are case-insensitive and stripped."""
         expected = r_1.r_1 if '1' in name else pendry.r_pendry
-        assert select.select_rfactor_by_name(name) is expected
+        assert selection.select_rfactor_by_name(name) is expected
 
     @parametrize(name=('1', '2', '3', '4', ' 1 '))
     def test_rejects_codes(self, name):
         """Check that integer codes are not taken as R-factor names."""
         with pytest.raises(ValueError, match='Unknown R-factor name'):
-            select.select_rfactor_by_name(name)
+            selection.select_rfactor_by_name(name)
 
     def test_unknown(self):
         """Check complaints for an unknown R-factor name."""
         with pytest.raises(ValueError, match='Unknown R-factor name'):
-            select.select_rfactor_by_name('definitely-not-an-rfactor')
+            selection.select_rfactor_by_name('definitely-not-an-rfactor')
