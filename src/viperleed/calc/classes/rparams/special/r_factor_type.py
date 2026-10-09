@@ -1,6 +1,6 @@
 """Module r_factor_type of viperleed.calc.classes.rparams.special.
 
-Defines the RFactorType class, a convenience container for parameter R_FACTOR_TYPE.
+Defines the RFactorType enumeration, used for parameter R_FACTOR_TYPE.
 """
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',)
@@ -8,200 +8,77 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-11-11'
 __license__ = 'GPLv3+'
 
+from enum import Enum
 
-from .base import SpecialParameter, SpecialParameterError
-
-
-class RFactorTypeError(SpecialParameterError):
-    """Exception for RFactorType-related errors."""
+from .base import SpecialParameter
 
 
-class RFactorType(SpecialParameter, param='R_FACTOR_TYPE'):
-    """Enum-like parameter for selecting the R-factor type.
+class RFactorType(Enum):
+    """Enumeration of the R-factor types.
 
-    This class provides a robust interface for specifying which
-    R-factor is used. It accepts both integer codes and a range of
-    string identifiers.
+    The value of each member is the integer code that TensErLEED
+    uses for the same R-factor type. Members can be created from
+    their value, or from a string. Strings may be the code itself
+    (e.g., '1'), or a case-insensitive name or synonym (e.g.,
+    'pendry', 'Zanazzi-Jona', 'R²').
 
-    Canonical mapping:
-        1 → 'pendry'
-        2 → 'r2'
-        3 → 'zj'
-        4 → 'smooth'
-
-    Parameters
-    ----------
-    value : {int, str, RFactorType}
-        The value to parse. Integers 1–4 map directly to the canonical
-        names above. Strings are case-insensitive and may include any
-        of the registered synonyms.
-
-    Attributes
-    ----------
-    id : int
-        Integer code identifying the selected R-factor type.
-    name : str
-        Canonical string name of the selected R-factor type.
-
-    Notes
-    -----
-    This class is automatically registered under the parameter name
-    ``'R_FACTOR_TYPE'`` via :meth:`SpecialParameter.__init_subclass__`.
+    Examples
+    --------
+    >>> RFactorType(1) is RFactorType('rp') is RFactorType.PENDRY
+    True
     """
 
-    # Define synonyms for matching
-    _ALIASES = {
-        'pendry': ['pendry_r', 'rp', 'pendry', 'pend', 'p'],
-        'R2': ['r2', 'r squared'],
-        'zj': ['zanazzi jona', 'zanazzi-jona', 'zanazzi_jona', 'zannazi', 'z'],
-        'smooth': [
-            'smoothed',
-            'smooth pendry',
-            'smooth-pendry',
-            'schmid',
-            's',
-        ],
-    }
-
-    _CODE_TO_NAME = {
-        1: 'pendry',
-        2: 'r2',
-        3: 'zj',
-        4: 'smooth',
-    }
-
-    # Constant integer codes
     PENDRY = 1
     R2 = 2
     ZJ = 3
     SMOOTH = 4
 
-    # Build reverse lookup including aliases
-    _NAME_TO_CODE = None  # filled below
+    @classmethod
+    def _missing_(cls, value):
+        """Return the member for a string `value`, or None."""
+        if not isinstance(value, str):
+            return None
+        value = value.strip()
+        if value.isdigit():
+            try:
+                return cls(int(value))
+            except ValueError:
+                return None
+        return _MEMBER_FROM_NAME.get(_norm_name(value))
 
-    def __init__(self, value):
-        r_fac_id, name = self._coerce(value)
-        self._id = r_fac_id
-        self._name = name
 
-    @property
-    def id(self):
-        """Integer code of the R-factor type."""
-        return self._id
+def _norm_name(name):
+    """Return a normalized version of a stripped `name`."""
+    return (
+        name.casefold()
+        .replace('²', '2')
+        .replace('^', '')
+        .replace('_', '')
+        .replace('-', '')
+        .replace(' ', '')
+    )
 
-    @property
-    def name(self):
-        """Canonical name of the R-factor type."""
-        return self._name
 
-    # --------- construction helpers ---------
+_ALIASES = {
+    RFactorType.PENDRY: ('pendry', 'pendry_r', 'rp', 'pend', 'p',
+                         'r_pendry', 'pendry r-factor'),
+    RFactorType.R2: ('r2', 'r squared', 'r2 factor'),
+    RFactorType.ZJ: ('zj', 'zanazzi jona', 'zannazi', 'zannazi jona', 'z',
+                     'zj factor'),
+    RFactorType.SMOOTH: ('smooth', 'smoothed', 'smooth pendry', 'schmid',
+                         's', 'rs', 'r_smooth'),
+    }
+_MEMBER_FROM_NAME = {
+    _norm_name(alias): member
+    for member, aliases in _ALIASES.items()
+    for alias in aliases
+    }
+
+
+class _RFactorTypeParameter(SpecialParameter, param='R_FACTOR_TYPE'):
+    """Register RFactorType as the class of parameter R_FACTOR_TYPE."""
+
     @classmethod
     def from_value(cls, value):
-        """Create an instance from ``value``.
-
-        Parameters
-        ----------
-        value : {int, str, RFactorType}
-            Input to parse into an R-factor type.
-
-        Returns
-        -------
-        RFactorType
-            Parsed instance.
-        """
-        return cls(value)
-
-    @classmethod
-    def _build_reverse_maps(cls):
-        """(Re)build the normalized name->code map including aliases."""
-        name_to_code = {}
-        # canonical names
-        for code, canon in cls._CODE_TO_NAME.items():
-            name_to_code[cls._norm_name(canon)] = code
-        # aliases
-        for canon, aliases in cls._ALIASES.items():
-            code = next(
-                k
-                for k, v in cls._CODE_TO_NAME.items()
-                if v.lower() == canon.lower()
-            )
-            for a in aliases:
-                name_to_code[cls._norm_name(a)] = code
-        cls._NAME_TO_CODE = name_to_code
-
-    @classmethod
-    def _coerce(cls, value):
-        """Parse input into (code, name)."""
-        if cls._NAME_TO_CODE is None:
-            cls._build_reverse_maps()
-
-        # Already an instance
-        if isinstance(value, cls):
-            return value.id, value.name
-
-        # Int-like
-        if isinstance(value, int):
-            try:
-                name = cls._CODE_TO_NAME[value]
-            except KeyError:
-                msg = f'Invalid R_FACTOR_TYPE code: {value}'
-                raise RFactorTypeError(msg) from None
-            return value, name
-
-        # String-like
-        if isinstance(value, str):
-            v = value.strip()
-            if v.isdigit():
-                code = int(v)
-                try:
-                    name = cls._CODE_TO_NAME[code]
-                except KeyError:
-                    msg = f'Invalid R_FACTOR_TYPE code: {value}'
-                    raise RFactorTypeError(msg) from None
-                return code, name
-            # name/alias
-            key = cls._norm_name(v)
-            try:
-                code = cls._NAME_TO_CODE[key]
-            except KeyError:
-                allowed = ', '.join(cls._CODE_TO_NAME.values())
-                msg = f"Invalid R_FACTOR_TYPE name: '{value}'. Allowed: {allowed}"
-                raise RFactorTypeError(msg) from None
-            return code, cls._CODE_TO_NAME[code]
-
-        msg = f'Cannot parse R_FACTOR_TYPE from {type(value).__name__}: {value!r}'
-        raise TypeError(msg)
-
-    @staticmethod
-    def _norm_name(input_str):
-        """Normalize a name for robust matching."""
-        # unify type & whitespace
-        output_str = input_str.strip().casefold()
-        # replace common separators
-        return (
-            output_str.replace('²', '2')
-            .replace('^', '')
-            .replace('_', '')
-            .replace('-', '')
-            .replace(' ', '')
-        )
-
-    def __repr__(self):
-        """Return a representation string of this RFactorType."""
-        return f"RFactorType(code={self.id}, name='{self.name}')"
-
-    def __str__(self):
-        """Return a string version of this RFactorType."""
-        return self.name
-
-    def __int__(self):
-        """Return the integer code of this RFactorType."""
-        return self.id
-
-    def __eq__(self, other):
-        """Compare with int, str, or RFactorType."""
-        try:
-            r_fac_id, _ = self._coerce(other)
-        except (TypeError, ValueError):
-            return NotImplemented
-        return self.id == r_fac_id
+        """Return the RFactorType member corresponding to `value`."""
+        return RFactorType(value)

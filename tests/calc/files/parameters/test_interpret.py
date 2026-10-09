@@ -22,6 +22,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,
     LayerCutTokenType as CutType
     )
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
@@ -1068,20 +1069,20 @@ class TestRFactorType(_TestInterpretBase):
 
     valid = {
         # canonical names
-        'pendry': ('pendry', ('pendry', 1)),
-        'r2': ('r2', ('r2', 2)),
-        'zj': ('zj', ('zj', 3)),
-        'smooth': ('smooth', ('smooth', 4)),
+        'pendry': ('pendry', RFactorType.PENDRY),
+        'r2': ('r2', RFactorType.R2),
+        'zj': ('zj', RFactorType.ZJ),
+        'smooth': ('smooth', RFactorType.SMOOTH),
         # aliases / normalization
-        'pendry alias rp': ('rp', ('pendry', 1)),
-        'zj alias dashed': ('zanazzi-jona', ('zj', 3)),
-        'smooth alias schmid': ('schmid', ('smooth', 4)),
-        'case and whitespace': ('  PeNdRy  ', ('pendry', 1)),
+        'pendry alias rp': ('rp', RFactorType.PENDRY),
+        'zj alias dashed': ('zanazzi-jona', RFactorType.ZJ),
+        'smooth alias schmid': ('schmid', RFactorType.SMOOTH),
+        'case and whitespace': ('  PeNdRy  ', RFactorType.PENDRY),
         # numeric codes passed as strings
-        'code 1': ('1', ('pendry', 1)),
-        'code 2': ('2', ('r2', 2)),
-        'code 3': ('3', ('zj', 3)),
-        'code 4': ('4', ('smooth', 4)),
+        'code 1': ('1', RFactorType.PENDRY),
+        'code 2': ('2', RFactorType.R2),
+        'code 3': ('3', RFactorType.ZJ),
+        'code 4': ('4', RFactorType.SMOOTH),
     }
 
     invalid = {
@@ -1094,10 +1095,7 @@ class TestRFactorType(_TestInterpretBase):
         self.interpret(interpreter, value)
         r_factor_type = self.rpars_value(interpreter)
 
-        expected_name, expected_id = expected
-        assert r_factor_type.name == expected_name
-        assert int(r_factor_type) == expected_id
-        assert str(r_factor_type) == expected_name
+        assert r_factor_type is expected
 
     @parametrize('value', invalid.values(), ids=invalid)
     def test_interpret_invalid_value(self, interpreter, value):
@@ -1115,8 +1113,7 @@ class TestRFactorType(_TestInterpretBase):
         self.interpret(interpreter, 'z')
         value = self.rpars_value(interpreter)
 
-        assert value == 'zj'
-        assert value == 3
+        assert value is RFactorType.ZJ
 
 
 class TestRun(_TestInterpretBase):

@@ -21,6 +21,7 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
@@ -53,6 +54,16 @@ logger = logging.getLogger(__name__)
 # I (@michele-riva) have gotten it wrong. It SHOULD NOT BE USED for
 # other purposes.
 _N_EXPAND_THEO = 2
+
+# Weights of the R2, Zanazzi-Jona and Pendry R factors in the WR line
+# of WEXPEL. Since TensErLEED 2.1, rfactor.f uses the smooth R factor
+# when all three weights are zero (it sets a fourth weight to one).
+_WEXPEL_R_WEIGHTS = {
+    RFactorType.PENDRY: '0.,0.,1.',
+    RFactorType.R2: '1.,0.,0.',
+    RFactorType.ZJ: '0.,1.,0.',
+    RFactorType.SMOOTH: '0.,0.,0.',
+    }
 
 
 class RfactorError(Exception):
@@ -477,31 +488,17 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         output += '\n'
     output += '&NL2\n'
     output += ' NSSK=    0,\n'
-    if str(rp.R_FACTOR_TYPE) == 'pendry':
-        output += ' WR=      0.,0.,1.,\n'
-    elif str(rp.R_FACTOR_TYPE) == 'r2':
-        output += ' WR=      1.,0.,0.,\n'
-    elif str(rp.R_FACTOR_TYPE) == 'zj':
-        output += ' WR=      0.,1.,0.,\n'
-    elif str(rp.R_FACTOR_TYPE) == 'smooth':
-        if rp.TL_VERSION < Version('2.1.0'):  # No R_S implemented
-            output += ' WR=      0.,0.,1.,\n'
-            logger.warning(
-                'Smooth R-factors are not supported outside of the search for '
-                'TensErLEED versions <2.1. Falling back on Pendry R-factor. '
-                'Resulting R-factors may differ from those calculated during '
-                'the search.'
-                )
-        else:
-            # rfactor.f changes 4th weight to 1
-            output += ' WR=      0.,0.,0.,\n'
-    else:
-        msg = (
-            f'R factor type {rp.R_FACTOR_TYPE} not supported by '
-            'TensErLEED backend.'
-        )
-        logger.error(msg)
-        raise RfactorError(msg)
+    r_factor_type = rp.R_FACTOR_TYPE
+    if (r_factor_type is RFactorType.SMOOTH
+            and rp.TL_VERSION < Version('2.1.0')):  # No R_S implemented
+        logger.warning(
+            'Smooth R-factors are not supported outside of the search for '
+            'TensErLEED versions <2.1. Falling back on Pendry R-factor. '
+            'Resulting R-factors may differ from those calculated during '
+            'the search.'
+            )
+        r_factor_type = RFactorType.PENDRY
+    output += f' WR=      {_WEXPEL_R_WEIGHTS[r_factor_type]},\n'
     output += '''\
  &END
  &NL3
@@ -684,7 +681,7 @@ def read_rfactor_columns(cols_dir=''):
 @log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                     analysisFile='', v0i=0., formatting=None,
-                    which_r='pendry'):
+                    which_r=RFactorType.PENDRY):
     '''
     Creates a single PDF file containing the plots of R-factors, using plot_iv.
     If analysisFile is defined, a second 'analysis' PDF will be generated.
@@ -734,15 +731,18 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             layout will be adapted automatically. Numbers that are not nicely
             divisible may be rounded up, resulting in some whitespace.
             default: 2 (one column, two rows).
-    which_r : str
-        which R-factor type to use. Affects the Y-functions in the analysis
-        pdf. Only 'pendry' and 'smooth' are accepted.
+    which_r : str or RFactorType, optional
+        R-factor type whose Y functions are drawn in the analysis PDF.
+        Any value accepted by RFactorType. The analysis PDF is written
+        only for the Pendry and smooth R factors, and skipped for the
+        others. Default is RFactorType.PENDRY.
 
     Returns
     -------
     None
 
     '''
+    which_r = RFactorType(which_r)
     xyTheo, xyExp = read_rfactor_columns(cols_dir=colsDir)
     labels, rfacs = zip(*beams)
     rfac_str = ["R = {:.4f}".format(r) for r in rfacs]
@@ -751,7 +751,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     if not analysisFile:
         return
-    if which_r not in {'pendry', 'smooth'}:
+    if which_r not in (RFactorType.PENDRY, RFactorType.SMOOTH):
         logger.info('Rfactor_analysis.pdf is only available for Pendry and '
                     'Smooth R-factors.')
         return
@@ -1040,13 +1040,13 @@ def _yfuncs_from_splines(exp_spline, theo_spline, out_grid, v0i, which_r):
     theo_intensity = shift_theo_intensity_non_negative(theo_intensity,
                                                        exp_intensity)
 
-    if which_r == 'pendry':
+    if which_r is RFactorType.PENDRY:
         return (
             y_pendry(exp_intensity, exp_derivative_1, v0i),
             y_pendry(theo_intensity, theo_derivative_1, v0i),
         )
 
-    if which_r == 'smooth':
+    if which_r is RFactorType.SMOOTH:
         return (
             y_s(exp_intensity, exp_derivative_1, exp_derivative_2, v0i),
             y_s(theo_intensity, theo_derivative_1, theo_derivative_2, v0i),
@@ -1070,7 +1070,6 @@ def _rfactor_columns_to_spline(xy):
     for i, beam_xy in enumerate(xy):
         if len(beam_xy) == 0:
             continue
-        beam_xy = np.asarray(beam_xy, dtype=float)
         energies = beam_xy[:, 0]
         values = beam_xy[:, 1]
         indices = np.searchsorted(grid, energies)
@@ -1095,7 +1094,7 @@ def _write_rfactor_analysis_pdf_from_splines(
     analysis_file,
     v0i,
     formatting=None,
-    which_r='pendry',
+    which_r=RFactorType.PENDRY,
 ):
     y_exp_data, y_theo_data = _yfuncs_from_splines(
         exp_spline, theo_spline, out_grid,

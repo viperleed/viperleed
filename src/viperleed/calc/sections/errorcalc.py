@@ -12,6 +12,7 @@ import logging
 import os
 
 from viperleed.calc.classes.r_error import R_Error
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
@@ -127,7 +128,7 @@ def errorcalc(sl, rp):
         logger.info("Error calculation: Returning with no output.")
         return
 
-    if str(rp.R_FACTOR_TYPE) not in {'pendry', 'smooth'}:
+    if rp.R_FACTOR_TYPE not in (RFactorType.PENDRY, RFactorType.SMOOTH):
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
                     "and Smooth R-factors.")
@@ -159,5 +160,9 @@ def errorcalc(sl, rp):
                                          summary_fname='Errors_summary.csv')
 
     # Errors.pdf
-    errors_figs = ioerrorcalc.make_errors_figs(errors, formatting=rp.PLOT_IV)
+    errors_figs = ioerrorcalc.make_errors_figs(
+        errors,
+        r_factor_type=rp.R_FACTOR_TYPE,
+        formatting=rp.PLOT_IV,
+        )
     ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')

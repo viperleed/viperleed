@@ -3,15 +3,19 @@
 import numpy as np
 import pytest
 
-from viperleed.calc.lib import rfactor
+from viperleed.calc.lib.rfactor import pendry
+from viperleed.calc.lib.rfactor import r_1
+from viperleed.calc.lib.rfactor import r_2
+from viperleed.calc.lib.rfactor import smooth
+from viperleed.calc.lib.rfactor import zannazi_jona
 
 
 RFACTOR_FUNCS = (
-    rfactor.r_pendry,
-    rfactor.r_1,
-    rfactor.r_2,
-    rfactor.r_s,
-    rfactor.r_zjj,
+    pendry.r_pendry,
+    r_1.r_1,
+    r_2.r_2,
+    smooth.r_s,
+    zannazi_jona.r_zjj,
 )
 
 
@@ -85,7 +89,7 @@ def test_rfactor_per_beam_shape(func, synthetic_pair):
 
 def test_pendry_matches_existing_reference_value(sin_spline, cos_spline):
     energies = np.arange(15.0, 300.0, 0.5)
-    calc_r = rfactor.r_pendry(
+    calc_r = pendry.r_pendry(
         3.0,
         0.5,
         energies,

@@ -24,6 +24,7 @@ from viperleed.calc.classes.slab import Slab
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
+from viperleed.calc.lib.rfactor import r_1
 from viperleed.calc.lib.math_utils import angle
 
 from ..helpers import TEST_DATA
@@ -615,3 +616,21 @@ class TestRfactorFromCsv:
                 4.5,
                 beam_correspondence=beam_correspondence[:-1],
             )
+
+    @staticmethod
+    def test_which_r_r1(fe2o3_012_1x1_beam_files, mocker):
+        """Check that which_r='r1' computes the R1 R factor."""
+        exp_csv, theo_csv, _ = fe2o3_012_1x1_beam_files
+        r_1_func = mocker.patch(
+            'viperleed.calc.lib.rfactor.r_1.r_1',
+            wraps=r_1.r_1,
+            )
+        vpr_ase.rfactor_from_csv((exp_csv, theo_csv), 4.5, which_r='r1')
+        r_1_func.assert_called()
+
+    @staticmethod
+    def test_which_r_code_raises(fe2o3_012_1x1_beam_files):
+        """Check that an integer code is not an R-factor name."""
+        exp_csv, theo_csv, _ = fe2o3_012_1x1_beam_files
+        with pytest.raises(ValueError, match='Unknown R-factor name'):
+            vpr_ase.rfactor_from_csv((exp_csv, theo_csv), 4.5, which_r='1')

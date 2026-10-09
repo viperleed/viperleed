@@ -1,4 +1,4 @@
-"""viperleed.calc.lib.rfactor.r_1."""
+"""Module r_1 of viperleed.calc.lib.rfactor."""
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)',)
@@ -22,7 +22,10 @@ def r_1(
     **kwargs,
 ):
     """
-    Calculate the R2 R factor.
+    Calculate the R1 R factor.
+
+    The R1 R factor is kept for legacy reasons only. It cannot be
+    selected via the R_FACTOR_TYPE parameter.
 
     Uses two sets of beam data, either passed as splines or as
     already calculated arrays of intensities.

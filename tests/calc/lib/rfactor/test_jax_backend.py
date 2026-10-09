@@ -11,7 +11,11 @@ import numpy as np
 import pytest
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
-from viperleed.calc.lib import rfactor
+from viperleed.calc.lib.rfactor import pendry
+from viperleed.calc.lib.rfactor import r_1
+from viperleed.calc.lib.rfactor import r_2
+from viperleed.calc.lib.rfactor import smooth
+from viperleed.calc.lib.rfactor import zannazi_jona
 
 jax = pytest.importorskip('jax')
 interpax = pytest.importorskip('interpax')
@@ -102,11 +106,11 @@ _jit_r_factor_from_theo_spline = jax.jit(
 
 @pytest.mark.parametrize('per_group', [False, True], ids=('overall', 'group'))
 @pytest.mark.parametrize('rfactor_func', [
-    rfactor.r_pendry,
-    rfactor.r_2,
-    rfactor.r_s,
-    rfactor.r_zjj,
-    rfactor.r_1,
+    pendry.r_pendry,
+    r_2.r_2,
+    smooth.r_s,
+    zannazi_jona.r_zjj,
+    r_1.r_1,
     ])
 def test_jit_matches_numpy(rfactor_func,
                            per_group,
