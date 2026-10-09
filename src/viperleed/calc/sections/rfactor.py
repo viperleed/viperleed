@@ -120,7 +120,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         'Using new R-factor calculation. This is still experimental!'
     )
 
-    # select R-factor function by name
+    # select the R-factor function for R_FACTOR_TYPE
     r_func = select_rfactor(rp.R_FACTOR_TYPE)
     logger.info('Calculating R-factor type %s.',
                 rp.R_FACTOR_TYPE.name.lower())

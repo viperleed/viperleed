@@ -538,9 +538,13 @@ def rfactor_from_csv(
     intpol_step : float, default: 0.5
         Energy step for the interpolation/output grid.
     which_r : str, default: 'pendry'
-        Which R factor to use. Any value accepted by the R_FACTOR_TYPE
+        Which R factor to use. Any name accepted by the R_FACTOR_TYPE
         parameter (e.g., 'pendry', 'smooth'), or 'r1' for the R1 R
-        factor, which R_FACTOR_TYPE cannot select.
+        factor, which R_FACTOR_TYPE cannot select. Integer codes
+        (e.g., '1') are not accepted.
+
+        .. versionchanged:: 0.15.0
+            Accept all the names of the R_FACTOR_TYPE parameter.
     beam_correspondence : sequence, optional
         If given, use this correspondence directly in `average_beam_array`
         format. In that case, all experimental beams are kept as read from the

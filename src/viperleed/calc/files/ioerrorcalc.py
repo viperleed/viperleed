@@ -314,6 +314,10 @@ def make_errors_figs(errors,
         Which R-factor was used. Only used for labelling of axes.
         Strings are converted to RFactorType. The default is
         RFactorType.PENDRY.
+
+        .. versionchanged:: 0.15.0
+            Accept RFactorType and all R-factor types, not only
+            'pendry' and 'smooth'. The default is an RFactorType.
     formatting : dict, optional
         Dictionary containing formatting options for the plots.
         To be taken from rparams.PLOT_IV. The default is None.
