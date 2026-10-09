@@ -34,7 +34,7 @@ class TestDomainParameters:
         """Test with a non-existent path to ensure it still resolves."""
         work = 'non_existent_path'
         domain = make_domain(work, 'test_domain')
-        assert domain.workdir == Path(work)
+        assert domain.workdir == Path.cwd() / work
 
     @parametrize(name=('test_domain', ''))
     def test_str(self, name, make_domain):
