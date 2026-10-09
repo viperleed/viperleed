@@ -34,6 +34,14 @@ if CAN_PLOT:
     from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
 
+# Axis label and var(R) label of the error plots for each R factor
+_R_FACTOR_LABELS = {
+    RFactorType.PENDRY: ('Pendry R-factor', '$R_P + var(R_P)$'),
+    RFactorType.R2: ('R2 R-factor', '$R_2 + var(R_2)$'),
+    RFactorType.ZJ: ('Zanazzi-Jona R-factor', '$R_{ZJ} + var(R_{ZJ})$'),
+    RFactorType.SMOOTH: ('Smooth R-factor', '$R_S + var(R_S)$'),
+    }
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
 
@@ -324,22 +332,7 @@ def make_errors_figs(errors,
     titles = {"geo": "Geometry",
               "vib": "Vibration amplitudes",
               "occ": "Site occupation"}
-    r_factor_type = RFactorType(r_factor_type)
-    if r_factor_type is RFactorType.PENDRY:
-        ylabel = 'Pendry R-factor'
-        varlabel = '$R_P + var(R_P)$'
-    elif r_factor_type is RFactorType.SMOOTH:
-        ylabel = 'Smooth R-factor'
-        varlabel = '$R_S + var(R_S)$'
-    elif r_factor_type is RFactorType.R2:
-        ylabel = 'R2 R-factor'
-        varlabel = '$R_2 + var(R_2)$'
-    elif r_factor_type is RFactorType.ZJ:
-        ylabel = 'Zanazzi-Jona R-factor'
-        varlabel = '$R_{ZJ} + var(R_{ZJ})$'
-    else:
-        msg = f'Unknown R-factor type "{r_factor_type}"'
-        raise ValueError(msg)
+    ylabel, varlabel = _R_FACTOR_LABELS[RFactorType(r_factor_type)]
 
     for mode in ("geo", "vib", "occ"):
         mode_errors = [err for err in errors if err.mode == mode]
