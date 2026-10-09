@@ -32,11 +32,11 @@ from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.files.iorfactor import beamlist_to_array
 from viperleed.calc.files.iorfactor import write_Rfactorpdf_from_splines
-from viperleed.calc.lib import rfactor as rfactor_lib
 from viperleed.calc.lib import spline_interpolation
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.matrix import rotation_matrix
+from viperleed.calc.lib.rfactor.select import select_rfactor_by_name
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 from viperleed.calc.run import run_calc
 
@@ -538,7 +538,9 @@ def rfactor_from_csv(
     intpol_step : float, default: 0.5
         Energy step for the interpolation/output grid.
     which_r : str, default: 'pendry'
-        Selects which R-factor to use (e.g. 'pendry'/'smooth').
+        Which R factor to use. Any value accepted by the R_FACTOR_TYPE
+        parameter (e.g., 'pendry', 'smooth'), or 'r1' for the R1 R
+        factor, which R_FACTOR_TYPE cannot select.
     beam_correspondence : sequence, optional
         If given, use this correspondence directly in `average_beam_array`
         format. In that case, all experimental beams are kept as read from the
@@ -578,7 +580,7 @@ def rfactor_from_csv(
         )
 
     # Select R-factor function
-    r_func = rfactor_lib.select_rfactor(which_r)
+    r_func = select_rfactor_by_name(which_r)
 
     # Check if file is supposed to be read from disk or from memory and pass
     # it to readOUTBEMS accordingly.

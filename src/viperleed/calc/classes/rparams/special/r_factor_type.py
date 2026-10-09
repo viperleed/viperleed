@@ -60,12 +60,13 @@ def _norm_name(name):
 
 
 _ALIASES = {
-    RFactorType.PENDRY: ('pendry', 'pendry_r', 'rp', 'pend', 'p'),
-    RFactorType.R2: ('R2', 'r2', 'r squared'),
+    RFactorType.PENDRY: ('pendry', 'pendry_r', 'rp', 'pend', 'p',
+                         'r_pendry', 'pendry r-factor'),
+    RFactorType.R2: ('R2', 'r2', 'r squared', 'r2 factor'),
     RFactorType.ZJ: ('zj', 'zanazzi jona', 'zanazzi-jona', 'zanazzi_jona',
-                     'zannazi', 'z'),
+                     'zannazi', 'zannazi jona', 'z', 'zj factor'),
     RFactorType.SMOOTH: ('smooth', 'smoothed', 'smooth pendry',
-                         'smooth-pendry', 'schmid', 's'),
+                         'smooth-pendry', 'schmid', 's', 'rs', 'r_smooth'),
     }
 _MEMBER_FROM_NAME = {
     _norm_name(alias): member

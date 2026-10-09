@@ -21,8 +21,8 @@ from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
-from viperleed.calc.lib import rfactor as rfactor_lib
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.rfactor.select import select_rfactor
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 logger = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     )
 
     # select R-factor function by name
-    r_func = rfactor_lib.select_rfactor(rp.R_FACTOR_TYPE.name)
+    r_func = select_rfactor(rp.R_FACTOR_TYPE)
     logger.info('Calculating R-factor type %s.',
                 rp.R_FACTOR_TYPE.name.lower())
 

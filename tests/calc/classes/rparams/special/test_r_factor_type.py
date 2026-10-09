@@ -13,14 +13,17 @@ from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 
 _ALIASES = {
     RFactorType.PENDRY: ('pendry', 'pendry_r', 'rp', 'pend', 'p',
+                         'r_pendry', 'pendry r-factor', 'r_p',
                          'PENDRY', ' Pendry R ', 'pendry-r', '1', 1),
     RFactorType.R2: ('R2', 'r2', 'r squared', 'R²', 'r^2', 'R_2',
-                     'R SQUARED', '2', 2),
+                     'r2 factor', 'R SQUARED', '2', 2),
     RFactorType.ZJ: ('zj', 'zanazzi jona', 'zanazzi-jona', 'zanazzi_jona',
-                     'zannazi', 'z', 'ZJ', 'Zanazzi Jona', 'zanazzijona',
+                     'zannazi', 'zannazi jona', 'zannazi-jona', 'z',
+                     'zj factor', 'ZJ', 'Zanazzi Jona', 'zanazzijona',
                      '3', 3),
     RFactorType.SMOOTH: ('smooth', 'smoothed', 'smooth pendry',
-                         'smooth-pendry', 'schmid', 's', 'Smooth_Pendry',
+                         'smooth-pendry', 'schmid', 's', 'rs', 'r_s',
+                         'r_smooth', 'Smooth_Pendry',
                          'SMOOTH', ' s ', '4', 4),
     }
 _VALID = [(alias, member)

@@ -3,8 +3,6 @@
 import numpy as np
 import pytest
 
-from viperleed.calc.lib import rfactor
-
 from .conftest import (
     EXPECTED_FILE,
     build_regression_payload,
@@ -25,7 +23,7 @@ def _assert_regression_block(actual, expected):
 
 
 def test_realdata_regression_payload(request, fe2o3_012_1x1_dataset):
-    actual = build_regression_payload(fe2o3_012_1x1_dataset, rfactor)
+    actual = build_regression_payload(fe2o3_012_1x1_dataset)
 
     if request.config.getoption("--update-rfactor-expected"):
         write_expected_payload(actual)
@@ -52,7 +50,7 @@ def test_realdata_regression_payload(request, fe2o3_012_1x1_dataset):
 
 
 def test_realdata_spline_and_precomputed_paths_match(fe2o3_012_1x1_dataset):
-    payload = build_regression_payload(fe2o3_012_1x1_dataset, rfactor)
+    payload = build_regression_payload(fe2o3_012_1x1_dataset)
 
     for key in ("pendry", "r1", "r2", "rs", "zj"):
         assert payload[key]["overall_from_splines"] == pytest.approx(
@@ -64,7 +62,7 @@ def test_realdata_spline_and_precomputed_paths_match(fe2o3_012_1x1_dataset):
 
 
 def test_realdata_outputs_are_finite(fe2o3_012_1x1_dataset):
-    payload = build_regression_payload(fe2o3_012_1x1_dataset, rfactor)
+    payload = build_regression_payload(fe2o3_012_1x1_dataset)
 
     for key in ("pendry", "r1", "r2", "rs", "zj"):
         assert np.isfinite(payload[key]["overall"])

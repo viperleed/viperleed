@@ -11,6 +11,11 @@ from scipy.interpolate import CubicSpline
 
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.iorfactor import beamlist_to_array
+from viperleed.calc.lib.rfactor import pendry
+from viperleed.calc.lib.rfactor import r_1
+from viperleed.calc.lib.rfactor import r_2
+from viperleed.calc.lib.rfactor import smooth
+from viperleed.calc.lib.rfactor import zannazi_jona
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 from viperleed.calc.lib.spline_interpolation import interpolate_ragged_array
 
@@ -142,13 +147,13 @@ def fe2o3_012_1x1_dataset():
     }
 
 
-def build_regression_payload(dataset, rfactor_module):
+def build_regression_payload(dataset):
     funcs = {
-        'pendry': rfactor_module.r_pendry,
-        'r1': rfactor_module.r_1,
-        'r2': rfactor_module.r_2,
-        'rs': rfactor_module.r_s,
-        'zj': rfactor_module.r_zjj,
+        'pendry': pendry.r_pendry,
+        'r1': r_1.r_1,
+        'r2': r_2.r_2,
+        'rs': smooth.r_s,
+        'zj': zannazi_jona.r_zjj,
     }
 
     payload = {
