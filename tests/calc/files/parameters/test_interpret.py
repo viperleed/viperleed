@@ -1061,6 +1061,64 @@ class TestPlotIV(_TestInterpretBase):
         self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
+class TestRFactorType(_TestInterpretBase):
+    """Tests for interpretation of parameter R_FACTOR_TYPE."""
+
+    param = 'R_FACTOR_TYPE'
+
+    valid = {
+        # canonical names
+        'pendry': ('pendry', ('pendry', 1)),
+        'r2': ('r2', ('r2', 2)),
+        'zj': ('zj', ('zj', 3)),
+        'smooth': ('smooth', ('smooth', 4)),
+        # aliases / normalization
+        'pendry alias rp': ('rp', ('pendry', 1)),
+        'zj alias dashed': ('zanazzi-jona', ('zj', 3)),
+        'smooth alias schmid': ('schmid', ('smooth', 4)),
+        'case and whitespace': ('  PeNdRy  ', ('pendry', 1)),
+        # numeric codes passed as strings
+        'code 1': ('1', ('pendry', 1)),
+        'code 2': ('2', ('r2', 2)),
+        'code 3': ('3', ('zj', 3)),
+        'code 4': ('4', ('smooth', 4)),
+    }
+
+    invalid = {
+        'unknown name': 'nonsense',
+        'invalid numeric code': '5',
+    }
+
+    @parametrize('value,expected', valid.values(), ids=valid)
+    def test_interpret_valid(self, interpreter, value, expected):
+        self.interpret(interpreter, value)
+        r_factor_type = self.rpars_value(interpreter)
+
+        expected_name, expected_id = expected
+        assert r_factor_type.name == expected_name
+        assert int(r_factor_type) == expected_id
+        assert str(r_factor_type) == expected_name
+
+    @parametrize('value', invalid.values(), ids=invalid)
+    def test_interpret_invalid_value(self, interpreter, value):
+        self.check_raises(interpreter, value, err.ParameterValueError)
+
+    def test_interpret_rejects_multiple_values(self, interpreter):
+        with pytest.raises(err.ParameterNumberOfInputsError):
+            self.interpret(interpreter, 'pendry r2')
+
+    def test_interpret_rejects_flag(self, interpreter):
+        with pytest.raises(err.ParameterUnknownFlagError):
+            self.interpret(interpreter, 'pendry', flags_str='foo')
+
+    def test_interpret_assigns_rfactortype_instance(self, interpreter):
+        self.interpret(interpreter, 'z')
+        value = self.rpars_value(interpreter)
+
+        assert value == 'zj'
+        assert value == 3
+
+
 class TestRun(_TestInterpretBase):
     """Tests for interpreting RUN."""
 
