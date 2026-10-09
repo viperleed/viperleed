@@ -18,12 +18,15 @@ _MODULE = 'viperleed.calc.sections.errorcalc'
 class TestErrorsFigures:
     """Tests for the plots of the error calculation."""
 
-    @staticmethod
-    def _mock_rpars(mocker, r_factor_type):
-        """Return fake Rparams with one atom varied once per mode."""
+    @parametrize(r_factor_type=('pendry', 'smooth'))
+    def test_figures_get_r_factor_type(self, r_factor_type, mocker,
+                                       tmp_path, monkeypatch):
+        """Check that error plots are labelled with R_FACTOR_TYPE."""
+        monkeypatch.chdir(tmp_path)
+        # Fake Rparams with one atom varied once per mode
         atom = mocker.MagicMock()
         search_par = mocker.MagicMock(atom=atom, steps=2, el='vac')
-        return mocker.MagicMock(
+        rpars = mocker.MagicMock(
             domainParams=[],
             best_v0r=0.,
             search_index=0,
@@ -35,13 +38,6 @@ class TestErrorsFigures:
             searchpars=[search_par],
             R_FACTOR_TYPE=RFactorType(r_factor_type),
             )
-
-    @parametrize(r_factor_type=('pendry', 'smooth'))
-    def test_figures_get_r_factor_type(self, r_factor_type, mocker,
-                                       tmp_path, monkeypatch):
-        """Check that error plots are labelled with R_FACTOR_TYPE."""
-        monkeypatch.chdir(tmp_path)
-        rpars = self._mock_rpars(mocker, r_factor_type)
         for name in ('R_Error',
                      'section_deltas',
                      'section_superpos'):

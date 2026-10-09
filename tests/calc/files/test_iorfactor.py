@@ -45,20 +45,15 @@ class TestCheckTheoBeamsEnergies:
 class TestWriteRfactorPdf:
     """Tests for writing R-factor plots from TensErLEED column files."""
 
-    @fixture(name='columns')
-    def fixture_columns(self):
-        """Return fake theoretical and experimental column data."""
+    @parametrize(r_factor_type=('pendry', 'smooth'))
+    def test_writes_analysis(self, r_factor_type, mocker):
+        """Check that the analysis PDF is written for an RFactorType."""
         energies = np.linspace(50, 100, 21)
         theo = np.column_stack([energies, 1 + np.sin(energies / 5)])
         exp = np.column_stack([energies, 1 + np.cos(energies / 5)])
-        return [theo], [exp]
-
-    @parametrize(r_factor_type=('pendry', 'smooth'))
-    def test_writes_analysis(self, r_factor_type, columns, mocker):
-        """Check that the analysis PDF is written for an RFactorType."""
         mocker.patch.object(iorfactor,
                             'read_rfactor_columns',
-                            return_value=columns)
+                            return_value=([theo], [exp]))
         mocker.patch.object(iorfactor, 'plot_iv')
         write_analysis = mocker.patch.object(
             iorfactor,
@@ -73,7 +68,7 @@ class TestWriteRfactorPdf:
         assert kwargs['which_r'] is which_r
 
 
-
+_PENDRY_FALLBACK_LOG = 'Falling back on Pendry'
 _WEXPEL_WEIGHTS = {  # r_factor_type, tl_version, (wr_line, warns)
     'pendry': ('pendry', '2.0.0', (' WR=      0.,0.,1.,', False)),
     'r2': ('r2', '2.0.0', (' WR=      1.,0.,0.,', False)),
@@ -118,4 +113,4 @@ class TestWriteWEXPELRFactorType:
         rpars.TL_VERSION = Version(tl_version)
         wr_line, warns = expect
         assert wr_line in write_wexpel(rpars)
-        assert ('Falling back on Pendry' in caplog.text) == warns
+        assert (_PENDRY_FALLBACK_LOG in caplog.text) == warns
