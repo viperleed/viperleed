@@ -4,7 +4,7 @@ Defines functions that pick the function computing an R factor.
 """
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',
-               'Florian Kraushofer (@fkraushofer)',)
+               'Florian Kraushofer (@fkraushofer)')
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-08'
 __license__ = 'GPLv3+'
@@ -79,4 +79,5 @@ def select_rfactor_by_name(name):
     try:
         return select_rfactor(name)
     except ValueError:
-        raise ValueError(f'Unknown R-factor name: {name}') from None
+        msg = f'Unknown R-factor name: {name}'
+        raise ValueError(msg) from None

@@ -11,8 +11,8 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
-from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorfactor
 from viperleed.calc.lib.version import Version

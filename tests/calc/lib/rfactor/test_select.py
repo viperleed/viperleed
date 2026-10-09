@@ -1,7 +1,7 @@
 """Tests for module select of viperleed.calc.lib.rfactor."""
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',
-               'Florian Kraushofer (@fkraushofer)',)
+               'Florian Kraushofer (@fkraushofer)')
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-10-08'
 __license__ = 'GPLv3+'
@@ -75,7 +75,7 @@ class TestSelectRfactor:
     @parametrize(name=_R1_NAMES)
     def test_no_r1(self, name):
         """Check that the R1 R factor cannot be selected."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match='not a valid RFactorType'):
             select.select_rfactor(name)
 
 
