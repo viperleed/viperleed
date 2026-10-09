@@ -311,8 +311,13 @@ class TestViPErLEEDCLI:
     @parametrize('module_member,expect', _members.values(), ids=_members)
     def test_child_cls_from_module(self, module_member, expect, mocker):
         """Check fetching a CLI class from a module name."""
-        mocker.patch('importlib.import_module')
-        mocker.patch('inspect.getmembers', return_value=(module_member,))
+        # Patch getmembers first: on Python >= 3.11, mocker.patch
+        # imports the target module via importlib.import_module, so
+        # it would patch a mock instead of inspect once import_module
+        # is replaced.
+        getmembers = mocker.patch('inspect.getmembers',
+                                  return_value=(module_member,))
+        import_module = mocker.patch('importlib.import_module')
         # pylint: disable-next=protected-access           # OK in tests
         get = ViPErLEEDCLI._child_class_from_module_name
         if expect is NotAViPErLEEDCLIError:
@@ -320,6 +325,7 @@ class TestViPErLEEDCLI:
                 get('some_module')
         else:
             assert get('some_module') == expect
+        getmembers.assert_called_once_with(import_module.return_value)
 
     def test_cli_name_default(self, make_cli_cls):
         """Check default assignment of a CLI name."""
