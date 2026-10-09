@@ -1,0 +1,16 @@
+# for testing offsets in displacements
+
+== OFFSETS
+    geo Cu_surf z = 0.05
+    geo Cu_def 2 z = -0.03
+    vib Cu_surf = 0.02
+
+== SEARCH offsets
+    = GEO_DELTA
+    Cu_surf z = -0.1 0.1 0.05
+
+    = VIB_DELTA
+    Cu_surf = -0.1 0.1 0.05
+
+    = CONSTRAIN
+    geo Cu_def = linked
