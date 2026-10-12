@@ -24,7 +24,7 @@ Date: 26.04.2021
 #define LENGTH(array)  (sizeof(array) / sizeof((array)[0]))
 #define MIN(a, b)      ((a) < (b) ? (a) : (b))
 #ifndef NAN
-    #define NAN   (1.0/0)   // Floating-point not-a-number
+    #define NAN   (0.0/0.0)   // Floating-point not-a-number
 #endif
 
 // Interpret the same value as either uint16_t or a 2-bytes array
