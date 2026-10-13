@@ -326,93 +326,49 @@ class TestSlabSymmetrization:
         return (rattled_slab, slab, param, info, *rest)
 
     _known_incorrect_rattled = {
-        'pmm-ucell=square': 'Often reduced to pm',
-        'pgg-ucell=rectangular': 'Often reduced to pg',
-        'pgg-ucell=square': 'Often reduced to pg',
-        'rcm-ucell=square': 'Sometimes reduced to pm',
-        'rcm-ucell=rectangular': 'Sometimes reduced to pm',
-        'rcmm-ucell=square': 'Often reduced to, e.g., pmg',
-        'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
-        'pmm-ucell=rectangular': 'Sometimes reduced to pm',
-        'pmg-ucell=rectangular': 'Sometimes identified as rcm',
-        'cmm': 'Sometimes reduced to cm',
-        'p2': 'Sometimes reduced to p1',
-        'cm_1m1': 'Sometimes reduced to p1',
-        'p4': 'Sometimes reduced to p1',
-        'p4m': 'Sometimes reduced to cm',
-        'p4g': 'Sometimes reduced to cm',
-        'p3': 'Sometimes reduced to p1',
-        'p31m': 'Often reduced to cm',
-        'p3m1': 'Often reduced to cm',
-        'p6': 'Sometimes reduced to p2/p1',
-        'p6m': 'Sometimes reduced to cm',
-        'hex_cm_1m1': 'Often reduced to p1',
-        'hex_cm_11': 'Often reduced to p1',
-        'hex_cm_10': 'Often reduced to p1',
-        'hex_cm_01': 'Often reduced to p1',
-        'hex_cm_21': 'Often reduced to p1',
-        'hex_cm_12': 'Often reduced to p1',
-        'hex_cmm_11': 'Often reduced to cm',
+        'rcmm-ucell=rectangular': 'Seeded rattling gives pgg instead of rcmm',
+        'p6': 'Seeded rattling gives p1 instead of p6',
+        'hex_cm_11': 'Seeded rattling gives p1 instead of cm',
+        'hex_cm_12': 'Seeded rattling gives p1 instead of cm',
+        'hex_cmm_11': 'Seeded rattling gives cm instead of cmm',
         'hex_cmm_10': 'Known invalid plane group p2. May be correct cmm here',
         'hex_cmm_01': 'Known invalid plane group p2. May be correct cmm here',
-        'hex_p2': 'Often reduced to p1',
-        'square_cm_11': 'Sometimes reduced to pm',
-        'square_cm_1m1': 'Often reduced to pm',
-        'square_pmm': 'Sometimes reduced to pm',
-        'square_cmm': 'Sometimes reduced to cm',
-        'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
-        'poscar_ag100': 'Often reduced from p4m to cm',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'Sometimes reduced to p1 from p3'
+        'square_pmm': 'Seeded rattling gives pm instead of pmm',
+        'poscar_36carbon_atoms_p6m': (
+            'Seeded rattling gives p3m1 instead of p6m'
             ),
+        'poscar_ag100': 'Seeded rattling gives cm instead of p4m',
         'poscar-Cu2O(111)_1x1_surplus_oxygen': (
-            'Sometimes reduced to cm from p3m1'
+            'Seeded rattling gives p1 instead of p3m1'
             ),
         'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
-        'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
-        'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
-        'poscar_mgo': 'Sometimes reduced to cmm from p4m',
-        'poscar-ru': 'Sometimes reduced to cm from p3m1',
-        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
-        'poscar-SiC_H': 'Often reduced to cm from p3m1',
-        'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
-        'poscar_tio2_small': 'Sometimes reduced to pm from pmm',
-        'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
-        'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'Sometimes reduced to p1 from p3'
-            ),
-        'infoless_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
-        'infoless_poscar-Cu2O(111)_1x1_surplus_oxygen': (
-            'Sometimes reduced to cm from p3m1'
-            ),
+        'poscar_fe3o4_001_cod': 'Seeded rattling gives cm instead of cmm',
+        'poscar_mgo': 'Seeded rattling gives cmm instead of p4m',
+        'poscar-SiC_H': 'Seeded rattling gives cm instead of p3m1',
         'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
-        'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
-        'infoless_poscar-Fe3O4_(001)_cod1010369': (
-            'Sometimes reduced to cm from cmm'
+        'infoless_poscar-MgO_cod_9006456': (
+            'Seeded rattling gives cmm instead of p4m'
             ),
-        'infoless_poscar-graphene': 'Sometimes reduced to pmg from pmm',
-        'infoless_poscar-In2O3_(111)': 'Sometimes reduced to p1 from p3',
-        'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
-        'infoless_poscar-MgO_cod_9006456': 'Sometimes reduced to cmm from p4m',
-        'infoless_poscar-Ru(0001)-rt3Te': 'Sometimes reduced to cm from p3m1',
+        'infoless_poscar-Ru(0001)-rt3Te': (
+            'Seeded rattling gives cm instead of p31m'
+            ),
         'infoless_poscar-Sb_Si(111)_rect': (
-            'Sometimes symmetry increased to rcm from pm'
+            'Seeded rattling gives rcm instead of pm'
             ),
-        'infoless_poscar-SiC_H': 'Often reduced to cm from p3m1',
-        'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
-        'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
-        'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
-        'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
-        'double_bulk-ru': 'Sometimes reduced to cm from p3m1',
-        'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
+        'infoless_poscar-SiC_H': 'Seeded rattling gives cm instead of p3m1',
+        'bulk_repeat_poscar-Cu2O_111': (
+            'Seeded rattling gives cm instead of p3m1'
+            ),
+        'double_bulk-ru': 'Seeded rattling gives cm instead of p3m1',
         }
 
     def test_rattled_group(self, rattled_slab, first_case):
         """Check that the rattled slab has the right plane group."""
         rattled, original, param, info, *_ = rattled_slab
         symmetry.findSymmetry(rattled, param)
-        with may_fail(first_case, self._known_incorrect_rattled):
+        with may_fail(first_case,
+                      self._known_incorrect_rattled,
+                      strict=True):
             if info.symmetry.hermann:
                 assert hermann(original.planegroup) == info.symmetry.hermann
             assert original.planegroup == rattled.planegroup
