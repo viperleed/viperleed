@@ -377,10 +377,12 @@ class TestBulk3DOperations:
     """Tests for 3D symmetry operations of BulkSlab objects."""
 
     @staticmethod
-    def move_atom(slab, atom_index, distance):
+    def move_atom(slab, atom_index, distance, rng):
         """Move the atom at a given index by distance in a random direction."""
         atom = slab.atlist.get(atom_index)
-        direction = np.random.randn(2)
+        # A seeded rng (see tests/conftest.py), so that the outcome
+        # of each test is the same in every run
+        direction = rng.standard_normal(2)
         direction /= np.linalg.norm(direction)
         atom.cartpos[:2] += distance * direction
         slab.update_fractional_from_cartesian()
@@ -430,11 +432,11 @@ class TestBulk3DOperations:
                        strict=False)  # Sometimes they succeed
     @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
-                                             bulk_slab_with_glide):
+                                             bulk_slab_with_glide, rng):
         """Check identification of bulk glide plane with atoms a bit off."""
         slab, glide, eps = bulk_slab_with_glide
         for atom_ind in atoms_to_move:
-            self.move_atom(slab, atom_ind, 0.99*eps)
+            self.move_atom(slab, atom_ind, 0.99*eps, rng)
         assert slab.is_bulk_glide_symmetric(glide, 2, eps)
 
     fe3o4_bulk = poscar_slabs.CaseBulkSlabs.case_fe3o4_bulk
@@ -448,17 +450,17 @@ class TestBulk3DOperations:
         assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
     @parametrize_with_cases('bulk', cases=fe3o4_bulk)
-    def test_bulk_screw_symmetric(self, bulk, subtests):
+    def test_bulk_screw_symmetric(self, bulk, subtests, rng):
         """Check correct identification of bulk screw axis."""
         slab, rpars, *_ = bulk
         kwargs = {'order': 4, 'sublayer_period': 3, 'eps': rpars.SYMMETRY_EPS}
         with subtests.test('Move atom that is transformed by 4-fold screw'):
             # Atom no. 49 (oxygen) is not on the 4-fold screw
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
+            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS, rng)
             assert slab.is_bulk_screw_symmetric(**kwargs)
         with subtests.test('Move atom at 4-fold screw'):
             # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
+            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS, rng)
             try:
                 assert slab.is_bulk_screw_symmetric(**kwargs)
             except AssertionError:
@@ -467,8 +469,8 @@ class TestBulk3DOperations:
                 raise AssertionError('XPASS: This test should FAIL unless '
                                      'this is the better-symmetry branch')
         with subtests.test('Move both atoms'):
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
+            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS, rng)
+            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS, rng)
             try:
                 assert slab.is_bulk_screw_symmetric(**kwargs)
             except AssertionError:
