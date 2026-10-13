@@ -267,25 +267,11 @@ class TestSymmetryConstraints:
                 assert set(at.num for at in atom.linklist) == linked
 
     _known_invalid_constrained_group = {
-        'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
-        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
-        'pm_10': 'Known to sometimes fail with a random shift',
-        'cm_1m1': 'Known to sometimes fail with a random shift',
-        'hex_cm_10': 'Known to sometimes fail with a random shift',
-        'hex_cm_01': 'Known to sometimes fail with a random shift',
-        'hex_cm_1m1': 'Known to sometimes fail with a random shift',
-        'hex_cm_11': 'Known to sometimes fail with a random shift',
-        'hex_cm_21': 'Known to sometimes fail with a random shift',
-        'hex_cm_12': 'Known to sometimes fail with a random shift',
+        'hex_cm_1m1': SEEDED_SHIFT_FAILS,
+        'hex_cm_12': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'square_pm_10': 'Known to often fail with a random shift',
-        'square_pm_01': 'Known to often fail with a random shift',
-        'square_cm_11': 'Known to often fail with a random shift',
-        'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
-        'poscar_sb_si_111': 'Known to rarely fail with a random shift',
-        'poscar_sto110_4x1': 'Known to sometimes fail with a random shift',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
@@ -295,7 +281,9 @@ class TestSymmetryConstraints:
         if not info.symmetry.hermann:
             pytest.skip('No symmetry information available')
         symmetry.findSymmetry(slab, param)
-        with may_fail(first_case, self._known_invalid_constrained_group):
+        with may_fail(first_case,
+                      self._known_invalid_constrained_group,
+                      strict=True):
             assert hermann(slab.planegroup) == info.symmetry.hermann
 
     _known_do_not_preserve = {
