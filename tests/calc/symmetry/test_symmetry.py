@@ -327,7 +327,7 @@ class TestSlabSymmetrization:
     @fixture
     @parametrize_with_cases('args', cases=get_cases('all'),
                             filter=~id_has_suffix('p1'))
-    def rattled_slab(self, args):
+    def rattled_slab(self, args, rng):
         """Return a slab with atoms slightly misplaced."""
         slab, param, info, *rest = args
         symmetry.findSymmetry(slab, param)
@@ -335,7 +335,9 @@ class TestSlabSymmetrization:
         rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
         param.SYMMETRY_EPS = param.SYMMETRY_EPS.from_value(2 * 2**0.5 * eps)
-        displacements = np.random.uniform(-eps, eps, (slab.n_atoms, 2))
+        # A seeded rng (see tests/conftest.py), so that the outcome
+        # of each case is the same in every run
+        displacements = rng.uniform(-eps, eps, (slab.n_atoms, 2))
         for atom, delta in zip(rattled_slab, displacements):
             atom.cartpos[:2] += delta
         rattled_slab.collapse_cartesian_coordinates()
