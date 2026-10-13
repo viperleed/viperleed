@@ -428,9 +428,17 @@ class TestBulk3DOperations:
         glide = SymPlane(np.array([0.25, 0]), ab_cell[1], ab_cell)
         return slab, glide, eps
 
-    @pytest.mark.xfail(reason='Known bug. Will be fixed in better-symmetry',
-                       strict=False)  # Sometimes they succeed
-    @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
+    _seeded_glide_bug = pytest.mark.xfail(
+        reason=('Known bug, fails with the seeded direction. '
+                'Will be fixed in better-symmetry'),
+        strict=True,
+        )
+
+    @parametrize(atoms_to_move=(
+        (1,),
+        (3,),
+        pytest.param((1, 3), marks=_seeded_glide_bug),
+        ))
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
                                              bulk_slab_with_glide, rng):
         """Check identification of bulk glide plane with atoms a bit off."""
