@@ -239,34 +239,29 @@ class TestSymmetryConstraints:
                     assert atom.freedir == 1
 
     _known_invalid_linking = {
-        'rcm-ucell=rectangular': 'Known to regularly fail with a random shift',
-        'rcm-ucell=square': 'Known to regularly fail with a random shift',
-        'rcmm-ucell=rectangular': 'Known to regularly fail with a random shift',
-        'rcmm-ucell=square': 'Known to regularly fail with a random shift',
-        'hex_cm_1m1': 'Known to often fail with a random shift',
-        'hex_cm_11': 'Known to sometimes fail with a random shift',
-        'hex_cm_10': 'Known to regularly fail with a random shift',
-        'hex_cm_01': 'Known to regularly fail with a random shift',
-        'hex_cm_21': 'Known to regularly fail with a random shift',
-        'hex_cm_12': 'Known to regularly fail with a random shift',
+        'rcm-ucell=rectangular': SEEDED_SHIFT_FAILS,
+        'rcm-ucell=square': SEEDED_SHIFT_FAILS,
+        'rcmm-ucell=rectangular': SEEDED_SHIFT_FAILS,
+        'rcmm-ucell=square': SEEDED_SHIFT_FAILS,
+        'hex_cm_10': SEEDED_SHIFT_FAILS,
+        'hex_cm_01': SEEDED_SHIFT_FAILS,
+        'hex_cm_21': SEEDED_SHIFT_FAILS,
+        'hex_cm_12': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'square_cm_1m1': 'Known to sometimes fail with a random shift',
-        'square_cm_11': 'Known to sometimes fail with a random shift',
-        'square_pm_10': 'Known to sometimes fail with a random shift',
-        'square_pm_01': 'Known to sometimes fail with a random shift',
-        'square_pg_10': 'Known to often fail with a random shift',
-        'pm_10': 'Known to sometimes fail with a random shift',
-        'pg_10': 'Known to often fail with a random shift',
-        'cm_1m1': 'Known to often fail with a random shift',
-        'poscar_fe3o4_001_cod': 'Known to rarely fail with a random shift',
-        'p6': 'Known to rarely fail with a random shift',
+        'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'square_pm_10': SEEDED_SHIFT_FAILS,
+        'square_pm_01': SEEDED_SHIFT_FAILS,
+        'pm_10': SEEDED_SHIFT_FAILS,
+        'pg_10': SEEDED_SHIFT_FAILS,
         }
 
     def test_correct_atom_linking(self, with_symmetry_constraints, first_case):
         """Check that atoms were linked as expected."""
         slab, _, info = with_symmetry_constraints()
-        with may_fail(first_case, self._known_invalid_linking):
+        with may_fail(first_case,
+                      self._known_invalid_linking,
+                      strict=True):
             for atom_n, linked in info.symmetry.link_groups.items():
                 atom = slab.atlist.get(atom_n)
                 assert set(at.num for at in atom.linklist) == linked
