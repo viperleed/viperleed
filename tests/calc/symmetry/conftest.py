@@ -19,9 +19,6 @@ from .. import poscar_slabs
 from . import simple_slabs
 
 
-RANDOM = np.random.default_rng().uniform
-
-
 def get_cases(which='all'):
     """Return a sequence of test cases."""
     cases = []
@@ -39,10 +36,12 @@ slab_p6m = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p6m)
 
 @fixture(name='with_plane_group')
 @parametrize_with_cases('args', cases=get_cases('all'))
-def fixture_factory_with_plane_group(args):
+def fixture_factory_with_plane_group(args, rng):
     """Find plane group, including a (random) rigid origin shift."""
     slab, param, info, *_ = args
-    shift = RANDOM(-1, 1, size=2)
+    # A seeded rng (see tests/conftest.py), so that the shift, and
+    # hence the outcome of each test, is the same in every run
+    shift = rng.uniform(-1, 1, size=2)
 
     def _make(random_shifts=True):
         if random_shifts:
