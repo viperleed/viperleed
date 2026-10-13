@@ -51,10 +51,8 @@ if_ase = pytest.mark.skipif(
     )
 with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
                                           has_tag=Tag.BULK_PROPERTIES)
-with_layers = parametrize_with_cases(
-    'args',
-    cases=CasePOSCARSlabs.case_layer_info_poscar
-    )
+with_layers = parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                                     has_tag=Tag.LAYER_INFO)
 infoless_poscar = parametrize_with_cases(
     'args',
     cases=CasePOSCARSlabs.case_infoless_poscar
