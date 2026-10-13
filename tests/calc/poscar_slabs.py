@@ -167,24 +167,6 @@ def _add_known_bulk_properties(info, bulk_info):
     return info
 
 
-def _add_known_layer_properties(info, layer_info):
-    """Add layer properties to a TestInfo object."""
-    info.layer_properties = layer_info
-    return info
-
-
-def _add_nearest_neighbor_info(info, nn_info):
-    """Add nearest-neighbour information to a TestInfo object."""
-    info.nearest_neighbors = nn_info
-    return info
-
-
-def _add_surface_atom_info(info, surface_atom_info):
-    """Add info about surface atoms to a TestInfo object."""
-    info.surface_atoms = surface_atom_info
-    return info
-
-
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
         _get_poscar_info('POSCAR_Cu2O_111', 22+43),
@@ -200,9 +182,6 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             ),
         ),
     )
-POSCAR_WITH_LAYER_INFO = ()
-POSCAR_WITH_NEAREST_NEIGHBOR_INFO = ()
-POSCAR_WITH_SURFACE_ATOM_INFO = ()
 
 SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
@@ -244,29 +223,6 @@ class CasePOSCARSlabs:
         slab, rpars, info = self.case_poscar(info)
         rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
         return slab, rpars, info
-
-    @parametrize(info=POSCAR_WITH_LAYER_INFO, idgen=make_poscar_ids())
-    @case(tags=Tag.LAYER_INFO)
-    def case_layer_info_poscar(self, info):
-        """Return a slab, an Rparams and info on expected layers."""
-        slab, rpars, info = self.case_poscar(info)
-        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
-        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
-        slab.create_layers(rpars)
-        return slab, rpars, info
-
-    @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO,
-                 idgen=make_poscar_ids())
-    @case(tags=Tag.NEAREST_NEIGHBOURS)
-    def case_nearest_neighbors_poscar(self, info):
-        """Return a slab, an Rparams and info on expected nearest neighbors."""
-        return self.case_poscar(info)
-
-    @parametrize(info=POSCAR_WITH_SURFACE_ATOM_INFO, idgen=make_poscar_ids())
-    @case(tags=Tag.SURFACE_ATOMS)
-    def case_surface_atom_poscar(self, info):
-        """Return a slab, an Rparams and info on expected surface atoms."""
-        return self.case_poscar(info)
 
     @case(tags=(Tag.BULK_PROPERTIES,
                 Tag.LAYER_INFO,
