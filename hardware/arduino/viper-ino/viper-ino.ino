@@ -19,7 +19,7 @@ Date: 09.02.2022
 // changed!
 #define BOX_ID  1
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.10
+// Firmware version (MAX: v255.255). CURRENTLY: v0.11
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
 #define FIRMWARE_VERSION_MINOR    11  // max 255
 
