@@ -31,6 +31,9 @@ from . import simple_slabs
 from .conftest import get_cases
 
 
+SEEDED_SHIFT_FAILS = 'Fails with the seeded origin shift'
+
+
 def angle(vec1, vec2):
     """Return the (rounded) angle between vec1 and vec2 in degrees."""
     return round(np.degrees(angle_radians(vec1, vec2)))
@@ -208,20 +211,14 @@ class TestSymmetryConstraints:
         assert exc.match('.*Not a subgroup')
 
     _known_invalid_constraints = {
-        'pm_10': 'Known to sometimes fail with a random shift',
-        'cm_1m1': 'Known to sometimes fail with a random shift',
-        'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
-        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
-        'hex_cm_11': 'Known to sometimes fail with a random shift',
-        'hex_cm_1m1': 'Known to regularly fail with a random shift',
-        'hex_cm_10': 'Known to regularly fail with a random shift',
-        'hex_cm_01': 'Known to regularly fail with a random shift',
-        'hex_cm_21': 'Known to sometimes fail with a random shift',
-        'hex_cm_12': 'Known to regularly fail with a random shift',
+        'cm_1m1': SEEDED_SHIFT_FAILS,
+        'rcm-ucell=rectangular': SEEDED_SHIFT_FAILS,
+        'hex_cm_01': SEEDED_SHIFT_FAILS,
+        'hex_cm_21': SEEDED_SHIFT_FAILS,
+        'hex_cm_12': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'square_pm_10': 'Known to sometimes fail with a random shift',
-        'square_cm_1m1': 'Known to sometimes fail with a random shift',
+        'square_cm_1m1': SEEDED_SHIFT_FAILS,
         }
 
     def test_correct_free_directions(self, with_symmetry_constraints,
@@ -230,7 +227,9 @@ class TestSymmetryConstraints:
         slab, _, info = with_symmetry_constraints()
         if not info.symmetry.link_groups:
             pytest.skip('Not enough symmetry information available')
-        with may_fail(first_case, self._known_invalid_constraints):
+        with may_fail(first_case,
+                      self._known_invalid_constraints,
+                      strict=True):
             for atom in slab:
                 if atom.num in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
