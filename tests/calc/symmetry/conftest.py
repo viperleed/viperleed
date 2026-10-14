@@ -14,6 +14,7 @@ from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
 
+from ...helpers import duplicate_all
 from ...helpers import flat_fixture
 from .. import poscar_slabs
 from . import simple_slabs
@@ -36,14 +37,25 @@ slab_p6m = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p6m)
 
 @fixture(name='with_plane_group')
 @parametrize_with_cases('args', cases=get_cases('all'))
-def fixture_factory_with_plane_group(args, rng):
-    """Find plane group, including a (random) rigid origin shift."""
-    slab, param, info, *_ = args
-    # A seeded rng (see tests/conftest.py), so that the shift, and
-    # hence the outcome of each test, is the same in every run
-    shift = rng.uniform(-1, 1, size=2)
+def fixture_factory_with_plane_group(args, draws):
+    """Find plane group, including a (random) rigid origin shift.
 
-    def _make(random_shifts=True):
+    The returned factory takes one of the `draws` and returns
+    slab, Rparams, and info that belong to that draw only.
+    """
+    slab, param, info, *_ = args
+    # Each draw gets its own pristine copy of the case, and its own
+    # shift. Both are taken before anything modifies the objects.
+    per_draw = {
+        draw.index: (
+            *duplicate_all(slab, param, info),
+            draw.rng.uniform(-1, 1, size=2),
+            )
+        for draw in draws
+        }
+
+    def _make(draw, random_shifts=True):
+        slab, param, info, shift = per_draw[draw.index]
         if random_shifts:
             slab.translate_atoms_2d(shift)
             slab.collapse_cartesian_coordinates()
@@ -89,8 +101,8 @@ def displace_atoms():
 @fixture
 def with_symmetry_constraints(with_plane_group):
     """Apply symmetry constraints, then return slab, Rparams, and info."""
-    def _make(random_shifts=True):
-        slab, param, *rest = with_plane_group(random_shifts)
+    def _make(draw, random_shifts=True):
+        slab, param, *rest = with_plane_group(draw, random_shifts)
         symmetry.enforceSymmetry(slab, param)
         return (slab, param, *rest)
     return _make

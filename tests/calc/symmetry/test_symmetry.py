@@ -24,6 +24,7 @@ from pytest_cases.filters import id_has_suffix
 from viperleed.calc import symmetry
 from viperleed.calc.lib.math_utils import angle as angle_radians
 
+from ...helpers import check_draws
 from ...helpers import duplicate_all
 from ..poscar_slabs import make_poscar_ids
 from ..tags import CaseTag
@@ -88,10 +89,13 @@ def may_fail(case, known_failures, strict=False):
 class TestPlaneGroupFinding:
     """Collection of tests for finding plane groups."""
 
-    def test_any_plane_group_found(self, with_plane_group):
+    def test_any_plane_group_found(self, with_plane_group, draws):
         """Ensure that symmetry detection is successful."""
-        slab, *_ = with_plane_group()
-        assert slab.foundplanegroup != 'unknown'
+        def _check(draw):
+            slab, *_ = with_plane_group(draw)
+            assert slab.foundplanegroup != 'unknown'
+
+        check_draws(draws, _check)
 
     known_incorrect_groups = {
         'hex_cmm_10': 'Known incorrect plane group p2',
@@ -99,13 +103,16 @@ class TestPlaneGroupFinding:
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
         }
 
-    def test_correct_plane_group(self, with_plane_group, first_case):
+    def test_correct_plane_group(self, with_plane_group, first_case, draws):
         """Check the correct identification of the plane group."""
-        slab, *_, info = with_plane_group()
-        if not info.symmetry.hermann:
-            pytest.skip('No symmetry information available')
-        with may_fail(first_case, self.known_incorrect_groups, strict=True):
+        def _check(draw):
+            slab, *_, info = with_plane_group(draw)
+            if not info.symmetry.hermann:
+                pytest.skip('No symmetry information available')
             assert hermann(slab.planegroup) == info.symmetry.hermann
+
+        with may_fail(first_case, self.known_incorrect_groups, strict=True):
+            check_draws(draws, _check)
 
     _known_incorrect_rotations = {
         'hex_cmm_10': 'BUG: no rotation applied',
@@ -222,14 +229,12 @@ class TestSymmetryConstraints:
         }
 
     def test_correct_free_directions(self, with_symmetry_constraints,
-                                     first_case):
+                                     first_case, draws):
         """Check the correct identification of atom constraints."""
-        slab, _, info = with_symmetry_constraints()
-        if not info.symmetry.link_groups:
-            pytest.skip('Not enough symmetry information available')
-        with may_fail(first_case,
-                      self._known_invalid_constraints,
-                      strict=True):
+        def _check(draw):
+            slab, _, info = with_symmetry_constraints(draw)
+            if not info.symmetry.link_groups:
+                pytest.skip('Not enough symmetry information available')
             for atom in slab:
                 if atom.num in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
@@ -237,6 +242,11 @@ class TestSymmetryConstraints:
                     assert not atom.freedir
                 else:
                     assert atom.freedir == 1
+
+        with may_fail(first_case,
+                      self._known_invalid_constraints,
+                      strict=True):
+            check_draws(draws, _check)
 
     _known_invalid_linking = {
         'rcm-ucell=rectangular': SEEDED_SHIFT_FAILS,
@@ -256,15 +266,19 @@ class TestSymmetryConstraints:
         'pg_10': SEEDED_SHIFT_FAILS,
         }
 
-    def test_correct_atom_linking(self, with_symmetry_constraints, first_case):
+    def test_correct_atom_linking(self, with_symmetry_constraints,
+                                  first_case, draws):
         """Check that atoms were linked as expected."""
-        slab, _, info = with_symmetry_constraints()
-        with may_fail(first_case,
-                      self._known_invalid_linking,
-                      strict=True):
+        def _check(draw):
+            slab, _, info = with_symmetry_constraints(draw)
             for atom_n, linked in info.symmetry.link_groups.items():
                 atom = slab.atlist.get(atom_n)
                 assert set(at.num for at in atom.linklist) == linked
+
+        with may_fail(first_case,
+                      self._known_invalid_linking,
+                      strict=True):
+            check_draws(draws, _check)
 
     _known_invalid_constrained_group = {
         'hex_cm_1m1': SEEDED_SHIFT_FAILS,
@@ -275,16 +289,19 @@ class TestSymmetryConstraints:
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
-                                            first_case):
+                                            first_case, draws):
         """Test that applying constraints maintains the group correct."""
-        slab, param, info = with_symmetry_constraints()
-        if not info.symmetry.hermann:
-            pytest.skip('No symmetry information available')
-        symmetry.findSymmetry(slab, param)
+        def _check(draw):
+            slab, param, info = with_symmetry_constraints(draw)
+            if not info.symmetry.hermann:
+                pytest.skip('No symmetry information available')
+            symmetry.findSymmetry(slab, param)
+            assert hermann(slab.planegroup) == info.symmetry.hermann
+
         with may_fail(first_case,
                       self._known_invalid_constrained_group,
                       strict=True):
-            assert hermann(slab.planegroup) == info.symmetry.hermann
+            check_draws(draws, _check)
 
     _known_do_not_preserve = {
         'rcm': 'Fails in all directions due to missing centre link',
@@ -294,9 +311,13 @@ class TestSymmetryConstraints:
     @parametrize(displacement=XYZ_DISPLACEMENTS)
     def test_preserve_displaced_symmetry(self, displacement, displace_atoms,
                                          with_symmetry_constraints,
-                                         first_case):
+                                         first_case, draws):
         """Ensure that displacements conserve symmetry."""
-        slab, param, info, *_ = with_symmetry_constraints(random_shifts=False)
+        # No random shift is applied, so all draws would be identical
+        slab, param, info, *_ = with_symmetry_constraints(
+            draws[0],
+            random_shifts=False,
+            )
         displaced_slab = copy.deepcopy(slab)
         displace_atoms(displaced_slab, param, info, displacement)
         with may_fail(first_case, self._known_do_not_preserve, strict=True):
@@ -416,35 +437,44 @@ class TestSymmetryReduction:
         assert exc.match(r'.*unknown')
 
     @pytest.mark.xfail(reason='Does not check validity of group')
-    def test_invalid_group(self, with_plane_group):
+    def test_invalid_group(self, with_plane_group, draws):
         """Assert that not providing a direction raises exceptions."""
-        slab, param, *_ = with_plane_group()
-        with pytest.raises(ValueError) as exc:
-            symmetry.setSymmetry(slab, param, 'kt')
-        assert exc.match(r'kt is not.*acceptable')
+        def _check(draw):
+            slab, param, *_ = with_plane_group(draw)
+            with pytest.raises(ValueError) as exc:
+                symmetry.setSymmetry(slab, param, 'kt')
+            assert exc.match(r'kt is not.*acceptable')
 
-    def test_missing_direction(self, with_plane_group):
+        check_draws(draws, _check)
+
+    def test_missing_direction(self, with_plane_group, draws):
         """Assert that not providing a direction raises exceptions."""
-        slab, param, *_ = with_plane_group()
-        hermann_ = hermann(slab.foundplanegroup)
-        if hermann_ in 'pm|pmg':
-            need_direction = 'cm'
-        elif hermann_ == 'p6m':
-            need_direction = 'cmm'
-        else:
-            need_direction = 'pm'
-        # with pytest.raises(MissingGroupDirectionError):
-        symmetry.setSymmetry(slab, param, need_direction)
+        def _check(draw):
+            slab, param, *_ = with_plane_group(draw)
+            hermann_ = hermann(slab.foundplanegroup)
+            if hermann_ in 'pm|pmg':
+                need_direction = 'cm'
+            elif hermann_ == 'p6m':
+                need_direction = 'cmm'
+            else:
+                need_direction = 'pm'
+            # with pytest.raises(MissingGroupDirectionError):
+            symmetry.setSymmetry(slab, param, need_direction)
+
+        check_draws(draws, _check)
 
     @pytest.mark.xfail(reason='Does not check validity of subgroup')
-    def test_invalid_subgroup(self, with_plane_group):
+    def test_invalid_subgroup(self, with_plane_group, draws):
         """Make sure SlabSymmetrizer finds all atoms it should."""
-        slab, param, *_ = with_plane_group()
-        hermann_ = hermann(slab.foundplanegroup)
-        invalid_group = 'p4' if hermann_ == 'p6m' else 'p6m'
-        with pytest.raises(ValueError) as exc:
-            symmetry.setSymmetry(slab, param, invalid_group)
-        assert exc.match('.*not a valid symmetry reduction.*')
+        def _check(draw):
+            slab, param, *_ = with_plane_group(draw)
+            hermann_ = hermann(slab.foundplanegroup)
+            invalid_group = 'p4' if hermann_ == 'p6m' else 'p6m'
+            with pytest.raises(ValueError) as exc:
+                symmetry.setSymmetry(slab, param, invalid_group)
+            assert exc.match('.*not a valid symmetry reduction.*')
+
+        check_draws(draws, _check)
 
     @pytest.mark.xfail(reason='BUG: symmetry L724--789, missing [] at arrays',
                        raises=(ValueError, RuntimeWarning))
