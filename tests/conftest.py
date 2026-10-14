@@ -17,8 +17,6 @@ first_case
     The first of the current pytest-cases.
 re_match (factory)
     Return a match object from a pattern and a string.
-rng
-    A random-number generator seeded from the test id.
 """
 
 __authors__ = (
@@ -92,17 +90,6 @@ def first_case(current_cases):
                 return value
         raise ValueError('No case found')
     return _find_case(current_cases)
-
-
-@fixture(name='rng')
-def fixture_rng(request):
-    """Return a numpy random generator seeded from the test id."""
-    # Seed from the test id (without the file path), so that the
-    # random values of a test do not depend on which other tests
-    # run, in which order, or in which process: outcomes are then
-    # the same in every run. Not hash(): it depends on PYTHONHASHSEED.
-    _, test_id = request.node.nodeid.split('::', 1)
-    return np.random.default_rng(zlib.crc32(test_id.encode()))
 
 
 @fixture
