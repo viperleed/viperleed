@@ -511,7 +511,8 @@ class TestSymmetryReduction:
             symmetry.setSymmetry(slab, param, 'p1')
         assert exc.match(r'.*unknown')
 
-    @pytest.mark.xfail(reason='Does not check validity of group')
+    @pytest.mark.xfail(reason='Does not check validity of group',
+                       strict=True)
     def test_invalid_group(self, with_plane_group, draws):
         """Assert that not providing a direction raises exceptions."""
         def _check(draw):
