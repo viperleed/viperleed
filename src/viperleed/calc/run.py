@@ -115,6 +115,10 @@ def run_calc(
             source,
             home,
             )
+    except BaseException:
+        # Do not leave handlers (and open files) behind
+        close_all_handlers(LOGGER)
+        raise
     finally:
         LOGGER.setLevel(previous_level)
 

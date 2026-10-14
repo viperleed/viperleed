@@ -287,11 +287,13 @@ class TestRunCalcRestoresLogger:
 
     @parametrize(exc=(RuntimeError, KeyboardInterrupt))
     def test_level_after_exception(self, mocks, entry_level, exc):
-        """Check that the level is restored if an exception escapes."""
+        """Check level and handlers if an exception escapes."""
         mocks['section'].side_effect = exc
+        handlers_before = list(run_logger.handlers)
         with pytest.raises(exc):
             run_calc()
         assert run_logger.level == entry_level
+        assert run_logger.handlers == handlers_before
 
 
 class TestFinalizeOnEarlyExit:
