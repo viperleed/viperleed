@@ -539,7 +539,8 @@ class TestSymmetryReduction:
 
         check_draws(draws, _check)
 
-    @pytest.mark.xfail(reason='Does not check validity of subgroup')
+    @pytest.mark.xfail(reason='Does not check validity of subgroup',
+                       strict=True)
     def test_invalid_subgroup(self, with_plane_group, draws):
         """Make sure SlabSymmetrizer finds all atoms it should."""
         def _check(draw):
