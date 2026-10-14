@@ -37,6 +37,8 @@ from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import SingularMatrixError
 
+from ...helpers import check_draws
+from ...helpers import duplicate_all
 from ...helpers import exclude_tags, not_raises
 from .. import cases_ase, poscar_slabs
 from ..tags import CaseTag as Tag
@@ -380,8 +382,8 @@ class TestBulk3DOperations:
     def move_atom(slab, atom_index, distance, rng):
         """Move the atom at a given index by distance in a random direction."""
         atom = slab.atlist.get(atom_index)
-        # A seeded rng (see tests/conftest.py), so that the outcome
-        # of each test is the same in every run
+        # rng is a seeded generator (see the draws fixture in
+        # tests/conftest.py), so that the outcome is reproducible
         direction = rng.standard_normal(2)
         direction /= np.linalg.norm(direction)
         atom.cartpos[:2] += distance * direction
@@ -440,12 +442,17 @@ class TestBulk3DOperations:
         pytest.param((1, 3), marks=_seeded_glide_bug),
         ))
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
-                                             bulk_slab_with_glide, rng):
+                                             bulk_slab_with_glide, draws):
         """Check identification of bulk glide plane with atoms a bit off."""
         slab, glide, eps = bulk_slab_with_glide
-        for atom_ind in atoms_to_move:
-            self.move_atom(slab, atom_ind, 0.99*eps, rng)
-        assert slab.is_bulk_glide_symmetric(glide, 2, eps)
+
+        def _check(draw):
+            draw_slab, draw_glide = duplicate_all(slab, glide)
+            for atom_ind in atoms_to_move:
+                self.move_atom(draw_slab, atom_ind, 0.99*eps, draw.rng)
+            assert draw_slab.is_bulk_glide_symmetric(draw_glide, 2, eps)
+
+        check_draws(draws, _check)
 
     fe3o4_bulk = poscar_slabs.CaseBulkSlabs.case_fe3o4_bulk
 
@@ -458,29 +465,43 @@ class TestBulk3DOperations:
         assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
     @parametrize_with_cases('bulk', cases=fe3o4_bulk)
-    def test_bulk_screw_symmetric(self, bulk, subtests, rng):
+    def test_bulk_screw_symmetric(self, bulk, subtests, draws):
         """Check correct identification of bulk screw axis."""
         slab, rpars, *_ = bulk
-        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': rpars.SYMMETRY_EPS}
+        eps = rpars.SYMMETRY_EPS
+        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': eps}
+        # One slab per draw. The moves of the subtests accumulate
+        slabs = {draw.index: duplicate_all(slab)[0] for draw in draws}
+
+        def _move(atom_indices, draw):
+            for atom_ind in atom_indices:
+                self.move_atom(slabs[draw.index], atom_ind, 0.99*eps,
+                               draw.rng)
+
+        def _check_screw(draw):
+            assert slabs[draw.index].is_bulk_screw_symmetric(**kwargs)
+
         with subtests.test('Move atom that is transformed by 4-fold screw'):
             # Atom no. 49 (oxygen) is not on the 4-fold screw
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS, rng)
-            assert slab.is_bulk_screw_symmetric(**kwargs)
+            for draw in draws:
+                _move((49,), draw)
+            check_draws(draws, _check_screw)
         with subtests.test('Move atom at 4-fold screw'):
             # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS, rng)
+            for draw in draws:
+                _move((33,), draw)
             try:
-                assert slab.is_bulk_screw_symmetric(**kwargs)
+                check_draws(draws, _check_screw)
             except AssertionError:
                 pytest.xfail('Known bug. Will be fixed in better-symmetry')
             else:
                 raise AssertionError('XPASS: This test should FAIL unless '
                                      'this is the better-symmetry branch')
         with subtests.test('Move both atoms'):
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS, rng)
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS, rng)
+            for draw in draws:
+                _move((33, 49), draw)
             try:
-                assert slab.is_bulk_screw_symmetric(**kwargs)
+                check_draws(draws, _check_screw)
             except AssertionError:
                 pytest.xfail('Known bug. Will be fixed in better-symmetry')
             else:
