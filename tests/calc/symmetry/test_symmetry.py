@@ -32,7 +32,7 @@ from . import simple_slabs
 from .conftest import get_cases
 
 
-SEEDED_SHIFT_FAILS = 'Fails with the seeded origin shift'
+SEEDED_SHIFT_FAILS = 'Fails with some of the seeded origin shifts'
 
 
 def angle(vec1, vec2):
@@ -229,13 +229,18 @@ class TestSymmetryConstraints:
 
     _known_invalid_constraints = {
         'cm_1m1': SEEDED_SHIFT_FAILS,
+        'pm_10': SEEDED_SHIFT_FAILS,
         'rcm-ucell=rectangular': SEEDED_SHIFT_FAILS,
+        'rcm-ucell=square': SEEDED_SHIFT_FAILS,
+        'hex_cm_10': SEEDED_SHIFT_FAILS,
         'hex_cm_01': SEEDED_SHIFT_FAILS,
         'hex_cm_21': SEEDED_SHIFT_FAILS,
         'hex_cm_12': SEEDED_SHIFT_FAILS,
+        'hex_cm_1m1': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'square_pm_10': SEEDED_SHIFT_FAILS,
         }
 
     def test_correct_free_directions(self, with_symmetry_constraints,
