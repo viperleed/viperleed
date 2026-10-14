@@ -464,6 +464,19 @@ class TestBulk3DOperations:
         glide = SymPlane(np.array([0, 0]), ab_cell[0] + ab_cell[1], ab_cell)
         assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
+    @staticmethod
+    def _check_known_screw_bug(draws, check):
+        """Expect check to fail for the default draws, unless fresh."""
+        if draws.fresh:
+            check_draws(draws, check)
+            return
+        try:
+            check_draws(draws, check)
+        except AssertionError:
+            pytest.xfail('Known bug. Will be fixed in better-symmetry')
+        raise AssertionError('XPASS: This test should FAIL unless '
+                             'this is the better-symmetry branch')
+
     @parametrize_with_cases('bulk', cases=fe3o4_bulk)
     def test_bulk_screw_symmetric(self, bulk, subtests, draws):
         """Check correct identification of bulk screw axis."""
@@ -490,23 +503,11 @@ class TestBulk3DOperations:
             # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
             for draw in draws:
                 _move((33,), draw)
-            try:
-                check_draws(draws, _check_screw)
-            except AssertionError:
-                pytest.xfail('Known bug. Will be fixed in better-symmetry')
-            else:
-                raise AssertionError('XPASS: This test should FAIL unless '
-                                     'this is the better-symmetry branch')
+            self._check_known_screw_bug(draws, _check_screw)
         with subtests.test('Move both atoms'):
             for draw in draws:
                 _move((33, 49), draw)
-            try:
-                check_draws(draws, _check_screw)
-            except AssertionError:
-                pytest.xfail('Known bug. Will be fixed in better-symmetry')
-            else:
-                raise AssertionError('XPASS: This test should FAIL unless '
-                                     'this is the better-symmetry branch')
+            self._check_known_screw_bug(draws, _check_screw)
 
 
 class TestBulkDetect:

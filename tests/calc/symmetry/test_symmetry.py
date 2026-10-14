@@ -68,11 +68,18 @@ def _reconstruct_case_id(case):
 
 
 @contextmanager
-def may_fail(case, known_failures, strict=False):
-    """XFAIL if case is known to be problematic."""
+def may_fail(case, known_failures, strict=False, draws=None):
+    """XFAIL if case is known to be problematic.
+
+    Known failures of random-input tests refer to the default seeds:
+    pass the `draws` of the test to just check if they are fresh.
+    """
     reason = known_failures.get(case.id, '')
     if not reason:
         reason = known_failures.get(_reconstruct_case_id(case), '')
+    if draws is not None and draws.fresh:
+        reason = ''
+        strict = False
     try:
         yield None
     except AssertionError:
@@ -111,7 +118,10 @@ class TestPlaneGroupFinding:
                 pytest.skip('No symmetry information available')
             assert hermann(slab.planegroup) == info.symmetry.hermann
 
-        with may_fail(first_case, self.known_incorrect_groups, strict=True):
+        with may_fail(first_case,
+                      self.known_incorrect_groups,
+                      strict=True,
+                      draws=draws):
             check_draws(draws, _check)
 
     _known_incorrect_rotations = {
@@ -245,7 +255,8 @@ class TestSymmetryConstraints:
 
         with may_fail(first_case,
                       self._known_invalid_constraints,
-                      strict=True):
+                      strict=True,
+                      draws=draws):
             check_draws(draws, _check)
 
     _known_invalid_linking = {
@@ -277,7 +288,8 @@ class TestSymmetryConstraints:
 
         with may_fail(first_case,
                       self._known_invalid_linking,
-                      strict=True):
+                      strict=True,
+                      draws=draws):
             check_draws(draws, _check)
 
     _known_invalid_constrained_group = {
@@ -300,7 +312,8 @@ class TestSymmetryConstraints:
 
         with may_fail(first_case,
                       self._known_invalid_constrained_group,
-                      strict=True):
+                      strict=True,
+                      draws=draws):
             check_draws(draws, _check)
 
     _known_do_not_preserve = {
@@ -408,7 +421,8 @@ class TestSlabSymmetrization:
 
         with may_fail(first_case,
                       self._known_incorrect_rattled,
-                      strict=True):
+                      strict=True,
+                      draws=draws):
             check_draws(draws, _check)
 
 
