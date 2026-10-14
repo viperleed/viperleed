@@ -57,6 +57,8 @@ def run_calc(
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
     replaced by passing the `slab` and/or `preset_params` kwargs.
+    On return or exception, the level of the viperleed.calc logger is
+    restored and its handlers are closed.
 
     Parameters
     ----------
@@ -101,6 +103,31 @@ def run_calc(
         objects at the end of each executed section. None if the run
         terminates before any section is executed.
     """
+    # The logger level is set while running, and should not leak
+    # to whoever uses the calc logger after this function returns.
+    previous_level = LOGGER.level
+    try:
+        return _run_calc(
+            system_name,
+            console_output,
+            slab,
+            preset_params,
+            source,
+            home,
+            )
+    finally:
+        LOGGER.setLevel(previous_level)
+
+
+def _run_calc(
+    system_name,
+    console_output,
+    slab,
+    preset_params,
+    source,
+    home,
+        ):
+    """Run a calculation. See run_calc for the arguments."""
     os.umask(0)
 
     # Start logger, write to file:
