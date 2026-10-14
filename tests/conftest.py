@@ -60,7 +60,6 @@ Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
 RNG_SEED_OPTION = '--rng-seed'
 
-
 class Draws(tuple):
     """A tuple of Draw objects, knowing whether the base seed is fresh."""
 
