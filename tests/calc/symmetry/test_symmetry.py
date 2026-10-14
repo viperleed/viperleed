@@ -330,21 +330,33 @@ class TestSlabSymmetrization:
     @fixture
     @parametrize_with_cases('args', cases=get_cases('all'),
                             filter=~id_has_suffix('p1'))
-    def rattled_slab(self, args, rng):
-        """Return a slab with atoms slightly misplaced."""
+    def rattled_slab(self, args, draws):
+        """Return the slab, and a rattled copy of it for each draw.
+
+        Returns
+        -------
+        slab, rattled, param, info, *rest
+            `rattled` maps each draw index to a tuple
+            (rattled slab, Rparams, info) for that draw.
+        """
         slab, param, info, *rest = args
         symmetry.findSymmetry(slab, param)
         symmetry.enforceSymmetry(slab, param)
-        rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
-        param.SYMMETRY_EPS = param.SYMMETRY_EPS.from_value(2 * 2**0.5 * eps)
-        # A seeded rng (see tests/conftest.py), so that the outcome
-        # of each case is the same in every run
-        displacements = rng.uniform(-eps, eps, (slab.n_atoms, 2))
-        for atom, delta in zip(rattled_slab, displacements):
-            atom.cartpos[:2] += delta
-        rattled_slab.collapse_cartesian_coordinates()
-        return (rattled_slab, slab, param, info, *rest)
+        rattled = {}
+        for draw in draws:
+            rattled_slab, draw_param, draw_info = duplicate_all(slab,
+                                                                param,
+                                                                info)
+            draw_param.SYMMETRY_EPS = draw_param.SYMMETRY_EPS.from_value(
+                2 * 2**0.5 * eps
+                )
+            displacements = draw.rng.uniform(-eps, eps, (slab.n_atoms, 2))
+            for atom, delta in zip(rattled_slab, displacements):
+                atom.cartpos[:2] += delta
+            rattled_slab.collapse_cartesian_coordinates()
+            rattled[draw.index] = (rattled_slab, draw_param, draw_info)
+        return (slab, rattled, param, info, *rest)
 
     _known_incorrect_rattled = {
         'rcmm-ucell=rectangular': 'Seeded rattling gives pgg instead of rcmm',
@@ -383,16 +395,21 @@ class TestSlabSymmetrization:
         'double_bulk-ru': 'Seeded rattling gives cm instead of p3m1',
         }
 
-    def test_rattled_group(self, rattled_slab, first_case):
+    def test_rattled_group(self, rattled_slab, first_case, draws):
         """Check that the rattled slab has the right plane group."""
-        rattled, original, param, info, *_ = rattled_slab
-        symmetry.findSymmetry(rattled, param)
-        with may_fail(first_case,
-                      self._known_incorrect_rattled,
-                      strict=True):
+        original, rattled_all, _, info, *_ = rattled_slab
+
+        def _check(draw):
+            rattled, param, _ = rattled_all[draw.index]
+            symmetry.findSymmetry(rattled, param)
             if info.symmetry.hermann:
                 assert hermann(original.planegroup) == info.symmetry.hermann
             assert original.planegroup == rattled.planegroup
+
+        with may_fail(first_case,
+                      self._known_incorrect_rattled,
+                      strict=True):
+            check_draws(draws, _check)
 
 
 class TestBulkSymmetry:
