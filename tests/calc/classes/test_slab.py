@@ -465,15 +465,15 @@ class TestBulk3DOperations:
         assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
     @staticmethod
-    def _check_known_screw_bug(draws, check):
-        """Expect check to fail for the default draws, unless fresh."""
+    def _check_known_screw_bug(draws, check, reason):
+        """Expect check to fail for some default draws, unless fresh."""
         if draws.fresh:
             check_draws(draws, check)
             return
         try:
             check_draws(draws, check)
         except AssertionError:
-            pytest.xfail('Known bug. Will be fixed in better-symmetry')
+            pytest.xfail(reason)
         raise AssertionError('XPASS: This test should FAIL unless '
                              'this is the better-symmetry branch')
 
@@ -503,11 +503,20 @@ class TestBulk3DOperations:
             # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
             for draw in draws:
                 _move((33,), draw)
-            self._check_known_screw_bug(draws, _check_screw)
+            self._check_known_screw_bug(
+                draws,
+                _check_screw,
+                'Known bug. Will be fixed in better-symmetry',
+                )
         with subtests.test('Move both atoms'):
             for draw in draws:
                 _move((33, 49), draw)
-            self._check_known_screw_bug(draws, _check_screw)
+            self._check_known_screw_bug(
+                draws,
+                _check_screw,
+                'Known bug, fails with some of the seeded directions. '
+                'Will be fixed in better-symmetry',
+                )
 
 
 class TestBulkDetect:
