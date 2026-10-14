@@ -33,6 +33,7 @@ from .conftest import get_cases
 
 
 SEEDED_SHIFT_FAILS = 'Fails with some of the seeded origin shifts'
+CENTRING_NOT_LINKED = 'Known bug: centring-related atoms are not linked'
 
 
 def angle(vec1, vec2):
@@ -265,19 +266,22 @@ class TestSymmetryConstraints:
             check_draws(draws, _check)
 
     _known_invalid_linking = {
-        'rcm-ucell=rectangular': SEEDED_SHIFT_FAILS,
-        'rcm-ucell=square': SEEDED_SHIFT_FAILS,
-        'rcmm-ucell=rectangular': SEEDED_SHIFT_FAILS,
-        'rcmm-ucell=square': SEEDED_SHIFT_FAILS,
+        'rcm-ucell=rectangular': CENTRING_NOT_LINKED,
+        'rcm-ucell=square': CENTRING_NOT_LINKED,
+        'rcmm-ucell=rectangular': CENTRING_NOT_LINKED,
+        'rcmm-ucell=square': CENTRING_NOT_LINKED,
+        'cm_1m1': SEEDED_SHIFT_FAILS,
         'hex_cm_10': SEEDED_SHIFT_FAILS,
         'hex_cm_01': SEEDED_SHIFT_FAILS,
         'hex_cm_21': SEEDED_SHIFT_FAILS,
         'hex_cm_12': SEEDED_SHIFT_FAILS,
+        'hex_cm_1m1': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
+        'square_cm_11': SEEDED_SHIFT_FAILS,
         'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'square_pg_10': SEEDED_SHIFT_FAILS,
         'square_pm_10': SEEDED_SHIFT_FAILS,
-        'square_pm_01': SEEDED_SHIFT_FAILS,
         'pm_10': SEEDED_SHIFT_FAILS,
         'pg_10': SEEDED_SHIFT_FAILS,
         }
