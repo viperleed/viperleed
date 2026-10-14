@@ -8,6 +8,8 @@ check_log_records (factory)
     Raise unless caplog records are exactly as expected.
 data_path
     Path to the top-level folder containing test data.
+draws
+    N_DRAWS seeded random generators for one random-input test.
 mock_import_module (factory)
     Replace importlib.import_module to return selected fake modules.
     Retain normal behavior for all the others.
@@ -27,6 +29,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
+import collections
 from importlib import import_module
 import re
 import zlib
@@ -35,6 +38,12 @@ import numpy as np
 from pytest_cases import fixture
 
 from .helpers import TEST_DATA
+
+# Number of seeded draws a random-input test checks, all within one
+# test (one id). This is the only place where the number is defined.
+N_DRAWS = 5
+
+Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
 
 @fixture
@@ -94,6 +103,24 @@ def fixture_rng(request):
     # the same in every run. Not hash(): it depends on PYTHONHASHSEED.
     _, test_id = request.node.nodeid.split('::', 1)
     return np.random.default_rng(zlib.crc32(test_id.encode()))
+
+
+@fixture
+def draws(request):
+    """Return N_DRAWS Draw tuples, seeded from the test id."""
+    # Seed from the test id (without the file path), so that the
+    # random values of a test do not depend on which other tests
+    # run, in which order, or in which process: outcomes are then
+    # the same in every run. Not hash(): it depends on PYTHONHASHSEED.
+    _, test_id = request.node.nodeid.split('::', 1)
+    seeds = (
+        zlib.crc32(f'{test_id}#{index}'.encode())
+        for index in range(N_DRAWS)
+        )
+    return tuple(
+        Draw(index, seed, np.random.default_rng(seed))
+        for index, seed in enumerate(seeds)
+        )
 
 
 @fixture
