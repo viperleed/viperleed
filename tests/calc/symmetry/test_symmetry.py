@@ -128,10 +128,6 @@ class TestPlaneGroupFinding:
     _known_incorrect_rotations = {
         'hex_cmm_10': 'BUG: no rotation applied',
         'hex_cmm_01': 'BUG: no rotation applied',
-        'hex_cm_10': 'BUG: no rotation applied',
-        'hex_cm_01': 'BUG: no rotation applied',
-        'hex_cm_21': 'BUG: no rotation applied',
-        'hex_cm_12': 'BUG: no rotation applied',
         }
 
     @parametrize_with_cases('args',
