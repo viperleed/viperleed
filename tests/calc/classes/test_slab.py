@@ -483,7 +483,7 @@ class TestBulk3DOperations:
         slab, rpars, *_ = bulk
         eps = rpars.SYMMETRY_EPS
         kwargs = {'order': 4, 'sublayer_period': 3, 'eps': eps}
-        # One slab per draw. The moves of the subtests accumulate
+        # The moves of the subtests accumulate on the slab of each draw.
         slabs = {draw.index: duplicate_all(slab)[0] for draw in draws}
 
         def _move(atom_indices, draw):
