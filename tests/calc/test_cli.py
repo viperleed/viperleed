@@ -9,6 +9,7 @@ __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 import inspect
+import logging
 import os
 import sys
 
@@ -16,6 +17,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed import calc
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.cli import LOG_VERBOSE
 from viperleed.calc.cli import LOG_VERY_VERBOSE
@@ -37,6 +39,8 @@ from ..helpers import filesystem_from_dict
 from ..helpers import filesystem_to_dict
 
 _MODULE = 'viperleed.calc.cli'
+# A level that no caller of run_calc uses, to detect any re-setting
+_UNUSED_LEVEL = logging.WARNING + 1
 
 
 def test_calc_never_loads_graphics(mocker):
@@ -129,6 +133,21 @@ class TestCalcCliCall:
         log_file, *others = (f for f in tree_after if f not in tree_before)
         assert not others
         assert log_file.startswith(LOG_PREFIX)
+
+    def test_calc_logger_unchanged(self, tmp_path):
+        """Ensure the calc logger is as before after running the CLI."""
+        level_before = calc.LOGGER.level
+        handlers_before = list(calc.LOGGER.handlers)
+        calc.LOGGER.setLevel(_UNUSED_LEVEL)
+        cli = ViPErLEEDCalcCLI()
+        try:
+            with execute_in_dir(tmp_path):
+                cli([])  # No input files: stops early, runs run_calc
+            level_after = calc.LOGGER.level
+        finally:
+            calc.LOGGER.setLevel(level_before)
+        assert level_after == _UNUSED_LEVEL
+        assert calc.LOGGER.handlers == handlers_before
 
     @parametrize(tree_before=({'history': {}},
                               {'history.info': ''}))
