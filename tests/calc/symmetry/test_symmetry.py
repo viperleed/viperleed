@@ -144,8 +144,11 @@ class TestPlaneGroupFinding:
         area_after = np.linalg.det(slab.ab_cell)
         with subtests.test('successful logging'):
             with may_fail(first_case, self._known_incorrect_rotations):
-                assert re_match(r'.*unit.*cell.*change.*higher.*symmetry.*',
-                                caplog.text)
+                # The warning may be any of the logged messages
+                assert any(
+                    re_match(r'.*unit.*cell.*change.*higher.*symmetry', msg)
+                    for msg in caplog.messages
+                    )
         with subtests.test('correct rotation'):
             if first_case.id == 'hex_cm_12':
                 pytest.xfail('Inconsistent rotations between detection and '
