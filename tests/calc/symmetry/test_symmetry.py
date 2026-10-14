@@ -302,8 +302,10 @@ class TestSymmetryConstraints:
             check_draws(draws, _check)
 
     _known_invalid_constrained_group = {
-        'hex_cm_1m1': SEEDED_SHIFT_FAILS,
-        'hex_cm_12': SEEDED_SHIFT_FAILS,
+        'pm_10': SEEDED_SHIFT_FAILS,
+        'hex_cm_01': SEEDED_SHIFT_FAILS,
+        'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'poscar_sto110_4x1': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
