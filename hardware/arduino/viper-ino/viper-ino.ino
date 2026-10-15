@@ -858,12 +858,10 @@ void measureADCs(){
     }
 
     makeAndSumMeasurements();
-    // TODO: if, by chance, the last value measured by one of the ADCs
-    //       caused a solid saturation, this is not communicated in any
-    //       way to the PC, since the rest of the code goes through, and
-    //       the Arduino goes to STATE_ADC_VALUES_READY, swallowing
-    //       the error. It could be solved easily by a simple check:
-    //       if (currentState == STATE_ERROR) return;
+
+    if (currentState == STATE_ERROR || checkIfTimedOut()){
+        return;
+    }
 
     if (continuousMeasurement && adcGainSwitched){
         // The acquisition just caused a gain switch. The ADCs need to
@@ -876,9 +874,7 @@ void measureADCs(){
         initialTime = millis();
         return;
     }
-    if (checkIfTimedOut()){
-        return;
-    }
+
     if(numMeasurementsDone == numMeasurementsToDo){
         currentState = STATE_ADC_VALUES_READY;
     }
