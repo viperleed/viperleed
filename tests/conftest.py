@@ -59,6 +59,7 @@ N_DRAWS = 5
 Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
 RNG_SEED_OPTION = '--rng-seed'
+WORKER_SEED_KEY = 'rng_seed'  # In pytest-xdist's workerinput
 
 class Draws(tuple):
     """A tuple of Draw objects, knowing whether the base seed is fresh."""
@@ -82,20 +83,33 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    """Resolve --rng-seed to an integer, once, in the controller."""
+    """Resolve --rng-seed to an integer, once, in the controller.
+
+    A pytest-xdist worker does not resolve it: it takes the base that
+    the controller resolved and handed over (pytest_configure_node).
+    """
+    workerinput = getattr(config, 'workerinput', None)
+    if workerinput is not None:
+        config.option.rng_seed = workerinput[WORKER_SEED_KEY]
+        return
     value = config.option.rng_seed
-    if value is None or isinstance(value, int):
-        return  # No option, or already resolved (xdist worker)
+    if value is None:
+        return  # No option
     if value == 'random':
         value = random.SystemRandom().randrange(2**32)
     try:
-        # Store back: xdist workers get the options of the controller
         config.option.rng_seed = int(value)
     except ValueError:
         raise pytest.UsageError(
             f'{RNG_SEED_OPTION} must be an integer or "random", '
             f'not {value!r}'
             ) from None
+
+
+@pytest.hookimpl(optionalhook=True)  # Only exists with pytest-xdist
+def pytest_configure_node(node):
+    """Hand the resolved base seed over to a pytest-xdist worker."""
+    node.workerinput[WORKER_SEED_KEY] = node.config.option.rng_seed
 
 
 def _rng_seed_message(config):
