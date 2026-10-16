@@ -561,7 +561,8 @@ class TestFortranComp(_TestInterpretBase):
         'default_gnu': ('', 'gfortran', 'gfortran',
                         '-llapack -lpthread -lblas'),
         'default_intel_mpi': ('mpi', 'mpiifort', 'mpiifort', None),
-        'default_gnu_mpi': ('mpi', 'mpifort', 'mpifort -Ofast -no-pie', None),
+        # Version-dependent flags: see test_mpifort_version_flags
+        'default_gnu_mpi': ('mpi', 'mpifort', 'mpifort -Ofast', None),
         'custom_no_flag': ('', '"ifort -O3 -march=native"',
                            'ifort -O3 -march=native', None),
         'custom_post_flag': ('post', '"-L/opt/intel/mkl/lib/intel64"',
@@ -612,6 +613,24 @@ class TestFortranComp(_TestInterpretBase):
     def test_invalid(self, flag, val, exc, interpreter):
         """Ensure invalid FORTRAN_COMP raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+    @parametrize('version,expect', (
+        ('9.4.0', 'mpifort -Ofast'),
+        ('10.0.0', 'mpifort -Ofast -fallow-argument-mismatch'),
+        ('10.1.0', 'mpifort -Ofast -fallow-argument-mismatch'),
+        ))
+    def test_mpifort_version_flags(self, version, expect, mocker):
+        """Check the version-dependent flags of an mpifort compiler."""
+        mocker.patch('shutil.which', return_value='mpifort')
+        mocker.patch(
+            'viperleed.calc.lib.fortran_utils.get_mpifort_version',
+            return_value=Version(version),
+            )
+        rpars = Rparams()
+        rpars.getFortranMpiComp(comp='mpifort')
+        compiler, post = rpars.FORTRAN_COMP_MPI
+        assert compiler == expect
+        assert not post
 
 
 class TestIntpolDeg(_TestInterpretBase):
