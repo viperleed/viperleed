@@ -1,9 +1,9 @@
 """Tests for module viperleed.calc.classes.state_recorder."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-04'
 __license__ = 'GPLv3+'
@@ -51,10 +51,18 @@ class TestStateSequence:
 
     def test_is_sequence_like(self, state_sequence):
         """Check that state_sequence has the full Sequence interface."""
-        assert not set(dir(Sequence)) - set(dir(state_sequence))
+        # Not part of the interface: __class_getitem__ (Python >= 3.9)
+        # is for subscripting in type hints; __annotations__ appears
+        # in dir(Sequence) on Python >= 3.10 once anything reads it.
+        not_interface = {'__annotations__', '__class_getitem__'}
+        sequence_interface = set(dir(Sequence)) - not_interface
+        assert not sequence_interface - set(dir(state_sequence))
         assert not isinstance(state_sequence, Sequence)
 
-    _mutable_seq_methods = set(dir(MutableSequence)) - set(dir(Sequence))
+    # Sorted: pytest-xdist workers must all collect the same test
+    # IDs in the same order.
+    _mutable_seq_methods = sorted(set(dir(MutableSequence))
+                                  - set(dir(Sequence)))
 
     @parametrize(method=_mutable_seq_methods)
     def test_not_a_mutable_sequence(self, state_sequence, method):

@@ -10,9 +10,9 @@ read from a PARAMETERS file.
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
@@ -119,7 +119,7 @@ _SIMPLE_NUMERICAL_PARAMS = {
     # Other integers
     'HALTING' : NumericBounds(type_=int, range_=(1, 3)),
     'N_BULK_LAYERS' : NumericBounds(type_=int, range_=(1, 2)),
-    'R_FACTOR_SMOOTH' : NumericBounds(type_=int, range_=(0, 999)),
+    'R_FACTOR_SMOOTHING' : NumericBounds(type_=int, range_=(0, 999)),
     'R_FACTOR_TYPE' : NumericBounds(type_=int, range_=(1, 2)),
     'ZIP_COMPRESSION_LEVEL' : NumericBounds(type_=int, range_=(0, 9))
     }

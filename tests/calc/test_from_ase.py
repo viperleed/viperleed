@@ -5,9 +5,9 @@ available in the from_ase module of viperleed.calc.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-02-23'
 __license__ = 'GPLv3+'
@@ -483,8 +483,8 @@ class TestSuccessfulRefcalc:
          self.ase_atoms) = run_from_ase_refcalc
 
     @pytest.fixture(autouse=True)
-    @pytest.mark.usefixtures('run_refcalc')
-    def read_theobeams_from_results(self):
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
+    def read_theobeams_from_results(self, run_refcalc):  # noqa: ARG002
         """Store a list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
         # pylint: disable-next=attribute-defined-outside-init
@@ -535,8 +535,8 @@ class TestFailingRefcalc:
          self.ase_atoms) = run_from_ase_refcalc_fails
 
     @pytest.fixture(autouse=True)
-    @pytest.mark.usefixtures('run_refcalc')
-    def read_theobeams_from_results(self):
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
+    def read_theobeams_from_results(self, run_refcalc):  # noqa: ARG002
         """Store an (empty) list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
         # pylint: disable-next=attribute-defined-outside-init

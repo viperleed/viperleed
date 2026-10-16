@@ -35,8 +35,9 @@ def fixture_make_time(make_field_factory):
 class CasesTimestampField:
     """Test cases for the TimestampField class."""
 
-    _formats = set(TimestampFormat)
-    _formats.add(TimestampFormat.DEFAULT)
+    # Fixed order: pytest-xdist workers must all collect the same
+    # test IDs in the same order.
+    _formats = tuple(TimestampFormat)
     all_formats = parametrize(fmt=_formats)
 
     class Tag(Enum):
