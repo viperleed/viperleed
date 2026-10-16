@@ -51,10 +51,8 @@ if_ase = pytest.mark.skipif(
     )
 with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
                                           has_tag=Tag.BULK_PROPERTIES)
-with_layers = parametrize_with_cases(
-    'args',
-    cases=CasePOSCARSlabs.case_layer_info_poscar
-    )
+with_layers = parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                                     has_tag=Tag.LAYER_INFO)
 infoless_poscar = parametrize_with_cases(
     'args',
     cases=CasePOSCARSlabs.case_infoless_poscar
@@ -1538,7 +1536,8 @@ class TestSlabLayers:
         assert n_atoms_per_layer_after == n_atoms_per_layer_original
         # Check that all atoms are in the unit cell
         eps = 1e-8
-        assert np.all(-eps <= at.pos <= 1 + eps for at in slab)
+        assert all(np.all((-eps <= at.pos) & (at.pos <= 1 + eps))
+                   for at in slab)
 
     @with_layers
     def test_full_update_without_topat_ori_z(self, args):
