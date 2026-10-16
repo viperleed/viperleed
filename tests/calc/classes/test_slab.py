@@ -37,6 +37,8 @@ from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import SingularMatrixError
 
+from ...helpers import check_draws
+from ...helpers import duplicate_all
 from ...helpers import exclude_tags, not_raises
 from .. import cases_ase, poscar_slabs
 from ..tags import CaseTag as Tag
@@ -377,10 +379,12 @@ class TestBulk3DOperations:
     """Tests for 3D symmetry operations of BulkSlab objects."""
 
     @staticmethod
-    def move_atom(slab, atom_index, distance):
+    def move_atom(slab, atom_index, distance, rng):
         """Move the atom at a given index by distance in a random direction."""
         atom = slab.atlist.get(atom_index)
-        direction = np.random.randn(2)
+        # rng is a seeded generator (see the draws fixture in
+        # tests/conftest.py), so that the outcome is reproducible
+        direction = rng.standard_normal(2)
         direction /= np.linalg.norm(direction)
         atom.cartpos[:2] += distance * direction
         slab.update_fractional_from_cartesian()
@@ -426,16 +430,29 @@ class TestBulk3DOperations:
         glide = SymPlane(np.array([0.25, 0]), ab_cell[1], ab_cell)
         return slab, glide, eps
 
-    @pytest.mark.xfail(reason='Known bug. Will be fixed in better-symmetry',
-                       strict=False)  # Sometimes they succeed
-    @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
+    _seeded_glide_bug = pytest.mark.xfail(
+        reason=('Known bug, fails with some of the seeded directions. '
+                'Will be fixed in better-symmetry'),
+        strict=True,
+        )
+
+    @parametrize(atoms_to_move=(
+        (1,),
+        pytest.param((3,), marks=_seeded_glide_bug),
+        pytest.param((1, 3), marks=_seeded_glide_bug),
+        ))
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
-                                             bulk_slab_with_glide):
+                                             bulk_slab_with_glide, draws):
         """Check identification of bulk glide plane with atoms a bit off."""
         slab, glide, eps = bulk_slab_with_glide
-        for atom_ind in atoms_to_move:
-            self.move_atom(slab, atom_ind, 0.99*eps)
-        assert slab.is_bulk_glide_symmetric(glide, 2, eps)
+
+        def _check(draw):
+            draw_slab, draw_glide = duplicate_all(slab, glide)
+            for atom_ind in atoms_to_move:
+                self.move_atom(draw_slab, atom_ind, 0.99*eps, draw.rng)
+            assert draw_slab.is_bulk_glide_symmetric(draw_glide, 2, eps)
+
+        check_draws(draws, _check)
 
     fe3o4_bulk = poscar_slabs.CaseBulkSlabs.case_fe3o4_bulk
 
@@ -447,35 +464,59 @@ class TestBulk3DOperations:
         glide = SymPlane(np.array([0, 0]), ab_cell[0] + ab_cell[1], ab_cell)
         assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
+    @staticmethod
+    def _check_known_screw_bug(draws, check, reason):
+        """Expect check to fail for some default draws, unless fresh."""
+        if draws.fresh:
+            check_draws(draws, check)
+            return
+        try:
+            check_draws(draws, check)
+        except AssertionError:
+            pytest.xfail(reason)
+        raise AssertionError('XPASS: This test should FAIL unless '
+                             'this is the better-symmetry branch')
+
     @parametrize_with_cases('bulk', cases=fe3o4_bulk)
-    def test_bulk_screw_symmetric(self, bulk, subtests):
+    def test_bulk_screw_symmetric(self, bulk, subtests, draws):
         """Check correct identification of bulk screw axis."""
         slab, rpars, *_ = bulk
-        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': rpars.SYMMETRY_EPS}
+        eps = rpars.SYMMETRY_EPS
+        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': eps}
+        # The moves of the subtests accumulate on the slab of each draw.
+        slabs = {draw.index: duplicate_all(slab)[0] for draw in draws}
+
+        def _move(atom_indices, draw):
+            for atom_ind in atom_indices:
+                self.move_atom(slabs[draw.index], atom_ind, 0.99*eps,
+                               draw.rng)
+
+        def _check_screw(draw):
+            assert slabs[draw.index].is_bulk_screw_symmetric(**kwargs)
+
         with subtests.test('Move atom that is transformed by 4-fold screw'):
             # Atom no. 49 (oxygen) is not on the 4-fold screw
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
-            assert slab.is_bulk_screw_symmetric(**kwargs)
+            for draw in draws:
+                _move((49,), draw)
+            check_draws(draws, _check_screw)
         with subtests.test('Move atom at 4-fold screw'):
             # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
-            try:
-                assert slab.is_bulk_screw_symmetric(**kwargs)
-            except AssertionError:
-                pytest.xfail('Known bug. Will be fixed in better-symmetry')
-            else:
-                raise AssertionError('XPASS: This test should FAIL unless '
-                                     'this is the better-symmetry branch')
+            for draw in draws:
+                _move((33,), draw)
+            self._check_known_screw_bug(
+                draws,
+                _check_screw,
+                'Known bug. Will be fixed in better-symmetry',
+                )
         with subtests.test('Move both atoms'):
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
-            try:
-                assert slab.is_bulk_screw_symmetric(**kwargs)
-            except AssertionError:
-                pytest.xfail('Known bug. Will be fixed in better-symmetry')
-            else:
-                raise AssertionError('XPASS: This test should FAIL unless '
-                                     'this is the better-symmetry branch')
+            for draw in draws:
+                _move((33, 49), draw)
+            self._check_known_screw_bug(
+                draws,
+                _check_screw,
+                'Known bug, fails with some of the seeded directions. '
+                'Will be fixed in better-symmetry',
+                )
 
 
 class TestBulkDetect:
