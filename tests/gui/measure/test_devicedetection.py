@@ -19,6 +19,7 @@ from viperleed.gui.measure.devicedetection import DEF_CORRUPTED
 from viperleed.gui.measure.devicedetection import RUN_ERR
 from viperleed.gui.measure.devicedetection import DeviceDetectionErrors
 from viperleed.gui.measure.devicedetection import DeviceDetectionWorker
+from viperleed.gui.measure.hardwarebase import Version
 
 from .mock_qt import _FakeSignal
 
@@ -277,6 +278,50 @@ class TestDeviceDetectionWorker:
         assert devices[0]['controller'] == {}
         assert errors
         worker.stop.assert_called_once()
+
+    def test_recreate_devices_restores_firmware_version(self):
+        """'firmware' should be a Version, not a str."""
+        worker = DeviceDetectionWorker()
+        devices = {
+            'test_ctrl': [
+                'types',
+                'SimpleNamespace',
+                {
+                    'unique_name': 'ViPErLEED TEST (COM4)',
+                    'has_hardware_interface': True,
+                    'more': {
+                        'firmware': '0.11',
+                        'address': 'COM4',
+                        'name': 'ViPErLEED TEST',
+                    },
+                },
+            ]
+        }
+
+        recreated = worker._recreate_devices(devices)
+        _, settings_info = recreated['test_ctrl']
+        assert isinstance(settings_info.more['firmware'], Version)
+        assert settings_info.more['firmware'].major == 0
+        assert settings_info.more['firmware'].minor == 11
+
+    def test_recreate_devices_leaves_firmware_absent(self):
+        """_recreate_devices should not break when 'firmware' is missing."""
+        worker = DeviceDetectionWorker()
+        devices = {
+            'test_ctrl': [
+                'types',
+                'SimpleNamespace',
+                {
+                    'unique_name': 'ViPErLEED (COM5)',
+                    'has_hardware_interface': True,
+                    'more': {'address': 'COM5', 'name': 'ViPErLEED'},
+                },
+            ]
+        }
+
+        recreated = worker._recreate_devices(devices)
+        _, settings_info = recreated['test_ctrl']
+        assert 'firmware' not in settings_info.more
 
     def test_stop_returns_early_when_no_process(self):
         """stop() should be a no-op when _process is None."""
