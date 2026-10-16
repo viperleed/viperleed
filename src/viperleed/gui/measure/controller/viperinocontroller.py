@@ -12,6 +12,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-08'
 __license__ = 'GPLv3+'
 
+import math
 import re
 import threading
 import time
@@ -1161,7 +1162,7 @@ class ViPErinoController(MeasureControllerABC):
         Convert the TC voltages to degrees centigrade using the CJC
         temperatures as a reference. At the same time, store the TC
         voltages under the QuantityInfo.AUX key in case conversion
-        fails.
+        fails. NaN voltages are passed through unchanged.
 
         Emits
         -----
@@ -1174,16 +1175,27 @@ class ViPErinoController(MeasureControllerABC):
         self.measurements[QuantityInfo.AUX] = tc_voltages
         cjc_temperatures = self.measurements.get(QuantityInfo.COLD_JUNCTION,
                                                  [None]*len(tc_voltages))
-        try:
-            self.measurements[QuantityInfo.TEMPERATURE] = [
-                self.thermocouple.temperature(v, t0)
-                for v, t0 in zip(tc_voltages, cjc_temperatures)
-                ]
-        except ValueError as exc:
-            self.emit_error(
-                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE, f'\nInfo: {exc}. '
-                'Check if the thermocouple is wired incorrectly.'
-                )
+        temperatures = []
+        for voltage, cj_temperature in zip(tc_voltages, cjc_temperatures):
+            if math.isnan(voltage):
+                # In continuous-mode measurements, NaN points are emitted
+                # when the gain is being reduced after ADC saturation. There
+                # is no real temperature to convert here: leave NaN as-is
+                # and, importantly, do NOT emit an error (that would abort
+                # the whole measurement via _on_hardware_error).
+                temperatures.append(voltage)
+                continue
+            try:
+                temperatures.append(self.thermocouple.temperature(
+                    voltage, cj_temperature))
+            except ValueError as exc:
+                self.emit_error(
+                    ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                    f'\nInfo: {exc}. '
+                    'Check if the thermocouple is wired incorrectly.'
+                    )
+                temperatures.append(voltage)
+        self.measurements[QuantityInfo.TEMPERATURE] = temperatures
 
     @classmethod
     def _get_version(cls, config):

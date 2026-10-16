@@ -153,11 +153,10 @@ int32_t AD7705getCalibrationRegister(byte chipSelectPin, byte channel,
     return result;
 }
 
-// TODO: why is this returning stuff? Should be void.
 /** Sets the value in an AD7705 offset or gain calibration register.
  *  'theRegister' must be AD7705_REG_OFFSET or AD7705_REG_GAIN.
  *  This function can be called to restore the result of a previous self-calibration */
-int32_t AD7705setCalibrationRegister(byte chipSelectPin, byte channel, byte theRegister, int32_t value) {
+void AD7705setCalibrationRegister(byte chipSelectPin, byte channel, byte theRegister, int32_t value) {
   AD7705startIO(chipSelectPin);                                                 // TODO: Datasheet says one should write high to FSYNC before doing operations with the calibration registers
   SPI.transfer(theRegister | channel);
   SPI.transfer16(value>>8);                  //write high 16 bits

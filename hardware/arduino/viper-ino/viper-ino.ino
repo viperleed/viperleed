@@ -19,9 +19,31 @@ Date: 09.02.2022
 // changed!
 #define BOX_ID  1
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.10
+// Firmware version (MAX: v255.255). CURRENTLY: v0.11
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    10  // max 255
+#define FIRMWARE_VERSION_MINOR    11  // max 255
+
+// Number of (continuous-mode) measurement points, each point being the
+// usual 3-message set (ADC#0, ADC#1, LM35), to emit as NaN after a gain
+// switch is detected in continuous mode. After a gain switch the
+// affected ADC needs ~3/updateRate seconds before valid data is again
+// available. One measurement point is produced every ~1/updateRate
+// seconds, so ~3 points are "lost" during the settling. To keep the
+// PC's count-based time axis consistent with real elapsed time, we fill
+// those slots with NaN values instead of not emitting anything. This
+// compensation is applied in continuous mode only.
+#define N_NAN_PER_GAIN_SWITCH  3
+
+// Number of point-slots still to be emitted as NaN (continuous mode only).
+// Set nonzero when a gain switch is detected; decreased by one each time
+// a NaN point is emitted.
+uint16_t nrPendingNaNPoints = 0;
+
+// Flag set when the gain of at least one ADC was switched during the
+// current continuous-mode acquisition cycle. When true, the cycle's
+// measurement is considered invalid (the ADCs need to settle), so the
+// slot is not emitted and NaN compensation is scheduled instead.
+bool adcGainSwitched = false;
 
 
 /** ---------------------------- INITIALIZATION ---------------------------- **/
@@ -118,7 +140,8 @@ void updateState() {
 
     Writes
     ------
-    initialTime, currentState, waitingForDataFromPC, calibrationGain
+    initialTime, currentState, waitingForDataFromPC, calibrationGain,
+    nrPendingNaNPoints, adcGainSwitched
 
     Goes to state
     -------------
@@ -183,6 +206,8 @@ void updateState() {
             break;
         case PC_STOP:
             currentState = STATE_IDLE;
+            nrPendingNaNPoints = 0;
+            adcGainSwitched = false;
             encodeAndSend(PC_OK);
             break;
         case PC_SET_VOLTAGE_ONLY:
@@ -774,17 +799,30 @@ void measureADCs(){
         the state of the Arduino is changed to STATE_ADC_VALUES_READY, which
         will handle the communication of the measurement to the PC.
 
+    Behavior in continuous case on a detected gain switch:
+    - The acquisition that detected the (solid) saturation is discarded
+      (the ADCs need to settle after the gain change, so no value is
+      emitted that cycle).
+    - The following N_NAN_PER_GAIN_SWITCH cycles emit NaN points instead
+      of real measurements, accounting for the ~3/updateRate seconds the
+      ADCs need to provide valid data again (see AD7705setGainAndTrigger).
+    - After that, real measurements resume.
+
     Reads
     -----
-    numMeasurementsDone, numMeasurementsToDo, initialTime
+    adcGainSwitched, continuousMeasurement, numMeasurementsDone,
+    numMeasurementsToDo, initialTime, nrPendingNaNPoints
 
     Writes
     ------
-    summedMeasurements, currentState, newMessage
+    summedMeasurements, currentState, nrPendingNaNPoints,
+    adcGainSwitched, initialTime, numMeasurementsDone
 
     Msg to PC
     ---------
-    None.
+    None, except while nrPendingNaNPoints > 0 in continuous mode, when
+    three NaN data messages (ADC#0, ADC#1, LM35) are emitted. Real
+    measurement data is sent later from STATE_ADC_VALUES_READY.
 
     Goes to state
     -------------
@@ -808,19 +846,63 @@ void measureADCs(){
         return;
     }
 
-    makeAndSumMeasurements();
-    // TODO: if, by chance, the last value measured by one of the ADCs
-    //       caused a solid saturation, this is not communicated in any
-    //       way to the PC, since the rest of the code goes through, and
-    //       the Arduino goes to STATE_ADC_VALUES_READY, swallowing
-    //       the error. It could be solved easily by a simple check:
-    //       if (currentState == STATE_ERROR) return;
-    if (checkIfTimedOut()){
+    if (continuousMeasurement && nrPendingNaNPoints > 0){
+        // Compensate for a previous gain switch: emit a NaN point
+        // (still as the usual 3-message set to keep protocol intact),
+        // and stay in STATE_MEASURE_ADCS.
+        sendNaNPoint();
+        nrPendingNaNPoints--;
+        resetMeasurementData();   // Keep counter at 0 for the next real slot
+        initialTime = millis();
         return;
     }
+
+    makeAndSumMeasurements();
+
+    if (currentState == STATE_ERROR || checkIfTimedOut()){
+        return;
+    }
+
+    if (continuousMeasurement && adcGainSwitched){
+        // The acquisition just caused a gain switch. The ADCs need to
+        // settle, so discard this potentially corrupted slot and schedule
+        // NaN compensation instead of emitting a value. No emission this
+        // cycle.
+        adcGainSwitched = false;
+        nrPendingNaNPoints = N_NAN_PER_GAIN_SWITCH;
+        resetMeasurementData();
+        initialTime = millis();
+        return;
+    }
+
     if(numMeasurementsDone == numMeasurementsToDo){
         currentState = STATE_ADC_VALUES_READY;
     }
+}
+
+
+/** Emit a NaN measurement point (continuous mode only) */
+void sendNaNPoint(){
+    /**Send one full measurement point (ADC#0, ADC#1, LM35) as NaN.
+
+    The message format is identical to a normal measurement point, so
+    the serial/PC protocol is unchanged; only the values are
+    not-a-number. This is used in continuous mode to keep the count of
+    received points consistent with the real elapsed time while an ADC
+    settles after a gain switch.
+
+    Writes
+    ------
+    fDataOutput
+
+    Msg to PC
+    ---------
+    Three data messages, each 4 bytes (+ encoding), all NaN values
+    **/
+    for (int iDevice = 0; iDevice < N_MAX_MEAS; iDevice++){
+        fDataOutput[iDevice].asFloat = NAN;
+    }
+    sendADCMeasurements();
 }
 
 
@@ -839,7 +921,7 @@ void sendMeasuredValues(){
     - LM35 (if present)     : degC
     - LM35 (if not present) : Volts
 
-    The sequence of returned results is: LM35, ADC#0, ADC#1
+    The sequence of returned results is: ADC#0, ADC#1, LM35
 
     Notice that the I0 value (measured at the LEED electronics, i.e.,
     ADC#0, channel 0) is returned in uAmps under the assumption that:
@@ -886,6 +968,39 @@ void sendMeasuredValues(){
     //       N_MAX_MEAS*4(bytes)*2(encoding) + 3 (MSG_START, MSG_END, length)
     getFloatMeasurements();
 
+    // Send the values as three messages (ADC#0, ADC#1, LM35)
+    sendADCMeasurements();
+    resetMeasurementData();
+    if (continuousMeasurement) {
+        currentState = STATE_MEASURE_ADCS;
+        initialTime = millis();
+    }
+    else {
+        currentState = STATE_IDLE;
+    }
+}
+
+
+/** Send the current fDataOutput as the usual three measurement messages */
+void sendADCMeasurements(){
+    /**Send fDataOutput to the PC as three 4-byte messages.
+
+    The sequence (and hence the over-the-wire format) is identical to a
+    normal measurement point: ADC#0, ADC#1, LM35, each as 4 data bytes
+    (+ encoding), big-endian.
+
+    Reads
+    -----
+    fDataOutput
+
+    Writes
+    ------
+    None.
+
+    Msg to PC
+    ---------
+    Three serial messages, each contains 4 bytes (+encoding)
+    **/
     // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
     // have flip the bytes over to maintain consistency of our messages, which
     // are in big-endian order
@@ -897,14 +1012,6 @@ void sendMeasuredValues(){
         encodeAndSend(littleToBigEndian, 4);
     }
     //encodeAndSend(adc0Gain); //uncomment for debug (adapt python side accordingly)
-    resetMeasurementData();
-    if (continuousMeasurement) {
-        currentState = STATE_MEASURE_ADCS;
-        initialTime = millis();
-    }
-    else {
-        currentState = STATE_IDLE;
-    }
 }
 
 
@@ -1026,6 +1133,12 @@ void handleErrors(){
     -----
     currentState, errorTraceback
 
+    Writes
+    ------
+    nrPendingNaNPoints, adcGainSwitched, waitingForDataFromPC,
+    newMessage, currentState, adc0ShouldDecreaseGain,
+    adc1ShouldDecreaseGain
+
     Msg to PC
     ---------
     First message : PC_ERROR
@@ -1069,6 +1182,8 @@ void handleErrors(){
     }
     waitingForDataFromPC = false;
     newMessage = false;
+    nrPendingNaNPoints = 0;
+    adcGainSwitched = false;
     currentState = STATE_IDLE;
 }
 
@@ -1089,7 +1204,8 @@ void reset(){
     adc0Gain, adc1Gain, calibrationGain, adc0RipplePP, adc1RipplePP,
     adc0ShouldDecreaseGain, adc1ShouldDecreaseGain,
     numMeasurementsToDo, numMeasurementsToDoBackup,
-    numMeasurementsDone, summedMeasurements, calibratedChannels
+    numMeasurementsDone, summedMeasurements, calibratedChannels,
+    nrPendingNaNPoints, adcGainSwitched
 
     Goes to state
     -------------
@@ -1105,6 +1221,10 @@ void reset(){
     continuousMeasurement = false;
     dacSettlingTime = 100;
     nextVoltageStep = 0;
+
+    // Continuous-mode gain-switch NaN compensation state
+    nrPendingNaNPoints = 0;
+    adcGainSwitched = false;
 
     hardwareDetected.asInt = 0;
     hardwareNeverChecked = true;
@@ -1169,7 +1289,8 @@ void changeMeasurementMode() {
 
     Writes
     ------
-    continuousMeasurement
+    continuousMeasurement, nrPendingNaNPoints, adcGainSwitched,
+    numMeasurementsToDo
 
     Msg to PC
     ---------
@@ -1220,6 +1341,8 @@ void changeMeasurementMode() {
     }
     if (continuous_mode == 0) {
         continuousMeasurement = false;
+        nrPendingNaNPoints = 0;
+        adcGainSwitched = false;
     }
     if (continuous_mode != 1 and continuous_mode != 0) {
         raise(ERROR_MSG_DATA_INVALID);
@@ -1605,9 +1728,13 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
             measurement range (i.e., 2*ADC_RANGE_THRESHOLD),
             the value is still acceptable, but gain will soon
             need to be decreased. Set adcShouldDecreaseGain.
-        (2) If adcValue is in solid saturation (full scale),                    // TODO: can't we avoid redoing all measurements? Perhaps it's enough to shift the correct summedMeasurements[i] by >> 1?
-            the measurement itself is incorrect, and needs to
-            be repeated from scratch after decreasing the gain.
+        (2) If adcValue is in solid saturation (full scale) in                  // TODO: can't we avoid redoing all measurements? Perhaps it's enough to shift the correct summedMeasurements[i] by >> 1?
+            non-continuous mode, the measurement itself is incorrect,
+            and needs to be repeated from scratch after decreasing the
+            gain. In continuous mode, instead of resetting the
+            measurement data, the gain switch is signalled via
+            adcGainSwitched and the (invalid) slot is discarded by the
+            caller (measureADCs), which schedules NaN compensation.
         (3) If adcValue is in solid saturation but the gain
             cannot be decreased, go to STATE_ERROR,
             with ERROR_ADC_SATURATED code.
@@ -1648,8 +1775,19 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
             setAllADCgainsAndCalibration();
             if (currentState == STATE_ERROR)   // Some channel was not calibrated
                 return;
-            resetMeasurementData();
             *adcShouldDecreaseGain = false;
+            if (continuousMeasurement){
+                // In continuous mode we do not reset the measurement
+                // data here. Instead we signal the gain switch, and
+                // discard the (invalid) slot and schedule NaN
+                // compensation for the settling time. Doing the reset
+                // here would silently drop the slot and break the
+                // count-based time axis on the PC.
+                adcGainSwitched = true;
+            }
+            else{
+                resetMeasurementData();
+            }
         }
         else{
             raise(ERROR_ADC_SATURATED);
