@@ -13,9 +13,9 @@ hashlib. The check is toggled by parameter TL_IGNORE_CHECKSUM.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2022-10-12'
 __license__ = 'GPLv3+'

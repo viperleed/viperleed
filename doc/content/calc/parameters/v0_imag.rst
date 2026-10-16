@@ -9,6 +9,10 @@ V0_IMAG defines the imaginary part of the inner potential (in electronvolts),
 which is combined with the real part :ref:`V0_REAL<MUFTIN>`. (The original
 equivalent Fortran parameters are VPI, VPIS, VPIO.)
 
+.. note::
+    Different sign conventions exist in literature; here, V0_IMAG is
+    always expected to be positive.
+
 **Default**: V0_IMAG = 4.5
 
 **Syntax**:
