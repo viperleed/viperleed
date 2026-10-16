@@ -29,6 +29,7 @@ from pathlib import Path
 import shutil
 from zipfile import ZipFile
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -79,6 +80,27 @@ def fixture_factory_make_section_tempdir(tmp_path_factory):
         tmp_dir_name = f'{surface}_{section}' + '_'.join(other_specifiers)
         return tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     return _make
+
+
+def skip_if_tl_version_missing(source, version):
+    """Skip the current test/fixture if `source` has no TensErLEED `version`.
+
+    Parameters
+    ----------
+    source : path-like
+        Folder with TensErLEED sources (e.g., $VIPERLEED_TENSORLEED).
+    version : Version or str
+        The TensErLEED version that is needed.
+    """
+    version = Version(str(version))
+    try:
+        found = tenserleed.get_tenserleed_sources(source)
+        available = [s.version for s in found]
+    except (FileNotFoundError, NotImplementedError, ValueError):
+        available = []
+    if version not in available:
+        pytest.skip(f'TensErLEED v{version} is not available in {source}. '
+                    'Set VIPERLEED_TENSORLEED to a folder that contains it.')
 
 
 class BaseCalcFilesSetup:
@@ -138,6 +160,7 @@ class BaseCalcFilesSetup:
 
     def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
+        skip_if_tl_version_missing(source, preset_params['TL_VERSION'])
         with execute_in_dir(self.work_path):
             self.failed, self.records = run_calc(
                 source=source,
