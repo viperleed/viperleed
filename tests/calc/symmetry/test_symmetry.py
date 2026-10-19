@@ -242,6 +242,9 @@ class TestSymmetryConstraints:
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_cm_1m1': SEEDED_SHIFT_FAILS,
         'square_pm_10': SEEDED_SHIFT_FAILS,
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'hex_cm_11': 'Known to sometimes fail with a random shift',
         }
 
     def test_correct_free_directions(self, with_symmetry_constraints,
@@ -284,6 +287,13 @@ class TestSymmetryConstraints:
         'square_pm_10': SEEDED_SHIFT_FAILS,
         'pm_10': SEEDED_SHIFT_FAILS,
         'pg_10': SEEDED_SHIFT_FAILS,
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'hex_cm_11': 'Known to sometimes fail with a random shift',
+        # 'square_pm_01': 'Known to sometimes fail with a random shift',
+        # 'poscar_fe3o4_001_cod':
+        #     'Known to rarely fail with a random shift',
+        # 'p6': 'Known to rarely fail with a random shift',
         }
 
     def test_correct_atom_linking(self, with_symmetry_constraints,
@@ -309,6 +319,23 @@ class TestSymmetryConstraints:
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'rcm-ucell=rectangular':
+        #     'Known to sometimes fail with a random shift',
+        # 'rcm-ucell=square':
+        #     'Known to sometimes fail with a random shift',
+        # 'cm_1m1': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_10': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_1m1': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_11': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_21': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_12': 'Known to sometimes fail with a random shift',
+        # 'square_pm_10': 'Known to often fail with a random shift',
+        # 'square_pm_01': 'Known to often fail with a random shift',
+        # 'square_cm_11': 'Known to often fail with a random shift',
+        # 'poscar_sb_si_111':
+        #     'Known to rarely fail with a random shift',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
@@ -450,6 +477,42 @@ class TestSlabSymmetrization:
         'double_bulk-fe3o4': 'Seeded rattling gives pm instead of pmm',
         'double_bulk-ru': 'Seeded rattling gives cm instead of p3m1',
         'fe3o4_bulk': 'Seeded rattling gives pm instead of pmm',
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'pgg-ucell=square': 'Often reduced to pg',
+        # 'rcm-ucell=square': 'Sometimes reduced to pm',
+        # 'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
+        # 'pmm-ucell=rectangular': 'Sometimes reduced to pm',
+        # 'pmg-ucell=rectangular': 'Sometimes identified as rcm',
+        # 'cmm': 'Sometimes reduced to cm',
+        # 'p2': 'Sometimes reduced to p1',
+        # 'cm_1m1': 'Sometimes reduced to p1',
+        # 'p4': 'Sometimes reduced to p1',
+        # 'p4g': 'Sometimes reduced to cm',
+        # 'p3': 'Sometimes reduced to p1',
+        # 'p3m1': 'Often reduced to cm',
+        # 'p6': 'Sometimes reduced to p2/p1',
+        # 'hex_cm_12': 'Often reduced to p1',
+        # 'hex_cmm_11': 'Often reduced to cm',
+        # 'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
+        # 'poscar_ag100': 'Often reduced from p4m to cm',
+        # 'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        # 'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
+        # 'poscar-ru': 'Sometimes reduced to cm from p3m1',
+        # 'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
+        # 'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
+        # 'infoless_poscar-Cu2O_111':
+        #     'Sometimes reduced to cm from p3m1',
+        # 'infoless_poscar-Fe3O4_SCV':
+        #     'Sometimes reduced to cm from cmm',
+        # 'infoless_poscar-In2O3_(111)':
+        #     'Sometimes reduced to p1 from p3',
+        # 'infoless_poscar-Ir(100)-(2x1)-O':
+        #     'Sometimes misidentified as pm',
+        # 'infoless_poscar-TiO2_supercell':
+        #     'Sometimes reduced to pm from pmm',
+        # 'infoless_poscar-TiO2_small':
+        #     'Sometimes reduced to pm/p1 from pmm',
         }
 
     def test_rattled_group(self, rattled_slab, first_case, draws):
