@@ -127,12 +127,10 @@ def errorcalc(sl, rp):
         logger.info("Error calculation: Returning with no output.")
         return
 
-    # Inform user that statistical error estimates are only available
-    # for Pendry R-factor.
-    if rp.R_FACTOR_TYPE != 1:
+    if str(rp.R_FACTOR_TYPE) not in {'pendry', 'smooth'}:
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
-                    "R-factor.")
+                    "and Smooth R-factors.")
     else:
         # Write var(R) to log as info.
         var_r_info = ioerrorcalc.extract_var_r(errors)

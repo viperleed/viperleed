@@ -17,23 +17,13 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc.constants import DEFAULT_OUT
-from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files import iorfactor
-from viperleed.calc.files import iotensors
+from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
+from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
-from viperleed.calc.lib import fs_utils
-from viperleed.calc.lib import leedbase
+from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
+from viperleed.calc.lib import rfactor as rfactor_lib
 from viperleed.calc.lib.checksums import validate_multiple_files
-
-try:
-    from viperleed.calc.wrapped.rfactor import r_factor_new as rf
-except ImportError:
-    _HAS_NEW_R_FACTOR = False
-else:
-    from viperleed.calc.wrapped.error_codes import check_ierr
-    _HAS_NEW_R_FACTOR = True
+from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +56,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):                    
     expbeams = rp.expbeams
 
     # Branch off for new R factor calculation
-    if not rp.R_FACTOR_LEGACY and _HAS_NEW_R_FACTOR:                            # TODO: we may want to raise some errors if we want to use it but it's not there
+    if not rp.R_FACTOR_LEGACY:
         return run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams)
     return run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary)
 
@@ -126,299 +116,150 @@ def _fetch_and_check_spectra(rp, index, name):
 
 
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
-    logger.debug("Using new R-factor calculation. This is still experimental!")
-    which_r = rp.R_FACTOR_TYPE
+    logger.warning(
+        'Using new R-factor calculation. This is still experimental!'
+    )
 
-    if which_r == 1:
-        n_derivs = 1
-    elif which_r == 2:
-        n_derivs = 0
-    else:
-        check_ierr(701, logger)
+    # select R-factor function by name
+    r_func = rfactor_lib.select_rfactor(rp.R_FACTOR_TYPE.name)
+    logger.info(f'Calculating R-factor type {rp.R_FACTOR_TYPE.name}.')
 
-    (_, theo_range,
-     iv_shift,
-     intpol_step) = iorfactor.prepare_rfactor_energy_ranges(
-        rp, theobeams, for_error,
-        n_expand=(rp.INTPOL_DEG - 1) // 2
+    (_, theo_range, iv_shift, intpol_step) = (
+        iorfactor.prepare_rfactor_energy_ranges(
+            rp, theobeams, for_error, n_expand=(rp.INTPOL_DEG - 1) // 2
         )
-    out_grid = np.arange(theo_range.min,
-                         theo_range.max + 0.1 * intpol_step,
-                         intpol_step)
+    )
+    out_grid = np.arange(
+        theo_range.min, theo_range.max + 0.1 * intpol_step, intpol_step
+    )
+
+    if rp.INTPOL_DEG != 3:
+        logger.error(
+            'New R-factor calculation only supports cubic '
+            'interpolation (INTPOL_DEG=3).'
+        )
+        rp.setHaltingLevel(1)
+        return []
 
     # find correspondence experimental to theoretical beams:
-    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
-    # integer & fractional beams
-    iorf = []
-    for (i, beam) in enumerate(rp.expbeams):
-        if beam.hk[0] % 1.0 != 0.0 or beam.hk[1] % 1.0 != 0.0:
-            iorf.append(2)
-        else:
-            iorf.append(1)
-    iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
+    beam_correspondence = leedbase.getBeamCorrespondence(sl, rp)
+    beam_correspondence = tuple(beam_correspondence)
+    logger.debug(f'Beam correspondence: {beam_correspondence}')
 
-    n_beams = len(beamcorr) - beamcorr.count(-1)  # -1 indicates no correspondence
-    (exp_grid, exp_id_start,
-     exp_n_E_beams,
-     exp_intensities_in) = iorfactor.beamlist_to_array(rp.expbeams)
-    corr_theobeams = []
-    for i in beamcorr:
-        if i != -1:
-            corr_theobeams.append(theobeams[i])
-    (theo_grid,
-     theo_id_start,
-     theo_n_E_beams,
-     theo_intensities_in) = iorfactor.beamlist_to_array(corr_theobeams)
+    # calculate splines from the spectra
+    logger.debug('Constructing splines from data...')
 
-    deg = rp.INTPOL_DEG
-    v0i = rp.V0_IMAG
-
-    # Should we do reordering averaging etc. using the subroutine? - unused right now... # TODO
-    averaging_scheme = np.int32(np.arange(n_beams) + 1)  # Fortran index
-
-    # create buffer arrays
-    (
-        exp_e_start_beams_out,
-        exp_n_e_beams_out,
-        exp_intpol_int,
-        exp_intpol_deriv_y,
-        ierr,
-    ) = rf.alloc_beams_arrays(n_beams, len(out_grid))
-    check_ierr(ierr, logger)
-
-    # interpolation and derivative
-    ierr = rf.prepare_beams(
-        e_grid_in=exp_grid,
-        intensities=exp_intensities_in,
-        e_start_beams=exp_id_start + 1,  # Fortran indices
-        n_e_beams=exp_n_E_beams,
-        deg=deg,
-        n_derivs=n_derivs,
-        e_grid_out=out_grid,
-        e_start_beams_out=exp_e_start_beams_out,
-        n_e_beams_out=exp_n_e_beams_out,
-        intpol_intensity=exp_intpol_int,
-        intpol_derivative=exp_intpol_deriv_y,
+    ## experiment
+    exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(
+        rp.expbeams
     )
-    # check for erros
-    check_ierr(ierr, logger)
-
-    # Same for theoretical beams now
-    # create buffer arrays
-    (
-        theo_e_start_beams_out,
-        theo_n_e_beams_out,
-        theo_intpol_int,
-        theo_intpol_deriv_y,
-        ierr,
-    ) = rf.alloc_beams_arrays(n_beams, len(out_grid))
-    check_ierr(ierr, logger)
-
-    # interpolation and derivative
-    ierr = rf.prepare_beams(
-        e_grid_in=theo_grid,
-        intensities=theo_intensities_in,
-        e_start_beams=theo_id_start + 1,  # Fortran indices
-        n_e_beams=theo_n_E_beams,
-        deg=deg,
-        n_derivs=n_derivs,
-        e_grid_out=out_grid,
-        e_start_beams_out=theo_e_start_beams_out,
-        n_e_beams_out=theo_n_e_beams_out,
-        intpol_intensity=theo_intpol_int,
-        intpol_derivative=theo_intpol_deriv_y,
+    exp_spline = spline_interpolation.interpolate_ragged_array(
+        x=exp_energies,
+        y=exp_intensities,
+        bc_type='not-a-knot',  # TODO: from Rfactor parameter?
     )
-    # check for erros
-    check_ierr(ierr, logger)
+    exp_spline = spline_interpolation.CachedSpline(exp_spline)
 
-    # For Factor R2 we use intesities for further calculations, otherwise the Y function
-    if which_r == 1:
-        # Make Y-functions
-        rf.pendry_y_beamset(
-            exp_intpol_int,
-            exp_intpol_deriv_y,  # derivative is overwritten by the Y function
-            exp_e_start_beams_out,
-            exp_n_e_beams_out,
-            v0i,
-        )
-
-        rf.pendry_y_beamset(
-            theo_intpol_int,
-            theo_intpol_deriv_y,  # derivative is overwritten by the Y function
-            theo_e_start_beams_out,
-            theo_n_e_beams_out,
-            v0i,
-        )
-
-        exp_data = exp_intpol_deriv_y
-        theo_data = theo_intpol_deriv_y
-
-    elif which_r == 2:
-        exp_data = exp_intpol_int
-        theo_data = theo_intpol_int
-
-        # optimize V0r and calculate R factor
-
-        ## settings for V0r optimization
-    bounds = iv_shift.min, iv_shift.max
-    v0r_range = np.array(
-        [round(bound / intpol_step) for bound in bounds], dtype="int32"
+    ## theory
+    (theo_grid, _, _, theo_intensities) = iorfactor.beamlist_to_array(theobeams)
+    theo_intensities = average_beam_array(theo_intensities, beam_correspondence)
+    theo_spline = spline_interpolation.interpolate_ragged_array(
+        x=theo_grid,
+        y=theo_intensities,
+        bc_type='not-a-knot',  # TODO: from Rfactor parameter?
     )
-    v0r_center = int((v0r_range[0] + v0r_range[1]) / 2)
-    start_guess = np.array([v0r_range[0], v0r_center, v0r_range[1]], dtype="int32")
+    theo_spline = spline_interpolation.CachedSpline(theo_spline)
 
-    # TODO: make below into User Parameters
-    fast_search = False
-    tol_r = (1 - 5e-2,)
-    tol_r_2 = (1 - 5e-2,)
-    max_fit_range = 6
-
-    (
-        best_v0r_step,
-        best_v0r,
-        best_rfac,
-        _,  # n_v0r_evaluated
-        R_beams,
-        numerators,
-        denominators,
-        n_overlapp_beams,
-        ierr,
-    ) = rf.r_beamset_v0r_opt_on_grid(
-        which_r,
-        v0r_range,
-        start_guess,
-        fast_search,
-        intpol_step,
-        exp_data,
-        theo_data,
-        exp_e_start_beams_out,
-        theo_e_start_beams_out,
-        exp_n_e_beams_out,
-        theo_n_e_beams_out,
-        tol_r=tol_r,
-        tol_r_2=tol_r_2,
-        max_fit_range=max_fit_range,
+    logger.debug('Sweeping V0r...')
+    # sweep V0r shifts - TODO: continuous shifts?
+    shifts = np.arange(
+        rp.IV_SHIFT_RANGE.start,
+        rp.IV_SHIFT_RANGE.stop + rp.IV_SHIFT_RANGE.step,
+        rp.IV_SHIFT_RANGE.step,
     )
-
-    check_ierr(ierr, logger)
-
-    logger.info(
-        "With inner potential shift of {:.2f} eV: "
-        "R = {:.4f}\n".format(best_v0r, best_rfac)
-    )
-    rp.best_v0r = best_v0r
-
-    # seperate into integer and fractional beams
-    n_groups = 2
-    grouping = np.int32(iorf)  # 1 is integer, 2 is fractional
-
-    # Call grouping routine
-    (r_factor_groups, _, ierr) = rf.r_beamtype_grouping(  # n_overlapp_groups unused
-        which_r, R_beams, numerators, denominators, n_overlapp_beams, n_groups, grouping
-    )
-    # error 903 and 904 are acceptable - that just means there are no integer/fractional beams
-
-    check_ierr(ierr, logger)
-
-    (r_int, r_frac) = list(r_factor_groups)
-
-    if np.isclose(best_rfac, 0):
-        logger.error(
-            "R-Factor reported as zero. This means "
-            "something went wrong in the reference "
-            "calculation or in the R-factor calculation."
-        )
-        rp.setHaltingLevel(2)
-    elif best_rfac > 2:
-        logger.error(
-            f"R-Factor reported as {best_rfac}. This means "
-            "something went wrong in the reference "
-            "calculation or in the R-factor calculation."
-        )
-        rp.setHaltingLevel(2)
-    else:
-        rp.last_R = best_rfac
-        rp.stored_R[name] = (best_rfac, r_int, r_frac)
-
-    if rp.PLOT_IV["plot"]:
-        # Plot R-factor
-        outname = "Rfactor_plots_{}.pdf".format(name)
-        aname = "Rfactor_analysis_{}.pdf".format(name)
-        if rp.PLOT_IV["overbar"]:
-            labelstyle = "overbar"
-        else:
-            labelstyle = "minus"
-        # labelwidth = max([beam.getLabel(style=labelstyle)[1] for beam in rp.expbeams]) # TODO currently unused? why?
-
-        labels = [beam.label for beam in expbeams]
-
-        # Apply v0r shift to arrays for plotting
-
-        shifted_intpol_exp = np.copy(exp_intpol_int)
-        shifted_intpol_theo = np.copy(theo_intpol_int)
-        shifted_y_exp = np.copy(exp_data)
-        shifted_y_theo = np.copy(theo_data)
-        shifted_E_start_exp = np.copy(exp_e_start_beams_out)
-        shifted_E_start_theo = np.copy(theo_e_start_beams_out)
-        shifted_n_exp = np.copy(exp_n_e_beams_out)
-        shifted_n_theo = np.copy(theo_n_e_beams_out)
-
-        """
-            np.savetxt("viper_exp_start.csv", exp_e_start_beams_out, delimiter = ',')
-            np.savetxt("viper_exp_n_beams.csv", exp_n_e_beams_out, delimiter = ',')
-            np.savetxt("viper_exp_y.csv", exp_yfunc, delimiter = ',')
-            np.savetxt("viper_exp_intensity.csv", exp_intpol_intensity, delimiter = ',')
-            np.savetxt("viper_theo_start.csv", theo_e_start_beams_out, delimiter = ',')
-            np.savetxt("viper_theo_n_beams.csv", theo_n_e_beams_out, delimiter = ',')
-            np.savetxt("viper_theo_y.csv", theo_yfunc, delimiter = ',')
-            np.savetxt("viper_theo_intensity.csv", theo_intpol_intensity, delimiter = ',')
-            np.savetxt("viper_theo_energies.csv", theo_grid, delimiter = ',')
-            np.savetxt("viper_exp_energies.csv", exp_grid, delimiter = ',')
-            """
-
-        ierr = rf.apply_beamset_shift(
-            shifted_intpol_exp,
-            shifted_E_start_exp,
-            shifted_n_exp,
-            shifted_intpol_theo,
-            shifted_E_start_theo,
-            shifted_n_theo,
-            shift=best_v0r_step,
-            fill_outside=1,
-        )
-        check_ierr(ierr, logger)
-        ierr = rf.apply_beamset_shift(
-            shifted_y_exp,
-            np.copy(exp_e_start_beams_out),
-            np.copy(exp_n_e_beams_out),
-            shifted_y_theo,
-            np.copy(theo_e_start_beams_out),
-            np.copy(theo_n_e_beams_out),
-            shift=best_v0r_step,
-            fill_outside=1,
-        )
-        check_ierr(ierr, logger)
-
-        # shifted_E_start_exp must be now same as shifted_E_start_theo -> no need to pass both
-        # same for n_e_beams
-        iorfactor.writeRfactorPdf_new(
-            n_beams,
-            labels,
-            R_beams,
+    r_values = [
+        r_func(
+            rp.V0_IMAG,
+            intpol_step,
             out_grid,
-            shifted_E_start_exp,
-            shifted_n_exp,
-            shifted_intpol_exp,
-            shifted_intpol_theo,
-            shifted_y_exp,
-            shifted_y_theo,
-            outName=outname,
-            analysisFile=aname,
-            v0i=rp.V0_IMAG,
-            formatting=rp.PLOT_IV,
+            data_spline_1=exp_spline,
+            data_spline_2=theo_spline,
+            shift_2nd_spline=shift,
+            groups=None,
         )
-    rfaclist = list(R_beams)
-    return rfaclist
+        for shift in shifts
+    ]
+
+    # use best shift
+    r_values = np.array(r_values)
+    best_index = np.argmin(r_values)
+    best_shift = shifts[best_index]
+    logger.info(
+        f'Best inner potential shift: {best_shift:.2f} eV '
+        f'with R = {r_values[best_index]:.4f}'
+    )
+    rp.best_v0r = best_shift
+
+    if best_shift != 0:
+        # re-build theoretical splines one more time on the shifted grid
+        theo_spline = spline_interpolation.interpolate_ragged_array(
+            x=theo_grid + best_shift,
+            y=theo_intensities,
+            bc_type='not-a-knot',  # TODO: from Rfactor parameter?
+            )
+        theo_spline = spline_interpolation.CachedSpline(theo_spline)
+
+    # calculate R-factors at best shift
+    logger.debug('Calculating R-factors...')
+    r_fac_overall = r_func(
+        rp.V0_IMAG,
+        intpol_step,
+        out_grid,
+        data_spline_1=exp_spline,
+        data_spline_2=theo_spline,
+        groups=None,
+        )
+
+    integer_fractional_mask = determine_integer_or_fractional(rp)
+    r_fac_integer, r_fac_fractional = r_func(
+        rp.V0_IMAG,
+        intpol_step,
+        out_grid,
+        data_spline_1=exp_spline,
+        data_spline_2=theo_spline,
+        groups=integer_fractional_mask,
+        num_groups=2,
+    )
+
+    r_fac_per_beam = r_func(
+        rp.V0_IMAG,
+        intpol_step,
+        out_grid,
+        data_spline_1=exp_spline,
+        data_spline_2=theo_spline,
+        groups='beam',
+    )
+
+    # plotting
+    if rp.PLOT_IV['plot']:
+        outname = f'Rfactor_plots_{name}.pdf'
+        aname = f'Rfactor_analysis_{name}.pdf'
+        iorfactor.write_Rfactorpdf_from_splines(
+            rp,
+            theo_spline,
+            exp_spline,
+            out_grid,
+            r_fac_per_beam,
+            outname=outname,
+            analysis_file=aname,
+        )
+
+    # store R-factors
+    rp.last_R = r_fac_overall
+    rp.stored_R[name] = (r_fac_overall, r_fac_integer, r_fac_fractional)
+
+    # return the per-beam R-factors
+    return r_fac_per_beam
 
 
 def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
@@ -553,7 +394,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     rp.best_v0r = v0rshift
     dir_list = [Path(), Path(DEFAULT_OUT)]
     for dir_name in dir_list:
-        for f_name in dir_name.glob(f"R_OUT*"):
+        for f_name in dir_name.glob("R_OUT*"):
             if not f_name.is_file():
                 continue
             try:  # delete old R_OUT files
@@ -596,7 +437,19 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
                 analysisFile=aname,
                 v0i=rp.V0_IMAG,
                 formatting=rp.PLOT_IV,
+                which_r=rp.R_FACTOR_TYPE,
                 )
         except Exception:                                                       # TODO catch correct exception
             logger.warning("Error plotting R-factors.", exc_info=True)
     return rfaclist
+
+
+def determine_integer_or_fractional(rpars):
+    """Determine whether beams are integer or fractional."""
+    iorf = []
+    for beam in rpars.expbeams:
+        if beam.hk[0] % 1.0 or beam.hk[1] % 1.0:
+            iorf.append(1)
+        else:
+            iorf.append(0)
+    return tuple(iorf)

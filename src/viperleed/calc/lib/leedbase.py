@@ -100,50 +100,6 @@ def get_superlattice_repetitions(matrix):
     return abs(round(matrix[0, 0])), abs(round(n_repeats / matrix[0, 0]))
 
 
-def getYfunc(ivfunc, v0i):
-    """
-    Returns the Y function for a given function. The derivative is
-    approximated by the slope between one point to the left and one to the
-    right, so the Y function does not have values for the highest and lowest
-    energies that are passed.
-    Y = L/sqrt(1 + v0i^2 * L^2)
-    L = ivfunc' / ivfunc
-
-    Parameters
-    ----------
-    ivfunc : iterable
-        Should be a 2D array, list of lists, or list of tuples containing
-        energies in ivfunc[:,0] and values in ivfunc[:,1], both as float.
-
-    v0i : float
-        Imaginary part of the inner potential
-
-    Returns
-    -------
-    yfunc : numpy array
-        2D array of the Y-function energies and values
-
-    """
-    if len(ivfunc) < 3:
-        # cannot calculate derivative, return empty
-        return np.array([[]])
-    yfunc = None
-    ivfunc = np.array(ivfunc)
-    for i in range(1, len(ivfunc)-1):
-        vals = ivfunc[i-1:i+2, 1]
-        lf = ((vals[2] - vals[0]) /
-              (2*vals[1] + 1e-100))  # +1e-100 to avoid div by 0
-        y = lf / (1 + (lf*v0i)**2)
-        try:
-            yfunc = np.append(yfunc, [[ivfunc[i, 0], y]], axis=0)
-        except ValueError:
-            if not yfunc:
-                yfunc = np.array([[ivfunc[i, 0], y]])
-            else:
-                raise
-    return yfunc
-
-
 # TODO: move to iotensors?
 def get_tensor_indices(home='', zip_only=False):
     """Yield the indices of all the Tensor files/folders in `home`/Tensors.
