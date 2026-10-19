@@ -565,7 +565,7 @@ class TestWarnIfWrongTensors:
         rpars.TL_VERSION = Version(version)
         _warn_if_wrong_tensors(rpars)
         mock_logger.warning.assert_called_once()
-        assert 'v2.1.0' in mock_logger.warning.call_args.args[0]
+        assert 'v2.1.0' in mock_logger.warning.call_args[0][0]
         assert len(mock_logger.method_calls) == 1
 
     @parametrize(version=('1.6.0', '1.6.1', '1.7.1', '2.1.0', '2.2.0', None))
