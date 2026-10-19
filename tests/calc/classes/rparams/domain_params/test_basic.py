@@ -34,7 +34,10 @@ class TestDomainParameters:
         """Test with a non-existent path to ensure it still resolves."""
         work = 'non_existent_path'
         domain = make_domain(work, 'test_domain')
-        assert domain.workdir == Path(work)
+        # Path.resolve() of a non-existent relative path is not made
+        # absolute on Windows with Python < 3.10, so compare against
+        # the very same operation as the implementation.
+        assert domain.workdir == Path(work).resolve()
 
     @parametrize(name=('test_domain', ''))
     def test_str(self, name, make_domain):

@@ -1,9 +1,9 @@
 """Tests for a single-domain execution of section initialization."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-07-19'
 __license__ = 'GPLv3+'

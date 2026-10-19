@@ -5,9 +5,9 @@ errors curves.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Florian Kraushofer (@fkraushofer)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-01-12'
 __license__ = 'GPLv3+'

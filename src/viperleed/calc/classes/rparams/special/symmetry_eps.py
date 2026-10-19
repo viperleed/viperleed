@@ -4,9 +4,9 @@ Defines the SymmetryEps class, a float with optional z value.
 """
 
 __authors__ = (
-    'Alexander Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-12-11'
 __license__ = 'GPLv3+'

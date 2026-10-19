@@ -165,8 +165,6 @@ def fd_optimization(sl, rp):
     else:
         x0 = 1.   # geometry: x is a scaling factor
 
-
-
     # optimization loop
     curvature_fail = 0
     parabola = None
@@ -296,6 +294,9 @@ def fd_optimization(sl, rp):
         tmpdirs.append(workdir)
         logger.info(f"STARTING CALCULATION AT {which} = {x:.4f}")
         r, rfaclist = get_fd_r(tsl, trp, workdir)
+        # If beams are missing in IVBEAMS, trp.expbeams may have changed now.
+        # This needs to be propagated to rp.expbeams so labels match at the end.
+        rp.expbeams = trp.expbeams
         known_points = np.append(known_points, np.array([[x, r]]), 0)
         rfactor_lists.append(rfaclist)
         if not best_explicit_r or r < best_explicit_r[0]:

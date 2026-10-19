@@ -17,6 +17,7 @@ from pytest_cases import parametrize
 from viperleed.calc import LOGGER as calc_logger
 from viperleed.calc.files import parameters
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.lib.version import Version
 from viperleed.calc.run import LOGGER as run_logger
 from viperleed.calc.run import _finalize_on_early_exit
 from viperleed.calc.run import _make_rpars_and_slab
@@ -26,6 +27,7 @@ from viperleed.calc.run import _read_poscar_file
 from viperleed.calc.run import _set_log_level
 from viperleed.calc.run import _set_system_name
 from viperleed.calc.run import _set_tensorleed_source
+from viperleed.calc.run import _warn_if_wrong_tensors
 from viperleed.calc.run import run_calc
 
 _MODULE = 'viperleed.calc.run'
@@ -550,6 +552,30 @@ class TestSetLogLevel:
         _set_log_level(rpars, {})
         mock_logger.setLevel.assert_called_once_with(rpars.LOG_LEVEL)
         assert len(mock_logger.method_calls) == 1  # only setLevel
+
+
+class TestWarnIfWrongTensors:
+    """Tests for the _warn_if_wrong_tensors helper."""
+
+    @parametrize(version=('1.7.2', '1.7.3', '1.7.4', '1.7.5', '1.7.6', '2.0.0'))
+    def test_affected(self, version, mocker):
+        """Check that affected TensErLEED versions log a warning."""
+        mock_logger = mocker.patch(f'{_MODULE}.LOGGER')
+        rpars = Rparams()
+        rpars.TL_VERSION = Version(version)
+        _warn_if_wrong_tensors(rpars)
+        mock_logger.warning.assert_called_once()
+        assert 'v2.1.0' in mock_logger.warning.call_args[0][0]
+        assert len(mock_logger.method_calls) == 1
+
+    @parametrize(version=('1.6.0', '1.6.1', '1.7.1', '2.1.0', '2.2.0', None))
+    def test_not_affected(self, version, mocker):
+        """Check that no warning is logged for other versions."""
+        mock_logger = mocker.patch(f'{_MODULE}.LOGGER')
+        rpars = Rparams()
+        rpars.TL_VERSION = None if version is None else Version(version)
+        _warn_if_wrong_tensors(rpars)
+        assert not mock_logger.method_calls
 
 
 class TestSetTensorleedSource:

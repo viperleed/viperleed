@@ -1,9 +1,9 @@
 """Tests for module fortran_utils of viperleed.calc.lib."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'

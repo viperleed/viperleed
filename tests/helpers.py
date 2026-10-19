@@ -232,7 +232,7 @@ def filesystem_to_dict(root, skip=None):
     return contents
 
 
-def flat_fixture(func, **fixture_args):                                         # TODO: better name. Only usable for parameter-less functions
+def flat_fixture(func, **fixture_args):                                         # TODO: better name. Parameters must be fixtures or @parametrize'd
     """Turn a function into a fixture with fixture_args.
 
     For use without decoration, like so:
@@ -240,8 +240,9 @@ def flat_fixture(func, **fixture_args):                                         
 
     Parameters
     ----------
-    func : function
-        The function to be turned into a fixture.
+    func : function or method
+        The function to be turned into a fixture. May be a bound
+        method, e.g., a method of a case-class instance.
     **fixture_args : object
         Argument to pass to the @fixture decorator.
 
@@ -249,8 +250,23 @@ def flat_fixture(func, **fixture_args):                                         
     -------
     fixture
     """
+    if inspect.ismethod(func):
+        func = _wrap_method(func)
     _decorator = fixture(**fixture_args)
     return _decorator(func)
+
+
+def _wrap_method(method):
+    """Return a plain function that calls a bound `method`."""
+    # pytest-cases removes the pytestmark attribute of a fixture
+    # function on pytest >= 8. This is impossible on a bound method.
+    # functools.wraps shares the pytestmark list of the method with
+    # the wrapper. This is safe: pytest-cases only deletes the
+    # attribute of the wrapper, so the method keeps its marks.
+    @functools.wraps(method)
+    def _wrapper(*args, **kwargs):
+        return method(*args, **kwargs)
+    return _wrapper
 
 
 # ######################   CONTEXT MANAGERS   #########################

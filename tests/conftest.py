@@ -8,6 +8,9 @@ check_log_records (factory)
     Raise unless caplog records are exactly as expected.
 data_path
     Path to the top-level folder containing test data.
+mock_import_module (factory)
+    Replace importlib.import_module to return selected fake modules.
+    Retain normal behavior for all the others.
 first_case
     The first of the current pytest-cases.
 re_match (factory)
@@ -16,12 +19,13 @@ re_match (factory)
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
-    'Alexander M. Imre (@amimre)',
-    )
+    'Alexandra Mia Imre (@alexmiame)',
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
+from importlib import import_module
 import re
 
 from pytest_cases import fixture
@@ -75,3 +79,17 @@ def first_case(current_cases):
                 return value
         raise ValueError('No case found')
     return _find_case(current_cases)
+
+
+@fixture
+def mock_import_module(mocker):
+    """Make importlib.import_module return fake modules."""
+    def _patch(**fake_modules):
+        def _fake_import(module_name, *args, **kwargs):
+            try:
+                return fake_modules[module_name]
+            except KeyError:
+                return import_module(module_name, *args, **kwargs)
+        mocker.patch('importlib.import_module', side_effect=_fake_import)
+        mocker.patch.dict('sys.modules', fake_modules)
+    return _patch
