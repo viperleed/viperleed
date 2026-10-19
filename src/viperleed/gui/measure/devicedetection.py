@@ -225,6 +225,11 @@ class DeviceDetectionWorker(qtc.QObject):
         for name, (mod_name, cls_name, kwargs) in devices.items():
             mod = import_module(mod_name)
             cls = getattr(mod, cls_name)
+            # JSONEncoderSafe serializes a Version as a str. Restore the
+            # Version type that SettingsInfo.more is expected to carry.
+            firmware = kwargs.get('more', {}).get('firmware')
+            if isinstance(firmware, str):
+                kwargs['more']['firmware'] = base.Version(firmware)
             recreated[name] = (cls, SettingsInfo(**kwargs))
         return recreated
 
