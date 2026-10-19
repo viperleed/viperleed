@@ -37,6 +37,7 @@ KNOWN_TL_VERSIONS = (
     '1.7.5',
     '1.7.6',
     '2.0.0',
+    '2.1.0',
     )
 
 OLD_TL_VERSION_NAMES = {
@@ -51,6 +52,17 @@ OLD_TL_VERSION_NAMES = {
     }
 
 CURRENT_TL_VERSION = max([Version(v) for v in KNOWN_TL_VERSIONS])
+
+# Versions whose ADREF2T (lib.tleed) computes wrong top-layer tensors
+# (AMP0(N) instead of AMP0(I)). Fixed in v2.1.0.
+TL_VERSIONS_WITH_WRONG_TENSORS = (
+    '1.7.2',
+    '1.7.3',
+    '1.7.4',
+    '1.7.5',
+    '1.7.6',
+    '2.0.0',
+    )
 
 VERSION_FILE_NAME = 'version'
 
