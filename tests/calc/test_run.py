@@ -250,10 +250,10 @@ class TestRunCalcRestoresLogger:
         mocker.patch.object(rpars, 'updateDerivedParams')
         return mocks
 
-    @fixture(name='entry_level', params=_entry_levels)
-    def fixture_entry_level(self, request):
+    @fixture(name='entry_level')
+    @parametrize(level=_entry_levels)
+    def fixture_entry_level(self, level):
         """Set the level of the calc logger. Restore it when done."""
-        level = request.param
         old_level = run_logger.level
         old_handlers = list(run_logger.handlers)
         run_logger.setLevel(level)
