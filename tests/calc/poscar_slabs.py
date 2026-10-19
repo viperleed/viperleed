@@ -14,6 +14,7 @@ import copy
 import inspect
 
 import numpy as np
+import pytest
 from pytest_cases import case
 from pytest_cases import lazy_value
 from pytest_cases import parametrize
@@ -183,6 +184,19 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
         ),
     )
 
+# No POSCAR with known layer properties yet. A single skipped
+# placeholder keeps the case visible in -rs. Its TestInfo is made up
+# (and never read), as @parametrize(info=...) rejects pytest.param(id=).
+POSCAR_WITH_LAYER_INFO = (
+    pytest.param(
+        _get_poscar_info('POSCAR_no_poscar_with_layer_info'),
+        marks=pytest.mark.skip(
+            reason='No POSCAR with layer info yet. Ag(100) is tested '
+                   'with default Rparams in case_poscar_ag100'
+            ),
+        ),
+    )
+
 SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
 
@@ -222,6 +236,16 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and info on expected bulk properties."""
         slab, rpars, info = self.case_poscar(info)
         rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
+        return slab, rpars, info
+
+    @parametrize(info=POSCAR_WITH_LAYER_INFO, idgen=make_poscar_ids())
+    @case(tags=Tag.LAYER_INFO)
+    def case_layer_info_poscar(self, info):
+        """Return a slab, an Rparams and info on expected layers."""
+        slab, rpars, info = self.case_poscar(info)
+        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
+        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
+        slab.create_layers(rpars)
         return slab, rpars, info
 
     @case(tags=(Tag.BULK_PROPERTIES,
