@@ -91,13 +91,17 @@ def skip_if_tl_version_missing(source, version):
         Folder with TensErLEED sources (e.g., $VIPERLEED_TENSORLEED).
     version : Version or str
         The TensErLEED version that is needed.
+
+    Raises
+    ------
+    Exception
+        Any error from looking up the TensErLEED sources in `source`
+        (e.g., an entry without a version). A broken tree should make
+        the test fail rather than skip as if `version` were missing.
     """
     version = Version(str(version))
-    try:
-        found = tenserleed.get_tenserleed_sources(source)
-        available = [s.version for s in found]
-    except (FileNotFoundError, NotImplementedError, ValueError):
-        available = []
+    available = [s.version
+                 for s in tenserleed.get_tenserleed_sources(source)]
     if version not in available:
         pytest.skip(f'TensErLEED v{version} is not available in {source}. '
                     'Set VIPERLEED_TENSORLEED to a folder that contains it.')
