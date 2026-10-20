@@ -148,7 +148,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish to ${{ needs.resolve.outputs.target }}
+    name: Publish  # The environment shows the target index
     needs: [resolve, build]
     runs-on: ubuntu-latest
     environment:
