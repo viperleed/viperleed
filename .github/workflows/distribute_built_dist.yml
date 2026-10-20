@@ -1,0 +1,177 @@
+# Build viperleed from a release tag and publish it to PyPI or TestPyPI.
+#
+# Runs either when a GitHub release is published (always to PyPI), or
+# by hand ("Run workflow") for a given tag and target index. Uploads
+# use trusted publishing: the PyPI/TestPyPI projects trust this file
+# (by name) together with the GitHub environment named like the target.
+# Keep the file name and the environment names unchanged.
+
+name: Publish viperleed to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and publish (e.g., v0.15.0)
+        required: true
+        type: string
+      target:
+        description: Package index to publish to
+        required: true
+        type: choice
+        options:
+          - pypi
+          - testpypi
+        default: pypi
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve tag and target
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      target: ${{ steps.resolve.outputs.target }}
+    steps:
+      - name: Resolve tag and target from the trigger
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_TARGET: ${{ inputs.target }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              tag="$INPUT_TAG"
+              target="$INPUT_TARGET"
+              ;;
+            release)
+              tag="$RELEASE_TAG"
+              target=pypi
+              ;;
+            *)
+              echo "::error::Unsupported event '$EVENT_NAME'"
+              exit 1
+              ;;
+          esac
+          if [[ -z "$tag" ]]; then
+            echo "::error::No tag given"
+            exit 1
+          fi
+          if [[ ! "$tag" =~ ^v[^[:space:]]+$ ]]; then
+            echo "::error::Tag '$tag' must start with 'v' and contain no spaces"
+            exit 1
+          fi
+          case "$target" in
+            pypi|testpypi) ;;
+            *)
+              echo "::error::Unknown target '$target'"
+              exit 1
+              ;;
+          esac
+          echo "Publishing $tag to $target"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build distributions
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.resolve.outputs.tag }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+      - name: Install build and twine
+        run: python -m pip install --upgrade build twine
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Check distribution metadata
+        run: python -m twine check --strict dist/*
+      - name: Check that the tag matches the built version
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          python - <<'EOF'
+          """Fail unless TAG == 'v' + the version of each built distribution."""
+          import os
+          import sys
+          import tarfile
+          import zipfile
+          from email.parser import Parser
+          from pathlib import Path
+
+          tag = os.environ['TAG']
+          dist = Path('dist')
+          sdists = sorted(dist.glob('*.tar.gz'))
+          wheels = sorted(dist.glob('*.whl'))
+          if len(sdists) != 1 or len(wheels) != 1:
+              sys.exit('::error::Expected exactly one sdist and one wheel, '
+                       f'found {[p.name for p in dist.iterdir()]}')
+
+          def version_from(archive, names, read):
+              """Return the Version field of the first metadata file."""
+              for name in names:
+                  if name.count('/') == 1 and name.endswith(read):
+                      return Parser().parsestr(archive(name))['Version']
+              sys.exit(f'::error::No {read} found')
+
+          with tarfile.open(sdists[0]) as sdist:
+              sdist_version = version_from(
+                  lambda n: sdist.extractfile(n).read().decode(),
+                  sdist.getnames(),
+                  '/PKG-INFO',
+                  )
+          with zipfile.ZipFile(wheels[0]) as wheel:
+              wheel_version = version_from(
+                  lambda n: wheel.read(n).decode(),
+                  wheel.namelist(),
+                  '.dist-info/METADATA',
+                  )
+          print(f'Tag: {tag}; sdist: {sdist_version}; wheel: {wheel_version}')
+          for kind, version in (('sdist', sdist_version),
+                                ('wheel', wheel_version)):
+              if tag != f'v{version}':
+                  sys.exit(f'::error::Tag {tag} does not match {kind} '
+                           f'version {version}')
+          EOF
+      - name: Store the distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to ${{ needs.resolve.outputs.target }}
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.resolve.outputs.target }}
+      url: ${{ needs.resolve.outputs.target == 'testpypi' && 'https://test.pypi.org/p/viperleed' || 'https://pypi.org/p/viperleed' }}
+    permissions:
+      id-token: write  # For trusted publishing and attestations
+    steps:
+      - name: Download the distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        if: needs.resolve.outputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to TestPyPI
+        if: needs.resolve.outputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
