@@ -979,19 +979,9 @@ class TestTensorsAndDeltasInfo:
     _attr_needs_update = (
         'most_recent',
         )
-    _method_needs_update = (
-        # None for now
-        )
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, tensors, attr):
         """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             attrgetter(attr)(tensors)
-
-    @parametrize(method_name=_method_needs_update)
-    def test_too_early_method_call(self, tensors, method_name):
-        """Check that calling methods before collection fails."""
-        method = attrgetter(method_name)(tensors)
-        with pytest.raises(AttributeError, match=r'.*collect.*'):
-            method()

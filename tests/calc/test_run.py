@@ -31,6 +31,7 @@ from viperleed.calc.run import _warn_if_wrong_tensors
 from viperleed.calc.run import run_calc
 
 _MODULE = 'viperleed.calc.run'
+_BELOW_DEBUG = logging.DEBUG - 5
 
 
 class TestRunCalc:
@@ -43,8 +44,11 @@ class TestRunCalc:
             assert mocks[mock_name].mock_calls == [call]
         for mock_name in not_called:
             mocks[mock_name].assert_not_called()
-        assert len(mocks['logger'].info.mock_calls) == n_log_msgs
-        assert len(mocks['logger'].method_calls) == n_log_msgs
+        logger = mocks['logger']
+        assert len(logger.info.mock_calls) == n_log_msgs
+        # The only other call is the restoring of the logger level
+        logger.setLevel.assert_called_once_with(logger.level)
+        assert len(logger.method_calls) == n_log_msgs + 1
 
     @fixture(name='mocks')
     def fixture_mock_implementation(self, mocker):
@@ -210,6 +214,88 @@ class TestRunCalc:
             'shutdown',
             )
         self.check_calls(mocks, expect_calls, not_called, n_log_msgs=3)
+
+
+class TestRunCalcRestoresLogger:
+    """Tests for the state of the real calc logger after run_calc."""
+
+    _entry_levels = (
+        logging.NOTSET,
+        logging.DEBUG,
+        logging.WARNING,
+        )
+
+    @fixture(name='mocks')
+    def fixture_mock_implementation(self, mocker, tmp_path, monkeypatch):
+        """Replace implementation details, except for the logger."""
+        monkeypatch.chdir(tmp_path)
+        rpars = Rparams()
+
+        def _section_loop(*_):
+            # Emulate what _set_log_level does while reading inputs
+            run_logger.setLevel(_BELOW_DEBUG)
+            return 0, 'recorder'
+
+        mocks = {
+            'make_rp_sl': mocker.patch(f'{_MODULE}._make_rpars_and_slab',
+                                       return_value=(rpars, mocker.Mock())),
+            'finalize': mocker.patch(f'{_MODULE}._finalize_on_early_exit'),
+            'section': mocker.patch(f'{_MODULE}.section_loop',
+                                    side_effect=_section_loop),
+            'rpars': rpars,
+            }
+        mocker.patch(f'{_MODULE}.ManifestFile')
+        mocker.patch(f'{_MODULE}._set_tensorleed_source')
+        mocker.patch(f'{_MODULE}._set_system_name')
+        mocker.patch(f'{_MODULE}.prerun_clean')
+        mocker.patch(f'{_MODULE}.preserve_original_inputs')
+        mocker.patch.object(rpars, 'updateDerivedParams')
+        return mocks
+
+    @fixture(name='entry_level')
+    @parametrize(level=_entry_levels)
+    def fixture_entry_level(self, level):
+        """Set the level of the calc logger. Restore it when done."""
+        old_level = run_logger.level
+        old_handlers = list(run_logger.handlers)
+        run_logger.setLevel(level)
+        yield level
+        run_logger.setLevel(old_level)
+        for handler in list(run_logger.handlers):
+            if handler not in old_handlers:
+                run_logger.removeHandler(handler)
+                handler.close()
+
+    def test_level_after_success(self, mocks, entry_level):
+        """Check that the level is restored after a normal return."""
+        run_calc()
+        mocks['section'].assert_called_once()
+        assert run_logger.level == entry_level
+
+    def test_level_after_read_fails(self, mocks, entry_level):
+        """Check that the level is restored after an early exit."""
+        mocks['make_rp_sl'].side_effect = OSError
+        exit_code, _ = run_calc()
+        assert exit_code
+        assert run_logger.level == entry_level
+
+    def test_level_after_halt(self, mocks, entry_level):
+        """Check that the level is restored if halting is in effect."""
+        mocks['rpars'].halt = mocks['rpars'].HALTING
+        run_calc()
+        mocks['finalize'].assert_called_once()
+        mocks['section'].assert_not_called()
+        assert run_logger.level == entry_level
+
+    @parametrize(exc=(RuntimeError, KeyboardInterrupt))
+    def test_level_after_exception(self, mocks, entry_level, exc):
+        """Check level and handlers if an exception escapes."""
+        mocks['section'].side_effect = exc
+        handlers_before = list(run_logger.handlers)
+        with pytest.raises(exc):
+            run_calc()
+        assert run_logger.level == entry_level
+        assert run_logger.handlers == handlers_before
 
 
 class TestFinalizeOnEarlyExit:

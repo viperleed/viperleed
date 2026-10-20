@@ -14,6 +14,7 @@ import copy
 import inspect
 
 import numpy as np
+import pytest
 from pytest_cases import case
 from pytest_cases import lazy_value
 from pytest_cases import parametrize
@@ -167,24 +168,6 @@ def _add_known_bulk_properties(info, bulk_info):
     return info
 
 
-def _add_known_layer_properties(info, layer_info):
-    """Add layer properties to a TestInfo object."""
-    info.layer_properties = layer_info
-    return info
-
-
-def _add_nearest_neighbor_info(info, nn_info):
-    """Add nearest-neighbour information to a TestInfo object."""
-    info.nearest_neighbors = nn_info
-    return info
-
-
-def _add_surface_atom_info(info, surface_atom_info):
-    """Add info about surface atoms to a TestInfo object."""
-    info.surface_atoms = surface_atom_info
-    return info
-
-
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
         _get_poscar_info('POSCAR_Cu2O_111', 22+43),
@@ -200,9 +183,19 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             ),
         ),
     )
-POSCAR_WITH_LAYER_INFO = ()
-POSCAR_WITH_NEAREST_NEIGHBOR_INFO = ()
-POSCAR_WITH_SURFACE_ATOM_INFO = ()
+
+# No POSCAR with known layer properties yet. A single skipped
+# placeholder keeps the case visible in -rs. Its TestInfo is made up
+# (and never read), as @parametrize(info=...) rejects pytest.param(id=).
+POSCAR_WITH_LAYER_INFO = (
+    pytest.param(
+        _get_poscar_info('POSCAR_no_poscar_with_layer_info'),
+        marks=pytest.mark.skip(
+            reason='No POSCAR with layer info yet. Ag(100) is tested '
+                   'with default Rparams in case_poscar_ag100'
+            ),
+        ),
+    )
 
 SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
@@ -254,19 +247,6 @@ class CasePOSCARSlabs:
         rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         slab.create_layers(rpars)
         return slab, rpars, info
-
-    @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO,
-                 idgen=make_poscar_ids())
-    @case(tags=Tag.NEAREST_NEIGHBOURS)
-    def case_nearest_neighbors_poscar(self, info):
-        """Return a slab, an Rparams and info on expected nearest neighbors."""
-        return self.case_poscar(info)
-
-    @parametrize(info=POSCAR_WITH_SURFACE_ATOM_INFO, idgen=make_poscar_ids())
-    @case(tags=Tag.SURFACE_ATOMS)
-    def case_surface_atom_poscar(self, info):
-        """Return a slab, an Rparams and info on expected surface atoms."""
-        return self.case_poscar(info)
 
     @case(tags=(Tag.BULK_PROPERTIES,
                 Tag.LAYER_INFO,
