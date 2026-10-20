@@ -43,7 +43,7 @@ Overview of NG LEED unit
         * Remove the desired module(s) as shown in :numref:`fig_ngleed_remove_hv_cables`.
         * If necessary, remove the rear panel as shown in :numref:`fig_ngleed_rear_panel_tilted`.
 
-:numref:`fig_ngleed_old_overview` and :numref:`fig_ngleed_new_overview` show an overview of the **older** and **newer** versions of the NG LEED electronics, respectively. The two versions can be told apart from the different appearance of the rear \[:numref:`fig_ngleed_old_overview`\ (a), :numref:`fig_ngleed_new_overview`\ (a)\] and front \[:numref:`fig_ngleed_old_overview`\ (c), :numref:`fig_ngleed_new_overview`\ (c)\] panels.
+:numref:`fig_ngleed_old_overview` and :numref:`fig_ngleed_new_overview` show an overview of the **older** and **newer** versions of the NG LEED electronics, respectively. The two versions can be told apart by the different appearance of the rear \[:numref:`fig_ngleed_old_overview`\ (a), :numref:`fig_ngleed_new_overview`\ (a)\] and front \[:numref:`fig_ngleed_old_overview`\ (c), :numref:`fig_ngleed_new_overview`\ (c)\] panels.
 
 .. _fig_ngleed_old_overview:
 .. figure:: /_static/hardware/SpectaLEED_modification/overview_ngleed_old.svg
@@ -274,7 +274,7 @@ In terms of the original current :math:`I_0`, the signal is then
 
 .. math:: I_0 + \frac{R_8}{R_1}\left(1 - \frac{R_1}{R_2} x\right)\,10\,\mathrm{µA} ,
 
-where we have used the 1 V/µA gain between :math:`I_0` and :math:`V_{I_0}` resulting from the combined transimpedance amplification of the ``BEAM`` and ``CONTROL`` boards. By picking R1 relative to R8, one can then tune the range of variability of the offset correction. With the original values in :numref:`fig_ngleed_i0_control_and_buffer`\ (d), the range of offset correction is (−2.42, +2.13) µA, which is probably much larger than required. Drift and fluctuations caused by the offset compensation circuit will be noticable especially for MCP LEED systems with low beam currents. Therefore, it is a good idea to decrease the range of offset correction by increasing the values of R1 and R2. Using :math:`R_1=680\,\mathrm{kΩ}` and :math:`R_2=330\,\mathrm{kΩ}` gives a more reasonable range of (−156, +147) nA. Users with a microchannel-plate LEED may want to use even larger resistors.
+where we have used the 1 V/µA gain between :math:`I_0` and :math:`V_{I_0}` resulting from the combined transimpedance amplification of the ``BEAM`` and ``CONTROL`` boards. By picking R1 relative to R8, one can then tune the range of variability of the offset correction. With the original values in :numref:`fig_ngleed_i0_control_and_buffer`\ (d), the range of offset correction is (−2.42, +2.13) µA, which is probably much larger than required. Drift and fluctuations caused by the offset compensation circuit will be noticeable especially for MCP LEED systems with low beam currents. Therefore, it is a good idea to decrease the range of offset correction by increasing the values of R1 and R2. Using :math:`R_1=680\,\mathrm{kΩ}` and :math:`R_2=330\,\mathrm{kΩ}` gives a more reasonable range of (−156, +147) nA. Users with a microchannel-plate LEED may want to use even larger resistors.
 
 .. note::
     Before choosing resistors R1 and R2 that are appropriate for your unit, we suggest that you measure your offset to evaluate which range makes most sense. You should leave this as the **last step** among all the edits suggested in this guide. Leave the chassis open and connect the mains. Short the interlock pins on the outside of the HV plug (see :numref:`fig_ngleed_hv_plug` and :numref:`fig_ngleed_suppressor_check_display`) with a short wire, and turn on the unit. Wait for at least 30 min to allow for warm-up. **Leave the beam energy control knob at zero on the front panel**. Connect a multimeter to the ``I0`` BNC of the rear panel. Expect voltages in the millivolt range. Using a small screwdriver, turn the trimmer R3 of the ``E0 BUFFER`` board. **Be careful** as the mains supply cables run somewhat close by. If you feel like you would need more resolution to be able to trim the value to zero, you need larger resistor values for R1 and R2.
@@ -286,7 +286,7 @@ Aside from modifying the range of offset adjustment, you should also use the two
 Checking the BNC output
 -----------------------
 
-The I0 output of the NGLEED unit suffers from another problem. According to the schematics, a 1 µF capacitor should be present at the output BNC between the signal (center) and ground (shield). This is visible in :numref:`fig_ngleed_i0_rear`. This is problematic, as the capacitor is essentially on the output of stage U1.A of the ``E0 BUFFER`` board (schematics in :numref:`fig_ngleed_i0_control_and_buffer`\ (d)). The problem is very similar to the one that causes instability of the first transimpedance stage on the ``BEAM`` HV module (solved in :secref:`ngleed_i0_beam_module`): the 200 Ω output impedance of the AD704 op-amp, in series with the capacitor, introduces a pole in the feedback factor that reduces the phase margin and can make U1.A unstable. The `datasheet of AD704 <https://www.analog.com/media/en/technical-documentation/data-sheets/AD704.pdf>`_ indeed indicates that the op-amp can drive at most a 10 nF capacitive load. In principle, the addition of the 10 nF capacitor in parallel to the feedback resistor of U1.A --- described in :secref:`ngleed_i0_modify_e0_buffer` --- should maintain the phase margin large enough for stability. Nevertheless, we suggest to **remove** the 1 µF capacitor.
+The I0 output of the NG LEED unit suffers from another problem. According to the schematics, a 1 µF capacitor should be present at the output BNC between the signal (center) and ground (shield). This is visible in :numref:`fig_ngleed_i0_rear`. This is problematic, as the capacitor is essentially on the output of stage U1.A of the ``E0 BUFFER`` board (schematics in :numref:`fig_ngleed_i0_control_and_buffer`\ (d)). The problem is very similar to the one that causes instability of the first transimpedance stage on the ``BEAM`` HV module (solved in :secref:`ngleed_i0_beam_module`): the 200 Ω output impedance of the AD704 op-amp, in series with the capacitor, introduces a pole in the feedback factor that reduces the phase margin and can make U1.A unstable. The `datasheet of AD704 <https://www.analog.com/media/en/technical-documentation/data-sheets/AD704.pdf>`_ indeed indicates that the op-amp can drive at most a 10 nF capacitive load. In principle, the addition of the 10 nF capacitor in parallel to the feedback resistor of U1.A --- described in :secref:`ngleed_i0_modify_e0_buffer` --- should maintain the phase margin large enough for stability. Nevertheless, we suggest to **remove** the 1 µF capacitor.
 
 .. _fig_ngleed_i0_rear:
 .. figure:: /_static/hardware/SpectaLEED_modification/i0_rear_panel.svg
@@ -294,9 +294,9 @@ The I0 output of the NGLEED unit suffers from another problem. According to the 
 
     Location of the :math:`I_0` BNC output on the rear panel of the NG LEED unit.
 
-For this purpose, open up the rear panel of the unit, as described in :secref:`ngleed_remove_rear`. The incriminated capacitor can be seen in the right panel of :numref:`fig_ngleed_i0_rear`. It is not necessary to fully remove the capacitor: it's enough to unsolder its lead that is connected to the center conductor of the BNC.
+For this purpose, open up the rear panel of the unit, as described in :secref:`ngleed_remove_rear`. The offending capacitor can be seen in the right panel of :numref:`fig_ngleed_i0_rear`. It is not necessary to fully remove the capacitor: it's enough to unsolder its lead that is connected to the center conductor of the BNC.
 
-.. note ::
+.. note::
     On our unit, while the capacitor was present, there has clearly been a (lucky) manufacturing error: both leads of the capacitor were soldered to the stainless steel wire connected to the shell of the BNC plug --- i.e., the capacitor was connected between ground and... ground. This meant that, for our unit, there was no need to unsolder the capacitor lead. Cross-check that your unit indeed has the problem before unsoldering.
 
 As you have the rear panel open, consider also the modifications described in :secref:`ngleed_rewire_hv_plug` and :secref:`ngleed_shield_mains`, especially suggested for users with a microchannel-plate LEED.
@@ -350,7 +350,7 @@ Before you start with the modifications, make sure you have all required compone
 
 Additionally, for the modifications in :secref:`ngleed_rewire_hv_plug`:
 
-    - two UF4002 diodes,
+    - two UF4002 diodes (any UF400x type is ok),
     - insulated wire (e.g., 0.25 mm²) and means to strip its insulation at the ends,
     - thin insulating sheet (e.g., an old transparency foil),
     - double-sided tape or other means to glue the sheet,
@@ -376,7 +376,7 @@ The following boards need rewiring and should be removed as described in :secref
 
     Suggestions on how to correctly rewire the guard ring from ``HV_GND`` to ``GND`` on the faulty boards.
 
-On all boards, the track to be cut (i.e., ``HV_GND``) is the one connected to the **first** pair of pins of the low-voltage connector. The next pair of pins of the same connector is on ``GND``, i.e., where the guard ring and transformer shields should be connected to.
+On all boards, the track to be cut (i.e., ``HV_GND``) is the one connected to the **first** pair of pins of the low-voltage connector. The next pair of pins of the same connector is on ``GND``, i.e., where the guard ring and transformer shields should be connected.
 
 The easiest way to reconnect the guard ring is by stripping away a narrow bit of insulation from it (and, in some cases, also from the track to which to connect). It should be enough to scratch away the insulation by pressing strongly against the track with a small flat screwdriver, then sliding it along the track while applying pressure. Usually a single pass is enough. **Be careful not to damage the copper connection underneath the insulation**. It is now very easy to join the exposed copper of the stripped track to ``GND``. You can use the remainder of the leads of one of the discrete components that you have used in :secref:`ngleed_i0_mod_mandatory` and solder it in place. There is no need to add insulation, as the track is at ground. Use :numref:`fig_swap_hvguard_on_boards` and a multimeter to identify the correct spot.
 
