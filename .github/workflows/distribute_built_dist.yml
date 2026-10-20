@@ -111,12 +111,15 @@ jobs:
               sys.exit('::error::Expected exactly one sdist and one wheel, '
                        f'found {[p.name for p in dist.iterdir()]}')
 
-          def version_from(archive, names, read):
-              """Return the Version field of the first metadata file."""
+          def version_from(read_member, names, suffix):
+              """Return the Version field of the top-level metadata file."""
               for name in names:
-                  if name.count('/') == 1 and name.endswith(read):
-                      return Parser().parsestr(archive(name))['Version']
-              sys.exit(f'::error::No {read} found')
+                  # One level deep: <name-version>/PKG-INFO in the sdist,
+                  # <name-version>.dist-info/METADATA in the wheel, not
+                  # copies nested further down (e.g., in *.egg-info/).
+                  if name.count('/') == 1 and name.endswith(suffix):
+                      return Parser().parsestr(read_member(name))['Version']
+              sys.exit(f'::error::No {suffix} found')
 
           with tarfile.open(sdists[0]) as sdist:
               sdist_version = version_from(
