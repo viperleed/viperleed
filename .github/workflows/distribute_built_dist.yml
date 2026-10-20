@@ -64,8 +64,8 @@ jobs:
             echo "::error::No tag given"
             exit 1
           fi
-          if [[ ! "$tag" =~ ^v[^[:space:]]+$ ]]; then
-            echo "::error::Tag '$tag' must start with 'v' and contain no spaces"
+          if [[ ! "$tag" =~ ^v[0-9][^[:space:]]*$ ]]; then
+            echo "::error::Tag '$tag' must be 'v' and a version, without spaces"
             exit 1
           fi
           case "$target" in
