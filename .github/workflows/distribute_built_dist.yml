@@ -5,6 +5,13 @@
 # use trusted publishing: the PyPI/TestPyPI projects trust this file
 # (by name) together with the GitHub environment named like the target.
 # Keep the file name and the environment names unchanged.
+#
+# - Tags are 'v' + the PEP 440 version in viperleed.__version__, e.g.,
+#   v0.15.0 or v0.15.0rc1 (not v0.15.0-rc1). The build fails otherwise.
+# - Start manual runs from master ("Use workflow from"): the
+#   environments' deployment rules check that ref, not the tag input.
+# - A published release starts this workflow only if the tagged commit
+#   contains this file.
 
 name: Publish viperleed to PyPI
 
