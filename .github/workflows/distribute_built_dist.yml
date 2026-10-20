@@ -55,15 +55,7 @@ jobs:
               tag="$RELEASE_TAG"
               target=pypi
               ;;
-            *)
-              echo "::error::Unsupported event '$EVENT_NAME'"
-              exit 1
-              ;;
           esac
-          if [[ -z "$tag" ]]; then
-            echo "::error::No tag given"
-            exit 1
-          fi
           if [[ ! "$tag" =~ ^v[0-9][^[:space:]]*$ ]]; then
             echo "::error::Tag '$tag' must be 'v' and a version, without spaces"
             exit 1
