@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-22'
 __license__ = 'GPLv3+'
 
@@ -162,6 +162,15 @@ class TestImportDummyPyqtAndRunApp:
 
 class TestFindMissingDependencies:
     """Tests for the find_missing_qt_dependencies function."""
+
+    @fixture(autouse=True)
+    def mock_sane_pyqt(self, mocker):
+        """Do not start a real QApplication to check PyQt5."""
+        # Unmocked, the first call would run a subprocess that starts
+        # a QApplication, which aborts (and makes pytest's faulthandler
+        # print "Fatal Python error") on systems without a display.
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     return_value=PyQtSanity.OK)
 
     def test_raises(self, mocker):
         """Check complaints when calling the function without Qt."""
