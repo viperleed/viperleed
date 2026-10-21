@@ -18,7 +18,7 @@ The option and the fixture below are used by tests/conftest.py.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-21'
 __license__ = 'GPLv3+'
 
