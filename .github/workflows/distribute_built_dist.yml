@@ -13,7 +13,8 @@
 # - A published release starts this workflow only if the tagged commit
 #   contains this file.
 # - The tag/version check (build/scripts/check_dist_version.py) is
-#   taken from the commit this workflow runs from, not from the tag.
+#   taken from the commit this workflow runs from, not from the tag,
+#   as older tags do not have the script.
 # - For target pypi only, the same sdist and wheel are then attached
 #   to the release of the tag (replacing assets of the same name; no
 #   release: notice, no upload). This breaks if the repository turns
@@ -103,8 +104,7 @@ jobs:
         run: python -m build
       - name: Check distribution metadata
         run: python -m twine check --strict dist/*
-      # After the build, so these files cannot end up in dist/. From
-      # the workflow's commit, as older tags do not have the script.
+      # After the build, so these files cannot end up in dist/.
       - name: Get the version check from the workflow's commit
         uses: actions/checkout@v7
         with:
