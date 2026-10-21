@@ -170,6 +170,9 @@ jobs:
           TAG: ${{ needs.resolve.outputs.tag }}
         run: |
           set -euo pipefail
+          # Fails on a wrong repository or token, which gh release view
+          # would also report as "release not found".
+          gh repo view "$GH_REPO" --json name > /dev/null
           if ! out=$(gh release view "$TAG" --json tagName 2>&1); then
             if [[ "$out" == *"release not found"* ]]; then
               echo "::notice::No release for $TAG, so no assets attached"
