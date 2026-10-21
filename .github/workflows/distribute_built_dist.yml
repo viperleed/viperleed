@@ -97,56 +97,22 @@ jobs:
         run: python -m build
       - name: Check distribution metadata
         run: python -m twine check --strict dist/*
+      # After the build, so these files cannot end up in dist/. From
+      # the workflow's commit, as older tags do not have the script.
+      - name: Get the version check from the workflow's commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-scripts
+          sparse-checkout: build/scripts/check_dist_version.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Check that the tag matches the built version
         env:
           TAG: ${{ needs.resolve.outputs.tag }}
-        run: |
-          python - <<'EOF'
-          """Fail unless TAG == 'v' + the version of each built distribution."""
-          import os
-          import sys
-          import tarfile
-          import zipfile
-          from email.parser import Parser
-          from pathlib import Path
-
-          tag = os.environ['TAG']
-          dist = Path('dist')
-          sdists = sorted(dist.glob('*.tar.gz'))
-          wheels = sorted(dist.glob('*.whl'))
-          if len(sdists) != 1 or len(wheels) != 1:
-              sys.exit('::error::Expected exactly one sdist and one wheel, '
-                       f'found {[p.name for p in dist.iterdir()]}')
-
-          def version_from(read_member, names, suffix):
-              """Return the Version field of the top-level metadata file."""
-              for name in names:
-                  # One level deep: <name-version>/PKG-INFO in the sdist,
-                  # <name-version>.dist-info/METADATA in the wheel, not
-                  # copies nested further down (e.g., in *.egg-info/).
-                  if name.count('/') == 1 and name.endswith(suffix):
-                      return Parser().parsestr(read_member(name))['Version']
-              sys.exit(f'::error::No {suffix} found')
-
-          with tarfile.open(sdists[0]) as sdist:
-              sdist_version = version_from(
-                  lambda n: sdist.extractfile(n).read().decode(),
-                  sdist.getnames(),
-                  '/PKG-INFO',
-                  )
-          with zipfile.ZipFile(wheels[0]) as wheel:
-              wheel_version = version_from(
-                  lambda n: wheel.read(n).decode(),
-                  wheel.namelist(),
-                  '.dist-info/METADATA',
-                  )
-          print(f'Tag: {tag}; sdist: {sdist_version}; wheel: {wheel_version}')
-          for kind, version in (('sdist', sdist_version),
-                                ('wheel', wheel_version)):
-              if tag != f'v{version}':
-                  sys.exit(f'::error::Tag {tag} does not match {kind} '
-                           f'version {version}')
-          EOF
+        run: >-
+          python workflow-scripts/build/scripts/check_dist_version.py
+          "$TAG" dist
       - name: Store the distributions
         uses: actions/upload-artifact@v7
         with:
