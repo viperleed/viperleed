@@ -64,6 +64,13 @@ N_DRAWS = 5
 
 Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
+# Fixtures that run, or need the sources of, TensErLEED. Any test
+# that has one of them in its fixture closure is marked 'tensorleed'
+TENSORLEED_FIXTURES = frozenset((
+    'tensorleed_path',
+    'run_from_ase_refcalc',
+    ))
+
 RNG_SEED_OPTION = '--rng-seed'
 WORKER_SEED_KEY = 'rng_seed'  # In pytest-xdist's workerinput
 
@@ -140,8 +147,10 @@ def pytest_terminal_summary(terminalreporter, config):
 
 
 def pytest_collection_modifyitems(items):
-    """Do not expect failures of random-input tests with fresh seeds."""
+    """Mark TensErLEED tests; do not expect failures with fresh seeds."""
     for item in items:
+        if TENSORLEED_FIXTURES.intersection(item.fixturenames):
+            item.add_marker(pytest.mark.tensorleed)
         if (item.config.option.rng_seed is not None
                 and 'draws' in item.fixturenames):
             item.own_markers[:] = [
