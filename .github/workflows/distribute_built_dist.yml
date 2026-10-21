@@ -12,6 +12,12 @@
 #   environments' deployment rules check that ref, not the tag input.
 # - A published release starts this workflow only if the tagged commit
 #   contains this file.
+# - The tag/version check (build/scripts/check_dist_version.py) is
+#   taken from the commit this workflow runs from, not from the tag.
+# - For target pypi only, the same sdist and wheel are then attached
+#   to the release of the tag (replacing assets of the same name; no
+#   release: notice, no upload). This breaks if the repository turns
+#   on immutable releases.
 
 name: Publish viperleed to PyPI
 
