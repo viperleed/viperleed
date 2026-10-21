@@ -38,11 +38,6 @@ def check_dist_version(tag, dist_dir):
         Directory containing exactly one sdist (*.tar.gz) and one
         wheel (*.whl).
 
-    Returns
-    -------
-    sdist_version, wheel_version : str
-        The Version fields found in the distributions' metadata.
-
     Raises
     ------
     DistVersionError
@@ -77,7 +72,6 @@ def check_dist_version(tag, dist_dir):
             raise DistVersionError(
                 f'Tag {tag} does not match {kind} version {version}'
                 )
-    return sdist_version, wheel_version
 
 
 def _version_from(read_member, names, suffix):
@@ -91,7 +85,7 @@ def _version_from(read_member, names, suffix):
     raise DistVersionError(f'No {suffix} found')
 
 
-def main(argv=None):
+def main():
     """Check the distributions in a directory against a tag."""
     parser = argparse.ArgumentParser(
         description='Check that TAG matches the version of the built '
@@ -99,7 +93,7 @@ def main(argv=None):
         )
     parser.add_argument('tag', help="release tag, e.g., 'v0.15.0'")
     parser.add_argument('dist_dir', help='directory with sdist and wheel')
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
     try:
         check_dist_version(args.tag, args.dist_dir)
     except DistVersionError as exc:
