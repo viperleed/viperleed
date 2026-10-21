@@ -154,6 +154,7 @@ classifiers = [
     addopts = [
         '--import-mode=importlib',
         '--strict-markers',
+        '-m', 'not tensorleed',
         '--cov=viperleed',
         '--cov=tests',
         '--cov-report=html',
