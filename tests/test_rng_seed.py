@@ -3,7 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-15'
 __license__ = 'GPLv3+'
 
@@ -17,6 +17,9 @@ import zlib
 import pytest
 
 from .conftest import N_DRAWS
+
+# The tests in this module start pytest subprocesses
+pytestmark = pytest.mark.slow
 
 pytest.importorskip('xdist')
 
