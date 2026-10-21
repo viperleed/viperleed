@@ -16,11 +16,12 @@ Running tests
 
 ViPErLEED comes with a suite of tests and uses
 `pytest <https://docs.pytest.org/en/>`__ for testing.
-The :term:`TensErLEED` source code should be available on the testing machine
-(repository ``viperleed-tensorleed``) and the ``VIPERLEED_TENSORLEED``
-:term:`environment variable` should be set. See also :ref:`install_tensorleed`.
-
-Also make sure to have compiled the :ref:`eeasisss_compile` source code.
+Tests that run :term:`TensErLEED` (marked ``tensorleed``) are not part of
+a default run. To run them, the :term:`TensErLEED` source code (repository
+``viperleed-tensorleed``) should be available on the testing machine and the
+``VIPERLEED_TENSORLEED`` :term:`environment variable` should be set. See also
+:ref:`install_tensorleed`, which also describes where the compiled
+:ref:`eeasisss_compile` source code is expected.
 
 Tests are *not* distributed with the ``viperleed`` package on
 `pypi <https://pypi.org/project/viperleed/>`__. To run the tests, clone the
@@ -30,8 +31,8 @@ Tests are *not* distributed with the ``viperleed`` package on
 
     python -m pip install --upgrade -r requirements/tests.txt
 
-To execute tests, navigate to your local copy of the |repo|,
-then run
+To execute tests, navigate to the :file:`tests` folder of your local copy
+of the |repo|, then run
 
 .. code-block:: bash
 
@@ -44,19 +45,35 @@ then run
     sure to first install ``viperleed`` in *editable* mode in your environment.
     See `editable_install`.
 
-If you also would like to produce coverage reports, install :program:`coverage`
-via
+The command above runs the *default* tier: all tests except those that need
+:term:`TensErLEED`. Tests are grouped in tiers via markers and the ``-m``
+and ``--quick`` options:
 
 .. code-block:: bash
 
-    python -m pip install coverage
+    python -m pytest . --quick        # quick tier
+    python -m pytest .                # default tier
+    python -m pytest . -m tensorleed  # TensErLEED tier
+    python -m pytest . -m ""          # everything
 
-then, in your local copy of the ``viperleed`` repository, run
+The quick tier leaves out tests that take about half a second or more (marked
+``slow``). The ``--quick`` option adds ``and not slow`` to the ``-m``
+expression in effect: it is equivalent to ``-m "not slow and not tensorleed"``,
+and ``-m tensorleed --quick`` runs the TensErLEED tests that are not slow.
+
+The TensErLEED tier requires ``VIPERLEED_TENSORLEED``: its tests fail (rather
+than being skipped) when :term:`TensErLEED` or one of the versions they need
+is missing. Optional dependencies that are not installed make some tests skip.
+To turn those skips into failures, add the option ``--require-all``.
+
+Coverage is not collected by default. To produce a coverage report, run
 
 .. code-block:: bash
 
-    python -m coverage run -m pytest .
-    python -m coverage html
+    python -m pytest . --cov=viperleed --cov=tests --cov-branch --cov-report=html
+
+(the :program:`pytest-cov` plugin is among the test requirements). The
+report is written to :file:`htmlcov/`.
 
 
 .. _editable_install:
