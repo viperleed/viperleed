@@ -155,10 +155,6 @@ classifiers = [
         '--import-mode=importlib',
         '--strict-markers',
         '-m', 'not tensorleed',
-        '--cov=viperleed',
-        '--cov=tests',
-        '--cov-report=html',
-        '--cov-branch',
         ]
     pythonpath = ['.', '..']
     # Turn all warnings into errors. See also "How to capture warnings"
