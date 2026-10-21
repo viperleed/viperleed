@@ -92,8 +92,8 @@ class TestRangeToStr:
                                     '1-3, 5-6, 8'),
         'one-element group': ([1, 2, 4, 6, 7, 8], '1-2, 4, 6-8'),
         }
-    # No known failing input. Whether bools or negative numbers should
-    # be supported is open (#576). Keep a skipped placeholder.
+    # Bools are rejected (see _raises); negative numbers are not
+    # expected as input.
     _fail = (
         pytest.param(
             [], '',
@@ -116,6 +116,8 @@ class TestRangeToStr:
     _raises = {
         'string item': ([1, '2', 3], {}, TypeError),
         'string sequence': ('831255856', {}, TypeError),
+        'bool item': ([1, True, 3], {}, TypeError),
+        'only bool': ([False], {}, TypeError),
         'invalid separator': ([1,2,3], {'sep': None}, AttributeError),
         }
 
