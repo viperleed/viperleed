@@ -143,3 +143,33 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+
+  release-assets:
+    name: Attach the distributions to the release
+    needs: [resolve, publish]
+    if: needs.resolve.outputs.target == 'pypi'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # For uploading release assets
+    steps:
+      - name: Download the distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Upload the distributions to the release of the tag
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! out=$(gh release view "$TAG" --json tagName 2>&1); then
+            if [[ "$out" == *"release not found"* ]]; then
+              echo "::notice::No release for $TAG, so no assets attached"
+              exit 0
+            fi
+            echo "$out" >&2
+            exit 1
+          fi
+          gh release upload "$TAG" dist/* --clobber
