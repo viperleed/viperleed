@@ -9,7 +9,7 @@ The :term:`SpectaLEED<SpectaLEED>` LEED/Auger optics produced by :term:`Omicron<
 At variance with the :term:`ErLEED` electronics, the NG LEED (S) requires deeper modifications of the circuitry to allow reasonable LEED-:math:`I(V)` measurements. In the following sections, five main categories of modifications are described:
 
 #. Modifications that are necessary for a :ref:`reliable measurement<ngleed_i0_mod_mandatory>` of :math:`I_0`
-#. Modifications aimed at :ref:`reducing impact of noise<ngleed_improve_noise>` on :math:`I_0`
+#. Modifications aimed at :ref:`reducing the impact of noise<ngleed_improve_noise>` on :math:`I_0`
 #. Modifications aimed at :ref:`improving the time response<ngleed_faster_beam>` of the beam energy, and, as a consequence, of :math:`I_0`
 #. Modification of the :ref:`range<ngleed_suppressor_range>` of the ``SUPPRESSOR`` voltage
 #. Modifications needed to :ref:`access the beam energy at high voltage<ngleed_beamhv_port>` (only needed for older units)
@@ -191,7 +191,7 @@ Before you start with the modifications, make sure you have all required compone
     - one `OPA627BP <https://www.ti.com/lit/ds/symlink/opa627.pdf>`_ operational amplifier (e.g., RS code 660-4355),
     - one 1 nF and two 10 nF non-polarized radial capacitors (e.g., ceramic) --- or three 10 nF non-polarized radial capacitors if your ``BEAM`` HV module has a 10 kΩ feedback resistor on U3 (see :numref:`fig_ngleed_i0_circuit_beam_module_mod` and the :ref:`warning <warn_swapped_components>` in the previous section),
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips, Pozi, and flat-head screwdrivers,
+    - a suitable set of Phillips, Pozidriv, and flat-head screwdrivers,
     - a soldering iron and solder,
     - means to remove solder from PCB vias --- e.g., a manual or (better) pneumatic solder pump,
     - tweezers (not necessary, but useful),
@@ -343,7 +343,7 @@ Required Components
 Before you start with the modifications, make sure you have all required components and tools:
 
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips, Pozi, and flat-head screwdrivers,
+    - a suitable set of Phillips, Pozidriv, and flat-head screwdrivers,
     - a soldering iron and solder,
     - a sharp blade (e.g., a paper cutter),
     - a multimeter.
@@ -470,7 +470,7 @@ Before you start with the modifications, make sure you have all required compone
     - two 470 nF capacitors (e.g., film capacitors),
     - one 470 µF electrolytic capacitor rated for at least 25 V and with **large maximum ripple current** (e.g., RS 725-8168).
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips, Pozi, and flat-head screwdrivers,
+    - a suitable set of Phillips, Pozidriv, and flat-head screwdrivers,
     - a soldering iron and solder,
     - means to remove solder from PCB vias --- e.g., a manual or (better) pneumatic solder pump,
     - tweezers (not necessary, but useful).
@@ -536,7 +536,7 @@ Before proceeding, make sure you have all the necessary tools:
     - two accurate digital multimeters,
     - two sets of pin grabbers,
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips, Pozi, and flat-head screwdrivers.
+    - a suitable set of Phillips, Pozidriv, and flat-head screwdrivers.
 
 Before modifying the circuit that produces the suppressor voltage, it is worth cross-checking that the reading on the front panel is indeed correct. In fact, you will normally use the value displayed to set the suppressor voltage.
 
@@ -579,7 +579,7 @@ Before proceeding, make sure you have all the necessary tools:
     - two accurate digital multimeters,
     - two sets of pin grabbers,
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips, Pozi, and flat-head screwdrivers.
+    - a suitable set of Phillips, Pozidriv, and flat-head screwdrivers.
 
 This check may be more interesting for those who use their SpectaLEED setup also as a retarding-field analyser for Auger spectroscopy. There, the retarding voltage determines the accuracy of the energy scale. In practice, as explained at the end of the introduction to :secref:`ngleed_suppressor_range`, checking the correctness of the feedback gain is equivalent to ensuring that the high-voltage output range is the nominal 0 to -2000 V.
 
@@ -611,7 +611,7 @@ Modifying the suppressor setpoint
 Before proceeding, make sure you have all the necessary components and tools:
     - one 100 kΩ resistor,
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips, Pozi, and flat-head screwdrivers,
+    - a suitable set of Phillips, Pozidriv, and flat-head screwdrivers,
     - a soldering iron and solder,
     - tweezers (not necessary, but useful).
 
@@ -630,7 +630,7 @@ where :math:`x` is the fractional position of the front-panel potentiometer, and
 
 As mentioned in the introductory part of :secref:`ngleed_suppressor_range` and described in detail in :secref:`ngleed_suppressor_feedback`, the ``RETARD`` HV module has twice the gain of the ``BEAM`` module (in LEED mode). This means that :math:`V_\mathrm{RETARD\_SET} = 5\,\mathrm{V}` gives -1 kV suppressor, or 100% retarding voltage. With the factory value of R125 (27 kΩ), the ``SUPPRESSOR`` knob gives :math:`V_\mathrm{RETARD\_SET}` between 4.03 V and 5.52 V, corresponding to the 80.6--110.4% range of retarding voltages mentioned earlier.
 
-Modifying the range is then merely a matter of changing the R125 resistor: 20 kΩ should give a maximum suppressor retardation of exactly 100% if the ratio of the gains of the ``RETARD`` and ``BEAM`` HV modules is exactly 2. However, replacing R125 is tricky as it requires removing the whole ``CONTROL`` board --- including the potentiometers on the front panel. It is significantly easier to add a 100 kΩ resistor in parallel to R125. This gives an equivalent resistance of :math:`27\mathrm{k}\parallel100\mathrm{k}=21.3\mathrm{k}`, and a theoretical 69.4--102% suppressor range. Using a 100 kΩ resistor has also the advantage of leaving a little room in case :ref:`the feedback gain is a little off<ngleed_suppressor_feedback>`. See :numref:`fig_bent_resistors` for suggestions on how to prepare the new resistor.
+Modifying the range is then merely a matter of changing the R125 resistor: 20 kΩ should give a maximum suppressor retardation of exactly 100% if the ratio of the gains of the ``RETARD`` and ``BEAM`` HV modules is exactly 2. However, replacing R125 is tricky as it requires removing the whole ``CONTROL`` board --- including the potentiometers on the front panel. It is significantly easier to add a 100 kΩ resistor in parallel to R125. This gives an equivalent resistance of :math:`27\mathrm{k}\parallel100\mathrm{k}=21.3\mathrm{k}`, and a nominal 69.4--102% suppressor range. Using a 100 kΩ resistor also has the advantage of leaving a little room in case :ref:`the feedback gain is a little off<ngleed_suppressor_feedback>`. See :numref:`fig_bent_resistors` for suggestions on how to prepare the new resistor.
 
 .. _ngleed_beamhv_port:
 
