@@ -1,0 +1,47 @@
+Distributed under GLPv3, so we can include it in our releases. See https://github.com/arduino/arduino-cli
+* Comes precompiled for Linux, Mac and Windows
+* Could one use the source code directly? Seems not, as it's written in Go. There is an extensive python test suite, however.
+
+E:\Software\Installers\Arduino\CLI\arduino-cli.exe
+
+
+1) board list
+List all boards connected, including the 'core', i.e., micro-controller type, as well as their location
+
+2) core install ...
+Install all files needed for compiling/uploading files to specific micro-controller. For Arduino Micro, use ... == arduino:avr
+This has to be done only the first time, in principle.
+
+3) core list
+Lists the core stuff installed. Also gives current version and latest version for each. Perhaps one can
+check things, and then call "upgrade". Another option is calling 'outdated'
+
+4) compile -b arduino:avr:micro path/to/sketch/to/compile
+Compile sketch, gives more or less the same output as the IDE. This does not upload. Can be used for checking perhaps.
+
+Generates files (in a temporary folder on windows) sketchName.avr.micro.elf (debugging), sketchName.avr.micro.hex, and sketchName.avr.micro.with_bootloader.hex
+
+5) upload -b arduino:avr:micro -p port_from_call_to_board_list path/to/sketch/to/upload
+Requires a compile command first. To do all at once use compile with -u and -p flags.
+
+Other useful flags for user PCs: --clean (cleans up the build temp)
+
+6) board attach serial://port_from_call_to_board_list_including_first_slash
+Creates a .json file that allows to call a bare "arduino-cli compile" or "upload..." without all the optional flags
+
+7) For renaming the board to, e.g., ViPErLEED, one should look into the following flags:
+compile:
+  --vid-pid string      When specified, VID/PID specific build properties are used, if board supports them.
+
+https://forum.arduino.cc/t/renaming-issues-in-arduino-leonardo/514470/4
+One needs to change the "bus reported device descriptor, which is coded into the bootloader and sketch firmware on the ATmega"
+easier: https://www.eightforums.com/threads/tutorial-how-to-change-device-names-in-device-manager.15321/
+Even better: https://forum.arduino.cc/t/change-the-name-of-arduino-pro-micro-shown-in-the-devices-and-printers/660942/3
+edit the boards.txt file, then re-upload:
+#micro.build.usb_product="Arduino Micro"
+micro.build.usb_product="My 32u4 Device"
+Then probably best to set it back?  NEEDS TESTING!
+The correct location can be found by calling config dump or config init --dest-file path_to_file.yaml, and it is under the directories:data: key. The path in there then needs: +/packages/arduino/hardware/avr/[VERSION]/boards.txt
+
+
+All commands allow a --format json. Maybe then the output is easier to handle with the json python library?

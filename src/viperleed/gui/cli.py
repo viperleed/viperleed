@@ -6,18 +6,19 @@ the ViPErLEED Graphical User Interface.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 from importlib import import_module
 from itertools import chain
 from pathlib import Path
+import signal
 import sys
 
 from viperleed.cli_base import ViPErLEEDCLI
-from viperleed.gui.base import catch_gui_crash
 from viperleed.gui.constants import LOGO
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import Qt5DependencyFinder
@@ -34,7 +35,7 @@ If you are executing viperleed in a conda environment, try one of the
 following:
     1. Creating a new, clean environment without Qt by calling
        conda create with the --no-default-packages flag, then
-            pip install "viperleed[GUI]"
+            pip install 'viperleed[GUI]'
        there.
     2. Deactivating the current environment first, if you have
        installed viperleed globally.
@@ -135,12 +136,18 @@ def gui_main():
     Body of the functionality that invokes the ViPErLEED
     Graphical User Interface.
     """
+    log_path = Path(__file__).resolve().parent.parent / '_logs'
+    if not log_path.exists():
+        log_path.mkdir()
+
     (qtc,
      qtg,
      qtw,
+     widgets_lib,
      plugin_selector) = import_graphics_modules()
 
-    catch_gui_crash()
+    # Ensure we always use '.' as decimal separators
+    qtc.QLocale.setDefault(qtc.QLocale.c())
 
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
@@ -148,6 +155,10 @@ def gui_main():
     suppress_file_permission_warnings()  # Next line emits the warnings
     app = qtw.QApplication(sys.argv)
     app.setWindowIcon(qtg.QIcon(LOGO))
+
+    # About the disables: we never call gui_main if not has_pyqt()
+    widgets_lib.catch_gui_crash(log_path)
+    widgets_lib.raise_on_qt_messages()
 
     # Import some fonts from ./fonts folder
     font_path = resources_path('gui/fonts')
@@ -163,6 +174,12 @@ def gui_main():
     plugin_selector_window = plugin_selector()
     plugin_selector_window.show()
     print('Done', flush=True)
+
+    # An awful hack to allow keyboard interrupts to be accepted also
+    # while the next app.exec_ runs and the python interpreter is not
+    # running. See https://stackoverflow.com/questions/4938723
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     return app.exec_()
 
 
@@ -175,5 +192,6 @@ def import_graphics_modules():
         import_module('PyQt5.QtCore'),  # Not graphics per-se
         import_module('PyQt5.QtGui'),
         import_module('PyQt5.QtWidgets'),
+        import_module('viperleed.gui.widgets.lib'),
         gui_select.ViPErLEEDSelectPlugin,
         )
