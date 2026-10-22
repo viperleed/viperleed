@@ -157,7 +157,9 @@ Keeping copyright years up to date
 
 The |repo| comes with a `pre-commit <https://pre-commit.com>`__ hook that
 sets the end year of the ``__copyright__`` module dunder of every Python file
-you commit to the current year, if it is out of date. Using it is optional.
+you commit to the current year, if it is out of date. It only updates files
+that are staged for the commit, so ``pre-commit run --all-files`` leaves
+files you did not touch alone. Using it is optional.
 To opt in, run
 
 .. code-block:: bash
