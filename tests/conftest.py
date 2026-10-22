@@ -36,7 +36,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
@@ -50,7 +50,13 @@ import numpy as np
 import pytest
 from pytest_cases import fixture
 
+from . import optional_dependencies
 from .helpers import TEST_DATA
+
+pytest_plugins = ('pytester',)  # For testing the options themselves
+
+# Fixture of optional_dependencies that needs no wrapping
+fixture_missing_dependency = optional_dependencies.fixture_missing_dependency
 
 # Number of seeded draws a random-input test checks, all within one
 # test (one id). This is the only place where the number is defined.
@@ -68,7 +74,8 @@ class Draws(tuple):
 
 
 def pytest_addoption(parser):
-    """Add the option to use other seeds for random-input tests."""
+    """Add the options of the test suite."""
+    optional_dependencies.pytest_addoption(parser)
     parser.addoption(
         RNG_SEED_OPTION,
         dest='rng_seed',

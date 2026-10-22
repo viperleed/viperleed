@@ -4,7 +4,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -45,10 +45,6 @@ from ..tags import CaseTag as Tag
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
 todo = pytest.mark.skip('To be implemented')
-if_ase = pytest.mark.skipif(
-    not surface_slab._HAS_ASE,  # pylint: disable=protected-access
-    reason='No ASE module'
-    )
 with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
                                           has_tag=Tag.BULK_PROPERTIES)
 with_layers = parametrize_with_cases('args', cases=CasePOSCARSlabs,
@@ -168,7 +164,6 @@ class TestAtlistIsNotList:
         slab.create_layers(rpars)
         self._check_not_list(slab)
 
-    @if_ase
     @parametrize_with_cases('args', cases=cases_ase)
     def test_from_ase(self, args):
         """Check that from_ase does not mess with atlist."""
@@ -1216,7 +1211,6 @@ class TestExtraBulk:
             slab.with_extra_bulk_units(rpars, 1)
 
 
-@if_ase
 class TestFromAse:
     """Collection of tests for the from_ase class method."""
 
@@ -2033,7 +2027,6 @@ class TestVacuumGap:
         slab, *_ = args
         self._check_raises(slab, err.WrongVacuumPositionError)
 
-    @if_ase
     def test_no_vacuum_gap(self):
         """Check complaints when atoms are very close to both c=0 and c=1."""
         slab = Slab.from_ase(
