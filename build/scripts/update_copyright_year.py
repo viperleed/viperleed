@@ -3,9 +3,11 @@
 Sets the end year of the __copyright__ module dunder of given files
 to the current year. Meant to be used as a pre-commit hook: prints
 the files it changed, and exits with a non-zero code if any file was
-changed. Only files that are staged in git as added, modified or
-renamed are considered; other arguments are skipped silently, so
-that `pre-commit run --all-files` leaves untouched files alone. Only
+changed. Only files that are staged in git (except deleted ones) are
+considered; other arguments are skipped silently, so that
+`pre-commit run --all-files` leaves untouched files alone. git is
+required: if it is not found, or not run inside a repository, the
+script exits with an error without touching any file. Only
 dunders of the exact form
 
     __copyright__ = 'Copyright (c) <start>-<end> ViPErLEED developers'
@@ -41,8 +43,33 @@ COPYRIGHT_RE = re.compile(
     )
 
 
+class GitError(Exception):
+    """git could not be run, or a git command failed."""
+
+
+def _git(*args):
+    """Return the standard output of git called with `args`.
+
+    Raises
+    ------
+    GitError
+        If git is not found or exits with a non-zero code.
+    """
+    try:
+        result = subprocess.run(('git', *args), stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, check=False)
+    except OSError as exc:
+        raise GitError(f'could not run git ({exc})') from exc
+    if result.returncode:
+        error = os.fsdecode(result.stderr).strip().splitlines()
+        reason = error[-1] if error else f'exit code {result.returncode}'
+        command = ' '.join(('git', *args))
+        raise GitError(f'"{command}" failed: {reason}')
+    return result.stdout
+
+
 def get_staged_files():
-    """Return the resolved paths of files staged as added/modified/renamed.
+    """Return the resolved paths of all staged files except deleted ones.
 
     Returns
     -------
@@ -50,12 +77,14 @@ def get_staged_files():
         Absolute paths of the files in the git index that differ
         from HEAD (or all of them before the first commit), except
         deleted ones.
+
+    Raises
+    ------
+    GitError
+        If git is not found or fails, e.g., outside a repository.
     """
-    def _git(*args):
-        return subprocess.run(('git', *args), stdout=subprocess.PIPE,
-                              check=True).stdout
     toplevel = Path(os.fsdecode(_git('rev-parse', '--show-toplevel').strip()))
-    names = _git('diff', '--cached', '--name-only', '--diff-filter=AMR', '-z')
+    names = _git('diff', '--cached', '--name-only', '--diff-filter=d', '-z')
     return {(toplevel / os.fsdecode(name)).resolve()
             for name in names.split(b'\0') if name}
 
@@ -97,10 +126,15 @@ def main():
     Returns
     -------
     exit_code : int
-        1 if any file was changed, 0 otherwise.
+        1 if any file was changed, 0 otherwise. 2 if git is
+        unavailable or fails, in which case no file is touched.
     """
     year = date.today().year
-    staged = get_staged_files()
+    try:
+        staged = get_staged_files()
+    except GitError as exc:
+        print(f'update_copyright_year: error: {exc}', file=sys.stderr)
+        return 2
     exit_code = 0
     for filename in sys.argv[1:]:
         if Path(filename).resolve() not in staged:
