@@ -270,6 +270,7 @@ SLOW_CASES = {
         ),
     }
 
+QUICK_OPTION = '--quick'
 RNG_SEED_OPTION = '--rng-seed'
 WORKER_SEED_KEY = 'rng_seed'  # In pytest-xdist's workerinput
 
@@ -283,6 +284,12 @@ def pytest_addoption(parser):
     """Add the options of the test suite."""
     optional_dependencies.pytest_addoption(parser)
     parser.addoption(
+        QUICK_OPTION,
+        action='store_true',
+        help=('Quick tier: skip the tests marked "slow", in addition '
+              'to what the -m expression (if any) selects.'),
+        )
+    parser.addoption(
         RNG_SEED_OPTION,
         dest='rng_seed',
         metavar='INT|random',
@@ -295,12 +302,27 @@ def pytest_addoption(parser):
         )
 
 
-def pytest_configure(config):
-    """Resolve --rng-seed to an integer, once, in the controller.
+def _apply_quick_option(config):
+    """Add 'not slow' to the marker expression if --quick was given."""
+    if not config.option.quick:
+        return
+    expression = config.option.markexpr
+    config.option.markexpr = (
+        f'({expression}) and not slow' if expression else 'not slow'
+        )
 
-    A pytest-xdist worker does not resolve it: it takes the base that
-    the controller resolved and handed over (pytest_configure_node).
+
+def pytest_configure(config):
+    """Apply --quick and resolve --rng-seed to an integer, once.
+
+    The seed is resolved in the controller only. A pytest-xdist worker
+    takes the base that the controller resolved and handed over
+    (pytest_configure_node). Instead, --quick must be applied in each
+    worker: the options that xdist hands to a worker are those parsed
+    from the command line, not the ones modified by the controller's
+    pytest_configure.
     """
+    _apply_quick_option(config)
     workerinput = getattr(config, 'workerinput', None)
     if workerinput is not None:
         config.option.rng_seed = workerinput[WORKER_SEED_KEY]
