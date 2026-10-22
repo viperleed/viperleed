@@ -83,9 +83,19 @@ def _get_toplevel():
     return Path(os.fsdecode(_git('rev-parse', '--show-toplevel').strip()))
 
 
+def _resolve_dirs(path):
+    """Return `path` as absolute, with symlinks resolved except its name.
+
+    The file name itself is not resolved, so that a symlink and its
+    target remain different paths.
+    """
+    path = Path(path).absolute()
+    return path.parent.resolve() / path.name
+
+
 def _resolve_names(names, toplevel):
     """Return absolute paths for the NUL-separated git paths `names`."""
-    return {(toplevel / os.fsdecode(name)).resolve()
+    return {_resolve_dirs(toplevel / os.fsdecode(name))
             for name in names.split(b'\0') if name}
 
 
@@ -219,7 +229,7 @@ def main():
         return 2
     exit_code = 0
     for filename in sys.argv[1:]:
-        if Path(filename).resolve() not in candidates:
+        if _resolve_dirs(filename) not in candidates:
             continue
         if update_copyright_year(filename, year):
             print(f'Updated copyright year in {filename}')
