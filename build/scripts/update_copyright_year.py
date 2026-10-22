@@ -72,14 +72,24 @@ def _git(*args):
     return result.stdout
 
 
-def _resolve_names(names):
+def _get_toplevel():
+    """Return the root directory of the current git repository.
+
+    Raises
+    ------
+    GitError
+        If git is not found or fails, e.g., outside a repository.
+    """
+    return Path(os.fsdecode(_git('rev-parse', '--show-toplevel').strip()))
+
+
+def _resolve_names(names, toplevel):
     """Return absolute paths for the NUL-separated git paths `names`."""
-    toplevel = Path(os.fsdecode(_git('rev-parse', '--show-toplevel').strip()))
     return {(toplevel / os.fsdecode(name)).resolve()
             for name in names.split(b'\0') if name}
 
 
-def get_changed_files(from_ref, to_ref):
+def get_changed_files(from_ref, to_ref, toplevel):
     """Return the resolved paths of files changed between two refs.
 
     The files are those pre-commit picks for `pre-commit run
@@ -88,8 +98,12 @@ def get_changed_files(from_ref, to_ref):
 
     Parameters
     ----------
-    from_ref, to_ref : str
-        The git refs to compare.
+    from_ref : str
+        The git ref to compare against.
+    to_ref : str
+        The git ref whose changes are taken.
+    toplevel : Path
+        The root directory of the repository.
 
     Returns
     -------
@@ -107,11 +121,16 @@ def get_changed_files(from_ref, to_ref):
     except GitError:
         # Like pre-commit: refs without a merge base need a full diff
         names = _git(*diff, f'{from_ref}..{to_ref}')
-    return _resolve_names(names)
+    return _resolve_names(names, toplevel)
 
 
-def get_staged_files():
+def get_staged_files(toplevel):
     """Return the resolved paths of all staged files except deleted ones.
+
+    Parameters
+    ----------
+    toplevel : Path
+        The root directory of the repository.
 
     Returns
     -------
@@ -123,10 +142,10 @@ def get_staged_files():
     Raises
     ------
     GitError
-        If git is not found or fails, e.g., outside a repository.
+        If git is not found or fails.
     """
     names = _git('diff', '--cached', '--name-only', '--diff-filter=d', '-z')
-    return _resolve_names(names)
+    return _resolve_names(names, toplevel)
 
 
 def get_files_to_update():
@@ -139,13 +158,14 @@ def get_files_to_update():
     Raises
     ------
     GitError
-        If git is not found or fails.
+        If git is not found or fails, e.g., outside a repository.
     """
+    toplevel = _get_toplevel()
     from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
     to_ref = os.environ.get('PRE_COMMIT_TO_REF')
     if from_ref and to_ref:
-        return get_changed_files(from_ref, to_ref)
-    return get_staged_files()
+        return get_changed_files(from_ref, to_ref, toplevel)
+    return get_staged_files(toplevel)
 
 
 def update_copyright_year(path, year):
