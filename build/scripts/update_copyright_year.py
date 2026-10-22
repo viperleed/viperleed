@@ -1,18 +1,17 @@
 """Module update_copyright_year for viperleed files.
 
-Sets the end year of the __copyright__ module dunder of given files
-to the current year. Meant to be used as a pre-commit hook: prints
-the files it changed, and exits with a non-zero code if any file was
+Sets the end year of the __copyright__ module dunder of given files to
+the current year. Meant to be used as a pre-commit hook: prints the
+files it changed, and exits with a non-zero code if any file was
 changed. Only files that are staged in git (except deleted ones) are
 considered; other arguments are skipped silently, so that
-`pre-commit run --all-files` leaves untouched files alone. When run
-via `pre-commit run --from-ref A --to-ref B` (which sets the
-PRE_COMMIT_FROM_REF and PRE_COMMIT_TO_REF environment variables),
-the files changed between the two refs (except deleted ones) are
-considered instead of the staged ones. git is
-required: if it is not found, or not run inside a repository, the
-script exits with an error without touching any file. Only
-dunders of the exact form
+`pre-commit run --all-files` leaves untouched files alone. When run via
+`pre-commit run --from-ref A --to-ref B` (which sets the
+PRE_COMMIT_FROM_REF and PRE_COMMIT_TO_REF environment variables), the
+files changed between the two refs (except deleted ones) are considered
+instead of the staged ones. git is required: if it is not found, or not
+run inside a repository, the script exits with an error without touching
+any file. Only dunders of the exact form
 
     __copyright__ = 'Copyright (c) <start>-<end> ViPErLEED developers'
 
