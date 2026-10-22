@@ -67,13 +67,11 @@ def update_copyright_year(path, year):
     return True
 
 
-def main(argv=None):
-    """Update the copyright end year of files in argv. Return exit code."""
-    if argv is None:
-        argv = sys.argv[1:]
+def main():
+    """Update the copyright end year of files in sys.argv. Return exit code."""
     year = date.today().year
     exit_code = 0
-    for filename in argv:
+    for filename in sys.argv[1:]:
         if update_copyright_year(filename, year):
             print(f'Updated copyright year in {filename}')
             exit_code = 1
