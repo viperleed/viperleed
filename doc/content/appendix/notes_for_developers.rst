@@ -150,3 +150,20 @@ running
     python -m pip install --upgrade -r requirements/dev.txt
 
 in your local copy of the |repo|.
+
+
+Keeping copyright years up to date
+----------------------------------
+
+The |repo| comes with a `pre-commit <https://pre-commit.com>`__ hook that
+sets the end year of the ``__copyright__`` module dunder of every Python file
+you commit to the current year. Using it is optional. To opt in, run
+
+.. code-block:: bash
+
+    python -m pip install pre-commit
+    pre-commit install
+
+once in your local copy of the |repo|. When the hook updates a file, the
+commit is aborted and the updated files are listed. Stage them again (e.g.,
+with ``git add``) and repeat the commit.
