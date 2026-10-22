@@ -12,6 +12,7 @@ __license__ = 'GPLv3+'
 
 import ast
 from collections import Counter
+from datetime import date
 from pathlib import Path
 import re
 
@@ -273,7 +274,7 @@ def add_license_dunder(filename):
 
 def add_copyright_dunder(filename):
     """Add a __copyright__ dunder."""
-    _copyright = 'Copyright (c) 2019-2024 ViPErLEED developers'
+    _copyright = f'Copyright (c) 2019-{date.today().year} ViPErLEED developers'
     return add_one_dunder(filename, '__copyright__', _copyright)
 
 
