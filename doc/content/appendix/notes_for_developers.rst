@@ -174,6 +174,7 @@ with ``git add``) and repeat the commit. If pre-commit instead reports that
 it is rolling back fixes, a file you staged only partially has unstaged
 changes next to its ``__copyright__`` dunder: stage or stash those changes
 first, then repeat the commit.
+
 Independently of whether you use the hook, pull requests get an advisory
 check that flags out-of-date end years in the files they change. This
 check does not block merging.
