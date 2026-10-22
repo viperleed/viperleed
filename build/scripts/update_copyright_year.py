@@ -5,7 +5,11 @@ to the current year. Meant to be used as a pre-commit hook: prints
 the files it changed, and exits with a non-zero code if any file was
 changed. Only files that are staged in git (except deleted ones) are
 considered; other arguments are skipped silently, so that
-`pre-commit run --all-files` leaves untouched files alone. git is
+`pre-commit run --all-files` leaves untouched files alone. When run
+via `pre-commit run --from-ref A --to-ref B` (which sets the
+PRE_COMMIT_FROM_REF and PRE_COMMIT_TO_REF environment variables),
+the files changed between the two refs (except deleted ones) are
+considered instead of the staged ones. git is
 required: if it is not found, or not run inside a repository, the
 script exits with an error without touching any file. Only
 dunders of the exact form
@@ -68,6 +72,44 @@ def _git(*args):
     return result.stdout
 
 
+def _resolve_names(names):
+    """Return absolute paths for the NUL-separated git paths `names`."""
+    toplevel = Path(os.fsdecode(_git('rev-parse', '--show-toplevel').strip()))
+    return {(toplevel / os.fsdecode(name)).resolve()
+            for name in names.split(b'\0') if name}
+
+
+def get_changed_files(from_ref, to_ref):
+    """Return the resolved paths of files changed between two refs.
+
+    The files are those pre-commit picks for `pre-commit run
+    --from-ref from_ref --to-ref to_ref`, i.e., those changed on
+    `to_ref` since its merge base with `from_ref`, except deleted ones.
+
+    Parameters
+    ----------
+    from_ref, to_ref : str
+        The git refs to compare.
+
+    Returns
+    -------
+    changed : set of Path
+        Absolute paths of the changed files.
+
+    Raises
+    ------
+    GitError
+        If git is not found or fails, e.g., for an unknown ref.
+    """
+    diff = ('diff', '--name-only', '--no-ext-diff', '--diff-filter=d', '-z')
+    try:
+        names = _git(*diff, f'{from_ref}...{to_ref}')
+    except GitError:
+        # Like pre-commit: refs without a merge base need a full diff
+        names = _git(*diff, f'{from_ref}..{to_ref}')
+    return _resolve_names(names)
+
+
 def get_staged_files():
     """Return the resolved paths of all staged files except deleted ones.
 
@@ -83,10 +125,27 @@ def get_staged_files():
     GitError
         If git is not found or fails, e.g., outside a repository.
     """
-    toplevel = Path(os.fsdecode(_git('rev-parse', '--show-toplevel').strip()))
     names = _git('diff', '--cached', '--name-only', '--diff-filter=d', '-z')
-    return {(toplevel / os.fsdecode(name)).resolve()
-            for name in names.split(b'\0') if name}
+    return _resolve_names(names)
+
+
+def get_files_to_update():
+    """Return the resolved paths of the files that may be updated.
+
+    These are the files changed between PRE_COMMIT_FROM_REF and
+    PRE_COMMIT_TO_REF if pre-commit sets both, the staged files
+    otherwise. Deleted files are never included.
+
+    Raises
+    ------
+    GitError
+        If git is not found or fails.
+    """
+    from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
+    to_ref = os.environ.get('PRE_COMMIT_TO_REF')
+    if from_ref and to_ref:
+        return get_changed_files(from_ref, to_ref)
+    return get_staged_files()
 
 
 def update_copyright_year(path, year):
@@ -121,7 +180,10 @@ def update_copyright_year(path, year):
 
 
 def main():
-    """Update the copyright end year of staged files in sys.argv.
+    """Update the copyright end year of changed files in sys.argv.
+
+    Only files that are staged, or changed between the refs given
+    to `pre-commit run --from-ref --to-ref`, are considered.
 
     Returns
     -------
@@ -131,13 +193,13 @@ def main():
     """
     year = date.today().year
     try:
-        staged = get_staged_files()
+        candidates = get_files_to_update()
     except GitError as exc:
         print(f'update_copyright_year: error: {exc}', file=sys.stderr)
         return 2
     exit_code = 0
     for filename in sys.argv[1:]:
-        if Path(filename).resolve() not in staged:
+        if Path(filename).resolve() not in candidates:
             continue
         if update_copyright_year(filename, year):
             print(f'Updated copyright year in {filename}')
