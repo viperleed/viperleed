@@ -388,7 +388,7 @@ The easiest way to reconnect the guard ring is by stripping away a narrow bit of
 Rewiring the HV plug
 --------------------
 
-The capacitors visible on the inside of the high-voltage connector are connected between the high-voltage outputs and ``GND``. This is **incorrect** for all the voltages related to the electron gun (i.e., ``FILAMENT``, ``ANODE``, ``WEHNELT``, ``L1/3``, and ``L2``), which should be referred to ``HV_GND`` instead. This affects :math:`I_0`, which, as described :ref:`earlier <ngleed_i0_mod_mandatory>`, is the total current draw between ``HV_GND`` and ``GND``.
+The capacitors visible on the inside of the high-voltage connector are connected between the high-voltage outputs and ``GND``. If high-resolution :math:`I_0` measurements are required (for MCP LEED systems), this poses a problem. Any leakage current or dielectric relaxation in these capacitors will affect the :math:`I_0` measurement, and voltage jumps when increasing the beam energy will lead to transients in :math:`I_0`. To solve this problem, the capacitors for all the voltages related to the electron gun (i.e., ``FILAMENT``, ``ANODE``, ``WEHNELT``, ``L1/3``, and ``L2``), should be connected to ``HV_GND`` instead.
 
 The high-voltage connector can be accessed by :ref:`releasing the rear panel <ngleed_remove_rear>`. :numref:`fig_ngleed_hv_plug` shows the HV connector after the modifications described below, as well as a schematic of the wiring diagram.
 
