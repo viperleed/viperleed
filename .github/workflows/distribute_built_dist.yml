@@ -1,0 +1,184 @@
+# Build viperleed from a release tag and publish it to PyPI or TestPyPI.
+#
+# Runs either when a GitHub release is published (always to PyPI), or
+# by hand ("Run workflow") for a given tag and target index. Uploads
+# use trusted publishing: the PyPI/TestPyPI projects trust this file
+# (by name) together with the GitHub environment named like the target.
+# Keep the file name and the environment names unchanged.
+#
+# - Tags are 'v' + the PEP 440 version in viperleed.__version__, e.g.,
+#   v0.15.0 or v0.15.0rc1 (not v0.15.0-rc1). The build fails otherwise.
+# - Start manual runs from master ("Use workflow from"): the
+#   environments' deployment rules check that ref, not the tag input.
+# - A published release starts this workflow only if the tagged commit
+#   contains this file.
+# - The tag/version check (build/scripts/check_dist_version.py) is
+#   taken from the commit this workflow runs from, not from the tag,
+#   as older tags do not have the script.
+# - For target pypi only, the same sdist and wheel are then attached
+#   to the release of the tag (replacing assets of the same name; no
+#   release: notice, no upload). This breaks if the repository turns
+#   on immutable releases.
+
+name: Publish viperleed to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and publish (e.g., v0.15.0)
+        required: true
+        type: string
+      target:
+        description: Package index to publish to
+        required: true
+        type: choice
+        options:
+          - pypi
+          - testpypi
+        default: pypi
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve tag and target
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      target: ${{ steps.resolve.outputs.target }}
+    steps:
+      - name: Resolve tag and target from the trigger
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_TARGET: ${{ inputs.target }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              tag="$INPUT_TAG"
+              target="$INPUT_TARGET"
+              ;;
+            release)
+              tag="$RELEASE_TAG"
+              target=pypi
+              ;;
+          esac
+          if [[ ! "$tag" =~ ^v[0-9][^[:space:]]*$ ]]; then
+            echo "::error::Tag '$tag' must be 'v' and a version, without spaces"
+            exit 1
+          fi
+          case "$target" in
+            pypi|testpypi) ;;
+            *)
+              echo "::error::Unknown target '$target'"
+              exit 1
+              ;;
+          esac
+          echo "Publishing $tag to $target"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build distributions
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.resolve.outputs.tag }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+      - name: Install build and twine
+        run: python -m pip install --upgrade build twine
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Check distribution metadata
+        run: python -m twine check --strict dist/*
+      # After the build, so these files cannot end up in dist/.
+      - name: Get the version check from the workflow's commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-scripts
+          sparse-checkout: build/scripts/check_dist_version.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Check that the tag matches the built version
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: >-
+          python workflow-scripts/build/scripts/check_dist_version.py
+          "$TAG" dist
+      - name: Store the distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish  # The environment shows the target index
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.resolve.outputs.target }}
+      url: ${{ needs.resolve.outputs.target == 'testpypi' && 'https://test.pypi.org/p/viperleed' || 'https://pypi.org/p/viperleed' }}
+    permissions:
+      id-token: write  # For trusted publishing and attestations
+    steps:
+      - name: Download the distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        if: needs.resolve.outputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to TestPyPI
+        if: needs.resolve.outputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  release-assets:
+    name: Attach the distributions to the release
+    needs: [resolve, publish]
+    if: needs.resolve.outputs.target == 'pypi'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # For uploading release assets
+    steps:
+      - name: Download the distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Upload the distributions to the release of the tag
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Fails on a wrong repository or token, which gh release view
+          # would also report as "release not found".
+          gh repo view "$GH_REPO" --json name > /dev/null
+          if ! out=$(gh release view "$TAG" --json tagName 2>&1); then
+            if [[ "$out" == *"release not found"* ]]; then
+              echo "::notice::No release for $TAG, so no assets attached"
+              exit 0
+            fi
+            echo "$out" >&2
+            exit 1
+          fi
+          gh release upload "$TAG" dist/* --clobber
