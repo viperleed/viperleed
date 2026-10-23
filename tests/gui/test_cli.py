@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-27'
 __license__ = 'GPLv3+'
 
@@ -253,6 +253,7 @@ class TestImportGrpahicsModules:
 
     def test_success(self, mocker):
         """Check expected result of importing modules."""
+        mocker.patch(f'{_MODULE}.has_pyqt', return_value=True)
         mock_import = mocker.patch(f'{_MODULE}.import_module')
         result = import_graphics_modules()
         imported_modules = (

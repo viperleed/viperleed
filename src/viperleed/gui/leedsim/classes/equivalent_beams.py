@@ -7,7 +7,7 @@ spots into equivalence classes.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-13'
 __license__ = 'GPLv3+'
 
@@ -22,7 +22,7 @@ from viperleed.gui.classes.beamindex import BeamIndex
 from viperleed.gui.helpers import equal_dicts
 from viperleed.gui.helpers import two_by_two_array_to_tuple
 from viperleed.gui.leedsim.utils import sort_hk
-                  
+
 from viperleed.gui import decorators as dev_
 
 

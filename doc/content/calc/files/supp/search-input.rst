@@ -19,5 +19,5 @@ Search input files
     constraints, based on the :ref:`DISPLACEMENTS` file.
     Compiled with the rest of the search fortran files at runtime.
 -   search-PARAM: Defines static fortran array sizes. Mostly generated
-    automatically from all other input, but also defines the search population 
+    automatically from all other input, but also defines the search population
     size :ref:`SEARCHPOP`. Compiled with the search fortran files at runtime.

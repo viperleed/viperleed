@@ -4,7 +4,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
@@ -92,15 +92,22 @@ class TestRangeToStr:
                                     '1-3, 5-6, 8'),
         'one-element group': ([1, 2, 4, 6, 7, 8], '1-2, 4, 6-8'),
         }
-    _fail = {  # No known failing conditions so far
-        }
+    # Bools are rejected (see _raises); negative numbers are not
+    # expected as input.
+    _fail = (
+        pytest.param(
+            [], '',
+            id='no_known_failing_input',
+            marks=pytest.mark.skip(reason='No known failing input'),
+            ),
+        )
 
     @parametrize('integers,expect', _valid.values(), ids=_valid)
     def test_valid(self, integers, expect):
         """Check expected outcome."""
         assert range_to_str(integers) == expect
 
-    @parametrize('integers,expect', _fail.values(), ids=_fail)
+    @parametrize('integers,expect', _fail)
     @pytest.mark.xfail(reason='Current implementation does not support this')
     def test_fail(self, integers, expect):
         """Check conditions that we do not handle correctly."""
@@ -109,6 +116,8 @@ class TestRangeToStr:
     _raises = {
         'string item': ([1, '2', 3], {}, TypeError),
         'string sequence': ('831255856', {}, TypeError),
+        'bool item': ([1, True, 3], {}, TypeError),
+        'only bool': ([False], {}, TypeError),
         'invalid separator': ([1,2,3], {'sep': None}, AttributeError),
         }
 

@@ -7,7 +7,7 @@ lattice parameters and plane group that define a lattice.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-06-01'
 __license__ = 'GPLv3+'
 
@@ -173,7 +173,7 @@ class LatticeInput(qtw.QWidget):
     @property
     def top_left_global_handle(self):
         """Return the global position of the top-left alignment handle.
-        
+
         The alignment handle is the global position of the top-left
         corner of the 'shape' control. Can be used for aligning
         with respect to the 'bulk'.
@@ -217,7 +217,7 @@ class LatticeInput(qtw.QWidget):
 
     def flash_high_symm_button(self):
         """Flash on/off the high-symmetry button.
-        
+
         This is useful to get the sizeHint of the control
         adjust to the largest it can ever get. Can be called
         if the dialog has never been shown before with the

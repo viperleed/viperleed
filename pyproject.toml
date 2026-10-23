@@ -168,6 +168,9 @@ classifiers = [
         'pytest-timeout',
         ]
     xfail_strict = true
+    # An empty parameter set (e.g., an emptied list of POSCARs) is an
+    # error at collection, rather than a silent skip
+    empty_parameter_set_mark = 'fail_at_collect'
 
 
 

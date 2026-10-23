@@ -6,7 +6,7 @@ Contains tests for symmetry-detection routines.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-03-26'
 __license__ = 'GPLv3+'
 
@@ -24,11 +24,16 @@ from pytest_cases.filters import id_has_suffix
 from viperleed.calc import symmetry
 from viperleed.calc.lib.math_utils import angle as angle_radians
 
+from ...helpers import check_draws
 from ...helpers import duplicate_all
 from ..poscar_slabs import make_poscar_ids
 from ..tags import CaseTag
 from . import simple_slabs
 from .conftest import get_cases
+
+
+SEEDED_SHIFT_FAILS = 'Fails with some of the seeded origin shifts'
+CENTRING_NOT_LINKED = 'Known bug: centring-related atoms are not linked'
 
 
 def angle(vec1, vec2):
@@ -64,11 +69,18 @@ def _reconstruct_case_id(case):
 
 
 @contextmanager
-def may_fail(case, known_failures, strict=False):
-    """XFAIL if case is known to be problematic."""
+def may_fail(case, known_failures, strict=False, draws=None):
+    """XFAIL if case is known to be problematic.
+
+    Known failures of random-input tests refer to the default seeds:
+    pass the `draws` of the test to just check if they are fresh.
+    """
     reason = known_failures.get(case.id, '')
     if not reason:
         reason = known_failures.get(_reconstruct_case_id(case), '')
+    if draws is not None and draws.fresh:
+        reason = ''
+        strict = False
     try:
         yield None
     except AssertionError:
@@ -85,10 +97,13 @@ def may_fail(case, known_failures, strict=False):
 class TestPlaneGroupFinding:
     """Collection of tests for finding plane groups."""
 
-    def test_any_plane_group_found(self, with_plane_group):
+    def test_any_plane_group_found(self, with_plane_group, draws):
         """Ensure that symmetry detection is successful."""
-        slab, *_ = with_plane_group()
-        assert slab.foundplanegroup != 'unknown'
+        def _check(draw):
+            slab, *_ = with_plane_group(draw)
+            assert slab.foundplanegroup != 'unknown'
+
+        check_draws(draws, _check)
 
     known_incorrect_groups = {
         'hex_cmm_10': 'Known incorrect plane group p2',
@@ -96,21 +111,23 @@ class TestPlaneGroupFinding:
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
         }
 
-    def test_correct_plane_group(self, with_plane_group, first_case):
+    def test_correct_plane_group(self, with_plane_group, first_case, draws):
         """Check the correct identification of the plane group."""
-        slab, *_, info = with_plane_group()
-        if not info.symmetry.hermann:
-            pytest.skip('No symmetry information available')
-        with may_fail(first_case, self.known_incorrect_groups, strict=True):
+        def _check(draw):
+            slab, *_, info = with_plane_group(draw)
+            if not info.symmetry.hermann:
+                pytest.skip('No symmetry information available')
             assert hermann(slab.planegroup) == info.symmetry.hermann
+
+        with may_fail(first_case,
+                      self.known_incorrect_groups,
+                      strict=True,
+                      draws=draws):
+            check_draws(draws, _check)
 
     _known_incorrect_rotations = {
         'hex_cmm_10': 'BUG: no rotation applied',
         'hex_cmm_01': 'BUG: no rotation applied',
-        'hex_cm_10': 'BUG: no rotation applied',
-        'hex_cm_01': 'BUG: no rotation applied',
-        'hex_cm_21': 'BUG: no rotation applied',
-        'hex_cm_12': 'BUG: no rotation applied',
         }
 
     @parametrize_with_cases('args',
@@ -127,8 +144,11 @@ class TestPlaneGroupFinding:
         area_after = np.linalg.det(slab.ab_cell)
         with subtests.test('successful logging'):
             with may_fail(first_case, self._known_incorrect_rotations):
-                assert re_match(r'.*unit.*cell.*change.*higher.*symmetry.*',
-                                caplog.text)
+                # The warning may be any of the logged messages
+                assert any(
+                    re_match(r'.*unit.*cell.*change.*higher.*symmetry', msg)
+                    for msg in caplog.messages
+                    )
         with subtests.test('correct rotation'):
             if first_case.id == 'hex_cm_12':
                 pytest.xfail('Inconsistent rotations between detection and '
@@ -208,29 +228,31 @@ class TestSymmetryConstraints:
         assert exc.match('.*Not a subgroup')
 
     _known_invalid_constraints = {
-        'pm_10': 'Known to sometimes fail with a random shift',
-        'cm_1m1': 'Known to sometimes fail with a random shift',
-        'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
-        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
-        'hex_cm_11': 'Known to sometimes fail with a random shift',
-        'hex_cm_1m1': 'Known to regularly fail with a random shift',
-        'hex_cm_10': 'Known to regularly fail with a random shift',
-        'hex_cm_01': 'Known to regularly fail with a random shift',
-        'hex_cm_21': 'Known to sometimes fail with a random shift',
-        'hex_cm_12': 'Known to regularly fail with a random shift',
+        'cm_1m1': SEEDED_SHIFT_FAILS,
+        'pm_10': SEEDED_SHIFT_FAILS,
+        'rcm-ucell=rectangular': SEEDED_SHIFT_FAILS,
+        'rcm-ucell=square': SEEDED_SHIFT_FAILS,
+        'hex_cm_10': SEEDED_SHIFT_FAILS,
+        'hex_cm_01': SEEDED_SHIFT_FAILS,
+        'hex_cm_21': SEEDED_SHIFT_FAILS,
+        'hex_cm_12': SEEDED_SHIFT_FAILS,
+        'hex_cm_1m1': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'square_pm_10': 'Known to sometimes fail with a random shift',
-        'square_cm_1m1': 'Known to sometimes fail with a random shift',
+        'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'square_pm_10': SEEDED_SHIFT_FAILS,
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'hex_cm_11': 'Known to sometimes fail with a random shift',
         }
 
     def test_correct_free_directions(self, with_symmetry_constraints,
-                                     first_case):
+                                     first_case, draws):
         """Check the correct identification of atom constraints."""
-        slab, _, info = with_symmetry_constraints()
-        if not info.symmetry.link_groups:
-            pytest.skip('Not enough symmetry information available')
-        with may_fail(first_case, self._known_invalid_constraints):
+        def _check(draw):
+            slab, _, info = with_symmetry_constraints(draw)
+            if not info.symmetry.link_groups:
+                pytest.skip('Not enough symmetry information available')
             for atom in slab:
                 if atom.num in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
@@ -239,70 +261,97 @@ class TestSymmetryConstraints:
                 else:
                     assert atom.freedir == 1
 
+        with may_fail(first_case,
+                      self._known_invalid_constraints,
+                      strict=True,
+                      draws=draws):
+            check_draws(draws, _check)
+
     _known_invalid_linking = {
-        'rcm-ucell=rectangular': 'Known to regularly fail with a random shift',
-        'rcm-ucell=square': 'Known to regularly fail with a random shift',
-        'rcmm-ucell=rectangular': 'Known to regularly fail with a random shift',
-        'rcmm-ucell=square': 'Known to regularly fail with a random shift',
-        'hex_cm_1m1': 'Known to often fail with a random shift',
-        'hex_cm_11': 'Known to sometimes fail with a random shift',
-        'hex_cm_10': 'Known to regularly fail with a random shift',
-        'hex_cm_01': 'Known to regularly fail with a random shift',
-        'hex_cm_21': 'Known to regularly fail with a random shift',
-        'hex_cm_12': 'Known to regularly fail with a random shift',
+        'rcm-ucell=rectangular': CENTRING_NOT_LINKED,
+        'rcm-ucell=square': CENTRING_NOT_LINKED,
+        'rcmm-ucell=rectangular': CENTRING_NOT_LINKED,
+        'rcmm-ucell=square': CENTRING_NOT_LINKED,
+        'cm_1m1': SEEDED_SHIFT_FAILS,
+        'hex_cm_10': SEEDED_SHIFT_FAILS,
+        'hex_cm_01': SEEDED_SHIFT_FAILS,
+        'hex_cm_21': SEEDED_SHIFT_FAILS,
+        'hex_cm_12': SEEDED_SHIFT_FAILS,
+        'hex_cm_1m1': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'square_cm_1m1': 'Known to sometimes fail with a random shift',
-        'square_cm_11': 'Known to sometimes fail with a random shift',
-        'square_pm_10': 'Known to sometimes fail with a random shift',
-        'square_pm_01': 'Known to sometimes fail with a random shift',
-        'square_pg_10': 'Known to often fail with a random shift',
-        'pm_10': 'Known to sometimes fail with a random shift',
-        'pg_10': 'Known to often fail with a random shift',
-        'cm_1m1': 'Known to often fail with a random shift',
-        'poscar_fe3o4_001_cod': 'Known to rarely fail with a random shift',
-        'p6': 'Known to rarely fail with a random shift',
+        'square_cm_11': SEEDED_SHIFT_FAILS,
+        'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'square_pg_10': SEEDED_SHIFT_FAILS,
+        'square_pm_10': SEEDED_SHIFT_FAILS,
+        'pm_10': SEEDED_SHIFT_FAILS,
+        'pg_10': SEEDED_SHIFT_FAILS,
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'hex_cm_11': 'Known to sometimes fail with a random shift',
+        # 'square_pm_01': 'Known to sometimes fail with a random shift',
+        # 'poscar_fe3o4_001_cod':
+        #     'Known to rarely fail with a random shift',
+        # 'p6': 'Known to rarely fail with a random shift',
         }
 
-    def test_correct_atom_linking(self, with_symmetry_constraints, first_case):
+    def test_correct_atom_linking(self, with_symmetry_constraints,
+                                  first_case, draws):
         """Check that atoms were linked as expected."""
-        slab, _, info = with_symmetry_constraints()
-        with may_fail(first_case, self._known_invalid_linking):
+        def _check(draw):
+            slab, _, info = with_symmetry_constraints(draw)
             for atom_n, linked in info.symmetry.link_groups.items():
                 atom = slab.atlist.get(atom_n)
                 assert set(at.num for at in atom.linklist) == linked
 
+        with may_fail(first_case,
+                      self._known_invalid_linking,
+                      strict=True,
+                      draws=draws):
+            check_draws(draws, _check)
+
     _known_invalid_constrained_group = {
-        'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
-        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
-        'pm_10': 'Known to sometimes fail with a random shift',
-        'cm_1m1': 'Known to sometimes fail with a random shift',
-        'hex_cm_10': 'Known to sometimes fail with a random shift',
-        'hex_cm_01': 'Known to sometimes fail with a random shift',
-        'hex_cm_1m1': 'Known to sometimes fail with a random shift',
-        'hex_cm_11': 'Known to sometimes fail with a random shift',
-        'hex_cm_21': 'Known to sometimes fail with a random shift',
-        'hex_cm_12': 'Known to sometimes fail with a random shift',
+        'pm_10': SEEDED_SHIFT_FAILS,
+        'hex_cm_01': SEEDED_SHIFT_FAILS,
+        'square_cm_1m1': SEEDED_SHIFT_FAILS,
+        'poscar_sto110_4x1': SEEDED_SHIFT_FAILS,
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'square_pm_10': 'Known to often fail with a random shift',
-        'square_pm_01': 'Known to often fail with a random shift',
-        'square_cm_11': 'Known to often fail with a random shift',
-        'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
-        'poscar_sb_si_111': 'Known to rarely fail with a random shift',
-        'poscar_sto110_4x1': 'Known to sometimes fail with a random shift',
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'rcm-ucell=rectangular':
+        #     'Known to sometimes fail with a random shift',
+        # 'rcm-ucell=square':
+        #     'Known to sometimes fail with a random shift',
+        # 'cm_1m1': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_10': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_1m1': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_11': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_21': 'Known to sometimes fail with a random shift',
+        # 'hex_cm_12': 'Known to sometimes fail with a random shift',
+        # 'square_pm_10': 'Known to often fail with a random shift',
+        # 'square_pm_01': 'Known to often fail with a random shift',
+        # 'square_cm_11': 'Known to often fail with a random shift',
+        # 'poscar_sb_si_111':
+        #     'Known to rarely fail with a random shift',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
-                                            first_case):
+                                            first_case, draws):
         """Test that applying constraints maintains the group correct."""
-        slab, param, info = with_symmetry_constraints()
-        if not info.symmetry.hermann:
-            pytest.skip('No symmetry information available')
-        symmetry.findSymmetry(slab, param)
-        with may_fail(first_case, self._known_invalid_constrained_group):
+        def _check(draw):
+            slab, param, info = with_symmetry_constraints(draw)
+            if not info.symmetry.hermann:
+                pytest.skip('No symmetry information available')
+            symmetry.findSymmetry(slab, param)
             assert hermann(slab.planegroup) == info.symmetry.hermann
+
+        with may_fail(first_case,
+                      self._known_invalid_constrained_group,
+                      strict=True,
+                      draws=draws):
+            check_draws(draws, _check)
 
     _known_do_not_preserve = {
         'rcm': 'Fails in all directions due to missing centre link',
@@ -312,9 +361,13 @@ class TestSymmetryConstraints:
     @parametrize(displacement=XYZ_DISPLACEMENTS)
     def test_preserve_displaced_symmetry(self, displacement, displace_atoms,
                                          with_symmetry_constraints,
-                                         first_case):
+                                         first_case, draws):
         """Ensure that displacements conserve symmetry."""
-        slab, param, info, *_ = with_symmetry_constraints(random_shifts=False)
+        # No random shift is applied, so all draws would be identical
+        slab, param, info, *_ = with_symmetry_constraints(
+            draws[0],
+            random_shifts=False,
+            )
         displaced_slab = copy.deepcopy(slab)
         displace_atoms(displaced_slab, param, info, displacement)
         with may_fail(first_case, self._known_do_not_preserve, strict=True):
@@ -327,111 +380,156 @@ class TestSlabSymmetrization:
     @fixture
     @parametrize_with_cases('args', cases=get_cases('all'),
                             filter=~id_has_suffix('p1'))
-    def rattled_slab(self, args):
-        """Return a slab with atoms slightly misplaced."""
+    def rattled_slab(self, args, draws):
+        """Return the slab, and a rattled copy of it for each draw.
+
+        Returns
+        -------
+        slab, rattled, param, info, *rest
+            `rattled` maps each draw index to a tuple
+            (rattled slab, Rparams, info) for that draw.
+        """
         slab, param, info, *rest = args
         symmetry.findSymmetry(slab, param)
         symmetry.enforceSymmetry(slab, param)
-        rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
-        param.SYMMETRY_EPS = param.SYMMETRY_EPS.from_value(2 * 2**0.5 * eps)
-        displacements = np.random.uniform(-eps, eps, (slab.n_atoms, 2))
-        for atom, delta in zip(rattled_slab, displacements):
-            atom.cartpos[:2] += delta
-        rattled_slab.collapse_cartesian_coordinates()
-        return (rattled_slab, slab, param, info, *rest)
+        rattled = {}
+        for draw in draws:
+            rattled_slab, draw_param, draw_info = duplicate_all(slab,
+                                                                param,
+                                                                info)
+            draw_param.SYMMETRY_EPS = draw_param.SYMMETRY_EPS.from_value(
+                2 * 2**0.5 * eps
+                )
+            displacements = draw.rng.uniform(-eps, eps, (slab.n_atoms, 2))
+            for atom, delta in zip(rattled_slab, displacements):
+                atom.cartpos[:2] += delta
+            rattled_slab.collapse_cartesian_coordinates()
+            rattled[draw.index] = (rattled_slab, draw_param, draw_info)
+        return (slab, rattled, param, info, *rest)
 
     _known_incorrect_rattled = {
-        'pmm-ucell=square': 'Often reduced to pm',
-        'pgg-ucell=rectangular': 'Often reduced to pg',
-        'pgg-ucell=square': 'Often reduced to pg',
-        'rcm-ucell=square': 'Sometimes reduced to pm',
-        'rcm-ucell=rectangular': 'Sometimes reduced to pm',
-        'rcmm-ucell=square': 'Often reduced to, e.g., pmg',
-        'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
-        'pmm-ucell=rectangular': 'Sometimes reduced to pm',
-        'pmg-ucell=rectangular': 'Sometimes identified as rcm',
-        'cmm': 'Sometimes reduced to cm',
-        'p2': 'Sometimes reduced to p1',
-        'cm_1m1': 'Sometimes reduced to p1',
-        'p4': 'Sometimes reduced to p1',
-        'p4m': 'Sometimes reduced to cm',
-        'p4g': 'Sometimes reduced to cm',
-        'p3': 'Sometimes reduced to p1',
-        'p31m': 'Often reduced to cm',
-        'p3m1': 'Often reduced to cm',
-        'p6': 'Sometimes reduced to p2/p1',
-        'p6m': 'Sometimes reduced to cm',
-        'hex_cm_1m1': 'Often reduced to p1',
-        'hex_cm_11': 'Often reduced to p1',
-        'hex_cm_10': 'Often reduced to p1',
-        'hex_cm_01': 'Often reduced to p1',
-        'hex_cm_21': 'Often reduced to p1',
-        'hex_cm_12': 'Often reduced to p1',
-        'hex_cmm_11': 'Often reduced to cm',
+        'p31m': 'Seeded rattling gives cm instead of p31m',
+        'p4m': 'Seeded rattling gives cm instead of p4m',
+        'p6m': 'Seeded rattling gives cm instead of p6m',
+        'pgg-ucell=rectangular': 'Seeded rattling gives pg instead of pgg',
+        'pmg-ucell=square': 'Seeded rattling gives rcm instead of pmg',
+        'pmm-ucell=square': 'Seeded rattling gives p1 or pm instead of pmm',
+        'rcm-ucell=rectangular': 'Seeded rattling gives pm instead of rcm',
+        'rcmm-ucell=square': 'Seeded rattling gives pg instead of rcmm',
+        'hex_cm_01': 'Seeded rattling gives p1 instead of cm',
+        'hex_cm_10': 'Seeded rattling gives p1 instead of cm',
+        'hex_cm_11': 'Seeded rattling gives p1 instead of cm',
+        'hex_cm_1m1': 'Seeded rattling gives p1 instead of cm',
+        'hex_cm_21': 'Seeded rattling gives p1 instead of cm',
         'hex_cmm_10': 'Known invalid plane group p2. May be correct cmm here',
         'hex_cmm_01': 'Known invalid plane group p2. May be correct cmm here',
-        'hex_p2': 'Often reduced to p1',
-        'square_cm_11': 'Sometimes reduced to pm',
-        'square_cm_1m1': 'Often reduced to pm',
-        'square_pmm': 'Sometimes reduced to pm',
-        'square_cmm': 'Sometimes reduced to cm',
-        'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
-        'poscar_ag100': 'Often reduced from p4m to cm',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'Sometimes reduced to p1 from p3'
+        'hex_p2': 'Seeded rattling gives p1 instead of p2',
+        'square_cm_11': 'Seeded rattling gives pm instead of cm',
+        'square_cm_1m1': 'Seeded rattling gives pm instead of cm',
+        'square_cmm': 'Seeded rattling gives cm instead of cmm',
+        'square_pmm': 'Seeded rattling gives pm instead of pmm',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025': (
+            'Seeded rattling gives p1 instead of p3'
             ),
         'poscar-Cu2O(111)_1x1_surplus_oxygen': (
-            'Sometimes reduced to cm from p3m1'
+            'Seeded rattling gives cm or p1 instead of p3m1'
             ),
         'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
-        'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
-        'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
-        'poscar_mgo': 'Sometimes reduced to cmm from p4m',
-        'poscar-ru': 'Sometimes reduced to cm from p3m1',
-        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
-        'poscar-SiC_H': 'Often reduced to cm from p3m1',
-        'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
-        'poscar_tio2_small': 'Sometimes reduced to pm from pmm',
-        'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
-        'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'Sometimes reduced to p1 from p3'
+        'poscar_mgo': 'Seeded rattling gives rcm instead of p4m',
+        'poscar-SiC_H': 'Seeded rattling gives cm instead of p3m1',
+        'poscar_ru0001_rt3_te': (
+            'Seeded rattling gives cm or p3m1 instead of p31m'
             ),
-        'infoless_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
+        'poscar_sb_si_111': 'Seeded rattling gives rcm instead of pm',
+        'poscar_tio2_small': 'Seeded rattling gives pm instead of pmm',
+        'infoless_poscar-36C_p6m': 'Seeded rattling gives cmm instead of p6m',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025': (
+            'Seeded rattling gives p1 instead of p3'
+            ),
         'infoless_poscar-Cu2O(111)_1x1_surplus_oxygen': (
-            'Sometimes reduced to cm from p3m1'
+            'Seeded rattling gives cm instead of p3m1'
             ),
         'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
-        'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'infoless_poscar-Fe3O4_(001)_cod1010369': (
-            'Sometimes reduced to cm from cmm'
+            'Seeded rattling gives cm instead of cmm'
             ),
-        'infoless_poscar-graphene': 'Sometimes reduced to pmg from pmm',
-        'infoless_poscar-In2O3_(111)': 'Sometimes reduced to p1 from p3',
-        'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
-        'infoless_poscar-MgO_cod_9006456': 'Sometimes reduced to cmm from p4m',
-        'infoless_poscar-Ru(0001)-rt3Te': 'Sometimes reduced to cm from p3m1',
+        'infoless_poscar-graphene': 'Seeded rattling gives pmg instead of pmm',
+        'infoless_poscar-MgO_cod_9006456': (
+            'Seeded rattling gives cmm instead of p4m'
+            ),
+        'infoless_poscar-Pt25Rh75(100)-p(3x1)-O': (
+            'Seeded rattling gives pm instead of pmm'
+            ),
+        'infoless_poscar-Ru(0001)-rt3Te': (
+            'Seeded rattling gives cm, p1 or p3m1 instead of p31m'
+            ),
         'infoless_poscar-Sb_Si(111)_rect': (
-            'Sometimes symmetry increased to rcm from pm'
+            'Seeded rattling gives rcm instead of pm'
             ),
-        'infoless_poscar-SiC_H': 'Often reduced to cm from p3m1',
-        'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
-        'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
-        'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
-        'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
-        'double_bulk-ru': 'Sometimes reduced to cm from p3m1',
-        'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
+        'infoless_poscar-SiC_H': (
+            'Seeded rattling gives cm or p3 instead of p3m1'
+            ),
+        'bulk_repeat_poscar-Cu2O_111': (
+            'Seeded rattling gives cm or p3 instead of p3m1'
+            ),
+        'double_bulk-fe3o4': 'Seeded rattling gives pm instead of pmm',
+        'double_bulk-ru': 'Seeded rattling gives cm instead of p3m1',
+        'fe3o4_bulk': 'Seeded rattling gives pm instead of pmm',
+        # Failed at least once with random shifts before the
+        # seeding of #574; they pass for every seeded value:
+        # 'pgg-ucell=square': 'Often reduced to pg',
+        # 'rcm-ucell=square': 'Sometimes reduced to pm',
+        # 'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
+        # 'pmm-ucell=rectangular': 'Sometimes reduced to pm',
+        # 'pmg-ucell=rectangular': 'Sometimes identified as rcm',
+        # 'cmm': 'Sometimes reduced to cm',
+        # 'p2': 'Sometimes reduced to p1',
+        # 'cm_1m1': 'Sometimes reduced to p1',
+        # 'p4': 'Sometimes reduced to p1',
+        # 'p4g': 'Sometimes reduced to cm',
+        # 'p3': 'Sometimes reduced to p1',
+        # 'p3m1': 'Often reduced to cm',
+        # 'p6': 'Sometimes reduced to p2/p1',
+        # 'hex_cm_12': 'Often reduced to p1',
+        # 'hex_cmm_11': 'Often reduced to cm',
+        # 'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
+        # 'poscar_ag100': 'Often reduced from p4m to cm',
+        # 'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        # 'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
+        # 'poscar-ru': 'Sometimes reduced to cm from p3m1',
+        # 'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
+        # 'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
+        # 'infoless_poscar-Cu2O_111':
+        #     'Sometimes reduced to cm from p3m1',
+        # 'infoless_poscar-Fe3O4_SCV':
+        #     'Sometimes reduced to cm from cmm',
+        # 'infoless_poscar-In2O3_(111)':
+        #     'Sometimes reduced to p1 from p3',
+        # 'infoless_poscar-Ir(100)-(2x1)-O':
+        #     'Sometimes misidentified as pm',
+        # 'infoless_poscar-TiO2_supercell':
+        #     'Sometimes reduced to pm from pmm',
+        # 'infoless_poscar-TiO2_small':
+        #     'Sometimes reduced to pm/p1 from pmm',
         }
 
-    def test_rattled_group(self, rattled_slab, first_case):
+    def test_rattled_group(self, rattled_slab, first_case, draws):
         """Check that the rattled slab has the right plane group."""
-        rattled, original, param, info, *_ = rattled_slab
-        symmetry.findSymmetry(rattled, param)
-        with may_fail(first_case, self._known_incorrect_rattled):
+        original, rattled_all, _, info, *_ = rattled_slab
+
+        def _check(draw):
+            rattled, param, _ = rattled_all[draw.index]
+            symmetry.findSymmetry(rattled, param)
             if info.symmetry.hermann:
                 assert hermann(original.planegroup) == info.symmetry.hermann
             assert original.planegroup == rattled.planegroup
+
+        with may_fail(first_case,
+                      self._known_incorrect_rattled,
+                      strict=True,
+                      draws=draws):
+            check_draws(draws, _check)
 
 
 class TestBulkSymmetry:
@@ -475,36 +573,47 @@ class TestSymmetryReduction:
             symmetry.setSymmetry(slab, param, 'p1')
         assert exc.match(r'.*unknown')
 
-    @pytest.mark.xfail(reason='Does not check validity of group')
-    def test_invalid_group(self, with_plane_group):
+    @pytest.mark.xfail(reason='Does not check validity of group',
+                       strict=True)
+    def test_invalid_group(self, with_plane_group, draws):
         """Assert that not providing a direction raises exceptions."""
-        slab, param, *_ = with_plane_group()
-        with pytest.raises(ValueError) as exc:
-            symmetry.setSymmetry(slab, param, 'kt')
-        assert exc.match(r'kt is not.*acceptable')
+        def _check(draw):
+            slab, param, *_ = with_plane_group(draw)
+            with pytest.raises(ValueError) as exc:
+                symmetry.setSymmetry(slab, param, 'kt')
+            assert exc.match(r'kt is not.*acceptable')
 
-    def test_missing_direction(self, with_plane_group):
+        check_draws(draws, _check)
+
+    def test_missing_direction(self, with_plane_group, draws):
         """Assert that not providing a direction raises exceptions."""
-        slab, param, *_ = with_plane_group()
-        hermann_ = hermann(slab.foundplanegroup)
-        if hermann_ in 'pm|pmg':
-            need_direction = 'cm'
-        elif hermann_ == 'p6m':
-            need_direction = 'cmm'
-        else:
-            need_direction = 'pm'
-        # with pytest.raises(MissingGroupDirectionError):
-        symmetry.setSymmetry(slab, param, need_direction)
+        def _check(draw):
+            slab, param, *_ = with_plane_group(draw)
+            hermann_ = hermann(slab.foundplanegroup)
+            if hermann_ in 'pm|pmg':
+                need_direction = 'cm'
+            elif hermann_ == 'p6m':
+                need_direction = 'cmm'
+            else:
+                need_direction = 'pm'
+            # with pytest.raises(MissingGroupDirectionError):
+            symmetry.setSymmetry(slab, param, need_direction)
 
-    @pytest.mark.xfail(reason='Does not check validity of subgroup')
-    def test_invalid_subgroup(self, with_plane_group):
+        check_draws(draws, _check)
+
+    @pytest.mark.xfail(reason='Does not check validity of subgroup',
+                       strict=True)
+    def test_invalid_subgroup(self, with_plane_group, draws):
         """Make sure SlabSymmetrizer finds all atoms it should."""
-        slab, param, *_ = with_plane_group()
-        hermann_ = hermann(slab.foundplanegroup)
-        invalid_group = 'p4' if hermann_ == 'p6m' else 'p6m'
-        with pytest.raises(ValueError) as exc:
-            symmetry.setSymmetry(slab, param, invalid_group)
-        assert exc.match('.*not a valid symmetry reduction.*')
+        def _check(draw):
+            slab, param, *_ = with_plane_group(draw)
+            hermann_ = hermann(slab.foundplanegroup)
+            invalid_group = 'p4' if hermann_ == 'p6m' else 'p6m'
+            with pytest.raises(ValueError) as exc:
+                symmetry.setSymmetry(slab, param, invalid_group)
+            assert exc.match('.*not a valid symmetry reduction.*')
+
+        check_draws(draws, _check)
 
     @pytest.mark.xfail(reason='BUG: symmetry L724--789, missing [] at arrays',
                        raises=(ValueError, RuntimeWarning))
