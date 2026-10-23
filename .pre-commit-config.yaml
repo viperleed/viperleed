@@ -1,0 +1,17 @@
+# Hooks for pre-commit (https://pre-commit.com). Opt in with
+#     python -m pip install pre-commit
+#     pre-commit install
+# See doc/content/appendix/notes_for_developers.rst for details.
+repos:
+  - repo: local
+    hooks:
+      - id: update-copyright-year
+        name: Update copyright end year
+        description: >-
+          Set the end year of the __copyright__ dunder of Python files
+          to the current year, if they are staged or, with
+          `pre-commit run --from-ref A --to-ref B`, changed between
+          the two refs.
+        entry: python build/scripts/update_copyright_year.py
+        language: python
+        types: [python]
