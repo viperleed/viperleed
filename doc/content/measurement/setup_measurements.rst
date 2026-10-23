@@ -1,0 +1,394 @@
+.. include:: /substitutions.rst
+
+.. _setup_measurements:
+
+=====
+Setup
+=====
+
+After ViPErLEED has been installed successfully, the graphical user interface
+(GUI), seen in :numref:`fig_gui_selection`, can be started by executing
+``viperleed gui`` in a command prompt or terminal. This opens the main GUI
+window, which provides two options: **Simulate LEED Pattern** and
+**Measure LEED-IV**. To proceed to the data acquisition interface, select
+**Measure LEED-IV**. If your GUI is rendered differently, set the DPI settings
+of python.exe to **Override by application**.
+
+.. _fig_gui_selection:
+.. figure:: /_static/gui/gui_selection.jpg
+    :width: 30%
+    :align: center
+
+    Press *Measure LEED-IV* to enter the GUI for data acquisition.
+
+System settings
+===============
+
+Before measurements can be carried out, ViPErLEED must know where to store and
+retrieve essential configuration files, measurement data, and (if applicable)
+hardware-related drivers and components. If you are entering the measurement
+GUI for the first time, a warning will appear indicating that mandatory system
+settings need to be defined.
+
+.. _fig_error_sys_settings:
+.. figure:: /_static/gui/error_sys_settings.jpg
+    :width: 60%
+    :align: center
+
+    A warning that mandatory system settings need to be selected.
+
+Select *OK* in the error message seen in :numref:`fig_error_sys_settings` to
+continue. This opens the **System settings** dialog, where paths to relevant
+folders or directories can be specified. The hints displayed next to each label
+provide short explanations of how each directory is used within ViPErLEED.
+
+.. _fig_sys_settings:
+.. figure:: /_static/gui/sys_settings.jpg
+    :width: 55%
+    :align: center
+
+    The system settings dialog.
+
+The **System Settings** section (:numref:`fig_sys_settings`) allows the
+definition of the following paths:
+
+ * **Configuration** – Location in which device and GUI settings are stored and from which they are loaded.
+ * **Measurements** – Directory where measurement data are saved.
+ * **Arduino CLI** – Path to the installation of the `Arduino CLI <https://docs.arduino.cc/arduino-cli/>`__ used for firmware uploading.
+ * **Drivers** – Directory containing additional device drivers.
+ * **Firmware** – Directory containing the ViPErLEED hardware controller firmware files.
+
+Only the **Configuration** and **Measurements** paths are mandatory. However,
+if you plan to use the ViPErLEED hardware controller in your measurements,
+you should also define the **Arduino CLI** and **Firmware** paths at this
+stage. If your setup uses our The Imaging Source camera implementation, it is
+recommended to specify the **Drivers** directory at this point as well.
+
+Once all relevant paths have been defined, the main measurement GUI will
+appear.
+
+.. _fig_measurement_gui:
+.. figure:: /_static/gui/measurement_gui.jpg
+    :width: 40%
+    :align: center
+
+    The data acquisition interface.
+
+The toolbar at the top provides additional functionality not directly related
+to data acquisition:
+
+ * **File** – Load existing measurements for review. Loaded measurements are displayed in the data plot.
+ * **Devices** – Edit camera and controller settings. Selecting a camera opens a live preview window. Settings for new devices can be created by selecting the corresponding device from this menu.
+ * **Tools** – Hardware-related utilities, such as the firmware upload tool for the ViPErLEED hardware controller and the bad-pixel calibration tool.
+ * **View** – Reopen the data plot if it has been closed.
+ * **Settings** – Reopen the system settings dialog.
+ * **About** – Display software information.
+
+Once the system settings have been configured, ViPErLEED is ready for firmware
+upload, bad-pixel calibration, and data acquisition.
+
+Uploading firmware
+==================
+
+The ViPErLEED hardware includes an Arduino microcontroller. Before the first
+use, the firmware must be uploaded to the controller. With the controller
+connected to the PC, open the **Tools** menu and select
+*Upload/upgrade Firmware* (:numref:`fig_measurement_gui_select_firmware`).
+Ensure that your **Firmware** directory contains a copy of the controller
+firmware, so that ViPErLEED can detect it and upload it to the microcontroller.
+
+.. _fig_measurement_gui_select_firmware:
+.. figure:: /_static/gui/measurement_gui_select_firmware.jpg
+    :width: 40%
+    :align: center
+
+    Select *Upload/upgrade Firmware*.
+
+If no `Arduino CLI <https://docs.arduino.cc/arduino-cli/>`__ installation is
+available in either the system paths or the **Arduino CLI** directory,
+ViPErLEED will request permission to perform a local installation of the
+Arduino CLI (:numref:`fig_install_arduino_cli`).
+
+.. _fig_install_arduino_cli:
+.. figure:: /_static/gui/install_arduino_cli.jpg
+    :width: 68%
+    :align: center
+
+    Press *Agree and install Arduino CLI*.
+
+If your operating system does not support OpenSSL 1, you will be prompted to
+install the Python ``requests`` package. If your operating system supports
+OpenSSL 1, or after you have installed the ``requests`` package, the Arduino
+CLI will be installed automatically and you can start setting up your
+ViPErLEED hardware controller.
+
+.. _fig_firmware_gui:
+.. figure:: /_static/gui/firmware_gui.jpg
+    :width: 58%
+    :align: center
+
+    The firmware upload tool.
+
+Press *Refresh* (:numref:`fig_firmware_gui`) to detect connected controllers.
+New Arduino Micro boards will be listed with the COM port on which they were
+detected. If a controller already contains ViPErLEED firmware, this will be
+indicated by its name and the installed version will be displayed. You can
+select the firmware you wish to upload in the dropdown menu next to the *Upload
+firmware* button. ViPErLEED will automatically search your configured
+**Firmware** directory for matching firmware files, and will automatically
+select the newest available version. After you have selected your desired
+firmware, press *Upload firmware* to start the upload. Once the progress bar
+reaches 100% (:numref:`fig_upload_finished`), the firmware has been installed
+on the controller.
+
+.. _fig_upload_finished:
+.. figure:: /_static/gui/upload_finished.jpg
+    :width: 58%
+    :align: center
+
+    The upload progress has to reach 100%. If it fails and reports an error for
+    any reason, the upload has to be repeated.
+
+ViPErLEED hardware controller setup
+===================================
+
+To operate the controller during a measurement, it must be identifiable. To
+assign your controller a serial number and to create settings for it, open the
+**Devices** menu (:numref:`fig_select_controller`) and select the controller
+on which the firmware was just installed.
+
+.. _fig_select_controller:
+.. figure:: /_static/gui/select_controller.jpg
+    :width: 53%
+    :align: center
+
+    If the controller has not been used before, it will not yet have a serial
+    number.
+
+You should receive a notification that no settings were found for this
+controller. Press *Create a new settings file*
+(:numref:`fig_create_new_settings_no_serial_nr`) to generate new configuration
+files for the controller in your **Configuration** directory.
+
+.. _fig_create_new_settings_no_serial_nr:
+.. figure:: /_static/gui/create_new_settings_no_serial_nr.jpg
+    :width: 65%
+    :align: center
+
+    Create new settings for your controller.
+
+After creating new settings, assign a serial number to the controller. Either
+generate a random serial number by pressing *Generate randomly* or type your
+desired serial number into the line edit. Press *Set* to write it to the
+controller (:numref:`fig_new_settings_no_serial_nr`). This serial number will
+act as the identification marker for the controller, but it can be changed
+later if needed.
+
+.. _fig_new_settings_no_serial_nr:
+.. figure:: /_static/gui/new_settings_no_serial_nr.jpg
+    :width: 45%
+    :align: center
+
+    Set a serial number on your controller.
+
+After setting the serial number, delete the old, temporary settings file
+(:numref:`fig_delete_old_settings`) and close the settings dialog. Ensure the
+controller is powered, then reopen the controller settings dialog
+(:numref:`fig_new_settings_with_serial_nr`). The **Devices** menu should now
+display the controller with the serial number you assigned to it.
+
+.. _fig_delete_old_settings:
+.. figure:: /_static/gui/delete_old_settings.jpg
+    :width: 65%
+    :align: center
+
+    The old settings file can be deleted; it corresponds to a controller
+    without a serial number.
+
+.. _fig_new_settings_with_serial_nr:
+.. figure:: /_static/gui/new_settings_with_serial_nr.jpg
+    :width: 48%
+    :align: center
+
+    Once the controller is powered, the hardware configuration will be
+    displayed.
+
+Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and select the
+option with the same content in the dropdown, as seen in
+:numref:`fig_dropdown_thermocouple`.
+
+.. _fig_dropdown_thermocouple:
+.. figure:: /_static/gui/dropdown_thermocouple.jpg
+    :width: 30%
+    :align: center
+
+    Select the thermocouple option.
+
+In the window that opens, select the type of thermocouple installed on your
+controller (:numref:`fig_select_thermocouple`).
+
+.. _fig_select_thermocouple:
+.. figure:: /_static/gui/select_thermocouple.jpg
+    :width: 45%
+    :align: center
+
+    Select the installed thermocouple type.
+
+When finished, press *OK* to save your settings.
+
+Before acquiring data with your ViPErLEED controller, verify that it is
+configured for the correct |I0| input range for your LEED unit. If the wrong
+mode is selected, you must adjust the jumpers inside the ViPErLEED hardware
+controller box.
+
+Camera setup
+============
+
+To set up your camera, first ensure that it is powered and connected to your
+PC. Give the camera enough time to boot. Go to the **Devices** menu and select
+your camera to open a live view (:numref:`fig_select_camera`).
+
+.. _fig_select_camera:
+.. figure:: /_static/gui/select_camera.jpg
+    :width: 48%
+    :align: center
+
+    Select the camera.
+
+You should receive a notification that no settings were found for this camera.
+Press *Create a new settings file* to generate new configuration files for the
+camera in your **Configuration** directory
+(:numref:`fig_create_new_settings_camera`).
+
+.. _fig_create_new_settings_camera:
+.. figure:: /_static/gui/create_new_settings_camera.jpg
+    :width: 65%
+    :align: center
+
+    Create new settings for your camera.
+
+Once the settings have been created, a live view of the camera will open.
+Right-click inside the live view seen in :numref:`fig_camera_view`.
+
+.. _fig_camera_view:
+.. figure:: /_static/gui/camera_view.jpg
+    :width: 100%
+    :align: center
+
+    Right-click in the live view to open its menu.
+
+Select *Properties* from the menu to open the camera settings
+(:numref:`fig_new_camera_settings`). Set the binning value such that your
+images have roughly 500×500 pixels after binning. If your sensor is
+rectangular, set the binning so that the shorter side is ≈500 pixels. Later, we
+will set the ROI so that the resulting images are square.
+
+.. _fig_new_camera_settings:
+.. figure:: /_static/gui/new_camera_settings.jpg
+    :width: 55%
+    :align: center
+
+    The camera settings dialog. Set the binning value to reduce image size and
+    improve the signal-to-noise ratio.
+
+Bad pixel calibration
+=====================
+
+This calibration step is optional but strongly recommended before performing
+|LEED-IV| measurements. Camera sensors typically contain a small number of
+defective or unstable pixels. To improve image quality during data acquisition,
+these pixels can be detected and replaced by the average of their "good"
+neighbors. To perform a bad pixel calibration, open the bad-pixel calibration
+tool under the **Tools** menu as seen in
+:numref:`fig_measurement_gui_select_pixels`.
+
+.. _fig_measurement_gui_select_pixels:
+.. figure:: /_static/gui/measurement_gui_select_pixels.jpg
+    :width: 40%
+    :align: center
+
+    Select *Find bad pixels*.
+
+The camera can be selected in the dropdown menu at the top of the tool
+(:numref:`fig_find_bad_pixels`).
+
+.. _fig_find_bad_pixels:
+.. figure:: /_static/gui/find_bad_pixels.jpg
+    :width: 33%
+    :align: center
+
+    The dropdown menu is populated automatically. If you just connected your
+    camera to the PC, give it some time to initialise and then check the menu
+    again.
+
+When selecting a camera for the first time, you will need to choose a directory
+in which the resulting bad-pixel files will be stored
+(:numref:`fig_find_bad_pixels_with_camera`).
+
+.. _fig_find_bad_pixels_with_camera:
+.. figure:: /_static/gui/find_bad_pixels_with_camera.jpg
+    :width: 45%
+    :align: center
+
+    If the bad-pixel calibration has been performed previously, the stored
+    results will be shown.
+
+Press *Find* to start the acquisition process. The tool will guide you through
+the required steps interactively as seen in
+:numref:`fig_bad_pixels_instruction_1` and
+:numref:`fig_bad_pixels_instruction_2`. First, you will acquire dark images.
+For this step you should put a black cap on the lens, blocking all light to the
+camera.
+
+.. _fig_bad_pixels_instruction_1:
+.. figure:: /_static/gui/bad_pixels_instruction_1.jpg
+    :width: 50%
+    :align: center
+
+    Instructions will appear as each step is performed.
+
+Two dark-image steps are performed to detect different pixel errors (hot
+pixels, i.e., pixels with high dark current, and blinking pixels). After this,
+remove the lens cap and provide uniform illumination. This will take roughly 10
+minutes. Usually, turning on the room lights and placing a sheet of white paper
+a few centimetres in front of the lens is sufficient. Make sure that no shadows
+are cast onto the paper. This calibration step is necessary to detect dead
+pixels (pixels that are significantly less sensitive than their neighbors).
+
+.. _fig_bad_pixels_instruction_2:
+.. figure:: /_static/gui/bad_pixels_instruction_2.jpg
+    :width: 50%
+    :align: center
+
+    Remove the lens cap and place a white sheet of paper in front of the
+    camera.
+
+Once the calibration is completed (:numref:`fig_bad_pixels_finished`), it will
+be stored in your chosen directory and used automatically in subsequent
+measurements. Since camera sensors degrade over time, we recommend calibrating
+the cameras at least once a year.
+
+.. _fig_bad_pixels_finished:
+.. figure:: /_static/gui/bad_pixels_finished.jpg
+    :width: 50%
+    :align: center
+
+    After completion, you can close the bad-pixel finder dialog.
+
+Camera placement
+================
+
+After bad-pixel calibration, the camera can be moved into its final position.
+Fully open the lens aperture.
+
+In the **Devices** menu, open a live view of your camera. While observing the
+live view, position the camera so that the LEED screen fills the entire sensor
+for optimal pixel use. If your sensor is rectangular, the LEED screen should
+fill the height of the image.
+
+After adjusting the camera position, right-click the live view and select
+*Properties*. Adjust the ROI settings to crop away the parts of the image that
+do not cover the LEED screen. (ROI means region of interest, i.e. the region
+recorded.) On a rectangular sensor, one will typically select a square ROI.
+Press *Apply* to test different settings. Once you are satisfied, the camera is
+ready for data acquisition.
