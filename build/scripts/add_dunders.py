@@ -15,6 +15,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 import re
+import sys
 
 
 DUNDER_RE = re.compile(r'^__[a-z]+__$')
@@ -22,6 +23,9 @@ DUNDER_EQUALS_RE = re.compile(r'^(?P<dunder>__[a-z]+__) = ')
 ACCEPTABLE_DUNDER_TYPES = (
     ast.Tuple,
     ast.Constant,
+    # Python 3.7 parses string literals as ast.Str rather than
+    # ast.Constant. ast.Str is deprecated from 3.8, hence the guard.
+    *((ast.Str,) if sys.version_info < (3, 8) else ()),
     )
 IMPORT_RE = re.compile(r'^\s*(from\s+\w+\s+)?import\s+\w+')
 
