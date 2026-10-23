@@ -4,11 +4,13 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__copyright__ = "Copyright (c) 2019-2026 ViPErLEED developers"
 __created__ = "2025-07-16"
 __license__ = "GPLv3+"
 
 import copy
+import logging
+
 import numpy as np
 import scipy
 from sklearn.linear_model import ElasticNet
@@ -21,6 +23,9 @@ from sklearn.preprocessing import PolynomialFeatures
 
 from viperleed.calc.files import iosearch
 from viperleed.calc.classes.searchpar import SearchPar
+
+logger = logging.getLogger(__name__)
+
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     """
