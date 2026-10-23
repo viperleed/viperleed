@@ -6,7 +6,7 @@
 Download ViPErLEED firmware
 ===========================
 
-Firmware for the ViPErLEED hardware controller is provided through our firmware
+Firmware for the Arduino microcontroller in the ViPErLEED hardware is provided through our firmware
 `repository <https://github.com/viperleed>`__.
 (TODO: replace this link with the dedicated firmware repository URL once available)
 Download the desired firmware release and place the downloaded firmware in its
