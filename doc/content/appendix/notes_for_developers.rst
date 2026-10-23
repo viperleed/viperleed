@@ -175,6 +175,13 @@ it is rolling back fixes, a file you staged only partially has unstaged
 changes next to its ``__copyright__`` dunder: stage or stash those changes
 first, then repeat the commit.
 
+The same set-up also tidies every file you commit: it strips trailing
+whitespace, adds missing final newlines and unifies mixed line endings
+(data files, e.g., for tests, are left alone), aborting the commit like the
+copyright hook does. It also runs `ruff <https://docs.astral.sh/ruff/>`__
+to reject syntax errors (including syntax newer than Python 3.7) and
+undefined names.
+
 Independently of whether you use the hook, pull requests get an advisory
 check that flags out-of-date end years in the files they change. This
 check does not block merging.
