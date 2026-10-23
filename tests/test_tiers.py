@@ -185,3 +185,67 @@ class TestStaleSlowCases:
         result = run(*args, slow=slow, files=files, cache=True)
         result.assert_outcomes(failed=1)
         assert result.ret is pytest.ExitCode.TESTS_FAILED
+
+
+_SLOW_FILE = """
+import time
+
+import pytest
+
+def test_fast():
+    pass
+
+def test_unmarked_slow():
+    time.sleep(0.7)
+
+@pytest.mark.slow
+def test_marked_fast():
+    pass
+
+@pytest.mark.slow
+def test_marked_slow():
+    time.sleep(0.7)
+"""
+_SLOW_FILES = {'test_durations': _SLOW_FILE}
+_DURATIONS = 'test_durations.py::'
+_BELOW = 'took less than the threshold'
+
+
+@pytest.mark.slow  # About 1 s each (pytester)
+class TestCheckSlow:
+    """Tests for the --check-slow option."""
+
+    @staticmethod
+    def _check_report(result):
+        """Check the lists of --check-slow, and that nothing failed."""
+        result.assert_outcomes(passed=4)  # Report only
+        assert result.ret is pytest.ExitCode.OK
+        out = result.stdout.str()
+        head, _, rest = out.partition(_BELOW)
+        assert _DURATIONS + 'test_unmarked_slow' in head
+        assert _DURATIONS + 'test_marked_fast' in rest
+        for name in ('test_fast', 'test_marked_slow'):
+            assert f'{_DURATIONS}{name}\n' not in out
+
+    def test_candidates(self, run):
+        """Check that tests to mark and to unmark are listed."""
+        result = run(conftest.CHECK_SLOW_OPTION, files=_SLOW_FILES)
+        self._check_report(result)
+
+    def test_without_option(self, run):
+        """Check that nothing is reported without the option."""
+        result = run(files=_SLOW_FILES)
+        result.assert_outcomes(passed=4)
+        assert result.ret is pytest.ExitCode.OK
+        assert conftest.CHECK_SLOW_OPTION.lstrip('-') not in (
+            result.stdout.str()
+            )
+
+    def test_xdist(self, run):
+        """Check that --check-slow also works with pytest-xdist."""
+        result = run(
+            conftest.CHECK_SLOW_OPTION,
+            *_XDIST_ARGS,
+            files=_SLOW_FILES,
+            )
+        self._check_report(result)

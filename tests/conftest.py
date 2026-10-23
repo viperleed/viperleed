@@ -68,8 +68,11 @@ Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
 _COLLECTED_IDS = pytest.StashKey()
 _STALE_MESSAGE = pytest.StashKey()  # On the controller, with xdist
+_CALL_PHASE = 'call'
 _NODEID_SEP = '::'
+_SLOW_MARKER = 'slow'
 STALE_KEY = 'stale_slow_cases'  # In pytest-xdist's workeroutput
+CHECK_SLOW_OPTION = '--check-slow'
 QUICK_OPTION = '--quick'
 RNG_SEED_OPTION = '--rng-seed'
 WORKER_SEED_KEY = 'rng_seed'  # In pytest-xdist's workerinput
@@ -88,6 +91,15 @@ def pytest_addoption(parser):
         action='store_true',
         help=('Quick tier: skip the tests marked "slow", in addition '
               'to what the -m expression (if any) selects.'),
+        )
+    parser.addoption(
+        CHECK_SLOW_OPTION,
+        action='store_true',
+        help=('At the end, list the tests not marked "slow" that took '
+              f'{tiers.SLOW_THRESHOLD} s or more, and the "slow" ones '
+              'that took less (call phase), as candidates to be '
+              'marked or unmarked in tests/tiers.py. Only reports; '
+              'also with pytest-xdist.'),
         )
     parser.addoption(
         RNG_SEED_OPTION,
@@ -113,7 +125,7 @@ def _apply_quick_option(config):
 
 
 def pytest_configure(config):
-    """Apply --quick and resolve --rng-seed to an integer, once.
+    """Apply --quick, start --check-slow, resolve --rng-seed once.
 
     The seed is resolved in the controller only. A pytest-xdist worker
     takes the base that the controller resolved and handed over
@@ -124,6 +136,11 @@ def pytest_configure(config):
     """
     _apply_quick_option(config)
     workerinput = getattr(config, 'workerinput', None)
+    if workerinput is None and config.option.check_slow:
+        config.pluginmanager.register(
+            _DurationRecorder(),
+            _DurationRecorder.name,
+            )
     if workerinput is not None:
         config.option.rng_seed = workerinput[WORKER_SEED_KEY]
         return
@@ -160,11 +177,85 @@ def pytest_report_header(config):
     return _rng_seed_message(config)
 
 
+class _DurationRecorder:
+    """Plugin that records the call durations of the tests that run."""
+
+    name = 'check-slow-recorder'
+
+    def __init__(self):
+        """Initialize an instance with no durations."""
+        self.durations = {}  # nodeid: seconds
+        self.slow_ids = set()
+
+    def pytest_runtest_logreport(self, report):
+        """Record the call duration of a report."""
+        # With pytest-xdist, the controller receives all the reports.
+        # Subtests report under the id of their test: keep the longest
+        if report.when != _CALL_PHASE or report.skipped:
+            return
+        self.durations[report.nodeid] = max(
+            self.durations.get(report.nodeid, 0),
+            report.duration,
+            )
+        if _SLOW_MARKER in report.keywords:
+            self.slow_ids.add(report.nodeid)
+
+    def candidates(self, threshold):
+        """Return the tests whose marking may need to change.
+
+        Parameters
+        ----------
+        threshold : float
+            Duration (seconds) from which a test counts as slow.
+
+        Returns
+        -------
+        to_mark : list
+            (duration, node id) of tests that are not marked slow,
+            but took `threshold` or more, longest first.
+        to_unmark : list
+            (duration, node id) of tests marked slow that took less
+            than `threshold`, shortest first.
+        """
+        to_mark = sorted(
+            ((time, nodeid) for nodeid, time in self.durations.items()
+             if nodeid not in self.slow_ids and time >= threshold),
+            reverse=True,
+            )
+        to_unmark = sorted(
+            (time, nodeid) for nodeid, time in self.durations.items()
+            if nodeid in self.slow_ids and time < threshold
+            )
+        return to_mark, to_unmark
+
+
+def _write_slow_candidates(terminalreporter, config):
+    """Write the lists of tests whose marking may need to change."""
+    recorder = config.pluginmanager.get_plugin(_DurationRecorder.name)
+    threshold = tiers.SLOW_THRESHOLD
+    to_mark, to_unmark = recorder.candidates(threshold)
+    terminalreporter.section('check-slow (report only)')
+    terminalreporter.write_line(
+        f'Call phase, threshold {threshold} s. Edit tests/tiers.py '
+        '(SLOW_CASES) or the marks; timings are noisy: re-run a '
+        'candidate before changing it.'
+        )
+    for title, tests in (
+            ('Not marked "slow", but took the threshold or more:', to_mark),
+            ('Marked "slow", but took less than the threshold:', to_unmark),
+            ):
+        terminalreporter.write_line(f'{title} {len(tests)}')
+        for time, nodeid in tests:
+            terminalreporter.write_line(f'  {time:7.2f} s  {nodeid}')
+
+
 def pytest_terminal_summary(terminalreporter, config):
-    """Report the base seed, if used, also with -q."""
+    """Report the base seed, if used, also with -q, and --check-slow."""
     message = _rng_seed_message(config)
     if message:
         terminalreporter.write_line(message)
+    if config.option.check_slow:
+        _write_slow_candidates(terminalreporter, config)
 
 
 def _split_case_id(nodeid):
