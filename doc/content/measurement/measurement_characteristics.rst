@@ -107,10 +107,9 @@ Energy-resolved and time-resolved measurements
 ==============================================
 
 Measurements can be either energy-resolved or time-resolved. An energy-resolved
-measurement will collect one measurement per controller for each requested
-quantity at a certain energy. A time-resolved measurement, in contrast, will
-remain at each energy for the desired amount of time and continue collecting
-data during this time span.
+measurement will collect one measurement for each energy. A time-resolved
+measurement, in contrast, will remain at each energy for the desired amount of
+time and continue collecting data during this time span.
 
 Energy-resolved measurements
 ----------------------------
