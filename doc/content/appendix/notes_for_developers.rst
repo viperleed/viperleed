@@ -70,13 +70,13 @@ Coverage is not collected by default. To produce a coverage report, run
 
 .. code-block:: bash
 
-    python -m pytest . --cov --cov-config=../pyproject.toml
+    python -m pytest tests --cov
 
-(the :program:`pytest-cov` plugin is among the test requirements). What is
-measured (including branches) is configured in :file:`pyproject.toml`; the
-option ``--cov-config`` is not needed when running from the repository root
-(``python -m pytest tests --cov``). A summary with the missing lines is
-printed, and an HTML report is written to :file:`htmlcov/`.
+from the repository root (the :program:`pytest-cov` plugin is among the test
+requirements). Coverage is run from the root so that its configuration in
+:file:`pyproject.toml`, which sets what is measured (including branches), is
+found. A summary with the missing lines is printed, and an HTML report is
+written to :file:`htmlcov/`.
 
 Slow tests are kept up to date with the option ``--check-slow``. The slow
 tests that are individual cases of a parametrized test (as opposed to whole
