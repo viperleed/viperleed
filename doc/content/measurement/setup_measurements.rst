@@ -37,7 +37,7 @@ settings need to be defined.
 
     A warning that mandatory system settings need to be selected.
 
-Select *OK* in the window seen in :numref:`fig_error_sys_settings` to
+Select *OK* in the error message seen in :numref:`fig_error_sys_settings` to
 continue. This opens the **System settings** dialog, where paths to relevant
 folders or directories can be specified. The hints displayed next to each label
 provide short explanations of how each directory is used within ViPErLEED.
@@ -225,7 +225,7 @@ option with the same content in the dropdown, as seen in
     Select the thermocouple option.
 
 In the window that opens, select the type of thermocouple installed on your
-controller.
+controller (:numref:`fig_select_thermocouple`).
 
 .. _fig_select_thermocouple:
 .. figure:: /_static/gui/select_thermocouple.jpg
@@ -246,7 +246,7 @@ Camera setup
 
 To set up your camera, first ensure that it is powered and connected to your
 PC. Give the camera enough time to boot. Go to the **Devices** menu and select
-your camera to open a live view.
+your camera to open a live view (:numref:`fig_select_camera`).
 
 .. _fig_select_camera:
 .. figure:: /_static/gui/select_camera.jpg
@@ -257,7 +257,8 @@ your camera to open a live view.
 
 You should receive a notification that no settings were found for this camera.
 Press *Create a new settings file* to generate new configuration files for the
-camera in your **Configuration** directory.
+camera in your **Configuration** directory
+(:numref:`fig_create_new_settings_camera`).
 
 .. _fig_create_new_settings_camera:
 .. figure:: /_static/gui/create_new_settings_camera.jpg
@@ -267,7 +268,7 @@ camera in your **Configuration** directory.
     Create new settings for your camera.
 
 Once the settings have been created, a live view of the camera will open.
-Right-click inside the live view.
+Right-click inside the live view seen in :numref:`fig_camera_view`.
 
 .. _fig_camera_view:
 .. figure:: /_static/gui/camera_view.jpg
@@ -276,19 +277,19 @@ Right-click inside the live view.
 
     Right-click in the live view to open its menu.
 
-Select *Properties* from the menu to open the camera settings. Set the binning
-value such that your images have between 400×400 and 500×500 pixels after
-binning. If your sensor is rectangular, set the binning so that the shorter
-side is between 400 and 500 pixels. Later, we will set the ROI so that the
-resulting images are square.
+Select *Properties* from the menu to open the camera settings
+(:numref:`fig_new_camera_settings`). Set the binning value such that your
+images have roughly 500×500 pixels after binning. If your sensor is
+rectangular, set the binning so that the shorter side is ≈500 pixels. Later, we
+will set the ROI so that the resulting images are square.
 
 .. _fig_new_camera_settings:
 .. figure:: /_static/gui/new_camera_settings.jpg
     :width: 55%
     :align: center
 
-    Set the binning value to reduce image size and improve the signal-to-noise
-    ratio.
+    The camera settings dialog. Set the binning value to reduce image size and
+    improve the signal-to-noise ratio.
 
 Bad pixel calibration
 =====================
@@ -296,9 +297,10 @@ Bad pixel calibration
 This calibration step is optional but strongly recommended before performing
 |LEED-IV| measurements. Camera sensors typically contain a small number of
 defective or unstable pixels. To improve image quality during data acquisition,
-these pixels can be detected and replaced during image processing. To perform a
-bad pixel calibration, open the bad-pixel calibration tool under the **Tools**
-menu.
+these pixels can be detected and replaced by the average of their "good"
+neighbors. To perform a bad pixel calibration, open the bad-pixel calibration
+tool under the **Tools** menu as seen in
+:numref:`fig_measurement_gui_select_pixels`.
 
 .. _fig_measurement_gui_select_pixels:
 .. figure:: /_static/gui/measurement_gui_select_pixels.jpg
@@ -307,7 +309,8 @@ menu.
 
     Select *Find bad pixels*.
 
-The camera can be selected in the dropdown menu at the top of the tool.
+The camera can be selected in the dropdown menu at the top of the tool
+(:numref:`fig_find_bad_pixels`).
 
 .. _fig_find_bad_pixels:
 .. figure:: /_static/gui/find_bad_pixels.jpg
@@ -319,7 +322,8 @@ The camera can be selected in the dropdown menu at the top of the tool.
     again.
 
 When selecting a camera for the first time, you will need to choose a directory
-in which the resulting bad-pixel files will be stored.
+in which the resulting bad-pixel files will be stored
+(:numref:`fig_find_bad_pixels_with_camera`).
 
 .. _fig_find_bad_pixels_with_camera:
 .. figure:: /_static/gui/find_bad_pixels_with_camera.jpg
@@ -330,9 +334,11 @@ in which the resulting bad-pixel files will be stored.
     results will be shown.
 
 Press *Find* to start the acquisition process. The tool will guide you through
-the required steps interactively. First, you will acquire dark images. For this
-step you should have the lens cap ready to ensure that the camera is completely
-covered.
+the required steps interactively as seen in
+:numref:`fig_bad_pixels_instruction_1` and
+:numref:`fig_bad_pixels_instruction_2`. First, you will acquire dark images.
+For this step you should put a black cap on the lens, blocking all light to the
+camera.
 
 .. _fig_bad_pixels_instruction_1:
 .. figure:: /_static/gui/bad_pixels_instruction_1.jpg
@@ -341,10 +347,13 @@ covered.
 
     Instructions will appear as each step is performed.
 
-Two dark-image steps are performed to detect different pixel errors. After
-this, remove the lens cap and provide uniform illumination. Usually, turning on
-the room lights and placing a sheet of white paper a few centimetres in front
-of the lens is sufficient. Make sure that no shadows are cast onto the paper.
+Two dark-image steps are performed to detect different pixel errors (hot
+pixels, i.e., pixels with high dark current, and blinking pixels). After this,
+remove the lens cap and provide uniform illumination. This will take roughly 10
+minutes. Usually, turning on the room lights and placing a sheet of white paper
+a few centimetres in front of the lens is sufficient. Make sure that no shadows
+are cast onto the paper. This calibration step is necessary to detect dead
+pixels (pixels that are significantly less sensitive than their neighbours).
 
 .. _fig_bad_pixels_instruction_2:
 .. figure:: /_static/gui/bad_pixels_instruction_2.jpg
@@ -354,8 +363,10 @@ of the lens is sufficient. Make sure that no shadows are cast onto the paper.
     Remove the lens cap and place a white sheet of paper in front of the
     camera.
 
-Once the calibration is completed, it will be stored in your chosen directory
-and used automatically in subsequent measurements.
+Once the calibration is completed (:numref:`fig_bad_pixels_finished`), it will
+be stored in your chosen directory and used automatically in subsequent
+measurements. Since camera sensors degrade over time, we recommend calibrating
+the cameras at least once a year.
 
 .. _fig_bad_pixels_finished:
 .. figure:: /_static/gui/bad_pixels_finished.jpg
@@ -367,16 +378,17 @@ and used automatically in subsequent measurements.
 Camera placement
 ================
 
-After bad-pixel calibration, the camera can be moved into its final position,
-as further adjustment will not be necessary. Before placing the camera, fully
-open the camera aperture. Then mount it on your camera mount.
+After bad-pixel calibration, the camera can be moved into its final position.
+Fully open the lens aperture.
 
-Open a live view of your camera. While observing the live view, position the
-camera so that the LEED screen fills the entire sensor for optimal pixel use.
-If your sensor is rectangular, align the edges of the screen with the shorter
-edge of the image.
+In the **Devices** menu, open a live view of your camera. While observing the
+live view, position the camera so that the LEED screen fills the entire sensor
+for optimal pixel use. If your sensor is rectangular, the LEED screen should
+fill the height of the image.
 
 After adjusting the camera position, right-click the live view and select
 *Properties*. Adjust the ROI settings to crop away the parts of the image that
-do not cover the LEED screen. Press *Apply* to test different settings. Once
-you are satisfied, the camera is ready for data acquisition.
+do not cover the LEED screen. (ROI means region of interest, i.e. the region
+recorded.) On a rectangular sensor, one will typically select a square ROI.
+Press *Apply* to test different settings. Once you are satisfied, the camera is
+ready for data acquisition.
