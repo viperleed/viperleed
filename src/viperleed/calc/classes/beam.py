@@ -52,11 +52,11 @@ class Beam:
     @property
     def energies(self):
         return np.fromiter(self.intens.keys(), float)
-    
+
     @property
     def intensities(self):
         return np.fromiter(self.intens.values(), float)
-    
+
     def updateIndex(self, hk, maxdenom=99):
         """Keep values but change indices"""
         if all([isinstance(v, Fraction) for v in hk]):

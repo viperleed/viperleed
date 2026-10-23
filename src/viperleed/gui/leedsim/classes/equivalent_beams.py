@@ -22,7 +22,7 @@ from viperleed.gui.classes.beamindex import BeamIndex
 from viperleed.gui.helpers import equal_dicts
 from viperleed.gui.helpers import two_by_two_array_to_tuple
 from viperleed.gui.leedsim.utils import sort_hk
-                  
+
 from viperleed.gui import decorators as dev_
 
 

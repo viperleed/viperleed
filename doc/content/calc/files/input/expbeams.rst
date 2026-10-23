@@ -28,7 +28,7 @@ Format
     ...         ...          ...            ...
 
 For backwards compatibility, old experimental beam files formatted as
-:ref:`AUXEXPBEAMS` can easily be transformed to the EXPBEAMS file format 
+:ref:`AUXEXPBEAMS` can easily be transformed to the EXPBEAMS file format
 with the :ref:`aux_to_exp` utility.
 
 .. note::

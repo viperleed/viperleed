@@ -933,4 +933,3 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                 # this call even when not visible, the move is issued before the
                 # next show, and it will mess the position of the annotation
                 annot.move(annot.pos() + delta)
-

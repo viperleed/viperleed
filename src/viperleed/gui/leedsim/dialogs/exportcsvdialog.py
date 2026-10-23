@@ -176,4 +176,3 @@ class ExportCSVDialog(qtw.QDialog):
         # by LEEDPatternSimulator
 
         return params
-

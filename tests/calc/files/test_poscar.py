@@ -197,7 +197,7 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_c_only(self, args, output_stream):
-        """Check correct constraints for displacing only along z.""" 
+        """Check correct constraints for displacing only along z."""
         slab, *_ = args
         vasp_writer = poscar.VASPPOSCARWriter(output_stream,
                                               relax_info={'c_only': True})
@@ -208,7 +208,7 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_c_only_off(self, args, output_stream):
-        """Check correct constraints for displacing in all 3 directions.""" 
+        """Check correct constraints for displacing in all 3 directions."""
         slab, *_ = args
         vasp_writer = poscar.VASPPOSCARWriter(output_stream,
                                               relax_info={'c_only': False})
@@ -219,7 +219,7 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_above_c(self, args, output_stream):
-        """Check correct constraints for displacing only above a given c.""" 
+        """Check correct constraints for displacing only above a given c."""
         slab, *_ = args
         above_c = 0.3
         vasp_writer = poscar.VASPPOSCARWriter(output_stream,
@@ -239,7 +239,7 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_c_between_0_and_1(self, args, output_stream):
-        """Check complaints for invalid c value.""" 
+        """Check complaints for invalid c value."""
         slab, *_ = args
         with pytest.raises(ValueError):
             vasp_writer = poscar.VASPPOSCARWriter(output_stream,

@@ -33,7 +33,7 @@ Syntax
 
 where
 
--  ``POSCAREL`` is the :ref:`POSCAR` element and **not** the chemical species 
+-  ``POSCAREL`` is the :ref:`POSCAR` element and **not** the chemical species
    defined via :ref:`ELEMENT_MIX`.
    See also :ref:`element name collision<elementnamecollision>`.
 -  ``site`` is optional, and has the same functionality as the one in
