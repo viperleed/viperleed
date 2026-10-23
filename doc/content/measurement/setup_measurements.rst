@@ -7,11 +7,12 @@ Setup
 =====
 
 After ViPErLEED has been installed successfully, the graphical user interface
-(GUI) can be started by executing ``viperleed gui`` in a command prompt or
-terminal. This opens the main GUI window, which provides two options:
-**Simulate LEED Pattern** and **Measure LEED-IV**. To proceed to the data
-acquisition interface, select **Measure LEED-IV**. If your GUI is rendered
-differently, set the DPI settings of python.exe to override by application.
+(GUI), seen in :numref:`_fig_gui_selection`, can be started by executing
+``viperleed gui`` in a command prompt or terminal. This opens the main GUI
+window, which provides two options: **Simulate LEED Pattern** and
+**Measure LEED-IV**. To proceed to the data acquisition interface, select
+**Measure LEED-IV**. If your GUI is rendered differently, set the DPI settings
+of python.exe to override by application.
 
 .. _fig_gui_selection:
 .. figure:: /_static/gui/gui_selection.jpg
@@ -36,10 +37,10 @@ settings need to be defined.
 
     A warning that mandatory system settings need to be selected.
 
-Select *OK* to continue. This opens the **System settings** dialog, where
-paths to relevant folders or directories can be specified. The hints displayed
-next to each label provide short explanations of how each directory is used
-within ViPErLEED.
+Select *OK* in the window seen in :numref:`_fig_error_sys_settings` to
+continue. This opens the **System settings** dialog, where paths to relevant
+folders or directories can be specified. The hints displayed next to each label
+provide short explanations of how each directory is used within ViPErLEED.
 
 .. _fig_sys_settings:
 .. figure:: /_static/gui/sys_settings.jpg
@@ -48,7 +49,8 @@ within ViPErLEED.
 
     The system settings dialog.
 
-The **System Settings** section allows the definition of the following paths:
+The **System Settings** section (:numref:`_fig_sys_settings`) allows the
+definition of the following paths:
 
  * **Configuration** – Location in which device and GUI settings are stored and from which they are loaded.
  * **Measurements** – Directory where measurement data are saved.
@@ -59,7 +61,7 @@ The **System Settings** section allows the definition of the following paths:
 Only the **Configuration** and **Measurements** paths are mandatory. However,
 if you plan to use the ViPErLEED hardware controller in your measurements,
 you should also define the **Arduino CLI** and **Firmware** paths at this
-stage. If your setup uses our Imaging Source camera implementation, it is
+stage. If your setup uses our The Imaging Source camera implementation, it is
 recommended to specify the **Drivers** directory at this point as well.
 
 Once all relevant paths have been defined, the main measurement GUI will
@@ -88,12 +90,12 @@ upload, bad-pixel calibration, and data acquisition.
 Uploading firmware
 ==================
 
-Before a ViPErLEED hardware controller can be used for data acquisition, the
-firmware must be uploaded to the controller. ViPErLEED uses the Arduino Micro
-as its hardware controller platform, and new controllers must be flashed once
-before their first use. With the controller connected to the PC, open the
-**Tools** menu and select *Upload/upgrade Firmware*. Ensure that your
-**Firmware** directory contains a copy of the controller firmware.
+The ViPErLEED hardware includes an Arduino microcontroller. Before the first
+use, the firmware must be uploaded to the controller. With the controller
+connected to the PC, open the **Tools** menu and select
+*Upload/upgrade Firmware* (:numref:`_fig_measurement_gui_select_firmware`).
+Ensure that your **Firmware** directory contains a copy of the controller
+firmware, so that ViPErLEED can detect it and upload it to the microcontroller.
 
 .. _fig_measurement_gui_select_firmware:
 .. figure:: /_static/gui/measurement_gui_select_firmware.jpg
@@ -105,7 +107,7 @@ before their first use. With the controller connected to the PC, open the
 If no `Arduino CLI <https://docs.arduino.cc/arduino-cli/>`__ installation is
 available in either the system paths or the **Arduino CLI** directory,
 ViPErLEED will request permission to perform a local installation of the
-Arduino CLI.
+Arduino CLI (:numref:`_fig_install_arduino_cli`).
 
 .. _fig_install_arduino_cli:
 .. figure:: /_static/gui/install_arduino_cli.jpg
