@@ -36,20 +36,20 @@ class LEEDEquivalentBeams:                                                      
     In addition a list of glide-extinct beams can also be passed upon
     instantiation. If passed, it should have the same length as the domains
     dictionaries.
-    
+
     Alternatively, also list of LEEDEquivalentBeams instances can be passed in
     the constructor, in which case the information will be gathered from them,
     and there is no need to pass the bulk_basis or the lists of extinct beams
-    
+
     The primary goal of the class is to combine all the dictionaries given as
     input into new data structures that contain the beam equivalences when all
     the domains given upon instantiation are combined in an incoherent fashion
-    
+
     Since the calculations are relatively slow, and the combinations are many,
     it's a good idea to cache instances with a hash that is computed such
     that it is unique for the geometry considered. This gives speedups of more
     than a factor 100 upon re-using an already calculated geometry
-    
+
     This class is intended only for internal use. TRUE???
     """
 
@@ -97,9 +97,9 @@ class LEEDEquivalentBeams:                                                      
                              + f"domains ({len(extinct_lists)}) found in "
                              + f"extinct_lists. Expected {len(domains)}")
         domain_ids = kwargs.get('domain_ids', range(len(domains)))
-        
+
         self.__hash_dict = {}      # set by self.__update_hash
-        
+
         # re-prepare the kwargs to update the hash dictionary, updating values
         # that may have changed during this initialization
         kwargs['basis'] = basis
@@ -221,14 +221,14 @@ class LEEDEquivalentBeams:                                                      
         # store a deepcopy of the dictionary, as later on we will pop some
         # of the elements, and we don't want to screw with the input
         beams_by_domain_copy = copy.deepcopy(beams_by_domain)
-    
+
         # Flatten the list of all beams, keeping only uniques
         flat_beams = set(beam for beams in beams_by_domain for beam in beams)
-        
+
         # Now figure out which of the beams are symmetry equivalent
         # taking superposition of spots into account:
         # spots originating from beams that are equivalent within each domain,
-        # are equivalent only if all domains contribute with equivalent beams 
+        # are equivalent only if all domains contribute with equivalent beams
         # in all spots
         #
         # For example (symmetry domains on hexagonal bulk):
@@ -245,7 +245,7 @@ class LEEDEquivalentBeams:                                                      
         #
         # Another example (structural domains on square bulk):
         # p(2x2)-pmm + c(2x2)-pm[1 0] -- take spot (1 1)
-        #   
+        #
         #   p(2x2): (1 1), (1 -1), (-1  1), (-1 -1)  equivalent
         #   c(2x2): (1 1), (1 -1)                    equivalent
         #   --> (1 1) and (1 -1) are equivalent
@@ -268,7 +268,7 @@ class LEEDEquivalentBeams:                                                      
                 # if there are beams to process in the list, take the set
                 # intersection, i.e., find all those in common to all structures
                 common_beams = set.intersection(*beam_sets)
-                
+
                 # now "mark as processed" in all the structures the beams coming
                 # from the intersection by removing them, and set the correct
                 # keys of beam_equivalence
@@ -291,7 +291,7 @@ class LEEDEquivalentBeams:                                                      
             (sorted(beams, key=self.__sort_hk) for beams in beam_groups),
             key=self.__sort_energy
         )
-    
+
     def __index_beams(self, beam_groups, beams_by_domain, extinct, domain_ids):
         """
         Given the (sorted) list of beam groups, assign to each of the
@@ -315,7 +315,7 @@ class LEEDEquivalentBeams:                                                      
         domain_ids : iterable
             contains names for the domains. Typically would be integers
         """
-        
+
         indexed_beams = []
         for i, beams in enumerate(beam_groups):
             for beam in beams:
@@ -324,7 +324,7 @@ class LEEDEquivalentBeams:                                                      
                                for d, domain_beams in enumerate(beams_by_domain)
                                if beam in domain_beams]
                 group_idx = i
-                
+
                 # figure out whether the beam is extinct in all the structures
                 # that overlap, in which case the index goes negative
                 extinct_domains = [d for d in overlapping if beam in extinct[d]]
@@ -344,13 +344,10 @@ class LEEDEquivalentBeams:                                                      
     def __sort_hk(self, index):
         sortH, sortK = index
         return -sortH-sortK, -sortH
-    
+
     def __sort_energy(self, indices):
         # assumes that the indices passed represent beams that are equivalent to
         # one another, i.e., they all have the same length
         g = np.dot(indices[0], self.basis)
         # sort by energy, i.e., by ||g||^2:
         return g[0]**2 + g[1]**2
-
-
-

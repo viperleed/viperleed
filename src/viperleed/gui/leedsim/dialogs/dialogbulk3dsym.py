@@ -359,8 +359,3 @@ class Bulk3DSymDialog(qtw.QDialog):
         if glides:
             txt.append(f"m({', '.join(glides)})")
         return ', '.join(txt)
-
-
-
-
-

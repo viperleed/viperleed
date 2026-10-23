@@ -15,3 +15,32 @@ repos:
         entry: python build/scripts/update_copyright_year.py
         language: python
         types: [python]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Data, generated and third-party files keep their bytes as they
+      # are: test data, LEED-pattern simulator examples, example
+      # systems for the docs, TensErLEED Fortran sources, the encoded
+      # TensErLEED checksums, and the bundled fonts.
+      - id: end-of-file-fixer
+        exclude: &data_files |
+          (?x)^(
+              tests/_test_data/
+              |src/viperleed/gui/leedsim/exported/
+              |src/viperleed/gui/leedsim/input\ examples/
+              |src/viperleed/gui/fonts/
+              |src/viperleed/calc/lib/_checksums\.dat$
+              |doc/_static/example_systems/
+              |.*\.f90$
+          )
+      - id: trailing-whitespace
+        exclude: *data_files
+      - id: mixed-line-ending
+        exclude: *data_files
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.2
+    hooks:
+      # Only syntax errors (E9, including syntax newer than the
+      # target-version in pyproject.toml) and undefined names (F821).
+      - id: ruff-check
+        args: [--select, 'E9,F821']

@@ -33,4 +33,3 @@ def test_realspace_wrong_input_types():
         params[key] = dict()
         with pytest.raises((ValueError, TypeError, RuntimeError)):              # TODO: RuntimeError is an awful exception
             RealSpace(params)
-    

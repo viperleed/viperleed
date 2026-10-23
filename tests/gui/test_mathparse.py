@@ -83,7 +83,7 @@ class TestMathParserRaises:
         with pytest.raises(TooComplexMathError):
             MathParser('2*sqrt(2)' * 10)  # Exceeds MAX_LEN
         mathparse.MAX_LEN = backup
-    
+
     def test_max_recursion(self):
         """Check complaints for a too deep expression."""
         backup, mathparse.MAX_DEPTH = mathparse.MAX_DEPTH, 3

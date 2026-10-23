@@ -28,7 +28,7 @@ same :ref:`conventions<conventions>` (e.g., vacuum side of surface towards
 +\ |z| direction) as applicable for :ref:`POSCAR` files.
 
 The ASE API provides a number of Python function that allow calling and
-starting |LEED-IV| calculations. For an example of how to use the ASE 
+starting |LEED-IV| calculations. For an example of how to use the ASE
 interface, see :ref:`this tutorial<example_Ni(110)>`.
 Please note that the ASE interface may require installing the R-factor
 extension as described in the

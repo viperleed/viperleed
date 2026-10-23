@@ -109,7 +109,7 @@ class TestBeamIndex:
         """Check correct handling of problematic hash values."""
         beams = tuple(BeamIndex(i) for i in indices)
         assert beams == expect
-        
+
         # Invalidate cache, and do the opposite
         BeamIndex.clear_cache()
         beams = tuple(BeamIndex(i) for i in reversed(indices))
@@ -218,5 +218,3 @@ class TestBeamIndexRaises:
         op_ = getattr(operator, op)
         with pytest.raises(TypeError):
             op_(beam, value)
-
-

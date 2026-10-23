@@ -968,4 +968,3 @@ def beamlist_to_array(beams):
 
 
     return in_grid, id_start, n_E_beams, beam_arr
-

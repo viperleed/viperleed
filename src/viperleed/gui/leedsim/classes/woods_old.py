@@ -43,7 +43,7 @@ class Woods:
                                'p(2\u221a3\u00d72\u221a3)R30' + degrees},
         'Rhombic': common,
         }
-    
+
     def woodsToMatrix(self, woods, bulk):
         parsed = self.parseWoods(woods)
         if parsed is None:
@@ -55,25 +55,25 @@ class Woods:
         R2 = np.linalg.norm(bulk[1])
         q = R2/R1
         omega = np.arccos(np.dot(bulk[0], bulk[1])/(R1*R2))
-        
+
         m = np.array([[g1*np.sin(omega-alpha), g1*np.sin(alpha)/q],
                       [-g2*q*np.sin(alpha), g2*np.sin(omega+alpha)]])
         m = m/np.sin(omega)
-        
+
         if parsed[0] == 'c':
             m = np.dot([[1, 1], [-1, 1]], m)/2
-        
+
         if self.isCommensurate(m):
-            m = np.array([int(np.round(mij)) 
+            m = np.array([int(np.round(mij))
                           for mij in m.ravel()]).reshape(m.shape)
         else:
             m = None  # incommensurate
         return m
-    
+
     def parseWoods(self, woods):
         if not isinstance(woods, str):
             return None
-        
+
         reWoods = re.compile(
             r'''^(?P<prefix>[pc])                # * primitive or centered
             \(                                   # * open parenthesis
@@ -85,9 +85,9 @@ class Woods:
             \)                                   # * close parenthesis
             ((R(?P<alpha>\d+(\.\d+)?))\u00b0)?$  # * rotation angle
             ''', re.VERBOSE)
-        # notice that the ^ and $ anchors make sure that the string is 
+        # notice that the ^ and $ anchors make sure that the string is
         # matched as a whole
-        
+
         # check if it matches the full woods
         m = reWoods.match(woods)
         if m is not None:
@@ -108,10 +108,10 @@ class Woods:
                 alpha = 0
             return [w['prefix'], g1, g2, alpha]
         return None
-    
+
     def matrixToWoods(self, m, bulk):
         m = np.array(m)
-        
+
         pc = self.primitiveOrCentered(m, bulk)
         if pc:  # matrix is woods representable as primitive or centered
             toFormat = []
@@ -119,18 +119,18 @@ class Woods:
                 gSq = np.round(gSq)
                 (g2, grt) = self.squareToProdOfSquares(gSq)
                 integer = str(int(round(np.sqrt(g2))))
-                
+
                 dirStr = '' #format the direction in here
                 if grt > 1: # insert root part
                     dirStr = '\u221a' + str(int(grt))
-                if dirStr == '': # if there is no root part, always insert 
+                if dirStr == '': # if there is no root part, always insert
                                  # the integer part
                     dirStr = integer
                 else:
-                    if integer != '1': # otherwise place it in only if it's 
+                    if integer != '1': # otherwise place it in only if it's
                                        # not 1
                         dirStr = integer + dirStr
-                
+
                 toFormat.append(dirStr)
             woods = '{}({})'.format(pc[0], '\u00d7'.join(toFormat))
             cosAlpha = pc[3]
@@ -141,18 +141,18 @@ class Woods:
                 woods += 'R' + str(alpha) + degrees
             return woods
         return None
-    
+
     def isCommensurate(self, m, eps=1e-3):
         if m is None:
             return False
-        
+
         mu = np.linalg.det(m)
         if np.round(mu) == 0.0:  # matrix is singular
             return False
 
         if np.abs(mu/np.round(mu) - 1) > eps:  # determinant is not integer
             return False
-        
+
         # now check whether any element is non-integer
         for mij in m.ravel():
             if np.round(mij) == 0.0:
@@ -161,7 +161,7 @@ class Woods:
             elif np.abs(mij/np.round(mij) - 1) > eps:
                 return False
         return True
-    
+
     def isRepresentable(self, m, basis):
         transform = np.dot(m, basis)
         nBasis = np.linalg.norm(basis, axis=1)
@@ -169,12 +169,12 @@ class Woods:
         g1 = nTransf[0]/nBasis[0]
         g2 = nTransf[1]/nBasis[1]
         mu = np.abs(np.linalg.det(m))
-        
+
         return abs(mu/(g1*g2) - 1) < 1e-8
-    
+
     def primitiveOrCentered(self, m, basis):
         invT = np.array([[1, -1], [1, 1]])
-        
+
         primitive = self.isRepresentable(m, basis)
         ctrd = self.isRepresentable(np.dot(invT, m), basis)
         if primitive:
@@ -184,22 +184,22 @@ class Woods:
             m = np.dot(invT, m)
         else:
             return False
-        
+
         nBasis = np.linalg.norm(basis, axis=1)
         transform = np.dot(m, basis)
         nTransf = np.linalg.norm(transform, axis=1)
         g1 = nTransf[0]/nBasis[0]
         g2 = nTransf[1]/nBasis[1]
         cosAlpha = np.dot(transform[0], basis[0])/(nTransf[0]*nBasis[0])
-        
+
         return (prefix, g1, g2, cosAlpha)
-    
+
     def squareToProdOfSquares(self, number):
-        # takes number, finds all prime factors, returns a tuple, first 
-        # element is a product of all primes showing up an even number of 
-        # times, the second one the rest. Useful to turn, e.g., sqrt(12) 
+        # takes number, finds all prime factors, returns a tuple, first
+        # element is a product of all primes showing up an even number of
+        # times, the second one the rest. Useful to turn, e.g., sqrt(12)
         # into 2sqrt(3)
-        
+
         factors = list(self.primeFactors(number))
         if not factors:
             factors = [1]
@@ -211,9 +211,9 @@ class Woods:
                                       for (fact, pow, rem)
                                       in zip(uniqueFact, pow2, restPow)
                                       ])
-        
+
         return (np.prod(squares), np.prod(remainders))
-    
+
     def primeFactors(self, n):  # TODO: get a reference for this code
         f = 2
         increments = itertools.chain(

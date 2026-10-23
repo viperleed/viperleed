@@ -343,4 +343,3 @@ def plot_iv(data, filename, labels=[], annotations=[],
             return
     else:
         return figs
-

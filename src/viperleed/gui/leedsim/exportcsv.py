@@ -389,4 +389,3 @@ def _format_basis_vectors_(basis):
                                           suppress_small=True))
         )
     return txt
-
