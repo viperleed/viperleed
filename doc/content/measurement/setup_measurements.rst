@@ -7,7 +7,7 @@ Setup
 =====
 
 After ViPErLEED has been installed successfully, the graphical user interface
-(GUI), seen in :numref:`_fig_gui_selection`, can be started by executing
+(GUI), seen in :numref:`fig_gui_selection`, can be started by executing
 ``viperleed gui`` in a command prompt or terminal. This opens the main GUI
 window, which provides two options: **Simulate LEED Pattern** and
 **Measure LEED-IV**. To proceed to the data acquisition interface, select
@@ -37,7 +37,7 @@ settings need to be defined.
 
     A warning that mandatory system settings need to be selected.
 
-Select *OK* in the window seen in :numref:`_fig_error_sys_settings` to
+Select *OK* in the window seen in :numref:`fig_error_sys_settings` to
 continue. This opens the **System settings** dialog, where paths to relevant
 folders or directories can be specified. The hints displayed next to each label
 provide short explanations of how each directory is used within ViPErLEED.
@@ -49,7 +49,7 @@ provide short explanations of how each directory is used within ViPErLEED.
 
     The system settings dialog.
 
-The **System Settings** section (:numref:`_fig_sys_settings`) allows the
+The **System Settings** section (:numref:`fig_sys_settings`) allows the
 definition of the following paths:
 
  * **Configuration** – Location in which device and GUI settings are stored and from which they are loaded.
@@ -93,7 +93,7 @@ Uploading firmware
 The ViPErLEED hardware includes an Arduino microcontroller. Before the first
 use, the firmware must be uploaded to the controller. With the controller
 connected to the PC, open the **Tools** menu and select
-*Upload/upgrade Firmware* (:numref:`_fig_measurement_gui_select_firmware`).
+*Upload/upgrade Firmware* (:numref:`fig_measurement_gui_select_firmware`).
 Ensure that your **Firmware** directory contains a copy of the controller
 firmware, so that ViPErLEED can detect it and upload it to the microcontroller.
 
@@ -107,7 +107,7 @@ firmware, so that ViPErLEED can detect it and upload it to the microcontroller.
 If no `Arduino CLI <https://docs.arduino.cc/arduino-cli/>`__ installation is
 available in either the system paths or the **Arduino CLI** directory,
 ViPErLEED will request permission to perform a local installation of the
-Arduino CLI (:numref:`_fig_install_arduino_cli`).
+Arduino CLI (:numref:`fig_install_arduino_cli`).
 
 .. _fig_install_arduino_cli:
 .. figure:: /_static/gui/install_arduino_cli.jpg
@@ -129,16 +129,17 @@ ViPErLEED hardware controller.
 
     The firmware upload tool.
 
-Press *Refresh* to detect connected controllers. New Arduino Micro boards will
-be listed with the COM port on which they were detected. If a controller
-already contains ViPErLEED firmware, this will be indicated by its name and the
-installed version will be displayed. You can select the firmware you wish to
-upload in the dropdown menu next to the *Upload firmware* button. ViPErLEED
-will automatically search your configured **Firmware** directory for matching
-firmware files, and will automatically select the newest available version.
-After you have selected your desired firmware, press *Upload firmware* to start
-the upload. Once the progress bar reaches 100%, the firmware has been
-installed on the controller.
+Press *Refresh* (:numref:`fig_firmware_gui`) to detect connected controllers.
+New Arduino Micro boards will be listed with the COM port on which they were
+detected. If a controller already contains ViPErLEED firmware, this will be
+indicated by its name and the installed version will be displayed. You can
+select the firmware you wish to upload in the dropdown menu next to the *Upload
+firmware* button. ViPErLEED will automatically search your configured
+**Firmware** directory for matching firmware files, and will automatically
+select the newest available version. After you have selected your desired
+firmware, press *Upload firmware* to start the upload. Once the progress bar
+reaches 100% (:numref:`fig_upload_finished`), the firmware has been installed
+on the controller.
 
 .. _fig_upload_finished:
 .. figure:: /_static/gui/upload_finished.jpg
@@ -153,8 +154,8 @@ ViPErLEED hardware controller setup
 
 To operate the controller during a measurement, it must be identifiable. To
 assign your controller a serial number and to create settings for it, open the
-**Devices** menu and select the controller on which the firmware was just
-installed.
+**Devices** menu (:numref:`fig_select_controller`) and select the controller
+on which the firmware was just installed.
 
 .. _fig_select_controller:
 .. figure:: /_static/gui/select_controller.jpg
@@ -165,7 +166,8 @@ installed.
     number.
 
 You should receive a notification that no settings were found for this
-controller. Press *Create a new settings file* to generate new configuration
+controller. Press *Create a new settings file*
+(:numref:`fig_create_new_settings_no_serial_nr`) to generate new configuration
 files for the controller in your **Configuration** directory.
 
 .. _fig_create_new_settings_no_serial_nr:
@@ -178,8 +180,9 @@ files for the controller in your **Configuration** directory.
 After creating new settings, assign a serial number to the controller. Either
 generate a random serial number by pressing *Generate randomly* or type your
 desired serial number into the line edit. Press *Set* to write it to the
-controller. This serial number will act as the identification marker for the
-controller, but it can be changed later if needed.
+controller (:numref:`fig_new_settings_no_serial_nr`). This serial number will
+act as the identification marker for the controller, but it can be changed
+later if needed.
 
 .. _fig_new_settings_no_serial_nr:
 .. figure:: /_static/gui/new_settings_no_serial_nr.jpg
@@ -188,10 +191,11 @@ controller, but it can be changed later if needed.
 
     Set a serial number on your controller.
 
-After setting the serial number, delete the old, temporary settings file and
-close the settings dialog. Ensure the controller is powered, then reopen the
-controller settings dialog. The **Devices** menu should now display the
-controller with the serial number you assigned it.
+After setting the serial number, delete the old, temporary settings file
+(:numref:`fig_delete_old_settings`) and close the settings dialog. Ensure the
+controller is powered, then reopen the controller settings dialog
+(:numref:`fig_new_settings_with_serial_nr`). The **Devices** menu should now
+display the controller with the serial number you assigned it.
 
 .. _fig_delete_old_settings:
 .. figure:: /_static/gui/delete_old_settings.jpg
@@ -211,7 +215,7 @@ controller with the serial number you assigned it.
 
 Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and click the
 option with the same content in the dropdown, as seen in
-:numref:`_fig_dropdown_thermocouple`.
+:numref:`fig_dropdown_thermocouple`.
 
 .. _fig_dropdown_thermocouple:
 .. figure:: /_static/gui/dropdown_thermocouple.jpg
