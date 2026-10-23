@@ -6,7 +6,7 @@ Adds the __copyright__ and __license__ module dunders for given files.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-03-22'
 __license__ = 'GPLv3+'
 
