@@ -16,11 +16,12 @@ Running tests
 
 ViPErLEED comes with a suite of tests and uses
 `pytest <https://docs.pytest.org/en/>`__ for testing.
-The :term:`TensErLEED` source code should be available on the testing machine
-(repository ``viperleed-tensorleed``) and the ``VIPERLEED_TENSORLEED``
-:term:`environment variable` should be set. See also :ref:`install_tensorleed`.
-
-Also make sure to have compiled the :ref:`eeasisss_compile` source code.
+Tests that run :term:`TensErLEED` (marked ``tensorleed``) are not part of
+a default run. To run them, the :term:`TensErLEED` source code (repository
+``viperleed-tensorleed``) should be available on the testing machine and the
+``VIPERLEED_TENSORLEED`` :term:`environment variable` should be set. See also
+:ref:`install_tensorleed`, which also describes where the compiled
+:ref:`eeasisss_compile` source code is expected.
 
 Tests are *not* distributed with the ``viperleed`` package on
 `pypi <https://pypi.org/project/viperleed/>`__. To run the tests, clone the
@@ -30,8 +31,8 @@ Tests are *not* distributed with the ``viperleed`` package on
 
     python -m pip install --upgrade -r requirements/tests.txt
 
-To execute tests, navigate to your local copy of the |repo|,
-then run
+To execute tests, navigate to the :file:`tests` folder of your local copy
+of the |repo|, then run
 
 .. code-block:: bash
 
@@ -44,19 +45,61 @@ then run
     sure to first install ``viperleed`` in *editable* mode in your environment.
     See `editable_install`.
 
-If you also would like to produce coverage reports, install :program:`coverage`
-via
+The command above runs the *default* tier: all tests except those that need
+:term:`TensErLEED`. Tests are grouped in tiers via markers and the ``-m``
+and ``--quick`` options:
 
 .. code-block:: bash
 
-    python -m pip install coverage
+    python -m pytest . --quick        # quick tier
+    python -m pytest .                # default tier
+    python -m pytest . -m tensorleed  # TensErLEED tier
+    python -m pytest . -m ""          # everything
 
-then, in your local copy of the ``viperleed`` repository, run
+The quick tier leaves out tests that take about half a second or more (marked
+``slow``). The ``--quick`` option adds ``and not slow`` to the ``-m``
+expression in effect: it is equivalent to ``-m "not slow and not tensorleed"``,
+and ``-m tensorleed --quick`` runs the TensErLEED tests that are not slow.
+
+The TensErLEED tier requires ``VIPERLEED_TENSORLEED``: its tests fail (rather
+than being skipped) when :term:`TensErLEED` or one of the versions they need
+is missing. Optional dependencies that are not installed make some tests skip.
+To turn those skips into failures, add the option ``--require-all``.
+
+Coverage is not collected by default. To produce a coverage report, run
 
 .. code-block:: bash
 
-    python -m coverage run -m pytest .
-    python -m coverage html
+    python -m pytest tests --cov
+
+from the repository root (the :program:`pytest-cov` plugin is among the test
+requirements). Coverage is run from the root so that its configuration in
+:file:`pyproject.toml`, which sets what is measured (including branches), is
+found. A summary with the missing lines is printed, and an HTML report is
+written to :file:`htmlcov/`.
+
+Slow tests are kept up to date with the option ``--check-slow``. The slow
+tests that are individual cases of a parametrized test (as opposed to whole
+tests or classes marked ``slow``) are listed in :file:`tests/tiers.py`
+(``SLOW_CASES``): it maps each test to the parts of the case ids that make it
+slow. At collection, an entry that matches no test or case (e.g., after
+renaming a test or changing its parameters) is an error naming it; update the
+module. Entries of modules that are not collected are not checked, nor are
+runs that select tests by node id or with ``--lf``, so a subset of the tests
+can still be run. To find tests that should be marked, or
+that got fast and should not be, add ``--check-slow`` to a run (the more
+quiet the machine, the better: timings are noisy):
+
+.. code-block:: bash
+
+    python -m pytest . --check-slow -n 4
+    python -m pytest calc/symmetry --check-slow
+
+At the end of the run, the option lists the tests that are not marked
+``slow`` but whose call took the threshold (``SLOW_THRESHOLD`` in
+:file:`tests/tiers.py`) or more, and those marked ``slow`` whose call took
+less. It only reports: it changes neither the selection nor the exit status.
+It also works with ``-n`` (:program:`pytest-xdist`).
 
 
 .. _editable_install:

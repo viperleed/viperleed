@@ -18,6 +18,9 @@ import pytest
 
 from .conftest import N_DRAWS
 
+# The tests in this module start pytest subprocesses
+pytestmark = pytest.mark.slow
+
 pytest.importorskip('xdist')
 
 _TESTS_PARENT = Path(__file__).resolve().parent.parent
