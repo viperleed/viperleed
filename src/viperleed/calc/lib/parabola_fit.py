@@ -80,6 +80,18 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     float
         Predicted minimum R-factor.
 
+    Notes
+    -----
+    Parabola fits are deprecated since 0.11.0 and disabled by default
+    (PARABOLA_FIT type 'none', for which this function returns at
+    once). They were experimental, are not reliable, and may be
+    removed or significantly reworked in the future; perform an error
+    calculation instead for more reliable 1D R-factor data. The
+    function also fails with current versions of scipy and
+    scikit-learn: scipy's minimize now returns a scalar 'fun', so
+    'parab_min.fun[0]' raises a TypeError, and the Ridge, Lasso and
+    ElasticNet regressors no longer accept the 'normalize' keyword.
+
     """
 
     def optimizerHelper(array, func):
