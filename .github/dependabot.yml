@@ -1,0 +1,17 @@
+# Keep the GitHub Actions used in .github/workflows up to date.
+#
+# Once a month, Dependabot checks the actions referenced by the
+# workflows and opens a single pull request (against the default
+# branch, master) that bumps all outdated ones together. Actions stay
+# pinned by major tag (e.g., actions/checkout@v7); branch refs (e.g.,
+# pypa/gh-action-pypi-publish@release/v1) are not updated.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - '*'
