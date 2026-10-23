@@ -70,10 +70,36 @@ Coverage is not collected by default. To produce a coverage report, run
 
 .. code-block:: bash
 
-    python -m pytest . --cov=viperleed --cov=tests --cov-branch --cov-report=html
+    python -m pytest . --cov --cov-config=../pyproject.toml
 
-(the :program:`pytest-cov` plugin is among the test requirements). The
-report is written to :file:`htmlcov/`.
+(the :program:`pytest-cov` plugin is among the test requirements). What is
+measured (including branches) is configured in :file:`pyproject.toml`; the
+option ``--cov-config`` is not needed when running from the repository root
+(``python -m pytest tests --cov``). A summary with the missing lines is
+printed, and an HTML report is written to :file:`htmlcov/`.
+
+Slow tests are kept up to date with the option ``--check-slow``. The slow
+tests that are individual cases of a parametrized test (as opposed to whole
+tests or classes marked ``slow``) are listed in :file:`tests/tiers.py`
+(``SLOW_CASES``): it maps each test to the parts of the case ids that make it
+slow. At collection, an entry that matches no test or case (e.g., after
+renaming a test or changing its parameters) is an error naming it; update the
+module. Entries of modules that are not collected are not checked, nor are
+runs that select tests by node id or with ``--lf``, so a subset of the tests
+can still be run. To find tests that should be marked, or
+that got fast and should not be, add ``--check-slow`` to a run (the more
+quiet the machine, the better: timings are noisy):
+
+.. code-block:: bash
+
+    python -m pytest . --check-slow -n 4
+    python -m pytest calc/symmetry --check-slow
+
+At the end of the run, the option lists the tests that are not marked
+``slow`` but whose call took the threshold (``SLOW_THRESHOLD`` in
+:file:`tests/tiers.py`) or more, and those marked ``slow`` whose call took
+less. It only reports: it changes neither the selection nor the exit status.
+It also works with ``-n`` (:program:`pytest-xdist`).
 
 
 .. _editable_install:
