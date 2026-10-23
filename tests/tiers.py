@@ -6,6 +6,8 @@ Attributes
 ----------
 TENSORLEED_FIXTURES : frozenset
     Names of fixtures that run, or need the sources of, TensErLEED.
+SLOW_THRESHOLD : float
+    Duration (seconds, call phase) from which a test counts as slow.
 SLOW_CASES : dict
     Maps tests (node-id prefix) to the cases that are marked 'slow'.
 """
@@ -17,21 +19,21 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-23'
 __license__ = 'GPLv3+'
 
-# Fixtures that run, or need the sources of, TensErLEED. Any test
-# that has one of them in its fixture closure is marked 'tensorleed'
+SLOW_THRESHOLD = 0.5
+
 TENSORLEED_FIXTURES = frozenset((
     'tensorleed_path',
     'run_from_ase_refcalc',
     ))
 
-# Cases that take about half a second or more (call phase, serial
+# Cases that take about SLOW_THRESHOLD or more (call phase, serial
 # run). Each test (node-id prefix) is mapped to the case-id parts,
 # i.e., the '-'-separated fixture and slab names, that mark its slow
-# cases. A case is listed if its call took about 0.5 s or more. A
-# whole (test, slab) group is listed if at least 40 % of its cases
-# did, or if one took 0.7 s or more, as the cost of a first use of a
-# slab moves between the cases of a group. Only these cases are
-# marked 'slow'.
+# cases. A case is listed if its call took about SLOW_THRESHOLD or
+# more. A whole (test, slab) group is listed if at least 40 % of its
+# cases did, or if one took 1.4 times SLOW_THRESHOLD or more, as the
+# cost of a first use of a slab moves between the cases of a group.
+# Only these cases are marked 'slow'.
 _SYMMETRY_TESTS = 'tests/calc/symmetry/test_symmetry.py::'
 _SLAB_TESTS = 'tests/calc/classes/test_slab.py::'
 _POSCAR_WRITE = 'tests/calc/files/test_poscar.py::TestPOSCARWrite::'
