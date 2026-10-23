@@ -12,7 +12,7 @@ After ViPErLEED has been installed successfully, the graphical user interface
 window, which provides two options: **Simulate LEED Pattern** and
 **Measure LEED-IV**. To proceed to the data acquisition interface, select
 **Measure LEED-IV**. If your GUI is rendered differently, set the DPI settings
-of python.exe to override by application.
+of python.exe to **Override by application**.
 
 .. _fig_gui_selection:
 .. figure:: /_static/gui/gui_selection.jpg
@@ -195,7 +195,7 @@ After setting the serial number, delete the old, temporary settings file
 (:numref:`fig_delete_old_settings`) and close the settings dialog. Ensure the
 controller is powered, then reopen the controller settings dialog
 (:numref:`fig_new_settings_with_serial_nr`). The **Devices** menu should now
-display the controller with the serial number you assigned it.
+display the controller with the serial number you assigned to it.
 
 .. _fig_delete_old_settings:
 .. figure:: /_static/gui/delete_old_settings.jpg
@@ -213,7 +213,7 @@ display the controller with the serial number you assigned it.
     Once the controller is powered, the hardware configuration will be
     displayed.
 
-Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and click the
+Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and select the
 option with the same content in the dropdown, as seen in
 :numref:`fig_dropdown_thermocouple`.
 
@@ -353,7 +353,7 @@ remove the lens cap and provide uniform illumination. This will take roughly 10
 minutes. Usually, turning on the room lights and placing a sheet of white paper
 a few centimetres in front of the lens is sufficient. Make sure that no shadows
 are cast onto the paper. This calibration step is necessary to detect dead
-pixels (pixels that are significantly less sensitive than their neighbours).
+pixels (pixels that are significantly less sensitive than their neighbors).
 
 .. _fig_bad_pixels_instruction_2:
 .. figure:: /_static/gui/bad_pixels_instruction_2.jpg
