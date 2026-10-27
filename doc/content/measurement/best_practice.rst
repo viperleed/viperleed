@@ -28,7 +28,7 @@ grounded at all times during operation. Do not connect the beam-energy
 you want to measure the beam current :math:`I_0`. The high-voltage input of the
 hardware draws current and will falsify the beam-current measurement.
 
-camera
+Camera
 ======
 
 Make sure that you have recently (within the last few months) performed a bad
