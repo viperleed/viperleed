@@ -38,7 +38,7 @@ settings need to be defined.
     A warning that mandatory system settings need to be selected.
 
 Select *OK* in the error message seen in :numref:`fig_error_sys_settings` to
-continue. This opens the **System settings** dialog, where paths to relevant
+continue. This opens the **System Settings** dialog, where paths to relevant
 folders or directories can be specified. The hints displayed next to each label
 provide short explanations of how each directory is used within ViPErLEED.
 
@@ -214,7 +214,7 @@ display the controller with the serial number you assigned to it.
     displayed.
 
 Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and select the
-option with the same content in the dropdown, as seen in
+option with the same content, as seen in
 :numref:`fig_dropdown_thermocouple`.
 
 .. _fig_dropdown_thermocouple:
@@ -337,8 +337,8 @@ Press *Find* to start the acquisition process. The tool will guide you through
 the required steps interactively as seen in
 :numref:`fig_bad_pixels_instruction_1` and
 :numref:`fig_bad_pixels_instruction_2`. First, you will acquire dark images.
-For this step you should put a black cap on the lens, blocking all light to the
-camera.
+For this step you should put a black cap on the lens, blocking all light from
+reaching the camera.
 
 .. _fig_bad_pixels_instruction_1:
 .. figure:: /_static/gui/bad_pixels_instruction_1.jpg
@@ -349,11 +349,12 @@ camera.
 
 Two dark-image steps are performed to detect different pixel errors (hot
 pixels, i.e., pixels with high dark current, and blinking pixels). After this,
-remove the lens cap and provide uniform illumination. This will take roughly 10
-minutes. Usually, turning on the room lights and placing a sheet of white paper
-a few centimetres in front of the lens is sufficient. Make sure that no shadows
-are cast onto the paper. This calibration step is necessary to detect dead
-pixels (pixels that are significantly less sensitive than their neighbors).
+remove the lens cap and provide uniform illumination. This step will take
+roughly 10 minutes. Usually, turning on the room lights and placing a sheet of
+white paper a few centimetres in front of the lens is sufficient. Make sure
+that no shadows are cast onto the paper. This calibration step is necessary to
+detect dead pixels (pixels that are significantly less sensitive than their
+neighbors).
 
 .. _fig_bad_pixels_instruction_2:
 .. figure:: /_static/gui/bad_pixels_instruction_2.jpg
@@ -366,7 +367,7 @@ pixels (pixels that are significantly less sensitive than their neighbors).
 Once the calibration is completed (:numref:`fig_bad_pixels_finished`), it will
 be stored in your chosen directory and used automatically in subsequent
 measurements. Since camera sensors degrade over time, we recommend calibrating
-the cameras at least once a year.
+the camera at least once a year.
 
 .. _fig_bad_pixels_finished:
 .. figure:: /_static/gui/bad_pixels_finished.jpg
@@ -388,7 +389,7 @@ fill the height of the image.
 
 After adjusting the camera position, right-click the live view and select
 *Properties*. Adjust the ROI settings to crop away the parts of the image that
-do not cover the LEED screen. (ROI means region of interest, i.e. the region
+do not cover the LEED screen. (ROI means region of interest, i.e., the region
 recorded.) On a rectangular sensor, one will typically select a square ROI.
 Press *Apply* to test different settings. Once you are satisfied, the camera is
 ready for data acquisition.
