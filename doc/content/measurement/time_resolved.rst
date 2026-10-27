@@ -33,17 +33,17 @@ is ideal for observing rapid signal changes in real time. In this mode, the
 controllers continuously return data without interruption. A typical use case
 is determining the settling times of the beam energy and beam current. After
 setting a new beam energy, the electronics may exhibit transient behaviour; the
-duration and shape of these transients can be characterized using this mode.
+duration and shape of these transients can be characterised using this mode.
 
 This mode acquires measurements as fast as possible and creates a continuous
 data stream to the PC. The continuous time-resolved measurement does not
 currently support camera use.
 
-The behaviour of controllers differs between primary and secondary controllers.
-Primary controllers restart their acquisition sequence at each energy step
-(their behaviour is identical at all energies). Secondary controllers, if
-present, continue measuring while the primary controller sets the beam energy.
-This may provide additional information about transients.
+Primary and secondary controllers behave differently. Primary controllers
+restart their acquisition sequence at each energy step (their behaviour is
+identical at all energies). Secondary controllers, if present, continue
+measuring while the primary controller sets the beam energy. This may provide
+additional information about transients.
 
 .. _fig_continuous:
 .. figure:: /_static/gui/StepTimingContinuous.svg
@@ -68,9 +68,9 @@ observing the thermal drift of LEED electronics over time.
 
 Unlike the continuous mode, the triggered mode supports camera use. Each frame
 or data point is acquired according to the defined timing interval, ensuring
-synchronization between devices and stable acquisition over extended periods.
+synchronisation between devices and stable acquisition over extended periods.
 As for *I*\(*V*\) curve acquisition, each data point can be the average of
-several ADC readings and several camera images can be averaged if desired.
+several ADC readings; several camera images can also be averaged if desired.
 
 .. _fig_triggered:
 .. figure:: /_static/gui/StepTimingTriggered.svg
