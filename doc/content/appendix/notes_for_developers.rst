@@ -31,12 +31,12 @@ Tests are *not* distributed with the ``viperleed`` package on
 
     python -m pip install --upgrade -r requirements/tests.txt
 
-To execute tests, navigate to the :file:`tests` folder of your local copy
-of the |repo|, then run
+To execute tests, run the following from the root of your local copy
+of the |repo|:
 
 .. code-block:: bash
 
-    python -m pytest .
+    python -m pytest tests
 
 .. important::
     Notice that this will execute the tests against the version of ``viperleed``
@@ -51,10 +51,10 @@ and ``--quick`` options:
 
 .. code-block:: bash
 
-    python -m pytest . --quick        # quick tier
-    python -m pytest .                # default tier
-    python -m pytest . -m tensorleed  # TensErLEED tier
-    python -m pytest . -m ""          # everything
+    python -m pytest tests --quick        # quick tier
+    python -m pytest tests                # default tier
+    python -m pytest tests -m tensorleed  # TensErLEED tier
+    python -m pytest tests -m ""          # everything
 
 The quick tier leaves out tests that take about half a second or more (marked
 ``slow``). The ``--quick`` option adds ``and not slow`` to the ``-m``
@@ -69,16 +69,13 @@ To turn those skips into failures, add the option ``--require-all``.
 Coverage (including branches) is collected by default, via the
 :program:`pytest-cov` plugin, which is among the test requirements. An HTML
 report is written to :file:`htmlcov/`; add ``--cov-report=term`` to also get
-a summary with the missing lines in the terminal. Run from :file:`tests/`,
-the settings in the ``[tool.coverage]`` section of :file:`pyproject.toml` are
-not found (e.g., no missing lines or precision in the terminal summary), and
-the reports are written there. Coverage makes tests about
+a summary with the missing lines in the terminal. Coverage makes tests about
 2--3 times slower. If you do not need it, turn it off with ``--no-cov``, which
 is especially worthwhile for quick runs:
 
 .. code-block:: bash
 
-    python -m pytest . --quick --no-cov
+    python -m pytest tests --quick --no-cov
 
 Slow tests are kept up to date with the option ``--check-slow``. The slow
 tests that are individual cases of a parametrized test (as opposed to whole
@@ -95,8 +92,8 @@ durations, so ``--check-slow`` needs ``--no-cov``:
 
 .. code-block:: bash
 
-    python -m pytest . --check-slow --no-cov -n 4
-    python -m pytest calc/symmetry --check-slow --no-cov
+    python -m pytest tests --check-slow --no-cov -n 4
+    python -m pytest tests/calc/symmetry --check-slow --no-cov
 
 At the end of the run, the option lists the tests that are not marked
 ``slow`` but whose call took the threshold (``SLOW_THRESHOLD`` in
