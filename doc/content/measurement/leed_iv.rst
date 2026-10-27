@@ -13,8 +13,4 @@ quality and to reduce acquisition time.
 
 A |LEED-IV| measurement requires a camera for operation. A controller capable
 of measuring the beam current is strongly recommended, as it allows the
-acquired data to be normalized.
-
-----
-
-For further information, visit :ref:`Best Practice <best_practice>`.
+acquired image intensities to be normalized.
