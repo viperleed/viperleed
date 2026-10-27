@@ -69,11 +69,15 @@ def fixture_run(pytester, monkeypatch, slow_cases):
     The function takes the command-line arguments, the `slow` cases
     to put in tiers.SLOW_CASES, the `files` to write (default: the
     sample tests), and whether to keep the `cache` (default: no). It
-    runs in a subprocess if the arguments request pytest-xdist, and
-    fails (not skips) if it is missing. There, `slow` is handed over
-    with a plugin.
+    runs in the current process, unless `own_process` is True (default:
+    no) or the arguments request pytest-xdist. Use `own_process` for
+    runs with pytest-cov, which must not interfere with the coverage
+    of the outer run. A separate process requires pytest-xdist to be
+    installed (the run fails, not skips, if it is missing), and gets
+    `slow` handed over with a plugin.
     """
-    def _run(*args, slow=None, files=None, cache=False):
+    def _run(*args, slow=None, files=None, cache=False,
+             own_process=False):
         slow_cases.update(slow or {})
         pytester.makeini(_INI)
         pytester.makepyfile(**(files or _SAMPLE_FILES))
@@ -83,7 +87,7 @@ def fixture_run(pytester, monkeypatch, slow_cases):
             ]
         if not cache:
             options.extend(('-p', 'no:cacheprovider'))
-        if _XDIST_ARGS[0] not in args:
+        if _XDIST_ARGS[0] not in args and not own_process:
             return pytester.runpytest_inprocess(
                 *options,
                 plugins=[conftest],
@@ -231,6 +235,30 @@ class TestCheckSlow:
     def test_candidates(self, run):
         """Check that tests to mark and to unmark are listed."""
         result = run(check_slow.CHECK_SLOW_OPTION, files=_SLOW_FILES)
+        self._check_report(result)
+
+    def test_needs_no_cov(self, run):
+        """Check that --check-slow with coverage on is a usage error."""
+        result = run(
+            check_slow.CHECK_SLOW_OPTION,
+            '--cov=.',
+            '--cov-report=',
+            files=_SLOW_FILES,
+            own_process=True,
+            )
+        assert result.ret is pytest.ExitCode.USAGE_ERROR
+        result.stderr.fnmatch_lines(['*--check-slow needs --no-cov*'])
+
+    def test_no_cov(self, run):
+        """Check that --no-cov overrides --cov for --check-slow."""
+        result = run(
+            check_slow.CHECK_SLOW_OPTION,
+            '--cov=.',
+            '--cov-report=',
+            '--no-cov',
+            files=_SLOW_FILES,
+            own_process=True,
+            )
         self._check_report(result)
 
     def test_without_option(self, run):

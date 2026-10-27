@@ -7,11 +7,14 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-27'
 __license__ = 'GPLv3+'
 
+import pytest
+
 from . import tiers
 
 _CALL_PHASE = 'call'
 _SLOW_MARKER = 'slow'
 CHECK_SLOW_OPTION = '--check-slow'
+_PYTEST_COV_PLUGIN = '_cov'  # Registered by pytest-cov only if --cov
 
 
 def pytest_addoption(parser):
@@ -27,15 +30,35 @@ def pytest_addoption(parser):
         )
 
 
+def _coverage_is_on(config):
+    """Return whether pytest-cov measures coverage in this run."""
+    return (config.pluginmanager.hasplugin(_PYTEST_COV_PLUGIN)
+            and not config.getoption('no_cov', default=False))
+
+
 def pytest_configure(config):
-    """Start recording durations if --check-slow was given."""
+    """Start recording durations if --check-slow was given.
+
+    Raises
+    ------
+    pytest.UsageError
+        If --check-slow is given while coverage is on: it makes tests
+        2-3 times slower, so that the durations are not meaningful.
+    """
     # With pytest-xdist, only the controller records
-    if (getattr(config, 'workerinput', None) is None
-            and config.option.check_slow):
-        config.pluginmanager.register(
-            _DurationRecorder(),
-            _DurationRecorder.name,
+    if (getattr(config, 'workerinput', None) is not None
+            or not config.option.check_slow):
+        return
+    if _coverage_is_on(config):
+        message = (
+            f'{CHECK_SLOW_OPTION} needs --no-cov: coverage makes the '
+            'tests 2-3 times slower, and the durations meaningless'
             )
+        raise pytest.UsageError(message)
+    config.pluginmanager.register(
+        _DurationRecorder(),
+        _DurationRecorder.name,
+        )
 
 
 class _DurationRecorder:
