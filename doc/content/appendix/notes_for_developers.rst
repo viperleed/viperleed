@@ -66,17 +66,19 @@ than being skipped) when :term:`TensErLEED` or one of the versions they need
 is missing. Optional dependencies that are not installed make some tests skip.
 To turn those skips into failures, add the option ``--require-all``.
 
-Coverage is not collected by default. To produce a coverage report, run
+Coverage (including branches) is collected by default, via the
+:program:`pytest-cov` plugin, which is among the test requirements. An HTML
+report is written to :file:`htmlcov/`; add ``--cov-report=term`` to also get
+a summary with the missing lines in the terminal. Run from :file:`tests/`,
+the settings in the ``[tool.coverage]`` section of :file:`pyproject.toml` are
+not found (e.g., no missing lines or precision in the terminal summary), and
+the reports are written there. Coverage makes tests about
+2--3 times slower. If you do not need it, turn it off with ``--no-cov``, which
+is especially worthwhile for quick runs:
 
 .. code-block:: bash
 
-    python -m pytest tests --cov
-
-from the repository root (the :program:`pytest-cov` plugin is among the test
-requirements). Coverage is run from the root so that its configuration in
-:file:`pyproject.toml`, which sets what is measured (including branches), is
-found. A summary with the missing lines is printed, and an HTML report is
-written to :file:`htmlcov/`.
+    python -m pytest . --quick --no-cov
 
 Slow tests are kept up to date with the option ``--check-slow``. The slow
 tests that are individual cases of a parametrized test (as opposed to whole
@@ -88,12 +90,13 @@ module. Entries of modules that are not collected are not checked, nor are
 runs that select tests by node id or with ``--lf``, so a subset of the tests
 can still be run. To find tests that should be marked, or
 that got fast and should not be, add ``--check-slow`` to a run (the more
-quiet the machine, the better: timings are noisy):
+quiet the machine, the better: timings are noisy). Coverage distorts the
+durations, so ``--check-slow`` needs ``--no-cov``:
 
 .. code-block:: bash
 
-    python -m pytest . --check-slow -n 4
-    python -m pytest calc/symmetry --check-slow
+    python -m pytest . --check-slow --no-cov -n 4
+    python -m pytest calc/symmetry --check-slow --no-cov
 
 At the end of the run, the option lists the tests that are not marked
 ``slow`` but whose call took the threshold (``SLOW_THRESHOLD`` in
