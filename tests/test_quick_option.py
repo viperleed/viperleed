@@ -13,6 +13,7 @@ import re
 import pytest
 
 from . import conftest
+from . import quick_option
 
 _TEST_FILE = """
 import pytest
@@ -41,7 +42,7 @@ markers =
 """
 _ALL = frozenset(('plain', 'slow', 'tensorleed', 'slow_tensorleed'))
 _PASSED = re.compile(r'::test_(\w+) PASSED|PASSED \S*::test_(\w+)')
-_QUICK = conftest.QUICK_OPTION
+_QUICK = quick_option.QUICK_OPTION
 
 
 def _selected(pytester, *args, run=None):

@@ -1,6 +1,6 @@
 """Which tests belong to the slow and TensErLEED tiers.
 
-Data only; the hooks that use it are in conftest.py.
+Data only; the hooks that use it are in slow_marks.py.
 
 Attributes
 ----------

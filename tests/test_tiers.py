@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from . import check_slow
 from . import conftest
 from . import tiers
 
@@ -229,7 +230,7 @@ class TestCheckSlow:
 
     def test_candidates(self, run):
         """Check that tests to mark and to unmark are listed."""
-        result = run(conftest.CHECK_SLOW_OPTION, files=_SLOW_FILES)
+        result = run(check_slow.CHECK_SLOW_OPTION, files=_SLOW_FILES)
         self._check_report(result)
 
     def test_without_option(self, run):
@@ -237,14 +238,14 @@ class TestCheckSlow:
         result = run(files=_SLOW_FILES)
         result.assert_outcomes(passed=4)
         assert result.ret is pytest.ExitCode.OK
-        assert conftest.CHECK_SLOW_OPTION.lstrip('-') not in (
+        assert check_slow.CHECK_SLOW_OPTION.lstrip('-') not in (
             result.stdout.str()
             )
 
     def test_xdist(self, run):
         """Check that --check-slow also works with pytest-xdist."""
         result = run(
-            conftest.CHECK_SLOW_OPTION,
+            check_slow.CHECK_SLOW_OPTION,
             *_XDIST_ARGS,
             files=_SLOW_FILES,
             )

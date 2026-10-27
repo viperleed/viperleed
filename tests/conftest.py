@@ -1,18 +1,22 @@
 """Test configuration for viperleed.tests.
 
-Defines fixtures and fixture factories used in multiple tests.
+Defines fixtures and fixture factories used in multiple tests, and
+loads the plugins with the options and hooks of the test suite:
+check_slow.py (--check-slow), quick_option.py (--quick), rng_seed.py
+(--rng-seed) and slow_marks.py (slow and tensorleed marks, stale
+SLOW_CASES guard).
 
 Random-input tests (those requesting `draws`) check N_DRAWS draws
 seeded from the test id, so that outcomes are reproducible and known
 failures can be listed (xfail). The opt-in option --rng-seed=<int> or
 --rng-seed=random derives the seeds from a different base, to explore
 other draws locally; it is not meant for CI. With the option, the
-xfail marks of random-input tests are removed, and `draws.fresh` is
-True: tests that expect a known failure (e.g., via may_fail or inline
-pytest.xfail) must then just assert, so that the real outcome is
-reported. With `random`, the base is picked once by the controller
-(and passed on to pytest-xdist workers) and is printed in the report
-header and in the terminal summary, to reproduce a run.
+xfail marks of random-input tests are removed (rng_seed.py), and
+`draws.fresh` is True: tests that expect a known failure (e.g., via
+may_fail or inline pytest.xfail) must then just assert, so that the
+real outcome is reported. With `random`, the base is picked once by
+the controller (and passed on to pytest-xdist workers) and is printed
+in the report header and in the terminal summary, to reproduce a run.
 
 Fixtures
 --------
@@ -42,20 +46,22 @@ __license__ = 'GPLv3+'
 
 import collections
 from importlib import import_module
-import random
 import re
-import sys
 import zlib
 
 import numpy as np
-import pytest
 from pytest_cases import fixture
 
 from . import optional_dependencies
-from . import tiers
 from .helpers import TEST_DATA
 
-pytest_plugins = ('pytester',)  # For testing the options themselves
+pytest_plugins = (
+    'pytester',  # For testing the options themselves
+    'tests.check_slow',
+    'tests.quick_option',
+    'tests.rng_seed',
+    'tests.slow_marks',
+    )
 
 # Fixture of optional_dependencies that needs no wrapping
 fixture_missing_dependency = optional_dependencies.fixture_missing_dependency
@@ -66,16 +72,6 @@ N_DRAWS = 5
 
 Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
-_COLLECTED_IDS = pytest.StashKey()
-_STALE_MESSAGE = pytest.StashKey()  # On the controller, with xdist
-_CALL_PHASE = 'call'
-_NODEID_SEP = '::'
-_SLOW_MARKER = 'slow'
-STALE_KEY = 'stale_slow_cases'  # In pytest-xdist's workeroutput
-CHECK_SLOW_OPTION = '--check-slow'
-QUICK_OPTION = '--quick'
-RNG_SEED_OPTION = '--rng-seed'
-WORKER_SEED_KEY = 'rng_seed'  # In pytest-xdist's workerinput
 
 class Draws(tuple):
     """A tuple of Draw objects, knowing whether the base seed is fresh."""
@@ -86,302 +82,6 @@ class Draws(tuple):
 def pytest_addoption(parser):
     """Add the options of the test suite."""
     optional_dependencies.pytest_addoption(parser)
-    parser.addoption(
-        QUICK_OPTION,
-        action='store_true',
-        help=('Quick tier: skip the tests marked "slow", in addition '
-              'to what the -m expression (if any) selects.'),
-        )
-    parser.addoption(
-        CHECK_SLOW_OPTION,
-        action='store_true',
-        help=('At the end, list the tests not marked "slow" that took '
-              f'{tiers.SLOW_THRESHOLD} s or more, and the "slow" ones '
-              'that took less (call phase), as candidates to be '
-              'marked or unmarked in tests/tiers.py. Only reports; '
-              'also with pytest-xdist.'),
-        )
-    parser.addoption(
-        RNG_SEED_OPTION,
-        dest='rng_seed',
-        metavar='INT|random',
-        default=None,
-        help=('Derive the seeds of random-input tests from this base '
-              'integer, or from a random one if "random" (printed at '
-              'the end of the run, to reproduce it). Known failures '
-              '(xfail) of random-input tests then report their real '
-              'outcome. For local exploration, not for CI.'),
-        )
-
-
-def _apply_quick_option(config):
-    """Add 'not slow' to the marker expression if --quick was given."""
-    if not config.option.quick:
-        return
-    expression = config.option.markexpr
-    config.option.markexpr = (
-        f'({expression}) and not slow' if expression else 'not slow'
-        )
-
-
-def pytest_configure(config):
-    """Apply --quick, start --check-slow, resolve --rng-seed once.
-
-    The seed is resolved in the controller only. A pytest-xdist worker
-    takes the base that the controller resolved and handed over
-    (pytest_configure_node). Instead, --quick must be applied in each
-    worker: the options that xdist hands to a worker are those parsed
-    from the command line, not the ones modified by the controller's
-    pytest_configure.
-    """
-    _apply_quick_option(config)
-    workerinput = getattr(config, 'workerinput', None)
-    if workerinput is None and config.option.check_slow:
-        config.pluginmanager.register(
-            _DurationRecorder(),
-            _DurationRecorder.name,
-            )
-    if workerinput is not None:
-        config.option.rng_seed = workerinput[WORKER_SEED_KEY]
-        return
-    value = config.option.rng_seed
-    if value is None:
-        return  # No option
-    if value == 'random':
-        value = random.SystemRandom().randrange(2**32)
-    try:
-        config.option.rng_seed = int(value)
-    except ValueError:
-        raise pytest.UsageError(
-            f'{RNG_SEED_OPTION} must be an integer or "random", '
-            f'not {value!r}'
-            ) from None
-
-
-@pytest.hookimpl(optionalhook=True)  # Only exists with pytest-xdist
-def pytest_configure_node(node):
-    """Hand the resolved base seed over to a pytest-xdist worker."""
-    node.workerinput[WORKER_SEED_KEY] = node.config.option.rng_seed
-
-
-def _rng_seed_message(config):
-    """Return a line with the base seed, or None if not used."""
-    base = config.option.rng_seed
-    if base is None:
-        return None
-    return f'rng-seed base: {base} (reproduce with --rng-seed={base})'
-
-
-def pytest_report_header(config):
-    """Report the base seed, if used."""
-    return _rng_seed_message(config)
-
-
-class _DurationRecorder:
-    """Plugin that records the call durations of the tests that run."""
-
-    name = 'check-slow-recorder'
-
-    def __init__(self):
-        """Initialize an instance with no durations."""
-        self.durations = {}  # nodeid: seconds
-        self.slow_ids = set()
-
-    def pytest_runtest_logreport(self, report):
-        """Record the call duration of a report."""
-        # With pytest-xdist, the controller receives all the reports.
-        # Subtests report under the id of their test: keep the longest
-        if report.when != _CALL_PHASE or report.skipped:
-            return
-        self.durations[report.nodeid] = max(
-            self.durations.get(report.nodeid, 0),
-            report.duration,
-            )
-        if _SLOW_MARKER in report.keywords:
-            self.slow_ids.add(report.nodeid)
-
-    def candidates(self, threshold):
-        """Return the tests whose marking may need to change.
-
-        Parameters
-        ----------
-        threshold : float
-            Duration (seconds) from which a test counts as slow.
-
-        Returns
-        -------
-        to_mark : list
-            (duration, node id) of tests that are not marked slow,
-            but took `threshold` or more, longest first.
-        to_unmark : list
-            (duration, node id) of tests marked slow that took less
-            than `threshold`, shortest first.
-        """
-        to_mark = sorted(
-            ((time, nodeid) for nodeid, time in self.durations.items()
-             if nodeid not in self.slow_ids and time >= threshold),
-            reverse=True,
-            )
-        to_unmark = sorted(
-            (time, nodeid) for nodeid, time in self.durations.items()
-            if nodeid in self.slow_ids and time < threshold
-            )
-        return to_mark, to_unmark
-
-
-def _write_slow_candidates(terminalreporter, config):
-    """Write the lists of tests whose marking may need to change."""
-    recorder = config.pluginmanager.get_plugin(_DurationRecorder.name)
-    threshold = tiers.SLOW_THRESHOLD
-    to_mark, to_unmark = recorder.candidates(threshold)
-    terminalreporter.section('check-slow (report only)')
-    terminalreporter.write_line(
-        f'Call phase, threshold {threshold} s. Edit tests/tiers.py '
-        '(SLOW_CASES) or the marks; timings are noisy: re-run a '
-        'candidate before changing it.'
-        )
-    for title, tests in (
-            ('Not marked "slow", but took the threshold or more:', to_mark),
-            ('Marked "slow", but took less than the threshold:', to_unmark),
-            ):
-        terminalreporter.write_line(f'{title} {len(tests)}')
-        for time, nodeid in tests:
-            terminalreporter.write_line(f'  {time:7.2f} s  {nodeid}')
-
-
-def pytest_terminal_summary(terminalreporter, config):
-    """Report the base seed, if used, also with -q, and --check-slow."""
-    message = _rng_seed_message(config)
-    if message:
-        terminalreporter.write_line(message)
-    if config.option.check_slow:
-        _write_slow_candidates(terminalreporter, config)
-
-
-def _split_case_id(nodeid):
-    """Return the test part of `nodeid` and its '-'-padded case id."""
-    test, bracket, params = nodeid.partition('[')
-    if not bracket:
-        return test, ''
-    # Pad, to match whole '-'-separated parts of the case id
-    return test, f'-{params[:-1]}-'
-
-
-def _is_slow(item):
-    """Return whether `item` is one of tiers.SLOW_CASES."""
-    test, params = _split_case_id(item.nodeid)
-    slow_parts = tiers.SLOW_CASES.get(test, ())
-    return any(f'-{part}-' in params for part in slow_parts)
-
-
-def pytest_itemcollected(item):
-    """Remember the node ids of all items, before any deselection."""
-    item.config.stash.setdefault(_COLLECTED_IDS, []).append(item.nodeid)
-
-
-def _find_stale_slow_cases(nodeids):
-    """Return descriptions of SLOW_CASES entries matching no node id.
-
-    Only entries of modules with at least one collected node id are
-    checked, so that running a subset of the suite is not an error.
-
-    Parameters
-    ----------
-    nodeids : Iterable
-        The node ids of all collected items.
-
-    Returns
-    -------
-    stale : list
-        One string per entry (test) or case part that matches nothing.
-    """
-    collected = collections.defaultdict(list)  # test: case ids
-    modules = set()
-    for nodeid in nodeids:
-        test, params = _split_case_id(nodeid)
-        modules.add(test.partition(_NODEID_SEP)[0])
-        collected[test].append(params)
-    stale = []
-    for test, parts in tiers.SLOW_CASES.items():
-        if test.partition(_NODEID_SEP)[0] not in modules:
-            continue
-        if test not in collected:
-            stale.append(f'{test} (no such test)')
-            continue
-        stale.extend(
-            f'{test}[{part}] (no such case)'
-            for part in parts
-            if not any(f'-{part}-' in p for p in collected[test])
-            )
-    return stale
-
-
-def _stale_slow_cases_message(config):
-    """Return an error message about stale SLOW_CASES, or None."""
-    if any(_NODEID_SEP in arg for arg in config.args):
-        return None  # Tests selected by node id: only part of a module
-    if config.getoption('lf', default=False):
-        return None  # --lf drops the passed items of a module early
-    stale = _find_stale_slow_cases(config.stash.get(_COLLECTED_IDS, ()))
-    if not stale:
-        return None
-    entries = '\n  '.join(stale)
-    return (
-        f'Stale entries in SLOW_CASES ({tiers.__file__}), which lists '
-        f'the cases that take {tiers.SLOW_THRESHOLD} s or more: the '
-        f'tests or cases below do not exist (renamed or removed?). '
-        f'Update the module.\n  {entries}'
-        )
-
-
-def _check_slow_cases(config, items):
-    """Report stale tiers.SLOW_CASES as a usage error.
-
-    A pytest-xdist worker cannot raise it: that ends the controller
-    with an internal error. Instead, a worker drops all its items
-    (so that no test runs) and hands the message over to the
-    controller, which reports it and ends with the same exit status
-    as a serial run (pytest_testnodedown, pytest_sessionfinish).
-    """
-    message = _stale_slow_cases_message(config)
-    if not message:
-        return
-    workeroutput = getattr(config, 'workeroutput', None)
-    if workeroutput is None:
-        raise pytest.UsageError(message)
-    workeroutput[STALE_KEY] = message
-    items.clear()
-
-
-@pytest.hookimpl(optionalhook=True)  # Only exists with pytest-xdist
-def pytest_testnodedown(node):
-    """Remember the stale-entry message of a pytest-xdist worker."""
-    message = getattr(node, 'workeroutput', {}).get(STALE_KEY)
-    if message:
-        node.config.stash[_STALE_MESSAGE] = message
-
-
-def pytest_sessionfinish(session):
-    """End a pytest-xdist run with stale SLOW_CASES as a usage error."""
-    message = session.config.stash.get(_STALE_MESSAGE, None)
-    if message:
-        sys.stderr.write(f'ERROR: {message}\n')
-        session.exitstatus = pytest.ExitCode.USAGE_ERROR
-
-
-def pytest_collection_modifyitems(config, items):
-    """Mark TensErLEED and slow tests; no xfail with fresh seeds."""
-    _check_slow_cases(config, items)
-    for item in items:
-        if tiers.TENSORLEED_FIXTURES.intersection(item.fixturenames):
-            item.add_marker(pytest.mark.tensorleed)
-        if _is_slow(item):
-            item.add_marker(pytest.mark.slow)
-        if (item.config.option.rng_seed is not None
-                and 'draws' in item.fixturenames):
-            item.own_markers[:] = [
-                mark for mark in item.own_markers if mark.name != 'xfail'
-                ]
 
 
 @fixture
