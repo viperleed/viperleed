@@ -408,15 +408,23 @@ class TestSlabSymmetrization:
             rattled[draw.index] = (rattled_slab, draw_param, draw_info)
         return (slab, rattled, param, info, *rest)
 
+    # Pass with the seeded values, but the outcome depends on ~1e-14
+    # noise in the atomic positions: it changes the order of atoms at
+    # equal height, and hence which of several near-equal candidate
+    # symmetry positions are kept. Cannot be strict.
+    _noise_dependent_rattled = {
+        'infoless_poscar-36C_p6m': (
+            'Outcome depends on ~1e-14 position noise (gives cmm '
+            'instead of p6m for some)'
+            ),
+        'poscar_36carbon_atoms_p6m': (
+            'Outcome depends on ~1e-14 position noise (gives cmm '
+            'instead of p6m for some)'
+            ),
+        }
+
     _known_incorrect_rattled = {
-        'p31m': 'Seeded rattling gives cm instead of p31m',
-        'p4m': 'Seeded rattling gives cm instead of p4m',
-        'p6m': 'Seeded rattling gives cm instead of p6m',
-        'pgg-ucell=rectangular': 'Seeded rattling gives pg instead of pgg',
-        'pmg-ucell=square': 'Seeded rattling gives rcm instead of pmg',
-        'pmm-ucell=square': 'Seeded rattling gives p1 or pm instead of pmm',
         'rcm-ucell=rectangular': 'Seeded rattling gives pm instead of rcm',
-        'rcmm-ucell=square': 'Seeded rattling gives pg instead of rcmm',
         'hex_cm_01': 'Seeded rattling gives p1 instead of cm',
         'hex_cm_10': 'Seeded rattling gives p1 instead of cm',
         'hex_cm_11': 'Seeded rattling gives p1 instead of cm',
@@ -424,11 +432,8 @@ class TestSlabSymmetrization:
         'hex_cm_21': 'Seeded rattling gives p1 instead of cm',
         'hex_cmm_10': 'Known invalid plane group p2. May be correct cmm here',
         'hex_cmm_01': 'Known invalid plane group p2. May be correct cmm here',
-        'hex_p2': 'Seeded rattling gives p1 instead of p2',
         'square_cm_11': 'Seeded rattling gives pm instead of cm',
         'square_cm_1m1': 'Seeded rattling gives pm instead of cm',
-        'square_cmm': 'Seeded rattling gives cm instead of cmm',
-        'square_pmm': 'Seeded rattling gives pm instead of pmm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025': (
             'Seeded rattling gives p1 instead of p3'
             ),
@@ -436,14 +441,8 @@ class TestSlabSymmetrization:
             'Seeded rattling gives cm or p1 instead of p3m1'
             ),
         'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
-        'poscar_mgo': 'Seeded rattling gives rcm instead of p4m',
         'poscar-SiC_H': 'Seeded rattling gives cm instead of p3m1',
-        'poscar_ru0001_rt3_te': (
-            'Seeded rattling gives cm or p3m1 instead of p31m'
-            ),
         'poscar_sb_si_111': 'Seeded rattling gives rcm instead of pm',
-        'poscar_tio2_small': 'Seeded rattling gives pm instead of pmm',
-        'infoless_poscar-36C_p6m': 'Seeded rattling gives cmm instead of p6m',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025': (
             'Seeded rattling gives p1 instead of p3'
             ),
@@ -451,19 +450,6 @@ class TestSlabSymmetrization:
             'Seeded rattling gives cm instead of p3m1'
             ),
         'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
-        'infoless_poscar-Fe3O4_(001)_cod1010369': (
-            'Seeded rattling gives cm instead of cmm'
-            ),
-        'infoless_poscar-graphene': 'Seeded rattling gives pmg instead of pmm',
-        'infoless_poscar-MgO_cod_9006456': (
-            'Seeded rattling gives cmm instead of p4m'
-            ),
-        'infoless_poscar-Pt25Rh75(100)-p(3x1)-O': (
-            'Seeded rattling gives pm instead of pmm'
-            ),
-        'infoless_poscar-Ru(0001)-rt3Te': (
-            'Seeded rattling gives cm, p1 or p3m1 instead of p31m'
-            ),
         'infoless_poscar-Sb_Si(111)_rect': (
             'Seeded rattling gives rcm instead of pm'
             ),
@@ -473,9 +459,43 @@ class TestSlabSymmetrization:
         'bulk_repeat_poscar-Cu2O_111': (
             'Seeded rattling gives cm or p3 instead of p3m1'
             ),
-        'double_bulk-fe3o4': 'Seeded rattling gives pm instead of pmm',
         'double_bulk-ru': 'Seeded rattling gives cm instead of p3m1',
-        'fe3o4_bulk': 'Seeded rattling gives pm instead of pmm',
+        # Failed with the seeded values only because of the order
+        # of the neighbours returned by the KDTree queries that
+        # remove duplicate candidate positions in symmetry.py;
+        # they now pass for every draw:
+        # 'p31m': 'Seeded rattling gives cm instead of p31m',
+        # 'p4m': 'Seeded rattling gives cm instead of p4m',
+        # 'p6m': 'Seeded rattling gives cm instead of p6m',
+        # 'pgg-ucell=rectangular': 'Seeded rattling gives pg instead of pgg',
+        # 'pmg-ucell=square': 'Seeded rattling gives rcm instead of pmg',
+        # 'pmm-ucell=square': 'Seeded rattling gives p1 or pm instead of pmm',
+        # 'rcmm-ucell=square': 'Seeded rattling gives pg instead of rcmm',
+        # 'hex_p2': 'Seeded rattling gives p1 instead of p2',
+        # 'square_cmm': 'Seeded rattling gives cm instead of cmm',
+        # 'square_pmm': 'Seeded rattling gives pm instead of pmm',
+        # 'poscar_mgo': 'Seeded rattling gives rcm instead of p4m',
+        # 'poscar_ru0001_rt3_te': (
+        #     'Seeded rattling gives cm or p3m1 instead of p31m'
+        #     ),
+        # 'poscar_tio2_small': 'Seeded rattling gives pm instead of pmm',
+        # 'infoless_poscar-Fe3O4_(001)_cod1010369': (
+        #     'Seeded rattling gives cm instead of cmm'
+        #     ),
+        # 'infoless_poscar-graphene': (
+        #     'Seeded rattling gives pmg instead of pmm'
+        #     ),
+        # 'infoless_poscar-MgO_cod_9006456': (
+        #     'Seeded rattling gives cmm instead of p4m'
+        #     ),
+        # 'infoless_poscar-Pt25Rh75(100)-p(3x1)-O': (
+        #     'Seeded rattling gives pm instead of pmm'
+        #     ),
+        # 'infoless_poscar-Ru(0001)-rt3Te': (
+        #     'Seeded rattling gives cm, p1 or p3m1 instead of p31m'
+        #     ),
+        # 'double_bulk-fe3o4': 'Seeded rattling gives pm instead of pmm',
+        # 'fe3o4_bulk': 'Seeded rattling gives pm instead of pmm',
         # Failed at least once with random shifts before the
         # seeding of #574; they pass for every seeded value:
         # 'pgg-ucell=square': 'Often reduced to pg',
@@ -526,9 +546,12 @@ class TestSlabSymmetrization:
             assert original.planegroup == rattled.planegroup
 
         with may_fail(first_case,
-                      self._known_incorrect_rattled,
-                      strict=True,
-                      draws=draws):
+                      self._noise_dependent_rattled,
+                      draws=draws), \
+                may_fail(first_case,
+                         self._known_incorrect_rattled,
+                         strict=True,
+                         draws=draws):
             check_draws(draws, _check)
 
 
