@@ -358,6 +358,18 @@ class TestSymmetryConstraints:
         'rcmm': 'Fails in all directions due to missing centre link',
         }
 
+    # Pass with the default positions, but the outcome depends on
+    # ~1e-14 noise in the atomic positions: it changes the order of
+    # atoms at equal height, and hence which of several near-equal
+    # candidate symmetry positions are kept. Cannot be strict. Only
+    # the displacement along x is affected.
+    _noise_dependent_preserve = {
+        'poscar_36carbon_atoms_p6m': (
+            'Outcome depends on ~1e-14 position noise (symmetry not '
+            'preserved for some)'
+            ),
+        }
+
     @parametrize(displacement=XYZ_DISPLACEMENTS)
     def test_preserve_displaced_symmetry(self, displacement, displace_atoms,
                                          with_symmetry_constraints,
@@ -370,7 +382,13 @@ class TestSymmetryConstraints:
             )
         displaced_slab = copy.deepcopy(slab)
         displace_atoms(displaced_slab, param, info, displacement)
-        with may_fail(first_case, self._known_do_not_preserve, strict=True):
+        noisy = {}
+        if displacement == XYZ_DISPLACEMENTS[0]:
+            noisy = self._noise_dependent_preserve
+        with may_fail(first_case, noisy), \
+                may_fail(first_case,
+                         self._known_do_not_preserve,
+                         strict=True):
             assert displaced_slab.foundplanegroup == slab.foundplanegroup
 
 
