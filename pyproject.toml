@@ -172,6 +172,7 @@ classifiers = [
         'pytest-cov>=2.5',      # Added --cov-branch
         'pytest-mock>=3',
         'pytest-timeout',
+        'pytest-xdist',
         ]
     xfail_strict = true
     # An empty parameter set (e.g., an emptied list of POSCARs) is an

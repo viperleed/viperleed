@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-23'
 __license__ = 'GPLv3+'
 
-from importlib import import_module
 import os
 from pathlib import Path
 
@@ -72,9 +71,8 @@ def fixture_run(pytester, monkeypatch, slow_cases):
     runs in the current process, unless `own_process` is True (default:
     no) or the arguments request pytest-xdist. Use `own_process` for
     runs with pytest-cov, which must not interfere with the coverage
-    of the outer run. A separate process requires pytest-xdist to be
-    installed (the run fails, not skips, if it is missing), and gets
-    `slow` handed over with a plugin.
+    of the outer run. A separate process gets `slow` handed over with
+    a plugin.
     """
     def _run(*args, slow=None, files=None, cache=False,
              own_process=False):
@@ -92,7 +90,6 @@ def fixture_run(pytester, monkeypatch, slow_cases):
                 *options,
                 plugins=[conftest],
                 )
-        import_module('xdist')  # Fail if missing
         pytester.makepyfile(**{
             _SLOW_PLUGIN: f'from tests import tiers\n'
                           f'tiers.SLOW_CASES.update({slow_cases!r})\n',

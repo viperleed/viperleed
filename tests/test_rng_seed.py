@@ -21,8 +21,6 @@ from .conftest import N_DRAWS
 # The tests in this module start pytest subprocesses
 pytestmark = pytest.mark.slow
 
-pytest.importorskip('xdist')
-
 _TESTS_PARENT = Path(__file__).resolve().parent.parent
 _TEST_SOURCE = """
 import os
@@ -73,10 +71,8 @@ def _run_seed_logging_pytest(tmp_path, name, *args):
     return int(match.group(1)), sorted(log.read_text().splitlines())
 
 
-def test_random_base_reproducible_under_xdist(request, tmp_path):
+def test_random_base_reproducible_under_xdist(tmp_path):
     """Check that the printed random base reproduces a parallel run."""
-    if not request.config.pluginmanager.hasplugin('xdist'):
-        pytest.skip('pytest-xdist is not active')
     base, seeds = _run_seed_logging_pytest(
         tmp_path,
         'parallel',

@@ -91,7 +91,6 @@ def test_quick_selection(pytester, args, expected):
 
 def test_quick_selection_xdist(pytester, monkeypatch):
     """Check that --quick also skips slow tests with pytest-xdist."""
-    pytest.importorskip('xdist')
     root = Path(__file__).resolve().parent.parent
     monkeypatch.setenv('PYTHONPATH', str(root))
     selected = _selected(
