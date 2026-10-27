@@ -69,5 +69,5 @@ tensorleed/eeasisss
 htmlcov/
 **/prof/
 
-# Ignore windows batch files in devutils 
+# Ignore windows batch files in devutils
 devutils/*.bat

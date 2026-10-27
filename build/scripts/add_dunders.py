@@ -6,7 +6,7 @@ Adds the __copyright__ and __license__ module dunders for given files.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-03-22'
 __license__ = 'GPLv3+'
 
@@ -15,6 +15,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 import re
+import sys
 
 
 DUNDER_RE = re.compile(r'^__[a-z]+__$')
@@ -22,6 +23,9 @@ DUNDER_EQUALS_RE = re.compile(r'^(?P<dunder>__[a-z]+__) = ')
 ACCEPTABLE_DUNDER_TYPES = (
     ast.Tuple,
     ast.Constant,
+    # Python 3.7 parses string literals as ast.Str rather than
+    # ast.Constant. ast.Str is deprecated from 3.8, hence the guard.
+    *((ast.Str,) if sys.version_info < (3, 8) else ()),
     )
 IMPORT_RE = re.compile(r'^\s*(from\s+\w+\s+)?import\s+\w+')
 

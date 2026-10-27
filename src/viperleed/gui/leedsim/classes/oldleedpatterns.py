@@ -9,7 +9,7 @@ ready.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-13'
 __license__ = 'GPLv3+'
 
@@ -54,7 +54,7 @@ class LEEDPattern:
 
         # The following one is related to symmetry-equivalent beams
         self.firstDomRefs = None  # references of equivalent beams in 1st domain  ## REPLACE (different logics for off normal).
-        
+
         # The following ones are related to the LEED subpatterns                  ## THE LOGICS NEEDS TO CHANGE!
         # Will probably have a self.patterns dictionary that is initially populated only with some of the subpatterns. Other combinations will be dynamically generated and stored as new keys, with some reasonable hashing.
         self.firstLEED = None  # subpattern of first domain
@@ -107,7 +107,7 @@ class LEEDPattern:
         # return np.asarray([np.dot(superlattice, operation)
                            # for operation in operations])
         return np.einsum('ij,mjk->mik', superlattice, operations)
-    
+
     @property
     def primary_beam_theta(self):
         """
@@ -115,7 +115,7 @@ class LEEDPattern:
         to the surface
         """
         return self.__parameters['beamIncidence'][0]
-    
+
     @property
     def primary_beam_phi(self):
         """
@@ -123,7 +123,7 @@ class LEEDPattern:
         x axis. Positive counterclockwise when looking down on the surface.
         """
         return self.__parameters['beamIncidence'][1]
-    
+
     @property
     def primary_beam_direction(self):                                           # will probably not even use this
         """
@@ -212,7 +212,7 @@ class LEEDPattern:
         # beamsRefs contains at index [i, j] a list of the indices of beams of
         # domain domains[i] equivalent to beam j (including j)
         beamsRefs = []
-        for dom in domains: 
+        for dom in domains:
             beamsRefs.append([crossRef + dom*self.n_beams
                               for crossRef in self.firstDomRefs])
         return np.array(beamsRefs, dtype=object)
@@ -330,7 +330,7 @@ class LEEDPattern:
         sortK = beam[1]
 
         return (-sortH-sortK, -sortH)
-    
+
     def sortEnergy(self, beamlist):                                               ## this may go into BeamIndexList
         beam = eval(beamlist[0])  # returns a tuple
         # sort by Energy, i.e., by g^2. Notice the
@@ -464,7 +464,7 @@ class LEEDPattern:
 
         # then convert each set to a np.array of int, so that it's iterable
         # and it's easy to process later
-        return np.array([np.array(list(x), dtype=int) for x in crossRefs], 
+        return np.array([np.array(list(x), dtype=int) for x in crossRefs],
                         dtype=object)
 
     def get_ExtinctFirstDomain(self):
@@ -648,4 +648,3 @@ class LEEDsubpattern:
             self.rotBeams = np.dot(self.beams, transf)
         else:
             raise
-

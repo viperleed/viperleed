@@ -7,7 +7,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
@@ -56,7 +56,7 @@ def modify_vacuum(slab, vacuum_gap_info):
     slab : Slab
         The slab to prepare for relaxation.
     vacuum_gap_info : VacuumGapInfo
-        Information about the desired vacuum gap, including whether the size 
+        Information about the desired vacuum gap, including whether the size
         is absolute or relative and whether small gaps are acceptable.
 
     Returns
@@ -76,9 +76,9 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     Notes
     -----
-    The method checks and modifies the `c_vector` of the slab to adjust 
-    the vacuum gap. It ensures that the `a` and `b` vectors lie in-plane 
-    and recalculates Cartesian coordinates from fractional coordinates 
+    The method checks and modifies the `c_vector` of the slab to adjust
+    the vacuum gap. It ensures that the `a` and `b` vectors lie in-plane
+    and recalculates Cartesian coordinates from fractional coordinates
     as necessary.
     """
     processed_slab = deepcopy(slab)

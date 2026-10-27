@@ -8,7 +8,7 @@ patterns from multiple structures, accounting for symmetry.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-13'
 __license__ = 'GPLv3+'
 
@@ -870,21 +870,6 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                     )
                 return LEEDParametersList()
         return params
-
-    def __zz_test_annots_compose(self):                                        # TODO: remove
-        # self.ensurePolished()
-        # tmpscreencenter = self.recSpace.geometry().center()
-        # ctmp = winWidg.mapToGlobal(self.recSpace.geometry().center())
-        # print('\n\n', self.pos(), tmpscreencenter,
-              # ctmp, self.recSpace.parentWidget()==winWidg, '\n')
-        tmpC = np.array([500, 500])#np.array([530.5, 500.5])
-        # print("\ncreating")
-        self.tmps = [HoverAnnot(winWidg) for i in range(12)]
-        deltas = [np.array([np.cos(x), np.sin(x)]) for x in np.linspace(0, 2*np.pi, num=len(self.tmps), endpoint=False)]
-        # print("assign deltas")
-        for (tmp, delta) in zip(self.tmps, deltas):
-            tmp.head_pos = delta*5 + tmp.center
-            # tmp.show()
 
     def __zz_annots_showEvent(self, event):
         # print("begin showEvent")

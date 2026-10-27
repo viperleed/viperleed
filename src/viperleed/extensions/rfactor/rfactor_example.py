@@ -8,7 +8,7 @@ from rfactor import r_factor_new as rf
 """
 For compiling:
 f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature
-f2py -c rfactor.pyf rfactor.f90 
+f2py -c rfactor.pyf rfactor.f90
 """
 
 # Prepare some example arrays with curve data

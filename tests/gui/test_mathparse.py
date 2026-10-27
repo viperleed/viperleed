@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-03-04'
 __license__ = 'GPLv3+'
 
@@ -83,7 +83,7 @@ class TestMathParserRaises:
         with pytest.raises(TooComplexMathError):
             MathParser('2*sqrt(2)' * 10)  # Exceeds MAX_LEN
         mathparse.MAX_LEN = backup
-    
+
     def test_max_recursion(self):
         """Check complaints for a too deep expression."""
         backup, mathparse.MAX_DEPTH = mathparse.MAX_DEPTH, 3

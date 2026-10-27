@@ -25,7 +25,7 @@ RETURNS: Beam cut to only within [E_min, E_max]
 
 DIFFERENT INTERFACE FUNCTIONS:
 
-calling from search: 
+calling from search:
 - prepare experiment Y-functions before going to search loop (Prepare_beams)
 - in each generation, for each pop_config: average equivalent theoretical beams, interpolate I_theory, get Y_theory, call Rfactor_v0ropt
 
