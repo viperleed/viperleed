@@ -210,7 +210,7 @@ def test_marked_slow():
 """
 _SLOW_FILES = {'test_durations': _SLOW_FILE}
 _DURATIONS = 'test_durations.py::'
-_BELOW = 'took less than the threshold'
+_BELOW = 'took less than the lower limit'
 
 
 @pytest.mark.slow  # About 1 s each (pytester)
@@ -275,3 +275,42 @@ class TestCheckSlow:
             files=_SLOW_FILES,
             )
         self._check_report(result)
+
+
+_THRESHOLD = tiers.SLOW_THRESHOLD
+_UPPER = _THRESHOLD * (1 + tiers.SLOW_BAND)
+_LOWER = _THRESHOLD * (1 - tiers.SLOW_BAND)
+_MARGIN = 0.01 * _THRESHOLD
+_BAND_DURATIONS = {  # Names starting with 'marked' are marked slow
+    'unmarked_above': _UPPER + _MARGIN,
+    'unmarked_below': _UPPER - _MARGIN,
+    'unmarked_at_threshold': _THRESHOLD,
+    'marked_above': _LOWER + _MARGIN,
+    'marked_below': _LOWER - _MARGIN,
+    'marked_at_threshold': _THRESHOLD,
+    }
+
+
+class TestCheckSlowBand:
+    """Tests for the band of --check-slow around the threshold."""
+
+    @staticmethod
+    def _candidates():
+        """Return the candidates for the durations of the band."""
+        # pylint: disable-next=protected-access
+        recorder = check_slow._DurationRecorder()
+        recorder.durations.update(_BAND_DURATIONS)
+        recorder.slow_ids.update(
+            n for n in _BAND_DURATIONS if n.startswith('marked')
+            )
+        return recorder.candidates(tiers.SLOW_THRESHOLD)
+
+    def test_to_mark(self):
+        """Check that unmarked tests are listed from the upper limit."""
+        to_mark, _ = self._candidates()
+        assert [nodeid for _, nodeid in to_mark] == ['unmarked_above']
+
+    def test_to_unmark(self):
+        """Check that marked tests are listed below the lower limit."""
+        _, to_unmark = self._candidates()
+        assert [nodeid for _, nodeid in to_unmark] == ['marked_below']

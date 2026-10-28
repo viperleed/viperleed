@@ -8,6 +8,11 @@ TENSORLEED_FIXTURES : frozenset
     Names of fixtures that run, or need the sources of, TensErLEED.
 SLOW_THRESHOLD : float
     Duration (seconds, call phase) from which a test counts as slow.
+SLOW_BAND : float
+    Relative margin around SLOW_THRESHOLD in which a test keeps its
+    marking. A test that is not marked 'slow' is listed from
+    (1 + SLOW_BAND) * SLOW_THRESHOLD, a marked one is dropped below
+    (1 - SLOW_BAND) * SLOW_THRESHOLD.
 SLOW_CASES : dict
     Maps tests (node-id prefix) to the cases that are marked 'slow'.
 """
@@ -20,6 +25,7 @@ __created__ = '2026-10-23'
 __license__ = 'GPLv3+'
 
 SLOW_THRESHOLD = 0.5
+SLOW_BAND = 0.2
 
 TENSORLEED_FIXTURES = frozenset((
     'tensorleed_path',
@@ -33,6 +39,12 @@ TENSORLEED_FIXTURES = frozenset((
 # more. A whole (test, slab) group is listed if at least 40 % of its
 # cases did, or if one took 1.4 times SLOW_THRESHOLD or more, as the
 # cost of a first use of a slab moves between the cases of a group.
+# Cases and groups are counted if they have a call phase, also if they
+# skip or xfail in the test body. The rule has a band of SLOW_BAND
+# (20 %) around SLOW_THRESHOLD, because chunks of 0.5-0.8 s move
+# between unrelated cases whenever the code changes: a case that is
+# not marked is listed from 1.2 times SLOW_THRESHOLD, a listed one is
+# dropped below 0.8 times; in between it keeps its marking.
 # Only these cases are marked 'slow'.
 _SYMMETRY_TESTS = 'tests/calc/symmetry/test_symmetry.py::'
 _SLAB_TESTS = 'tests/calc/classes/test_slab.py::'
