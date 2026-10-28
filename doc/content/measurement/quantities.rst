@@ -44,14 +44,16 @@ very sensitive samples, the experimental |IV| curves should be interpolated to
 
 **End energy**: The final beam energy of the measurement, after which the
 acquisition either concludes or restarts. This energy should be chosen with
-great care. A wider energy range adds more data to the available data pool, but
-higher beam energies can sometimes degrade a sample very quickly.
+great care. A wider energy range adds more data, but damage to sensitive
+samples by the electron beam (i.e., desorption or cracking of adsorbates, and
+electron-stimulated desorption of oxygen from oxide surfaces) tends to increase
+with higher beam energies.
 
 Times
 =====
 
-**HV settling time / Energy settling time**: The duration of the transient
-response of the acceleration voltage after setting a new energy. This is the
+**HV settling time / Energy settling time**: The time it takes for the actual
+electron energy to reach a stable value after setting a new energy. This is the
 minimum time cameras in |LEED-IV| measurements, and controllers during the
 energy calibration and triggered time-resolved measurements, will wait before
 acquiring data.
