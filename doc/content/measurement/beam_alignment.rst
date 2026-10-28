@@ -41,8 +41,8 @@ mounted. There must be an electron collector behind the hole plate (e.g., a
 sample plate with a hole and the filament of an electron beam heater underneath
 acting as the electron collector). If you are not using the "I_sample @+33 V"
 input of the ViPErLEED hardware controller for the current measurement, apply a
-positive bias to the the electron collector to prevent secondary electron
-emission from interfering with the alignment process.
+positive bias to the electron collector to prevent secondary electron emission
+from interfering with the alignment process.
 
 Begin by placing the electron collector under the electron gun so that it is
 visually aligned. Tilt the hole plate such that the electron beam is
@@ -75,9 +75,9 @@ Sample alignment
 ================
 
 |LEED-IV| data are usually recorded at perpendicular incidence. Even a slight
-tilt of a few tenths of a degree leads has a substantial influence on the
-|LEED-IV| data. Threfore, it is best to have a manipulator that allows to tilt
-the sample in both directions. The following alignment procedure should be
+tilt of a few tenths of a degree has a substantial influence on the |LEED-IV|
+data. Therefore, it is best to have a manipulator that allows the sample to be
+tilted in both directions. The following alignment procedure should be
 performed whenever a new sample is inserted into the manipulator.
 
 Ensure that the magnetic field compensation coils are active, if required. Turn
