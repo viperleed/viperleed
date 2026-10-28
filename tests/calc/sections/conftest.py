@@ -25,6 +25,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-26'
 __license__ = 'GPLv3+'
 
+from contextlib import contextmanager
 from pathlib import Path
 import shutil
 from zipfile import ZipFile
@@ -33,6 +34,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.rparams.defaults import DEFAULTS
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import parameters
 from viperleed.calc.files import tenserleed
@@ -60,6 +62,11 @@ DELTA_DOMAINS = (  # Also in the domain subfolder of TEST_DATA
     'telluride_stacking',
     )
 REFCALC_SURFACES = ('Ag(100)',)
+# Seconds between reads of SD.TL during a SEARCH. The default (60 s) is
+# longer than what the search of Ag(100) needs to reach SEARCH_MAX_GEN
+# on a fast, idle machine. Then, no evaluation happens, and the
+# Search-progress/Search-report PDFs are not written. See also #582.
+SEARCH_EVAL_TIME = 1
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z': 'Deltas_z.zip',
     'DISPLACEMENTS_vib': 'Deltas_vib.zip',
@@ -304,6 +311,15 @@ def refcalc_files(surface, make_section_tempdir, tensorleed_path):
     return files
 
 
+@contextmanager
+def _short_search_eval_time():
+    """Temporarily make SEARCH read SD.TL every SEARCH_EVAL_TIME s."""
+    with pytest.MonkeyPatch.context() as patcher:
+        # SEARCH_EVAL_TIME is not a PARAMETERS keyword
+        patcher.setitem(DEFAULTS, 'SEARCH_EVAL_TIME', SEARCH_EVAL_TIME)
+        yield
+
+
 @fixture(scope='session')
 @parametrize(displacements=AG_100_DISPLACEMENTS, ids=AG_100_DISPLACEMENTS)
 def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
@@ -364,9 +380,11 @@ def search_files_ag100(displacements, deltas,
     deltas_source = files.inputs_path / 'search' / 'Deltas' / deltas
     files.copy_displacements(disp_source)
     files.copy_deltas(deltas_source)
-    files.run_calc_from_setup(
-        source=tensorleed_path,
-        preset_params={'RUN': [0, 3],  # init and search
-                       'TL_VERSION': _NON_INIT_TL_VERSION,}
-        )
+    with _short_search_eval_time():
+        files.run_calc_from_setup(
+            source=tensorleed_path,
+            preset_params={'RUN': [0, 3],  # init and search
+                           'TL_VERSION': _NON_INIT_TL_VERSION,}
+            )
     return files
+
