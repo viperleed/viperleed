@@ -213,7 +213,6 @@ _DURATIONS = 'test_durations.py::'
 _BELOW = 'took less than the lower limit'
 
 
-@pytest.mark.slow  # About 1 s each (pytester)
 class TestCheckSlow:
     """Tests for the --check-slow option."""
 
@@ -229,6 +228,7 @@ class TestCheckSlow:
         for name in ('test_fast', 'test_marked_slow'):
             assert f'{_DURATIONS}{name}\n' not in out
 
+    @pytest.mark.slow  # About 1.5 s (pytester)
     def test_candidates(self, run):
         """Check that tests to mark and to unmark are listed."""
         result = run(check_slow.CHECK_SLOW_OPTION, files=_SLOW_FILES)
@@ -246,6 +246,7 @@ class TestCheckSlow:
         assert result.ret is pytest.ExitCode.USAGE_ERROR
         result.stderr.fnmatch_lines(['*--check-slow needs --no-cov*'])
 
+    @pytest.mark.slow  # About 1.5 s (pytester)
     def test_no_cov(self, run):
         """Check that --no-cov overrides --cov for --check-slow."""
         result = run(
@@ -258,6 +259,7 @@ class TestCheckSlow:
             )
         self._check_report(result)
 
+    @pytest.mark.slow  # About 1.5 s (pytester)
     def test_without_option(self, run):
         """Check that nothing is reported without the option."""
         result = run(files=_SLOW_FILES)
@@ -267,6 +269,7 @@ class TestCheckSlow:
             result.stdout.str()
             )
 
+    @pytest.mark.slow  # About 1.5 s (pytester)
     def test_xdist(self, run):
         """Check that --check-slow also works with pytest-xdist."""
         result = run(
