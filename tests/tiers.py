@@ -10,6 +10,10 @@ SLOW_THRESHOLD : float
     Duration (seconds, call phase) from which a test counts as slow.
 SLOW_CASES : dict
     Maps tests (node-id prefix) to the cases that are marked 'slow'.
+RELEASE_CASES : dict
+    Maps tests (node-id prefix) to the cases that are marked
+    'release'. These are TensErLEED cases that take long and add
+    little over others, and only run with the --release option.
 """
 
 __authors__ = (
@@ -223,4 +227,26 @@ SLOW_CASES = {
         'poscar_36carbon_atoms_cm', 'poscar_36carbon_atoms_p6m',
         'poscar_diamond', 'poscar_sb_si_111', 'poscar_sto110_4x1',
         ),
+    }
+
+# Cases that only run with --release (and are also 'tensorleed'): the
+# case-id parts have the same format as for SLOW_CASES. These are the
+# consumers of the run_phaseshift fixture for the Al2O3 slab: its
+# PHASESHIFTS calculation is by far the longest one of the tier.
+_AL2O3_CHOLE = 'poscar-Al2O3_NiAl(111)_cHole_20061025'
+_PHASESHIFTS = 'tests/calc/files/test_phaseshifts.py::'
+_PSGEN = 'tests/calc/test_psgen.py::TestPhaseshiftsGen::'
+RELEASE_CASES = {
+    _PHASESHIFTS + 'test_check_consistency_element_order_no_false_positives': (
+        _AL2O3_CHOLE,
+        ),
+    _PHASESHIFTS + 'test_phaseshift_log_exists': (_AL2O3_CHOLE,),
+    _PHASESHIFTS + 'test_phaseshifts_firstline_len': (_AL2O3_CHOLE,),
+    _PHASESHIFTS + 'test_phaseshifts_firstline_not_empty': (_AL2O3_CHOLE,),
+    _PHASESHIFTS + 'test_phaseshifts_not_empty': (_AL2O3_CHOLE,),
+    _PHASESHIFTS + 'test_write_phaseshifts': (_AL2O3_CHOLE,),
+    _PSGEN + 'test_phaseshift_log_exists': (_AL2O3_CHOLE,),
+    _PSGEN + 'test_phaseshifts_firstline_len': (_AL2O3_CHOLE,),
+    _PSGEN + 'test_phaseshifts_firstline_not_empty': (_AL2O3_CHOLE,),
+    _PSGEN + 'test_phaseshifts_not_empty': (_AL2O3_CHOLE,),
     }
