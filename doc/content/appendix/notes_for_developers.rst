@@ -66,6 +66,34 @@ than being skipped) when :term:`TensErLEED` or one of the versions they need
 is missing. Optional dependencies that are not installed make some tests skip.
 To turn those skips into failures, add the option ``--require-all``.
 
+A few TensErLEED tests are in a fourth tier, the *release* tier (marker
+``release``). They are deselected by default, also under ``-m tensorleed``,
+and only run with the option ``--release``:
+
+.. code-block:: bash
+
+    python -m pytest tests -m tensorleed --release  # TensErLEED + release
+
+Tests go in the release tier if they take very long and add little over the
+other TensErLEED tests (currently, the calculation of the phase shifts of the
+:math:`\mathrm{Al_2O_3}/\mathrm{NiAl}(111)` slab with a core hole). The cases
+are listed in :file:`tests/tiers.py` (``RELEASE_CASES``) in the same format as
+``SLOW_CASES``, and are checked for stale entries in the same way. The option
+combines with ``-n``, ``--quick`` and ``-m``: ``--release`` only removes the
+deselection of release tests, so ``-m tensorleed`` without it remains the
+command for the TensErLEED tier.
+
+The TensErLEED tier also contains a full chain for :term:`TensErLEED` v1.6.1
+(:file:`tests/calc/sections/test_chain_v161.py`). A single fixture runs
+initialization, reference calculation, delta amplitudes, and search for
+Ag(100) in one go (``RUN = 0 1 2 3``), without any stored tensors or delta
+files, so that the code paths for versions older than 1.7.0 are exercised
+in all sections:
+
+.. code-block:: bash
+
+    python -m pytest tests/calc/sections/test_chain_v161.py -m tensorleed --no-cov
+
 Coverage (including branches) is collected by default, via the
 :program:`pytest-cov` plugin, which is among the test requirements. An HTML
 report is written to :file:`htmlcov/`; add ``--cov-report=term`` to also get
