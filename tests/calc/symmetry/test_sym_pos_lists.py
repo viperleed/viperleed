@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from pytest_cases import fixture
 from scipy import spatial
 
 from viperleed.calc import symmetry
@@ -49,15 +50,8 @@ def _candidates(points):
     return [np.zeros(2), *points, *midpoints]
 
 
-@pytest.fixture(name='neighbours_reversed', params=('KDTree', 'cKDTree'))
-def fixture_neighbours_reversed(request, monkeypatch):
-    """Make the scipy trees return neighbours in descending order.
-
-    scipy does not guarantee that the first index returned for a
-    point is the point itself. Both tree classes are replaced, so
-    that the test does not depend on the one used in symmetry.
-    """
-    original = getattr(spatial, request.param)
+def _reversed_tree(original):
+    """Return a subclass of original that finds neighbours backwards."""
 
     class _ReversedTree(original):  # pylint: disable=too-few-public-methods
         """A tree returning the neighbours in reverse order."""
@@ -67,11 +61,26 @@ def fixture_neighbours_reversed(request, monkeypatch):
             found = super().query_ball_point(*args, **kwargs)
             return sorted(found, reverse=True)
 
-    monkeypatch.setattr(spatial, 'KDTree', _ReversedTree)
-    monkeypatch.setattr(spatial, 'cKDTree', _ReversedTree)
+    return _ReversedTree
 
 
-@pytest.fixture(name='slab_and_rpars')
+@fixture(name='neighbours_reversed')
+def fixture_neighbours_reversed(mocker):
+    """Make the scipy trees return neighbours in descending order.
+
+    scipy does not guarantee that the first index returned for a
+    point is the point itself. Both tree classes are replaced, so
+    that the test does not depend on the one used in symmetry.
+    """
+    for name in ('KDTree', 'cKDTree'):
+        mocker.patch.object(
+            spatial,
+            name,
+            _reversed_tree(getattr(spatial, name)),
+            )
+
+
+@fixture(name='slab_and_rpars')
 def fixture_slab_and_rpars():
     """Return minimal slab and parameters for a square cell."""
     slab = SimpleNamespace(ab_cell=np.eye(2), celltype='square')
