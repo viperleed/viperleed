@@ -153,6 +153,8 @@ classifiers = [
     [tool.pytest.ini_options]
     addopts = [
         '--import-mode=importlib',
+        '--strict-markers',
+        '-m', 'not tensorleed',
         '--cov=viperleed',
         '--cov=tests',
         '--cov-report=html',
@@ -161,11 +163,16 @@ classifiers = [
     pythonpath = ['.', '..']
     # Turn all warnings into errors. See also "How to capture warnings"
     filterwarnings = ['error',]
+    markers = [
+        'slow: takes about half a second or more (quick tier: --quick)',
+        'tensorleed: needs a TensErLEED tree (VIPERLEED_TENSORLEED)',
+        ]
     required_plugins = [
         'pytest-cases>=3.8.5',  # Fixes marks on fixtures (pytest 8)
         'pytest-cov>=2.5',      # Added --cov-branch
         'pytest-mock>=3',
         'pytest-timeout',
+        'pytest-xdist',
         ]
     xfail_strict = true
     # An empty parameter set (e.g., an emptied list of POSCARs) is an

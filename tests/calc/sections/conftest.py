@@ -82,8 +82,11 @@ def fixture_factory_make_section_tempdir(tmp_path_factory):
     return _make
 
 
-def skip_if_tl_version_missing(source, version):
-    """Skip the current test/fixture if `source` has no TensErLEED `version`.
+def fail_if_tl_version_missing(source, version):
+    """Fail the current test/fixture if `source` has no TensErLEED `version`.
+
+    The tests that call this are in the 'tensorleed' tier, where a
+    missing TensErLEED version is an error rather than a reason to skip.
 
     Parameters
     ----------
@@ -94,16 +97,17 @@ def skip_if_tl_version_missing(source, version):
 
     Raises
     ------
+    Failed
+        If `version` is not among the TensErLEED sources in `source`.
     Exception
         Any error from looking up the TensErLEED sources in `source`
-        (e.g., an entry without a version). A broken tree should make
-        the test fail rather than skip as if `version` were missing.
+        (e.g., an entry without a version).
     """
     version = Version(str(version))
     available = [s.version
                  for s in tenserleed.get_tenserleed_sources(source)]
     if version not in available:
-        pytest.skip(f'TensErLEED v{version} is not available in {source}. '
+        pytest.fail(f'TensErLEED v{version} is not available in {source}. '
                     'Set VIPERLEED_TENSORLEED to a folder that contains it.')
 
 
@@ -164,7 +168,7 @@ class BaseCalcFilesSetup:
 
     def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
-        skip_if_tl_version_missing(source, preset_params['TL_VERSION'])
+        fail_if_tl_version_missing(source, preset_params['TL_VERSION'])
         with execute_in_dir(self.work_path):
             self.failed, self.records = run_calc(
                 source=source,

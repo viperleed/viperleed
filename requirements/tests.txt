@@ -11,3 +11,4 @@ pytest-mock>=3
 # pytest-subtests: built into pytest since 9.0
 pytest-subtests
 pytest-timeout
+pytest-xdist

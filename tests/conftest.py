@@ -1,18 +1,22 @@
 """Test configuration for viperleed.tests.
 
-Defines fixtures and fixture factories used in multiple tests.
+Defines fixtures and fixture factories used in multiple tests, and
+loads the plugins with the options and hooks of the test suite:
+check_slow.py (--check-slow), quick_option.py (--quick), rng_seed.py
+(--rng-seed) and slow_marks.py (slow and tensorleed marks, stale
+SLOW_CASES guard).
 
 Random-input tests (those requesting `draws`) check N_DRAWS draws
 seeded from the test id, so that outcomes are reproducible and known
 failures can be listed (xfail). The opt-in option --rng-seed=<int> or
 --rng-seed=random derives the seeds from a different base, to explore
 other draws locally; it is not meant for CI. With the option, the
-xfail marks of random-input tests are removed, and `draws.fresh` is
-True: tests that expect a known failure (e.g., via may_fail or inline
-pytest.xfail) must then just assert, so that the real outcome is
-reported. With `random`, the base is picked once by the controller
-(and passed on to pytest-xdist workers) and is printed in the report
-header and in the terminal summary, to reproduce a run.
+xfail marks of random-input tests are removed (rng_seed.py), and
+`draws.fresh` is True: tests that expect a known failure (e.g., via
+may_fail or inline pytest.xfail) must then just assert, so that the
+real outcome is reported. With `random`, the base is picked once by
+the controller (and passed on to pytest-xdist workers) and is printed
+in the report header and in the terminal summary, to reproduce a run.
 
 Fixtures
 --------
@@ -42,18 +46,22 @@ __license__ = 'GPLv3+'
 
 import collections
 from importlib import import_module
-import random
 import re
 import zlib
 
 import numpy as np
-import pytest
 from pytest_cases import fixture
 
 from . import optional_dependencies
 from .helpers import TEST_DATA
 
-pytest_plugins = ('pytester',)  # For testing the options themselves
+pytest_plugins = (
+    'pytester',  # For testing the options themselves
+    'tests.check_slow',
+    'tests.quick_option',
+    'tests.rng_seed',
+    'tests.slow_marks',
+    )
 
 # Fixture of optional_dependencies that needs no wrapping
 fixture_missing_dependency = optional_dependencies.fixture_missing_dependency
@@ -64,8 +72,6 @@ N_DRAWS = 5
 
 Draw = collections.namedtuple('Draw', ('index', 'seed', 'rng'))
 
-RNG_SEED_OPTION = '--rng-seed'
-WORKER_SEED_KEY = 'rng_seed'  # In pytest-xdist's workerinput
 
 class Draws(tuple):
     """A tuple of Draw objects, knowing whether the base seed is fresh."""
@@ -76,77 +82,6 @@ class Draws(tuple):
 def pytest_addoption(parser):
     """Add the options of the test suite."""
     optional_dependencies.pytest_addoption(parser)
-    parser.addoption(
-        RNG_SEED_OPTION,
-        dest='rng_seed',
-        metavar='INT|random',
-        default=None,
-        help=('Derive the seeds of random-input tests from this base '
-              'integer, or from a random one if "random" (printed at '
-              'the end of the run, to reproduce it). Known failures '
-              '(xfail) of random-input tests then report their real '
-              'outcome. For local exploration, not for CI.'),
-        )
-
-
-def pytest_configure(config):
-    """Resolve --rng-seed to an integer, once, in the controller.
-
-    A pytest-xdist worker does not resolve it: it takes the base that
-    the controller resolved and handed over (pytest_configure_node).
-    """
-    workerinput = getattr(config, 'workerinput', None)
-    if workerinput is not None:
-        config.option.rng_seed = workerinput[WORKER_SEED_KEY]
-        return
-    value = config.option.rng_seed
-    if value is None:
-        return  # No option
-    if value == 'random':
-        value = random.SystemRandom().randrange(2**32)
-    try:
-        config.option.rng_seed = int(value)
-    except ValueError:
-        raise pytest.UsageError(
-            f'{RNG_SEED_OPTION} must be an integer or "random", '
-            f'not {value!r}'
-            ) from None
-
-
-@pytest.hookimpl(optionalhook=True)  # Only exists with pytest-xdist
-def pytest_configure_node(node):
-    """Hand the resolved base seed over to a pytest-xdist worker."""
-    node.workerinput[WORKER_SEED_KEY] = node.config.option.rng_seed
-
-
-def _rng_seed_message(config):
-    """Return a line with the base seed, or None if not used."""
-    base = config.option.rng_seed
-    if base is None:
-        return None
-    return f'rng-seed base: {base} (reproduce with --rng-seed={base})'
-
-
-def pytest_report_header(config):
-    """Report the base seed, if used."""
-    return _rng_seed_message(config)
-
-
-def pytest_terminal_summary(terminalreporter, config):
-    """Report the base seed, if used, also with -q."""
-    message = _rng_seed_message(config)
-    if message:
-        terminalreporter.write_line(message)
-
-
-def pytest_collection_modifyitems(items):
-    """Do not expect failures of random-input tests with fresh seeds."""
-    for item in items:
-        if (item.config.option.rng_seed is not None
-                and 'draws' in item.fixturenames):
-            item.own_markers[:] = [
-                mark for mark in item.own_markers if mark.name != 'xfail'
-                ]
 
 
 @fixture
