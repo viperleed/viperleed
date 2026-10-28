@@ -110,7 +110,7 @@ the Wehnelt voltage such that no electrons leave the electron gun. Usually, a
 single snapshot is sufficient for dark-frame subtraction. If your LEED
 electronics output for the beam current :math:`I_0` has an energy-dependent
 offset, acquiring a movie of dark frames also provides the opportunity to
-measure this offset as a function of energy (named :math:`I_00`).
+measure this offset as a function of energy (named :math:`I_{00}`).
 
 You can perform two or three |LEED-IV| measurements at slightly different
 distances from the electron gun to average out the influence of the grid on the
