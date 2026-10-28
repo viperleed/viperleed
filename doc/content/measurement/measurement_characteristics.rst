@@ -63,12 +63,12 @@ When the preparation has been completed, the measurement loop is engaged. At
 the beginning of each iteration of this loop, the next beam energy of the
 measurement is set. This can be a no-op if the required energy has already been
 set, as is the case right after the end of the preparation. After setting an
-energy, the measurement will wait for the respective settle times to elapse
+energy, the measurement will wait for the respective settling times to elapse
 before acquiring data. Setting the energy can be as simple as doing a single
 abrupt energy step, or as complicated as setting multiple intermediate energies
 with different times to wait afterwards.
 
-After the target energy has been reached and the settle time has elapsed,
+After the target energy has been reached and the settling time has elapsed,
 controllers and cameras begin acquiring data. Depending on the measurement type
 this can be in triggered mode or continuous mode. In triggered mode the devices
 will acquire a set number of measurements and return data once per request. In
@@ -128,10 +128,10 @@ initiated.
 Step profile
 ============
 
-When transitioning from one energy to another, the measurement waits for settle
-times to elapse before triggering data acquisition in the controlled devices.
-Settle times represent an unavoidable slowdown due to transients following a
-change in beam energy.
+When transitioning from one energy to another, the measurement waits for
+settling times to elapse before triggering data acquisition in the controlled
+devices. Settling times represent an unavoidable slowdown due to transients
+following a change in beam energy.
 
 By controlling how the beam energy is stepped, the overall time until the beam
 energy becomes stable can be reduced for some electronics. To support this,
@@ -139,9 +139,9 @@ ViPErLEED provides several step profiles:
 
 * **Abrupt** — A direct jump from one energy to another. This is the default.
 * **Linear** — A transition using equidistant intermediate steps. Useful when
-  lower intermediate energies with very short intermediate settle times reduce
-  the total settle time.
-* **Custom** — Allows specifying arbitrary intermediate energies and settle
+  lower intermediate energies with very short intermediate settling times
+  reduce the total settling time.
+* **Custom** — Allows specifying arbitrary intermediate energies and settling
   times. This can, for example, be used to deliberately overshoot in order to
   create destructive interference between transients.
 
@@ -153,9 +153,9 @@ ViPErLEED provides several step profiles:
     The step profile can take a more complex form than a simple abrupt jump.
 
 In total, as seen in :numref:`fig_profile`, the time until the next measurement
-is the duration of the step profile plus the settle time. For cameras, the
-settle time is always the HV settle time. For controllers, the applicable
-settle time depends on the measurement type.
+is the duration of the step profile plus the settling time. For cameras, the
+settling time is always the HV settling time. For controllers, the applicable
+settling time depends on the measurement type.
 
 Device handling
 ===============
