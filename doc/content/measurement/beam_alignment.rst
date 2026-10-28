@@ -53,7 +53,7 @@ measuring the electron collector current, move the sample plate in the plane
 perpendicular to the beam direction and look for the current maximum. Once you
 have narrowed down the position of the maximum, adjust the tilt and search for
 the angle that produces the largest electron collector current. After
-determining the angle, repeat the process and determine position and angle
+determining the angle, repeat the process and determine the position and angle
 again. If these values no longer change, decrease the beam energy to a low
 value such as 30 eV.
 
