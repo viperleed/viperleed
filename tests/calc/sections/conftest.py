@@ -28,6 +28,7 @@ __license__ = 'GPLv3+'
 from contextlib import contextmanager
 from pathlib import Path
 import shutil
+import subprocess
 from zipfile import ZipFile
 
 import pytest
@@ -67,6 +68,8 @@ REFCALC_SURFACES = ('Ag(100)',)
 # on a fast, idle machine. Then, no evaluation happens, and the
 # Search-progress/Search-report PDFs are not written. See also #582.
 SEARCH_EVAL_TIME = 1
+CHAIN_TL_VERSION = Version('1.6.1')  # Older than 1.7.0
+CHAIN_DISPLACEMENTS = 'DISPLACEMENTS_z'
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z': 'Deltas_z.zip',
     'DISPLACEMENTS_vib': 'Deltas_vib.zip',
@@ -388,3 +391,68 @@ def search_files_ag100(displacements, deltas,
             )
     return files
 
+
+@fixture(scope='session')
+def tensorleed_chain_path(tensorleed_path, tmp_path_factory):
+    """Return a TensErLEED tree whose CHAIN_TL_VERSION can be linked.
+
+    The precompiled randomizer objects (MPIrandom_.o, random_.o) in
+    the lib folder of TensErLEED versions up to 1.7.3 are not
+    position-independent. Linking them fails with the default (PIE)
+    options of recent toolchains. The returned tree is a copy of
+    `tensorleed_path` in which they are recompiled for CHAIN_TL_VERSION.
+    Everything else is a link to the original tree.
+
+    Returns
+    -------
+    tree : Path
+        The path to the new TensErLEED tree.
+    """
+    fail_if_tl_version_missing(tensorleed_path, CHAIN_TL_VERSION)
+    chain_source, = (
+        s.path for s in tenserleed.get_tenserleed_sources(tensorleed_path)
+        if s.version == CHAIN_TL_VERSION
+        )
+    tree = tmp_path_factory.mktemp('tensorleed_chain')
+    for entry in Path(tensorleed_path).iterdir():
+        if entry.resolve() == chain_source:
+            shutil.copytree(entry, tree / entry.name)
+        else:
+            (tree / entry.name).symlink_to(entry)
+    lib = tree / chain_source.name / 'lib'
+    source_c = lib / 'random_.c'
+    for compiler, obj in (('mpicc', 'MPIrandom_.o'), ('gcc', 'random_.o')):
+        subprocess.run(
+            [compiler, '-fPIC', '-c', str(source_c), '-o', str(lib / obj)],
+            check=True,
+            capture_output=True,
+            )
+    return tree
+
+
+@fixture(scope='session')
+def chain_files_ag100_v161(make_section_tempdir, tensorleed_chain_path):
+    """Run INITIALIZATION to SEARCH for Ag(100) with TL 1.6.1.
+
+    Nothing stored is used apart from the inputs of the INITIALIZATION
+    and the displacements: the tensors for the delta-amplitude
+    calculation come from the reference calculation, and the delta
+    amplitudes for the search from the DELTAS section.
+    """
+    surface = 'Ag(100)'
+    files = BaseCalcFilesSetup(
+        surface_dir=surface,
+        tmp_test_path=make_section_tempdir(surface, 'chain', 'v161'),
+        required_files=['PHASESHIFTS',],
+        copy_dirs=['initialization']
+        )
+    disp_source = (files.inputs_path / 'displacements'
+                   / CHAIN_DISPLACEMENTS)
+    files.copy_displacements(disp_source)
+    with _short_search_eval_time():
+        files.run_calc_from_setup(
+            source=tensorleed_chain_path,
+            preset_params={'RUN': [0, 1, 2, 3],
+                           'TL_VERSION': CHAIN_TL_VERSION,}
+            )
+    return files
