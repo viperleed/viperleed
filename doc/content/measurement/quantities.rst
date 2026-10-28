@@ -9,7 +9,11 @@ Quantities
 Currents
 ========
 
-**Beam current** |I0b|: The current emitted by the electron gun.
+**Beam current** |I0b|: The current emitted by the electron gun. Note that this
+differs from the value displayed by LEED electronics as "emission current":
+Emission current refers to the electrons emitted from the filament (and mostly
+collected at the anode inside the electron source). Thus, the emission current
+(mA) is much higher than the beam current :math:`I_0` (µA or nA).
 
 **Sample current**: The beam current arriving at the sample. In order to
 measure the beam current as the sample current, the sample must be positively
@@ -19,10 +23,11 @@ Energies
 ========
 
 **Beam energy**: The kinetic energy of the electron beam directed at the
-sample, determined by the filament voltage. For |LEED-IV| measurements, it
-is important that the nominal (expected) energy matches the measured (real)
-energy as closely as possible. The energy calibration measurement should be
-performed if possible to improve the accuracy of the beam energy.
+sample, determined by the filament voltage, except for a constant offset due to
+the work functions, which is accounted for in |LEED-IV| calculations. For
+|LEED-IV| measurements, the beam energy must be accurate within a few tenths of
+a percent. Since most LEED electronics are not sufficiently accurate, an
+energy calibration is required.
 
 **Start energy**: The beam energy at which the measurement begins. For
 |LEED-IV| measurements, select the first energy at which diffraction spots
@@ -31,7 +36,11 @@ begin to appear.
 **Delta energy / ΔE**: The energy difference between two consecutively acquired
 energies. In other words, the step height between energy points. Smaller delta
 energies increase the information density and are therefore recommended for
-|LEED-IV| measurements (e.g., 0.5 eV).
+|LEED-IV| measurements (e.g., 0.5 eV). For |LEED-IV| studies, a step of 0.5 eV
+is recommended. If steps are larger, i.e., to reduce the measurement time for
+very sensitive samples, the experimental |IV| curves should be interpolated to
+0.5 eV steps or finer for comparison with theory
+:cite:p:`imre2026improvedrfactor`.
 
 **End energy**: The final beam energy of the measurement, after which the
 acquisition either concludes or restarts. This energy should be chosen with
