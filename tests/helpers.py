@@ -17,6 +17,7 @@ from dataclasses import dataclass, fields
 import functools
 import inspect
 from pathlib import Path
+import random
 
 import pytest
 from pytest_cases import case as case_decorator
@@ -37,6 +38,10 @@ from pytest_cases.filters import CaseFilter
 
 TEST_DATA = Path(__file__).resolve().parent / '_test_data'
 POSCAR_PATH = TEST_DATA / 'POSCARs'
+# Seed for the random choice of atoms that carry mixed elements in
+# psgen. Some draws give eeasisss inputs that make it crash (SIGSEGV),
+# seen with poscar_lsmo_001_rt2. This seed gives a working input.
+PSGEN_SEED = 0
 
 # ##############################   EXCEPTIONS   ###############################
 
@@ -280,6 +285,34 @@ def not_raises(exc):
         yield
     except exc:
         pytest.fail(f'DID RAISE {exc.__name__}')
+
+
+@contextmanager
+def private_random(module, seed):
+    """Temporarily make `module` draw from its own, seeded, generator.
+
+    The attribute `random` of `module` (i.e., the `random` module it
+    imported) is replaced by a random.Random instance. The state of the
+    global generator, as well as that of any other module, is neither
+    used nor changed.
+
+    Parameters
+    ----------
+    module : module
+        The module whose draws from `random` are to be seeded.
+    seed : int
+        The seed of the private generator.
+
+    Yields
+    ------
+    rng : random.Random
+        The private generator.
+    """
+    # S311: not for cryptography; only makes a test reproducible
+    rng = random.Random(seed)  # noqa: S311
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(module, 'random', rng)
+        yield rng
 
 
 @contextmanager

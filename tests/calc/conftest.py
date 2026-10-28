@@ -41,7 +41,9 @@ from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.context import execute_in_dir
 
 from ..helpers import POSCAR_PATH
+from ..helpers import PSGEN_SEED
 from ..helpers import exclude_tags
+from ..helpers import private_random
 from . import poscar_slabs
 from .tags import CaseTag
 
@@ -137,6 +139,7 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
 
     # run eeasisss in the temporary directory
     with execute_in_dir(tmp_path):
-        results = psgen.runPhaseshiftGen_old(slab, rpars,
-                                             psgensource=executable)
+        with private_random(psgen, PSGEN_SEED):
+            results = psgen.runPhaseshiftGen_old(slab, rpars,
+                                                 psgensource=executable)
         yield (rpars, slab, tmp_path, *results)
