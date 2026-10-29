@@ -27,6 +27,7 @@ __license__ = 'GPLv3+'
 
 from contextlib import contextmanager
 from pathlib import Path
+import re
 import shutil
 import subprocess
 from zipfile import ZipFile
@@ -37,6 +38,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.defaults import DEFAULTS
 from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters
 from viperleed.calc.files import tenserleed
 from viperleed.calc.lib import leedbase
@@ -205,6 +207,28 @@ class BaseCalcFilesSetup:
         return [f for f in self.work_path.rglob('*_OUT*')
                 # pylint: disable-next=magic-value-comparison
                 if 'R=' not in f.name]
+
+    def final_r_factor(self, section):
+        """Return the overall R factor of `section` in the calc log.
+
+        Parameters
+        ----------
+        section : str
+            Name of the section, as in 'Final R (<section>)'.
+
+        Returns
+        -------
+        r_factor : float or None
+            The R factor that was logged at the end of the run, or
+            None if there is none (e.g., no log file, section did not
+            run).
+        """
+        pattern = re.compile(rf'Final R \({section}\): (\d+\.\d+)')
+        for log in sorted(self.work_path.glob(f'{LOG_PREFIX}-*.log')):
+            match = pattern.search(log.read_text())
+            if match:
+                return float(match.group(1))
+        return None
 
     def copy_displacements(self, displacements_path):
         """Copy displacements_path to work as a DISPLACEMENTS file."""

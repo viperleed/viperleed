@@ -14,7 +14,15 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-28'
 __license__ = 'GPLv3+'
 
+import pytest
 from pytest_cases import parametrize
+
+# R factors of the chain, as in the calc log (4 decimals). They were
+# identical in 17 runs, serial and with pytest-xdist. Mistakes in the
+# inputs written for TensErLEED v1.6.1 that the other tests miss moved
+# them by 0.0016 to 0.85.
+R_FACTORS = {'refcalc': 0.1811, 'superpos': 0.1810}
+R_FACTOR_TOLERANCE = 5e-4
 
 
 class TestChainTL161:
@@ -45,3 +53,13 @@ class TestChainTL161:
     def test_does_not_write_out_suffixed(self, chain_files_ag100_v161):
         """Check that none of the files generated has an _OUT suffix."""
         assert not chain_files_ag100_v161.out_suffixed_files()
+
+    @parametrize(section=R_FACTORS)
+    def test_final_r_factor(self, chain_files_ag100_v161, section):
+        """Check the R factor of a section against the stored value."""
+        r_factor = chain_files_ag100_v161.final_r_factor(section)
+        assert r_factor is not None
+        assert r_factor == pytest.approx(
+            R_FACTORS[section],
+            abs=R_FACTOR_TOLERANCE,
+            )
