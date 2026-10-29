@@ -54,12 +54,13 @@ and ``--quick`` options:
     python -m pytest tests --quick        # quick tier
     python -m pytest tests                # default tier
     python -m pytest tests -m tensorleed  # TensErLEED tier
-    python -m pytest tests -m ""          # everything
+    python -m pytest tests -m "" --release  # everything
 
 The quick tier leaves out tests that take about half a second or more (marked
 ``slow``). The ``--quick`` option adds ``and not slow`` to the ``-m``
-expression in effect: it is equivalent to ``-m "not slow and not tensorleed"``,
-and ``-m tensorleed --quick`` runs the TensErLEED tests that are not slow.
+expression in effect: it is equivalent to
+``-m "not slow and not tensorleed and not release"``, and
+``-m tensorleed --quick`` runs the TensErLEED tests that are not slow.
 
 The TensErLEED tier requires ``VIPERLEED_TENSORLEED``: its tests fail (rather
 than being skipped) when :term:`TensErLEED` or one of the versions they need
@@ -77,8 +78,12 @@ and only run with the option ``--release``:
 Tests go in the release tier if they take very long and add little over the
 other TensErLEED tests (currently, the calculation of the phase shifts of the
 :math:`\mathrm{Al_2O_3}/\mathrm{NiAl}(111)` slab with a core hole). The cases
-are listed in :file:`tests/tiers.py` (``RELEASE_CASES``) in the same format as
-``SLOW_CASES``, and are checked for stale entries in the same way. The option
+are listed in :file:`tests/tiers.py` (``RELEASE_CASES``) by fixture
+(``run_phaseshift``) and case id, so that every test that uses the fixture
+for that slab is a release test. Entries that match no case of a collected
+test are reported as stale, like those of ``SLOW_CASES``. Naming a release
+case by node id or with ``-m release`` also needs ``--release``; otherwise
+nothing runs (a serial run says why). The option
 combines with ``-n``, ``--quick`` and ``-m``: ``--release`` only removes the
 deselection of release tests, so ``-m tensorleed`` without it remains the
 command for the TensErLEED tier.
