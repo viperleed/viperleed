@@ -7,6 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-27'
 __license__ = 'GPLv3+'
 
+from . import markexpr
+
 QUICK_OPTION = '--quick'
 
 
@@ -29,7 +31,4 @@ def pytest_configure(config):
     """
     if not config.option.quick:
         return
-    expression = config.option.markexpr
-    config.option.markexpr = (
-        f'({expression}) and not slow' if expression else 'not slow'
-        )
+    markexpr.exclude_marker(config, 'slow')

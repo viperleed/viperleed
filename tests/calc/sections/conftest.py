@@ -25,15 +25,20 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-26'
 __license__ = 'GPLv3+'
 
+from contextlib import contextmanager
 from pathlib import Path
+import re
 import shutil
+import subprocess
 from zipfile import ZipFile
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.rparams.defaults import DEFAULTS
 from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters
 from viperleed.calc.files import tenserleed
 from viperleed.calc.lib import leedbase
@@ -60,6 +65,32 @@ DELTA_DOMAINS = (  # Also in the domain subfolder of TEST_DATA
     'telluride_stacking',
     )
 REFCALC_SURFACES = ('Ag(100)',)
+# Seconds between reads of SD.TL during a SEARCH. The default (60 s) is
+# longer than what the search of Ag(100) needs to reach SEARCH_MAX_GEN
+# on a fast, idle machine. Then, no evaluation happens, and the
+# Search-progress/Search-report PDFs are not written. See also #582.
+SEARCH_EVAL_TIME = 1
+# TensErLEED versions for the full chain: one older than 1.7.0, which
+# takes other code paths in the modules that write TensErLEED inputs,
+# and the most recent one. Values are the final R factors of the chain
+# (calc log, 4 decimals). They were identical in 17 runs for v1.6.1
+# and in 7 runs for v2.1.0, serial and with pytest-xdist. Mistakes in
+# the inputs written for TensErLEED that the other tests miss moved
+# them by 0.0016 to 0.85 (v1.6.1) and by 0.0016 to 0.1712 (v2.1.0).
+# The values for the newest version must be re-recorded whenever
+# tenserleed.CURRENT_TL_VERSION changes.
+# Version is not hashable: the keys are str(version).
+_OLD_CHAIN_TL_VERSION = Version('1.6.1')
+CHAIN_R_FACTORS = {
+    str(_OLD_CHAIN_TL_VERSION): {'refcalc': 0.1811, 'superpos': 0.1810},
+    str(tenserleed.CURRENT_TL_VERSION): {'refcalc': 0.1712,
+                                         'superpos': 0.1712},
+    }
+CHAIN_TL_VERSIONS = tuple(Version(v) for v in CHAIN_R_FACTORS)
+# Versions whose precompiled randomizer objects cannot be linked
+# (see fixture tensorleed_chain_path)
+_NON_PIC_TL_VERSIONS = (_OLD_CHAIN_TL_VERSION,)
+CHAIN_DISPLACEMENTS = 'DISPLACEMENTS_z'
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z': 'Deltas_z.zip',
     'DISPLACEMENTS_vib': 'Deltas_vib.zip',
@@ -180,6 +211,43 @@ class BaseCalcFilesSetup:
     def expected_file_exists(self, expected_file):
         """Return whether the work directory contains `expected_file`."""
         return (self.work_path / expected_file).exists()
+
+    def section_ran(self, section):
+        """Return whether `section` ran, and nothing failed."""
+        return (
+            not self.failed
+            and self.records is not None
+            and bool(self.records.get_last_state_for_section(section))
+            )
+
+    def out_suffixed_files(self):
+        """Return the files in work with an old-style _OUT suffix."""
+        # Skip R_OUT files
+        return [f for f in self.work_path.rglob('*_OUT*')
+                # pylint: disable-next=magic-value-comparison
+                if 'R=' not in f.name]
+
+    def final_r_factor(self, section):
+        """Return the overall R factor of `section` in the calc log.
+
+        Parameters
+        ----------
+        section : str
+            Name of the section, as in 'Final R (<section>)'.
+
+        Returns
+        -------
+        r_factor : float or None
+            The R factor that was logged at the end of the run, or
+            None if there is none (e.g., no log file, section did not
+            run).
+        """
+        pattern = re.compile(rf'Final R \({section}\): (\d+\.\d+)')
+        for log in sorted(self.work_path.glob(f'{LOG_PREFIX}-*.log')):
+            match = pattern.search(log.read_text())
+            if match:
+                return float(match.group(1))
+        return None
 
     def copy_displacements(self, displacements_path):
         """Copy displacements_path to work as a DISPLACEMENTS file."""
@@ -304,6 +372,15 @@ def refcalc_files(surface, make_section_tempdir, tensorleed_path):
     return files
 
 
+@contextmanager
+def _short_search_eval_time():
+    """Temporarily make SEARCH read SD.TL every SEARCH_EVAL_TIME s."""
+    with pytest.MonkeyPatch.context() as patcher:
+        # SEARCH_EVAL_TIME is not a PARAMETERS keyword
+        patcher.setitem(DEFAULTS, 'SEARCH_EVAL_TIME', SEARCH_EVAL_TIME)
+        yield
+
+
 @fixture(scope='session')
 @parametrize(displacements=AG_100_DISPLACEMENTS, ids=AG_100_DISPLACEMENTS)
 def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
@@ -364,9 +441,111 @@ def search_files_ag100(displacements, deltas,
     deltas_source = files.inputs_path / 'search' / 'Deltas' / deltas
     files.copy_displacements(disp_source)
     files.copy_deltas(deltas_source)
-    files.run_calc_from_setup(
-        source=tensorleed_path,
-        preset_params={'RUN': [0, 3],  # init and search
-                       'TL_VERSION': _NON_INIT_TL_VERSION,}
+    with _short_search_eval_time():
+        files.run_calc_from_setup(
+            source=tensorleed_path,
+            preset_params={'RUN': [0, 3],  # init and search
+                           'TL_VERSION': _NON_INIT_TL_VERSION}
+            )
+    return files
+
+
+@fixture(scope='session', name='chain_tl_version',
+         params=CHAIN_TL_VERSIONS, ids=[f'v{v}' for v in CHAIN_TL_VERSIONS])
+def fixture_chain_tl_version(request):
+    """Return the TensErLEED version that a full chain runs with."""
+    return request.param
+
+
+@fixture(scope='session', name='tensorleed_chain_path')
+def fixture_tensorleed_chain_path(tensorleed_path, tmp_path_factory,
+                                  chain_tl_version):
+    """Return a TensErLEED tree whose `chain_tl_version` can be linked.
+
+    The precompiled randomizer objects (MPIrandom_.o, random_.o) in
+    the lib folder of TensErLEED v1.6.1 are not position-independent.
+    Linking them fails with the default (PIE) options of recent
+    toolchains. For that version, the returned tree is a copy of
+    `tensorleed_path` in which they are recompiled. Everything else
+    is a link to the original tree. For other versions,
+    `tensorleed_path` is returned.
+
+    Returns
+    -------
+    tree : Path
+        The path to the TensErLEED tree to use.
+    """
+    fail_if_tl_version_missing(tensorleed_path, chain_tl_version)
+    if chain_tl_version not in _NON_PIC_TL_VERSIONS:
+        return tensorleed_path
+    chain_source, = (
+        s.path for s in tenserleed.get_tenserleed_sources(tensorleed_path)
+        if s.version == chain_tl_version
         )
+    tree = tmp_path_factory.mktemp('tensorleed_chain')
+    chain_source_name = None
+    for entry in Path(tensorleed_path).iterdir():
+        if entry.resolve() == chain_source:
+            chain_source_name = entry.name
+            shutil.copytree(entry, tree / entry.name)
+        else:
+            (tree / entry.name).symlink_to(entry)
+    lib = tree / chain_source_name / 'lib'
+    source_c = lib / 'random_.c'
+    compilers = [('gcc', 'random_.o')]
+    if shutil.which('mpicc'):  # Otherwise, calc uses a serial search
+        compilers.append(('mpicc', 'MPIrandom_.o'))
+    for compiler, obj in compilers:
+        command = [compiler, '-fPIC', '-c', str(source_c),
+                   '-o', str(lib / obj)]
+        try:
+            # S603: the command is built from fixed names and paths
+            subprocess.run(  # noqa: S603
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+                )
+        except FileNotFoundError:
+            pytest.fail(f'Cannot rebuild {obj} for TensErLEED '
+                        f'v{chain_tl_version}: {compiler} not found.')
+        except subprocess.CalledProcessError as exc:
+            command_line = ' '.join(command)
+            pytest.fail(f'Failed to rebuild {obj} for TensErLEED '
+                        f'v{chain_tl_version}: {command_line}\n'
+                        f'{exc.stderr}')
+    return tree
+
+
+@fixture(scope='session', name='chain_files_ag100')
+def fixture_chain_files_ag100(make_section_tempdir,
+                              tensorleed_chain_path,
+                              chain_tl_version):
+    """Run INITIALIZATION to SEARCH for Ag(100) for each chain version.
+
+    Nothing stored is used apart from the inputs of the INITIALIZATION
+    and the displacements: the tensors for the delta-amplitude
+    calculation come from the reference calculation, and the delta
+    amplitudes for the search from the DELTAS section.
+    """
+    surface = 'Ag(100)'
+    files = BaseCalcFilesSetup(
+        surface_dir=surface,
+        tmp_test_path=make_section_tempdir(
+            surface,
+            'chain',
+            f'v{chain_tl_version}',
+            ),
+        required_files=['PHASESHIFTS'],
+        copy_dirs=['initialization']
+        )
+    disp_source = (files.inputs_path / 'displacements'
+                   / CHAIN_DISPLACEMENTS)
+    files.copy_displacements(disp_source)
+    with _short_search_eval_time():
+        files.run_calc_from_setup(
+            source=tensorleed_chain_path,
+            preset_params={'RUN': [0, 1, 2, 3],
+                           'TL_VERSION': chain_tl_version}
+            )
     return files
