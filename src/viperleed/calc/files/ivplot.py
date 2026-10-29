@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-10-25'
 __license__ = 'GPLv3+'
 
@@ -343,4 +343,3 @@ def plot_iv(data, filename, labels=[], annotations=[],
             return
     else:
         return figs
-

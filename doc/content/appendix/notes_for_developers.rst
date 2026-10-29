@@ -16,11 +16,12 @@ Running tests
 
 ViPErLEED comes with a suite of tests and uses
 `pytest <https://docs.pytest.org/en/>`__ for testing.
-The :term:`TensErLEED` source code should be available on the testing machine
-(repository ``viperleed-tensorleed``) and the ``VIPERLEED_TENSORLEED``
-:term:`environment variable` should be set. See also :ref:`install_tensorleed`.
-
-Also make sure to have compiled the :ref:`eeasisss_compile` source code.
+Tests that run :term:`TensErLEED` (marked ``tensorleed``) are not part of
+a default run. To run them, the :term:`TensErLEED` source code (repository
+``viperleed-tensorleed``) should be available on the testing machine and the
+``VIPERLEED_TENSORLEED`` :term:`environment variable` should be set. See also
+:ref:`install_tensorleed`, which also describes where the compiled
+:ref:`eeasisss_compile` source code is expected.
 
 Tests are *not* distributed with the ``viperleed`` package on
 `pypi <https://pypi.org/project/viperleed/>`__. To run the tests, clone the
@@ -30,12 +31,12 @@ Tests are *not* distributed with the ``viperleed`` package on
 
     python -m pip install --upgrade -r requirements/tests.txt
 
-To execute tests, navigate to your local copy of the |repo|,
-then run
+To execute tests, run the following from the root of your local copy
+of the |repo|:
 
 .. code-block:: bash
 
-    python -m pytest .
+    python -m pytest tests
 
 .. important::
     Notice that this will execute the tests against the version of ``viperleed``
@@ -44,19 +45,64 @@ then run
     sure to first install ``viperleed`` in *editable* mode in your environment.
     See `editable_install`.
 
-If you also would like to produce coverage reports, install :program:`coverage`
-via
+The command above runs the *default* tier: all tests except those that need
+:term:`TensErLEED`. Tests are grouped in tiers via markers and the ``-m``
+and ``--quick`` options:
 
 .. code-block:: bash
 
-    python -m pip install coverage
+    python -m pytest tests --quick        # quick tier
+    python -m pytest tests                # default tier
+    python -m pytest tests -m tensorleed  # TensErLEED tier
+    python -m pytest tests -m ""          # everything
 
-then, in your local copy of the ``viperleed`` repository, run
+The quick tier leaves out tests that take about half a second or more (marked
+``slow``). The ``--quick`` option adds ``and not slow`` to the ``-m``
+expression in effect: it is equivalent to ``-m "not slow and not tensorleed"``,
+and ``-m tensorleed --quick`` runs the TensErLEED tests that are not slow.
+
+The TensErLEED tier requires ``VIPERLEED_TENSORLEED``: its tests fail (rather
+than being skipped) when :term:`TensErLEED` or one of the versions they need
+is missing. Optional dependencies that are not installed make some tests skip.
+To turn those skips into failures, add the option ``--require-all``.
+
+Coverage (including branches) is collected by default, via the
+:program:`pytest-cov` plugin, which is among the test requirements. An HTML
+report is written to :file:`htmlcov/`; add ``--cov-report=term`` to also get
+a summary with the missing lines in the terminal. Coverage makes tests about
+2--3 times slower. If you do not need it, turn it off with ``--no-cov``, which
+is especially worthwhile for quick runs:
 
 .. code-block:: bash
 
-    python -m coverage run -m pytest .
-    python -m coverage html
+    python -m pytest tests --quick --no-cov
+
+Slow tests are kept up to date with the option ``--check-slow``. The slow
+tests that are individual cases of a parametrized test (as opposed to whole
+tests or classes marked ``slow``) are listed in :file:`tests/tiers.py`
+(``SLOW_CASES``): it maps each test to the parts of the case ids that make it
+slow. At collection, an entry that matches no test or case (e.g., after
+renaming a test or changing its parameters) is an error naming it; update the
+module. Entries of modules that are not collected are not checked, nor are
+runs that select tests by node id or with ``--lf``, so a subset of the tests
+can still be run. To find tests that should be marked, or
+that got fast and should not be, add ``--check-slow`` to a run (the more
+quiet the machine, the better: timings are noisy). Coverage distorts the
+durations, so ``--check-slow`` needs ``--no-cov``:
+
+.. code-block:: bash
+
+    python -m pytest tests --check-slow --no-cov -n 4
+    python -m pytest tests/calc/symmetry --check-slow --no-cov
+
+At the end of the run, the option lists the tests that are not marked
+``slow`` but whose call took 1.2 times the threshold (``SLOW_THRESHOLD`` in
+:file:`tests/tiers.py`) or more, and those marked ``slow`` whose call took
+less than 0.8 times the threshold. The band around the threshold (the
+``SLOW_BAND`` constant in the same module) is there because the time of a
+test depends on the cases that ran before it; tests in the band keep their
+marking. It only reports: it changes neither the selection nor the exit
+status. It also works with ``-n`` (:program:`pytest-xdist`).
 
 
 .. _editable_install:
@@ -150,3 +196,38 @@ running
     python -m pip install --upgrade -r requirements/dev.txt
 
 in your local copy of the |repo|.
+
+
+Keeping copyright years up to date
+----------------------------------
+
+The |repo| comes with a `pre-commit <https://pre-commit.com>`__ hook that
+sets the end year of the ``__copyright__`` module dunder of every Python file
+you commit to the current year, if it is out of date. It only updates files
+that are staged for the commit, so ``pre-commit run --all-files`` leaves
+files you did not touch alone. Using it is optional. Like pre-commit
+itself, the hook needs ``git`` to be available on your ``PATH``, which
+may not be the case by default on Windows. To opt in, run
+
+.. code-block:: bash
+
+    python -m pip install pre-commit
+    pre-commit install
+
+once in your local copy of the |repo|. When the hook updates a file, the
+commit is aborted and the updated files are listed. Stage them again (e.g.,
+with ``git add``) and repeat the commit. If pre-commit instead reports that
+it is rolling back fixes, a file you staged only partially has unstaged
+changes next to its ``__copyright__`` dunder: stage or stash those changes
+first, then repeat the commit.
+
+The same set-up also tidies every file you commit: it strips trailing
+whitespace, adds missing final newlines and unifies mixed line endings
+(data files, e.g., for tests, are left alone), aborting the commit like the
+copyright hook does. It also runs `ruff <https://docs.astral.sh/ruff/>`__
+to reject syntax errors (including syntax newer than Python 3.7) and
+undefined names.
+
+Independently of whether you use the hook, pull requests get an advisory
+check that flags out-of-date end years in the files they change. This
+check does not block merging.

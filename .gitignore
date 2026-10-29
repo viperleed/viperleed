@@ -66,7 +66,8 @@ tensorleed/eeasisss
 # Ignore test, coverage, and profiling results
 **/.pytest_cache/
 .coverage
+htmlcov/
 **/prof/
 
-# Ignore windows batch files in devutils 
+# Ignore windows batch files in devutils
 devutils/*.bat

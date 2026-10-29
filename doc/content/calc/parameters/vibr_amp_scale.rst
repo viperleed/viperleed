@@ -41,8 +41,8 @@ Fe_surf atoms will be set to 0.13 Å.
 
     The parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and VIBR_AMP_SCALE
     will normally be used only once, to calculate an initial guess for
-    vibration amplitudes and generate a :ref:`VIBROCC` file. Afterwards, 
+    vibration amplitudes and generate a :ref:`VIBROCC` file. Afterwards,
     all three parameters will automatically be commented out in the
     :ref:`PARAMETERS` file; the vibration amplitudes will be defined in the
-    VIBROCC file instead. Even if the parameters were un-commented again, 
+    VIBROCC file instead. Even if the parameters were un-commented again,
     they would never be used as long as a :ref:`VIBROCC` file is present.

@@ -4,11 +4,13 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__copyright__ = "Copyright (c) 2019-2026 ViPErLEED developers"
 __created__ = "2025-07-16"
 __license__ = "GPLv3+"
 
 import copy
+import logging
+
 import numpy as np
 import scipy
 from sklearn.linear_model import ElasticNet
@@ -21,6 +23,9 @@ from sklearn.preprocessing import PolynomialFeatures
 
 from viperleed.calc.files import iosearch
 from viperleed.calc.classes.searchpar import SearchPar
+
+logger = logging.getLogger(__name__)
+
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     """
@@ -74,6 +79,18 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         the next iteration.
     float
         Predicted minimum R-factor.
+
+    Notes
+    -----
+    Parabola fits are deprecated since 0.11.0 and disabled by default
+    (PARABOLA_FIT type 'none', for which this function returns at
+    once). They were experimental, are not reliable, and may be
+    removed or significantly reworked in the future; perform an error
+    calculation instead for more reliable 1D R-factor data. The
+    function also fails with current versions of scipy and
+    scikit-learn: scipy's minimize now returns a scalar 'fun', so
+    'parab_min.fun[0]' raises a TypeError, and the Ridge, Lasso and
+    ElasticNet regressors no longer accept the 'normalize' keyword.
 
     """
 

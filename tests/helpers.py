@@ -7,7 +7,7 @@ or running tests.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
@@ -426,6 +426,49 @@ def has_any_tag(*tags):
     if not tags:
         raise ValueError('Must select at least one tag')
     return CaseFilter(_filter)
+
+
+# ###########################   DRAWS   ###############################
+
+def check_draws(draws, check):
+    """Call check for each draw; fail if any of them fails.
+
+    All draws are checked, even after a failure, so that a single
+    test reports every draw that fails.
+
+    Parameters
+    ----------
+    draws : Sequence
+        The draws to be checked, as given by the `draws` fixture.
+        Each one has `index` and `seed` attributes.
+    check : callable
+        Called with a single draw. Should raise AssertionError if
+        the draw does not pass. Any other exception (including
+        pytest skip/xfail outcomes) is not caught.
+
+    Raises
+    ------
+    AssertionError
+        If `check` raised AssertionError for at least one draw. The
+        message gives the number of failing draws, and the index,
+        seed, and first line of the message of each failure.
+    """
+    failures = []
+    for draw in draws:
+        try:
+            check(draw)
+        except AssertionError as exc:
+            lines = str(exc).strip().splitlines()
+            failures.append((draw, lines[0] if lines else ''))
+    if not failures:
+        return
+    report = '\n'.join(
+        f'  draw {draw.index} (seed {draw.seed}): {message}'
+        for draw, message in failures
+        )
+    raise AssertionError(
+        f'{len(failures)} of {len(draws)} draws failed:\n{report}'
+        )
 
 
 # ###########################   CLASSES   #############################
