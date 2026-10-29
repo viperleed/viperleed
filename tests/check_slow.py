@@ -17,16 +17,27 @@ CHECK_SLOW_OPTION = '--check-slow'
 _PYTEST_COV_PLUGIN = '_cov'  # Registered by pytest-cov only if --cov
 
 
+def _upper(threshold):
+    """Return the duration from which an unmarked test is listed."""
+    return (1 + tiers.SLOW_BAND) * threshold
+
+
+def _lower(threshold):
+    """Return the duration below which a marked test is a candidate."""
+    return (1 - tiers.SLOW_BAND) * threshold
+
+
 def pytest_addoption(parser):
     """Add the --check-slow option."""
     parser.addoption(
         CHECK_SLOW_OPTION,
         action='store_true',
         help=('At the end, list the tests not marked "slow" that took '
-              f'{tiers.SLOW_THRESHOLD} s or more, and the "slow" ones '
-              'that took less (call phase), as candidates to be '
-              'marked or unmarked in tests/tiers.py. Only reports; '
-              'also with pytest-xdist.'),
+              f'{_upper(tiers.SLOW_THRESHOLD):.2f} s or more, and the '
+              f'"slow" ones that took less than '
+              f'{_lower(tiers.SLOW_THRESHOLD):.2f} s (call phase), as '
+              'candidates to be marked or unmarked in tests/tiers.py. '
+              'Only reports; also with pytest-xdist.'),
         )
 
 
@@ -91,24 +102,27 @@ class _DurationRecorder:
         ----------
         threshold : float
             Duration (seconds) from which a test counts as slow.
+            Tests within tiers.SLOW_BAND of it keep their marking.
 
         Returns
         -------
         to_mark : list
             (duration, node id) of tests that are not marked slow,
-            but took `threshold` or more, longest first.
+            but took (1 + SLOW_BAND) * `threshold` or more, longest
+            first.
         to_unmark : list
             (duration, node id) of tests marked slow that took less
-            than `threshold`, shortest first.
+            than (1 - SLOW_BAND) * `threshold`, shortest first.
         """
+        upper, lower = _upper(threshold), _lower(threshold)
         to_mark = sorted(
             ((time, nodeid) for nodeid, time in self.durations.items()
-             if nodeid not in self.slow_ids and time >= threshold),
+             if nodeid not in self.slow_ids and time >= upper),
             reverse=True,
             )
         to_unmark = sorted(
             (time, nodeid) for nodeid, time in self.durations.items()
-            if nodeid in self.slow_ids and time < threshold
+            if nodeid in self.slow_ids and time < lower
             )
         return to_mark, to_unmark
 
@@ -120,13 +134,22 @@ def _write_slow_candidates(terminalreporter, config):
     to_mark, to_unmark = recorder.candidates(threshold)
     terminalreporter.section('check-slow (report only)')
     terminalreporter.write_line(
-        f'Call phase, threshold {threshold} s. Edit tests/tiers.py '
-        '(SLOW_CASES) or the marks; timings are noisy: re-run a '
-        'candidate before changing it.'
+        f'Call phase, threshold {threshold} s, band '
+        f'{tiers.SLOW_BAND:.0%}: tests in between keep their marking. '
+        'Edit tests/tiers.py (SLOW_CASES) or the marks; timings are '
+        'noisy: re-run a candidate before changing it.'
+        )
+    to_mark_title = (
+        'Not marked "slow", but took the upper limit or more '
+        f'({_upper(threshold):.2f} s):'
+        )
+    to_unmark_title = (
+        'Marked "slow", but took less than the lower limit '
+        f'({_lower(threshold):.2f} s):'
         )
     for title, tests in (
-            ('Not marked "slow", but took the threshold or more:', to_mark),
-            ('Marked "slow", but took less than the threshold:', to_unmark),
+            (to_mark_title, to_mark),
+            (to_unmark_title, to_unmark),
             ):
         terminalreporter.write_line(f'{title} {len(tests)}')
         for time, nodeid in tests:

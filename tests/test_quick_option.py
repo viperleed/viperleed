@@ -92,6 +92,7 @@ def test_quick_selection(pytester, args, expected):
     assert _selected(pytester, *args) == expected
 
 
+@pytest.mark.slow  # About 0.7 s (pytester, subprocess)
 def test_quick_selection_xdist(pytester, monkeypatch):
     """Check that --quick also skips slow tests with pytest-xdist."""
     root = Path(__file__).resolve().parent.parent

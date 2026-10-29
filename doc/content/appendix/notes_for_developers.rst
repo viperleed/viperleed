@@ -130,10 +130,13 @@ durations, so ``--check-slow`` needs ``--no-cov``:
     python -m pytest tests/calc/symmetry --check-slow --no-cov
 
 At the end of the run, the option lists the tests that are not marked
-``slow`` but whose call took the threshold (``SLOW_THRESHOLD`` in
+``slow`` but whose call took 1.2 times the threshold (``SLOW_THRESHOLD`` in
 :file:`tests/tiers.py`) or more, and those marked ``slow`` whose call took
-less. It only reports: it changes neither the selection nor the exit status.
-It also works with ``-n`` (:program:`pytest-xdist`).
+less than 0.8 times the threshold. The band around the threshold (the
+``SLOW_BAND`` constant in the same module) is there because the time of a
+test depends on the cases that ran before it; tests in the band keep their
+marking. It only reports: it changes neither the selection nor the exit
+status. It also works with ``-n`` (:program:`pytest-xdist`).
 
 
 .. _editable_install:
