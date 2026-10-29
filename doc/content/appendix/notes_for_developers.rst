@@ -89,15 +89,16 @@ deselection of release tests, so ``-m tensorleed`` without it remains the
 command for the TensErLEED tier.
 
 The TensErLEED tier also contains a full chain for :term:`TensErLEED` v1.6.1
-(:file:`tests/calc/sections/test_chain_v161.py`). A single fixture runs
+and for the most recent version
+(:file:`tests/calc/sections/test_chain.py`). A single fixture per version runs
 initialization, reference calculation, delta amplitudes, and search for
 Ag(100) in one go (``RUN = 0 1 2 3``), without any stored tensors or delta
-files, so that the code paths for versions older than 1.7.0 are exercised
-in all sections:
+files, so that the code paths for versions older than 1.7.0, and those for
+newer versions, are exercised in all sections:
 
 .. code-block:: bash
 
-    python -m pytest tests/calc/sections/test_chain_v161.py -m tensorleed --no-cov
+    python -m pytest tests/calc/sections/test_chain.py -m tensorleed --no-cov
 
 Coverage (including branches) is collected by default, via the
 :program:`pytest-cov` plugin, which is among the test requirements. An HTML
