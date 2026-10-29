@@ -23,10 +23,7 @@ class TestChainTL161:
     @parametrize(section=('initialization', 'refcalc', 'delta', 'search'))
     def test_section_ran(self, chain_files_ag100_v161, section):
         """Check that each section ran, and that nothing failed."""
-        assert not chain_files_ag100_v161.failed
-        records = chain_files_ag100_v161.records
-        assert records is not None
-        assert records.get_last_state_for_section(section)
+        assert chain_files_ag100_v161.section_ran(section)
 
     @parametrize(
         expected_file=(
@@ -47,8 +44,4 @@ class TestChainTL161:
 
     def test_does_not_write_out_suffixed(self, chain_files_ag100_v161):
         """Check that none of the files generated has an _OUT suffix."""
-        out_suffixed = chain_files_ag100_v161.work_path.rglob('*_OUT*')
-        # Skip R_OUT files
-        # pylint: disable-next=magic-value-comparison
-        out_suffixed = (f for f in out_suffixed if 'R=' not in f.name)
-        assert not any(out_suffixed)
+        assert not chain_files_ag100_v161.out_suffixed_files()

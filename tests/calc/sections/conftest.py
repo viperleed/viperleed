@@ -191,6 +191,21 @@ class BaseCalcFilesSetup:
         """Return whether the work directory contains `expected_file`."""
         return (self.work_path / expected_file).exists()
 
+    def section_ran(self, section):
+        """Return whether `section` ran, and nothing failed."""
+        return (
+            not self.failed
+            and self.records is not None
+            and bool(self.records.get_last_state_for_section(section))
+            )
+
+    def out_suffixed_files(self):
+        """Return the files in work with an old-style _OUT suffix."""
+        # Skip R_OUT files
+        # pylint: disable-next=magic-value-comparison
+        return [f for f in self.work_path.rglob('*_OUT*')
+                if 'R=' not in f.name]
+
     def copy_displacements(self, displacements_path):
         """Copy displacements_path to work as a DISPLACEMENTS file."""
         shutil.copy(displacements_path, self.work_path / 'DISPLACEMENTS')
