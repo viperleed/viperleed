@@ -377,6 +377,24 @@ class TestReleaseOption:
         out = result.stdout.str()
         assert all((case in out) is present for case in _RELEASE_CASES)
 
+    @pytest.mark.parametrize(
+        ('args', 'hint'),
+        [
+            pytest.param((_MODULE + 'test_tl[b-c]',), True, id='node-id'),
+            pytest.param(('-m', 'release'), True, id='marker'),
+            pytest.param((_MODULE + 'test_tl[a]',), False, id='no-release'),
+            pytest.param((), False, id='some-ran'),
+            pytest.param(
+                (_MODULE + 'test_tl[b-c]', _RELEASE_OPTION), False,
+                id='with-option',
+                ),
+            ],
+        )
+    def test_hint_if_nothing_ran(self, run, args, hint):
+        """Check the hint if only release cases were deselected."""
+        result = run(*args, release=_RELEASE, files=_RELEASE_FILES)
+        assert ('release case(s) deselected' in result.stdout.str()) is hint
+
     def test_unused_fixture_is_no_error(self, run):
         """Check that a fixture that no test uses is not stale."""
         result = run(release={'renamed': ('a',)})
