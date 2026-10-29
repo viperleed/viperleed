@@ -202,8 +202,8 @@ class BaseCalcFilesSetup:
     def out_suffixed_files(self):
         """Return the files in work with an old-style _OUT suffix."""
         # Skip R_OUT files
-        # pylint: disable-next=magic-value-comparison
         return [f for f in self.work_path.rglob('*_OUT*')
+                # pylint: disable-next=magic-value-comparison
                 if 'R=' not in f.name]
 
     def copy_displacements(self, displacements_path):
@@ -402,13 +402,13 @@ def search_files_ag100(displacements, deltas,
         files.run_calc_from_setup(
             source=tensorleed_path,
             preset_params={'RUN': [0, 3],  # init and search
-                           'TL_VERSION': _NON_INIT_TL_VERSION,}
+                           'TL_VERSION': _NON_INIT_TL_VERSION}
             )
     return files
 
 
-@fixture(scope='session')
-def tensorleed_chain_path(tensorleed_path, tmp_path_factory):
+@fixture(scope='session', name='tensorleed_chain_path')
+def fixture_tensorleed_chain_path(tensorleed_path, tmp_path_factory):
     """Return a TensErLEED tree whose CHAIN_TL_VERSION can be linked.
 
     The precompiled randomizer objects (MPIrandom_.o, random_.o) in
@@ -456,14 +456,16 @@ def tensorleed_chain_path(tensorleed_path, tmp_path_factory):
             pytest.fail(f'Cannot rebuild {obj} for TensErLEED '
                         f'v{CHAIN_TL_VERSION}: {compiler} not found.')
         except subprocess.CalledProcessError as exc:
+            command_line = ' '.join(command)
             pytest.fail(f'Failed to rebuild {obj} for TensErLEED '
-                        f'v{CHAIN_TL_VERSION}: {" ".join(command)}\n'
+                        f'v{CHAIN_TL_VERSION}: {command_line}\n'
                         f'{exc.stderr}')
     return tree
 
 
-@fixture(scope='session')
-def chain_files_ag100_v161(make_section_tempdir, tensorleed_chain_path):
+@fixture(scope='session', name='chain_files_ag100_v161')
+def fixture_chain_files_ag100_v161(make_section_tempdir,
+                                   tensorleed_chain_path):
     """Run INITIALIZATION to SEARCH for Ag(100) with TL 1.6.1.
 
     Nothing stored is used apart from the inputs of the INITIALIZATION
@@ -475,7 +477,7 @@ def chain_files_ag100_v161(make_section_tempdir, tensorleed_chain_path):
     files = BaseCalcFilesSetup(
         surface_dir=surface,
         tmp_test_path=make_section_tempdir(surface, 'chain', 'v161'),
-        required_files=['PHASESHIFTS',],
+        required_files=['PHASESHIFTS'],
         copy_dirs=['initialization']
         )
     disp_source = (files.inputs_path / 'displacements'
@@ -485,6 +487,6 @@ def chain_files_ag100_v161(make_section_tempdir, tensorleed_chain_path):
         files.run_calc_from_setup(
             source=tensorleed_chain_path,
             preset_params={'RUN': [0, 1, 2, 3],
-                           'TL_VERSION': CHAIN_TL_VERSION,}
+                           'TL_VERSION': CHAIN_TL_VERSION}
             )
     return files

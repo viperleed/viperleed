@@ -1,10 +1,10 @@
 """Tests for a full calc chain with TensErLEED 1.6.1.
 
 Runs INITIALIZATION, REFCALC, DELTAS, and SEARCH one after the
-other, for TensErLEED v1.6.1 (see D-013), which differs from the
-newer versions in the format of several files. This covers the
-branches for older versions in the modules that write the inputs
-of TensErLEED. No stored TensErLEED data is used.
+other, for TensErLEED v1.6.1, which differs from the newer versions
+in the format of several files. This covers the branches for older
+versions in the modules that write the inputs of TensErLEED. No
+stored TensErLEED data is used.
 """
 
 __authors__ = (

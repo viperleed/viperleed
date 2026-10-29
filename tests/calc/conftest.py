@@ -25,7 +25,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
@@ -140,6 +140,9 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     # run eeasisss in the temporary directory
     with execute_in_dir(tmp_path):
         with private_random(psgen, PSGEN_SEED):
-            results = psgen.runPhaseshiftGen_old(slab, rpars,
-                                                 psgensource=executable)
+            results = psgen.runPhaseshiftGen_old(
+                slab,
+                rpars,
+                psgensource=executable,
+                )
         yield (rpars, slab, tmp_path, *results)
