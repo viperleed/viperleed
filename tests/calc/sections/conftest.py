@@ -414,19 +414,36 @@ def tensorleed_chain_path(tensorleed_path, tmp_path_factory):
         if s.version == CHAIN_TL_VERSION
         )
     tree = tmp_path_factory.mktemp('tensorleed_chain')
+    chain_source_name = None
     for entry in Path(tensorleed_path).iterdir():
         if entry.resolve() == chain_source:
+            chain_source_name = entry.name
             shutil.copytree(entry, tree / entry.name)
         else:
             (tree / entry.name).symlink_to(entry)
-    lib = tree / chain_source.name / 'lib'
+    lib = tree / chain_source_name / 'lib'
     source_c = lib / 'random_.c'
-    for compiler, obj in (('mpicc', 'MPIrandom_.o'), ('gcc', 'random_.o')):
-        subprocess.run(
-            [compiler, '-fPIC', '-c', str(source_c), '-o', str(lib / obj)],
-            check=True,
-            capture_output=True,
-            )
+    compilers = [('gcc', 'random_.o')]
+    if shutil.which('mpicc'):  # Otherwise, calc uses a serial search
+        compilers.append(('mpicc', 'MPIrandom_.o'))
+    for compiler, obj in compilers:
+        command = [compiler, '-fPIC', '-c', str(source_c),
+                   '-o', str(lib / obj)]
+        try:
+            # S603: the command is built from fixed names and paths
+            subprocess.run(  # noqa: S603
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+                )
+        except FileNotFoundError:
+            pytest.fail(f'Cannot rebuild {obj} for TensErLEED '
+                        f'v{CHAIN_TL_VERSION}: {compiler} not found.')
+        except subprocess.CalledProcessError as exc:
+            pytest.fail(f'Failed to rebuild {obj} for TensErLEED '
+                        f'v{CHAIN_TL_VERSION}: {" ".join(command)}\n'
+                        f'{exc.stderr}')
     return tree
 
 
