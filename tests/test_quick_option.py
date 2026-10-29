@@ -41,6 +41,7 @@ markers =
     tensorleed
 """
 _ALL = frozenset(('plain', 'slow', 'tensorleed', 'slow_tensorleed'))
+_FAST = {'plain', 'tensorleed'}
 _PASSED = re.compile(r'::test_(\w+) PASSED|PASSED \S*::test_(\w+)')
 _QUICK = quick_option.QUICK_OPTION
 
@@ -68,11 +69,12 @@ def _selected(pytester, *args, run=None):
     [
         ((), _ALL),
         (('-m', ''), _ALL),
-        ((_QUICK,), {'plain', 'tensorleed'}),
+        ((_QUICK,), _FAST),
         ((_QUICK, '-m', 'tensorleed'), {'tensorleed'}),
-        ((_QUICK, '-m', ''), {'plain', 'tensorleed'}),
+        ((_QUICK, '-m', ''), _FAST),
         (('-m', 'tensorleed'), {'tensorleed', 'slow_tensorleed'}),
         ((_QUICK, '-m', 'not tensorleed'), {'plain'}),
+        ((_QUICK, '-m', 'tensorleed or not tensorleed'), _FAST),
         ],
     ids=(
         'default',
@@ -82,6 +84,7 @@ def _selected(pytester, *args, run=None):
         'quick and empty expression',
         'tensorleed',
         'quick and not tensorleed',
+        'quick and or expression',
         ),
     )
 def test_quick_selection(pytester, args, expected):

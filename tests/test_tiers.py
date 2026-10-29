@@ -161,9 +161,10 @@ _NO_ERROR = [
 
 
 class TestStaleSlowCases:
-    """Tests for the error on SLOW_CASES entries that match nothing."""
+    """Tests for the error on tier-table entries that match nothing."""
 
     @pytest.mark.parametrize(('entries', 'line', 'absent'), _STALE)
+    @pytest.mark.parametrize('table', ('SLOW_CASES', 'RELEASE_CASES'))
     @pytest.mark.parametrize(
         'args',
         [
@@ -171,13 +172,14 @@ class TestStaleSlowCases:
             pytest.param(_XDIST_ARGS, marks=pytest.mark.slow, id='xdist'),
             ],
         )
-    def test_reported(self, run, entries, line, absent, args):
+    def test_reported(self, run, table, entries, line, absent, args):
         """Check that a stale entry is a usage error naming it."""
-        result = run(*args, slow=entries)
+        # The tables are the `slow` and `release` arguments of `run`
+        result = run(*args, **{table.split('_')[0].lower(): entries})
         assert result.ret is pytest.ExitCode.USAGE_ERROR
         result.stderr.fnmatch_lines(
             [
-                '*Stale entries in SLOW_CASES*Update the module.',
+                f'*Stale entries in {table}*Update the module.',
                 line,
                 ],
             )
@@ -303,11 +305,15 @@ def test_plain():
 _RELEASE_FILES = {'test_sample': _RELEASE_FILE}
 _RELEASE = {_MODULE + 'test_tl': ('b-c',)}
 _RELEASE_OPTION = release_option.RELEASE_OPTION
+_RELEASE_CASE = 'test_tl[b-c]'
 # Numbers of tests that run, out of test_tl[a], test_tl[b-c], test_plain
 _RELEASE_SELECTION = [
     pytest.param((), 2, id='default'),
     pytest.param(('-m', 'tensorleed'), 1, id='tensorleed'),
     pytest.param(('-m', 'not tensorleed'), 1, id='not-tensorleed'),
+    pytest.param(
+        ('-m', 'tensorleed or not tensorleed'), 2, id='tensorleed-or-not',
+        ),
     pytest.param((_RELEASE_OPTION,), 3, id='release'),
     pytest.param(
         (_RELEASE_OPTION, '-m', 'tensorleed'), 2, id='release-tensorleed',
@@ -347,25 +353,11 @@ class TestReleaseOption:
         )
     def test_release_case_collected(self, run, args, present):
         """Check that only --release collects a release case."""
-        result = run('--collect-only', '-q', *args, release=_RELEASE,
-                     files=_RELEASE_FILES)
-        assert ('test_tl[b-c]' in result.stdout.str()) is present
-    @pytest.mark.parametrize(('entries', 'line', 'absent'), _STALE)
-    @pytest.mark.parametrize(
-        'args',
-        [
-            pytest.param((), id='serial'),
-            pytest.param(_XDIST_ARGS, marks=pytest.mark.slow, id='xdist'),
-            ],
-        )
-    def test_stale_entry(self, run, entries, line, absent, args):
-        """Check that a stale RELEASE_CASES entry is a usage error."""
-        result = run(*args, release=entries)
-        assert result.ret is pytest.ExitCode.USAGE_ERROR
-        result.stderr.fnmatch_lines(
-            [
-                '*Stale entries in RELEASE_CASES*Update the module.',
-                line,
-                ],
+        result = run(
+            '--collect-only',
+            '-q',
+            *args,
+            release=_RELEASE,
+            files=_RELEASE_FILES,
             )
-        assert absent not in result.stderr.str()
+        assert (_RELEASE_CASE in result.stdout.str()) is present

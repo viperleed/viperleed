@@ -7,6 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-28'
 __license__ = 'GPLv3+'
 
+from . import markexpr
+
 RELEASE_OPTION = '--release'
 
 
@@ -29,7 +31,4 @@ def pytest_configure(config):
     """
     if config.option.release:
         return
-    expression = config.option.markexpr
-    config.option.markexpr = (
-        f'({expression}) and not release' if expression else 'not release'
-        )
+    markexpr.exclude_marker(config, 'release')
