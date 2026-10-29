@@ -118,18 +118,25 @@ def fixture_run(pytester, monkeypatch, slow_cases, release_cases):
     return _run
 
 
+# The tables are the `slow` and `release` arguments of the run fixture
 _STALE = [
     pytest.param(
-        {_MODULE + 'test_renamed': ('a',)},
+        {'slow': {_MODULE + 'test_renamed': ('a',)}},
         f'*{_MODULE}test_renamed (no such test)',
         '(no such case)',
-        id='test',
+        id='slow-test',
         ),
     pytest.param(
-        {_MODULE + 'test_cases': ('a', 'renamed')},
+        {'slow': {_MODULE + 'test_cases': ('a', 'renamed')}},
         f'*{_MODULE}test_cases[[]renamed] (no such case)',
         '[a]',
-        id='case',
+        id='slow-case',
+        ),
+    pytest.param(  # 'case' is the argument of test_cases
+        {'release': {'case': ('a', 'renamed')}},
+        '*case[[]renamed] (no such case)',
+        '[a]',
+        id='release-case',
         ),
     ]
 _NO_ERROR = [
@@ -163,8 +170,7 @@ _NO_ERROR = [
 class TestStaleSlowCases:
     """Tests for the error on tier-table entries that match nothing."""
 
-    @pytest.mark.parametrize(('entries', 'line', 'absent'), _STALE)
-    @pytest.mark.parametrize('table', ('SLOW_CASES', 'RELEASE_CASES'))
+    @pytest.mark.parametrize(('tables', 'line', 'absent'), _STALE)
     @pytest.mark.parametrize(
         'args',
         [
@@ -172,14 +178,14 @@ class TestStaleSlowCases:
             pytest.param(_XDIST_ARGS, marks=pytest.mark.slow, id='xdist'),
             ],
         )
-    def test_reported(self, run, table, entries, line, absent, args):
+    def test_reported(self, run, tables, line, absent, args):
         """Check that a stale entry is a usage error naming it."""
-        # The tables are the `slow` and `release` arguments of `run`
-        result = run(*args, **{table.split('_')[0].lower(): entries})
+        (table,) = tables
+        result = run(*args, **tables)
         assert result.ret is pytest.ExitCode.USAGE_ERROR
         result.stderr.fnmatch_lines(
             [
-                f'*Stale entries in {table}*Update the module.',
+                f'*Stale entries in {table.upper()}_CASES*Update the module.',
                 line,
                 ],
             )
@@ -294,31 +300,39 @@ class TestCheckSlow:
 _RELEASE_FILE = """
 import pytest
 
+@pytest.fixture(params=['a', 'b-c'])
+def tl_case(request):
+    return request.param
+
 @pytest.mark.tensorleed
-@pytest.mark.parametrize('case', ['a', 'b-c'])
-def test_tl(case):
+def test_tl(tl_case):
+    pass
+
+@pytest.mark.tensorleed
+def test_tl_other(tl_case):
     pass
 
 def test_plain():
     pass
 """
 _RELEASE_FILES = {'test_sample': _RELEASE_FILE}
-_RELEASE = {_MODULE + 'test_tl': ('b-c',)}
+_RELEASE = {'tl_case': ('b-c',)}
 _RELEASE_OPTION = release_option.RELEASE_OPTION
-_RELEASE_CASE = 'test_tl[b-c]'
-# Numbers of tests that run, out of test_tl[a], test_tl[b-c], test_plain
+_RELEASE_CASES = ('test_tl[b-c]', 'test_tl_other[b-c]')
+# Numbers of tests that run, out of test_plain and the cases 'a' and
+# 'b-c' of test_tl and test_tl_other
 _RELEASE_SELECTION = [
-    pytest.param((), 2, id='default'),
-    pytest.param(('-m', 'tensorleed'), 1, id='tensorleed'),
+    pytest.param((), 3, id='default'),
+    pytest.param(('-m', 'tensorleed'), 2, id='tensorleed'),
     pytest.param(('-m', 'not tensorleed'), 1, id='not-tensorleed'),
     pytest.param(
-        ('-m', 'tensorleed or not tensorleed'), 2, id='tensorleed-or-not',
+        ('-m', 'tensorleed or not tensorleed'), 3, id='tensorleed-or-not',
         ),
-    pytest.param((_RELEASE_OPTION,), 3, id='release'),
+    pytest.param((_RELEASE_OPTION,), 5, id='release'),
     pytest.param(
-        (_RELEASE_OPTION, '-m', 'tensorleed'), 2, id='release-tensorleed',
+        (_RELEASE_OPTION, '-m', 'tensorleed'), 4, id='release-tensorleed',
         ),
-    pytest.param((_RELEASE_OPTION, '--quick'), 3, id='release-quick'),
+    pytest.param((_RELEASE_OPTION, '--quick'), 5, id='release-quick'),
     ]
 
 
@@ -352,7 +366,7 @@ class TestReleaseOption:
             ],
         )
     def test_release_case_collected(self, run, args, present):
-        """Check that only --release collects a release case."""
+        """Check that only --release collects the release cases."""
         result = run(
             '--collect-only',
             '-q',
@@ -360,4 +374,10 @@ class TestReleaseOption:
             release=_RELEASE,
             files=_RELEASE_FILES,
             )
-        assert (_RELEASE_CASE in result.stdout.str()) is present
+        out = result.stdout.str()
+        assert all((case in out) is present for case in _RELEASE_CASES)
+
+    def test_unused_fixture_is_no_error(self, run):
+        """Check that a fixture that no test uses is not stale."""
+        result = run(release={'renamed': ('a',)})
+        result.assert_outcomes(passed=4)

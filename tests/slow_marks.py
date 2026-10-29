@@ -14,21 +14,10 @@ import pytest
 
 from . import tiers
 
-_COLLECTED_IDS = pytest.StashKey()
+_COLLECTED = pytest.StashKey()
 _STALE_MESSAGE = pytest.StashKey()  # On the controller, with xdist
 _NODEID_SEP = '::'
 STALE_KEY = 'stale_tier_cases'  # In pytest-xdist's workeroutput
-# Name of the tables of tiers, and what they list
-_TABLES = (
-    (
-        'SLOW_CASES',
-        f'the cases that take {tiers.SLOW_THRESHOLD} s or more',
-        ),
-    (
-        'RELEASE_CASES',
-        'the cases that only run with --release',
-        ),
-    )
 
 
 def _split_case_id(nodeid):
@@ -40,19 +29,39 @@ def _split_case_id(nodeid):
     return test, f'-{params[:-1]}-'
 
 
+def _has_case(params, part):
+    """Return whether `part` is a part of the '-'-padded `params`."""
+    return f'-{part}-' in params
+
+
 def _is_listed(item, cases):
-    """Return whether `item` is one of the `cases` of a tier table."""
+    """Return whether `item` is one of the `cases` of SLOW_CASES."""
     test, params = _split_case_id(item.nodeid)
     parts = cases.get(test, ())
-    return any(f'-{part}-' in params for part in parts)
+    return any(_has_case(params, part) for part in parts)
+
+
+def _is_release_case(item, cases):
+    """Return whether `item` is a case of RELEASE_CASES."""
+    _, params = _split_case_id(item.nodeid)
+    return any(
+        _has_case(params, part)
+        for fixture, parts in cases.items()
+        if fixture in item.fixturenames
+        for part in parts
+        )
 
 
 def pytest_itemcollected(item):
-    """Remember the node ids of all items, before any deselection."""
-    item.config.stash.setdefault(_COLLECTED_IDS, []).append(item.nodeid)
+    """Remember the node ids and fixtures of all items.
+
+    This is done before any deselection.
+    """
+    collected = item.config.stash.setdefault(_COLLECTED, [])
+    collected.append((item.nodeid, frozenset(item.fixturenames)))
 
 
-def _find_stale_cases(nodeids, cases):
+def _find_stale_cases(collected_items, cases):
     """Return descriptions of `cases` entries matching no node id.
 
     Only entries of modules with at least one collected node id are
@@ -60,10 +69,10 @@ def _find_stale_cases(nodeids, cases):
 
     Parameters
     ----------
-    nodeids : Iterable
-        The node ids of all collected items.
+    collected_items : Iterable
+        Pairs of node id and fixture names of all collected items.
     cases : dict
-        One of the tables (SLOW_CASES, RELEASE_CASES) of tiers.
+        The table SLOW_CASES of tiers.
 
     Returns
     -------
@@ -72,7 +81,7 @@ def _find_stale_cases(nodeids, cases):
     """
     collected = collections.defaultdict(list)  # test: case ids
     modules = set()
-    for nodeid in nodeids:
+    for nodeid, _ in collected_items:
         test, params = _split_case_id(nodeid)
         modules.add(test.partition(_NODEID_SEP)[0])
         collected[test].append(params)
@@ -86,9 +95,58 @@ def _find_stale_cases(nodeids, cases):
         stale.extend(
             f'{test}[{part}] (no such case)'
             for part in parts
-            if not any(f'-{part}-' in p for p in collected[test])
+            if not any(_has_case(p, part) for p in collected[test])
             )
     return stale
+
+
+def _find_stale_release_cases(collected, cases):
+    """Return descriptions of `cases` entries matching no case.
+
+    Only fixtures that at least one collected item uses are checked,
+    so that running a subset of the suite is not an error.
+
+    Parameters
+    ----------
+    collected : Iterable
+        Pairs of node id and fixture names of all collected items.
+    cases : dict
+        The table RELEASE_CASES of tiers.
+
+    Returns
+    -------
+    stale : list
+        One string per case part that matches no case of its fixture.
+    """
+    stale = []
+    for fixture, parts in cases.items():
+        params = [
+            _split_case_id(nodeid)[1]
+            for nodeid, fixtures in collected
+            if fixture in fixtures
+            ]
+        stale.extend(
+            f'{fixture}[{part}] (no such case)'
+            for part in parts
+            if params and not any(_has_case(p, part) for p in params)
+            )
+    return stale
+
+
+# Name of the tables of tiers, what they list, and how to find stale
+# entries in them
+_TABLES = (
+    (
+        'SLOW_CASES',
+        f'the cases that take {tiers.SLOW_THRESHOLD} s or more',
+        _find_stale_cases,
+        ),
+    (
+        'RELEASE_CASES',
+        'the cases that only run with --release',
+        _find_stale_release_cases,
+        ),
+    )
 
 
 def _stale_cases_message(config):
@@ -97,10 +155,10 @@ def _stale_cases_message(config):
         return None  # Tests selected by node id: only part of a module
     if config.getoption('lf', default=False):
         return None  # --lf drops the passed items of a module early
-    nodeids = config.stash.get(_COLLECTED_IDS, ())
+    collected = config.stash.get(_COLLECTED, ())
     messages = []
-    for name, what in _TABLES:
-        stale = _find_stale_cases(nodeids, getattr(tiers, name))
+    for name, what, find_stale in _TABLES:
+        stale = find_stale(collected, getattr(tiers, name))
         if not stale:
             continue
         entries = '\n  '.join(stale)
@@ -155,5 +213,5 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.tensorleed)
         if _is_listed(item, tiers.SLOW_CASES):
             item.add_marker(pytest.mark.slow)
-        if _is_listed(item, tiers.RELEASE_CASES):
+        if _is_release_case(item, tiers.RELEASE_CASES):
             item.add_marker(pytest.mark.release)

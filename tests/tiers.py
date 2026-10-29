@@ -11,9 +11,13 @@ SLOW_THRESHOLD : float
 SLOW_CASES : dict
     Maps tests (node-id prefix) to the cases that are marked 'slow'.
 RELEASE_CASES : dict
-    Maps tests (node-id prefix) to the cases that are marked
-    'release'. These are TensErLEED cases that take long and add
-    little over others, and only run with the --release option.
+    Maps fixture names to the case-id parts for which the tests that
+    use the fixture are marked 'release'. These are TensErLEED cases
+    that take long and add little over others, and only run with the
+    --release option. An entry is reported as stale if tests use its
+    fixture, but none has the case part. A fixture that no collected
+    test uses is not checked, as this cannot be judged when running
+    a subset of the suite.
 """
 
 __authors__ = (
@@ -229,24 +233,13 @@ SLOW_CASES = {
         ),
     }
 
-# Cases that only run with --release (and are also 'tensorleed'): the
-# case-id parts have the same format as for SLOW_CASES. These are the
-# consumers of the run_phaseshift fixture for the Al2O3 slab: its
+# Cases that only run with --release (and are also 'tensorleed'): each
+# fixture is mapped to case-id parts, in the same format as for
+# SLOW_CASES. A test is a 'release' case if it uses the fixture and its
+# case id has one of the parts. This makes any consumer of the
+# run_phaseshift fixture for the Al2O3 slab a release case: its
 # PHASESHIFTS calculation is by far the longest one of the tier.
 _AL2O3_CHOLE = 'poscar-Al2O3_NiAl(111)_cHole_20061025'
-_PHASESHIFTS = 'tests/calc/files/test_phaseshifts.py::'
-_PSGEN = 'tests/calc/test_psgen.py::TestPhaseshiftsGen::'
 RELEASE_CASES = {
-    _PHASESHIFTS + 'test_check_consistency_element_order_no_false_positives': (
-        _AL2O3_CHOLE,
-        ),
-    _PHASESHIFTS + 'test_phaseshift_log_exists': (_AL2O3_CHOLE,),
-    _PHASESHIFTS + 'test_phaseshifts_firstline_len': (_AL2O3_CHOLE,),
-    _PHASESHIFTS + 'test_phaseshifts_firstline_not_empty': (_AL2O3_CHOLE,),
-    _PHASESHIFTS + 'test_phaseshifts_not_empty': (_AL2O3_CHOLE,),
-    _PHASESHIFTS + 'test_write_phaseshifts': (_AL2O3_CHOLE,),
-    _PSGEN + 'test_phaseshift_log_exists': (_AL2O3_CHOLE,),
-    _PSGEN + 'test_phaseshifts_firstline_len': (_AL2O3_CHOLE,),
-    _PSGEN + 'test_phaseshifts_firstline_not_empty': (_AL2O3_CHOLE,),
-    _PSGEN + 'test_phaseshifts_not_empty': (_AL2O3_CHOLE,),
+    'run_phaseshift': (_AL2O3_CHOLE,),
     }
