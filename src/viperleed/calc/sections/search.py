@@ -443,8 +443,6 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
-    if rp.TL_VERSION >= Version('1.7.0'):
-        rf_info_content = ''  # search reads from rf.info since v1.7
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
@@ -492,6 +490,12 @@ def search(sl, rp):
             )
         logger.warning(f'{reason}. The search will be run without '
                        'parallelization. This will be much slower!')
+
+    if rp.TL_VERSION >= Version('1.7.0'):
+        rf_info_content = ''  # search reads from rf.info since v1.7
+    elif rp.TL_VERSION >= Version('1.6.0') and usempi:
+        # MPI versions read from rf.info at least since v1.6
+        rf_info_content = ''
 
     _find_compiler = None
     if usempi and not rp.FORTRAN_COMP_MPI[0]:
