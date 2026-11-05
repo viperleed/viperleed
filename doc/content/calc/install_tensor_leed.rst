@@ -1,6 +1,7 @@
 .. include:: /substitutions.rst
 
 .. |oneAPI| replace:: Intel oneAPI®
+.. |viperleed-tensorleed| replace:: `viperleed-tensorleed <https://github.com/viperleed/viperleed-tensorleed>`__
 
 
 .. _install_tensor_leed_deps:
@@ -17,8 +18,7 @@ Tensor-LEED source code
 The |calc| package acts as a wrapper and feature extension to the
 :term:`TensErLEED` package. It requires TensErLEED source files to be present
 on your machine. You can obtain all the necessary source code from the
-`viperleed-tensorleed <https://github.com/viperleed/viperleed-tensorleed>`__
-GitHub repository. We suggest downloading the most recent
+|viperleed-tensorleed| GitHub repository. We suggest downloading the most recent
 `release <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
 into a local directory of your choice.
 Note that you may need to decompress the TensErLEED source files after
@@ -28,7 +28,7 @@ folder structure.
 If you want to use older version of TensErLEED, you can also download older
 releases from the
 `releases tab <https://github.com/viperleed/viperleed-tensorleed/releases>`__
-of the ``viperleed-tensorleed`` repository. You can have multiple versions of
+of the |viperleed-tensorleed| repository. You can have multiple versions of
 TensErLEED on your system at the same time. |calc| will use the most recent one
 by default. To select a different version you can use the :ref:`TL_VERSION`
 parameter.
@@ -133,7 +133,7 @@ can use to locate the :ref:`tensor-LEED code<install_tensorleed>`.
         click :guilabel:`New...`. Use ``VIPERLEED_TENSORLEED`` as
         the :guilabel:`Variable name`. For :guilabel:`Variable value`
         use the full path to the folder containing the archives you
-        have downloaded from the ``viperleed-tensorleed`` GitHub page.
+        have downloaded from the |viperleed-tensorleed| GitHub page.
         You may need to reboot your system.
 
 
@@ -671,10 +671,8 @@ EEASiSSS
 This is the "Elastic Electron–Atom Scattering in Solids and Surface Slabs"
 (\ :program:`EEASiSSS`) program by
 :cite:t:`rundgrenElasticElectronatomScattering2007`.
-Its source code is distributed by the ViPErLEED developers
-in the ``viperleed-tensorleed`` GitHub
-`repository <https://github.com/viperleed/viperleed-tensorleed>`__
-with permission from the author.
+Its source code is distributed by the ViPErLEED developers in the
+|viperleed-tensorleed| GitHub repository with permission from the author.
 See also :ref:`this section<install_tensorleed>` for more information
 on how to obtain the source code.
 
@@ -691,7 +689,7 @@ compilation from source as described in the following.
 
         :program:`EEASiSSS` can be compiled automatically using
         the provided ``Makefile``. Navigate to your local version
-        of the ``viperleed-tensorleed`` repository using
+        of the |viperleed-tensorleed| repository using
 
         .. code-block:: bash
 
@@ -703,7 +701,7 @@ compilation from source as described in the following.
     .. tab-item:: Native Windows
 
         EEASiSSS can be compiled automatically using the provided ``make.bat``.
-        Navigate to your local version of the ``viperleed-tensorleed``
+        Navigate to your local version of the |viperleed-tensorleed|
         repository using
 
         .. code-block:: bat
@@ -715,8 +713,7 @@ compilation from source as described in the following.
 
         An alternative to compilation from source is using the precompiled
         ``eeasisss_windows.exe`` executable available in the
-        ``viperleed-tensorleed``
-        `repository <https://github.com/viperleed/viperleed-tensorleed>`__.
+        |viperleed-tensorleed| repository.
         It should be renamed to ``eeasisss.exe`` after download.
 
         .. warning::
