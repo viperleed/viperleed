@@ -777,7 +777,7 @@ Fortran compilers, you should already have the necessary C compilers installed
     mistake and should be removed. Make sure to recompile them on your machine
     following the instructions below.
 
-..tab-set::
+.. tab-set::
 
     .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
