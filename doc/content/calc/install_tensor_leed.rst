@@ -756,24 +756,77 @@ which is installed by default with NumPy.
 Random numbers library for TensErLEED < v1.7.4
 ----------------------------------------------
 
-.. note::
-    Users wishing to run natively on Windows can skip this step,
-    as the random numbers are only used in legacy versions of TensErLEED
-    (< 1.7.3) where the structure-optimization :ref:`section<sec_search>`
-    is unsupported on Windows.
-
 TensErLEED versions up to v1.7.3 need the :term:`C`-object files called
-``random_.o`` and ``MPIrandom_.o``. These files must be precompiled with C and
-C MPI compilers, respectively. A ``Makefile`` is also provided for them. If you
-followed the :ref:`instructions<install_fortran_comp>` for obtaining the
+``random_.o`` and ``MPIrandom_.o``. These files are used during the
+:ref:`structure-optimization section<sec_search>`. They must be precompiled
+with C and C MPI compilers, respectively.
+If you followed the :ref:`instructions<install_fortran_comp>` for obtaining the
 Fortran compilers, you should already have the necessary C compilers installed
 (from either GCC or Intel).
 
-To compile the random-number generation library for a certain TensErLEED
-version, navigate in your terminal to the respective
-:ref:`directory containing the TensErLEED source files<install_tensorleed>`
-and call either ``make intel`` or ``make gcc`` to compile
-them using the Intel or GCC :term:`C` compilers, respectively.
+.. note::
+    Make sure to compile ``random_.o``/``MPIrandom_.o`` with the same compiler
+    (i.e., GNU, Intel, etc.) as the one used during the structure-optimization
+    :ref:`section<sec_search>`. See also :ref:`FORTRAN_COMP`. Changing the
+    compiler—e.g., from Intel to GNU—in :ref:`FORTRAN_COMP` requires
+    recompiling the random-number generation library as described below.
+
+.. warning::
+    The releases in the |viperleed-tensorleed| repository up to v1.7.3 already
+    contain some ``random_.o``/``MPIrandom_.o`` files. These were included by
+    mistake and should be removed. Make sure to recompile them on your machine
+    following the instructions below.
+
+..tab-set::
+
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+
+        To compile the random-number generation library for a certain
+        TensErLEED version, navigate in your terminal to the respective
+        :ref:`directory containing the TensErLEED source files<install_tensorleed>`
+        and call either ``make intel`` or ``make gcc`` to compile
+        them using the Intel or GCC :term:`C` compilers, respectively.
+
+        .. note::
+           The ``Makefile`` for Intel compilers uses ``icc``/``mpiicc``. These
+           compilers may be unavailable on recent |oneAPI| versions, as they
+           were discontinued in favor of ``icx``/``mpiicx``. If this is the
+           case, replace ``icc``/``mpiicc`` by ``icx``/``mpiicx`` in the
+           ``Makefile``, then call ``make intel`` once again.
+
+    .. tab-item:: Windows, native
+
+        .. versionchanged:: 0.14.1
+            The structure-optimization :ref:`section<sec_search>` in |calc|
+            versions earlier than 0.14.1 contains Python code that is
+            incompatible with Windows.
+
+        .. versionchanged:: 0.15.0
+            |calc| versions between 0.14.1 (included) and 0.15.0 do not support
+            executing the structure-optimization :ref:`section<sec_search>`
+            with TensErLEED versions earlier than v1.7.0.
+
+        To compile the random-number generation library for a certain
+        TensErLEED version, navigate to the respective
+        :ref:`directory containing the TensErLEED source files<install_tensorleed>`,
+        then into its :file:`lib` subfolder. The source code to be compiled
+        is contained in :file:`random_.c`. The version of :file:`random_.c`
+        released with TensErLEED in the |viperleed-tensorleed| repository is
+        only compatible with UNIX. Therefore, the :file:`random_.c` file
+        should be replaced with
+        :download:`this Windows-compatible version</static/tenserleed_windows/random_.c>`.
+
+        After replacing :file:`random_.c`, navigate to its containing folder
+        in your terminal. Then compile it with
+
+        .. code-block:: bat
+
+            icx /c random_.c /Fo:random_.o /O3
+            copy /y random_.o MPIrandom_.o
+
+        .. note::
+            For earlier versions of |oneAPI| that do not include the ``icx``
+            compiler, replace ``icx`` above with ``icc``.
 
 
 .. [#]  For other distributions have a look, for example, at this tutorial
