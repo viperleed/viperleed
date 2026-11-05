@@ -814,7 +814,7 @@ Fortran compilers, you should already have the necessary C compilers installed
         released with TensErLEED in the |viperleed-tensorleed| repository is
         only compatible with UNIX. Therefore, the :file:`random_.c` file
         should be replaced with
-        :download:`this Windows-compatible version</static/tenserleed_windows/random_.c>`.
+        :download:`this Windows-compatible version</_static/tenserleed_windows/random_.c>`.
 
         After replacing :file:`random_.c`, navigate to its containing folder
         in your terminal. Then compile it with
