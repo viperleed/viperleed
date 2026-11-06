@@ -43,16 +43,6 @@ class PyQtSanity(IntEnum):
     UNRESPONSIVE = 5   # Importing PyQt5 did not finish in time
 
 
-# The exit codes that _import_dummy_pyqt_and_run_app uses on purpose.
-# Any other exit code of the checker subprocess signals a crash.
-_CHECKER_EXIT_CODES = frozenset((
-    PyQtSanity.OK.value,
-    PyQtSanity.NOT_FOUND.value,
-    PyQtSanity.IMPORT_ERROR.value,
-    PyQtSanity.NO_DISPLAY.value,
-    ))
-
-
 class PyQtSanityChecker:
     """A callable that checks whether the current PyQt5 is usable.
 
@@ -118,13 +108,15 @@ class PyQtSanityChecker:
             # still trying to start up. This means we have no display.
             proc.terminate()
             return PyQtSanity.NO_DISPLAY
-        # Pick the sanity based on the exit code. Any unexpected code
-        # is taken as a crash. One could in principle check whether the
-        # exit code is negative, or one of the signals, but this keeps
-        # this checker as OS-independent as possible.
-        if proc.exitcode in _CHECKER_EXIT_CODES:
+        # Pick the sanity based on the exit code
+        try:
             return PyQtSanity(proc.exitcode)
-        return PyQtSanity.RUNTIME_CRASH
+        except ValueError:
+            # Assume there was a crash. One could in principle
+            # check whether the exit code is negative, or one
+            # of the signals, but this keeps this checker as
+            # OS-independent as possible.
+            return PyQtSanity.RUNTIME_CRASH
 
 
 check_pyqt_sanity = PyQtSanityChecker()

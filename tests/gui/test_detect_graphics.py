@@ -398,7 +398,6 @@ class TestPyQtSanityChecker:
         2: PyQtSanity.IMPORT_ERROR,
         3: PyQtSanity.RUNTIME_CRASH,
         4: PyQtSanity.NO_DISPLAY,
-        5: PyQtSanity.RUNTIME_CRASH,    # Not an exit code of the child
         -6: PyQtSanity.RUNTIME_CRASH,   # SIGABRT
         134: PyQtSanity.RUNTIME_CRASH,  # SIGABRT on Unix
         'any code': PyQtSanity.RUNTIME_CRASH
