@@ -335,6 +335,14 @@ def _import_dummy_pyqt_and_run_app(imports_done):
     for module in sub_modules:
         try:
             importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            # PyQt5 may be a namespace package without its modules,
+            # e.g., if only PyQt5-sip and PyQt5-Qt5 are left after
+            # uninstalling PyQt5. Any other missing module (e.g.,
+            # PyQt5.sip) means that the installation is broken.
+            not_found = exc.name == module
+            _exit_with(PyQtSanity.NOT_FOUND if not_found
+                       else PyQtSanity.IMPORT_ERROR)
         except ImportError:
             _exit_with(PyQtSanity.IMPORT_ERROR)
     imports_done.send(True)

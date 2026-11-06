@@ -185,18 +185,37 @@ class TestImportDummyPyqtAndRunApp:
                                       + PyQtSanity.IMPORT_ERROR.value)
         imports_done.send.assert_not_called()
 
+    # Exceptions raised when importing a PyQt5 submodule, as a function
+    # of the submodule's name, and the expected exit status.
+    _submodule_errors = {
+        'import error': (lambda _: ImportError(),
+                         PyQtSanity.IMPORT_ERROR),
+        # E.g., only PyQt5-sip and PyQt5-Qt5 are left after
+        # uninstalling PyQt5: 'PyQt5' is a namespace package
+        'submodule missing': (lambda mod: ModuleNotFoundError(name=mod),
+                              PyQtSanity.NOT_FOUND),
+        # A dependency of the submodule is missing: broken PyQt5
+        'dependency missing': (
+            lambda _: ModuleNotFoundError(name='PyQt5.sip'),
+            PyQtSanity.IMPORT_ERROR,
+            ),
+        }
+
     @parametrize(module=_modules)
-    def test_cant_import_pyqt_submodule(self, module, imports_done, mocker):
+    @parametrize('make_exc,expect', _submodule_errors.values(),
+                 ids=_submodule_errors)
+    # pylint: disable-next=too-many-arguments  # 2/6 fixtures
+    def test_cant_import_pyqt_submodule(self, module, make_exc, expect,
+                                        imports_done, mocker):
         """Check the expected exit code when importing PyQt5 fails."""
         def _fail_module_import(mod_name):
             if mod_name == module:
-                raise ImportError
+                raise make_exc(mod_name)
         mocker.patch('importlib.import_module',
                      side_effect=_fail_module_import)
         with pytest.raises(SystemExit) as excinfo:
             _import_dummy_pyqt_and_run_app(imports_done)
-        assert excinfo.value.code == (_EXIT_CODE_OFFSET
-                                      + PyQtSanity.IMPORT_ERROR.value)
+        assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
         imports_done.send.assert_not_called()
 
     def test_pyqt_not_found(self, imports_done, mocker):
