@@ -545,7 +545,7 @@ def search(sl, rp):
         else:
             hashname = ""
 
-        randname = 'MPIrandom_.o' if usempi else 'random_.o'
+        randname = 'random_.o'
         if rp.TL_VERSION <= Version('1.7.3'):
             # Try to copy randomizer lib object file
             # These are short C scripts - use pre-compiled versions

@@ -756,16 +756,20 @@ which is installed by default with NumPy.
 Random numbers library for TensErLEED < v1.7.4
 ----------------------------------------------
 
-TensErLEED versions up to v1.7.3 need the :term:`C`-object files called
-``random_.o`` and ``MPIrandom_.o``. These files are used during the
-:ref:`structure-optimization section<sec_search>`. They must be precompiled
-with C and C MPI compilers, respectively.
+TensErLEED versions up to v1.7.3 need the :term:`C`-object file called
+:file:`random_.o`, used during the :ref:`structure-optimization section<sec_search>`.
+It must be precompiled from its source :file:`random_.c` with a C compiler.
 If you followed the :ref:`instructions<install_fortran_comp>` for obtaining the
-Fortran compilers, you should already have the necessary C compilers installed
+Fortran compilers, you should already have the necessary C compiler installed
 (from either GCC or Intel).
 
+.. versionchanged:: 0.15.0
+    Earlier |calc| versions would also look for an :file:`MPIrandom_.o` file
+    when running the structure optimization in a parallelized manner. However,
+    this file is identical to :file:`random_.o`.
+
 .. note::
-    Make sure to compile ``random_.o``/``MPIrandom_.o`` with the same compiler
+    Make sure to compile ``random_.o`` with the same compiler
     (i.e., GNU, Intel, etc.) as the one used during the structure-optimization
     :ref:`section<sec_search>`. See also :ref:`FORTRAN_COMP`. Changing the
     compiler—e.g., from Intel to GNU—in :ref:`FORTRAN_COMP` requires
@@ -774,8 +778,8 @@ Fortran compilers, you should already have the necessary C compilers installed
 .. warning::
     The releases in the |viperleed-tensorleed| repository up to v1.7.3 already
     contain some ``random_.o``/``MPIrandom_.o`` files. These were included by
-    mistake and should be removed. Make sure to recompile them on your machine
-    following the instructions below.
+    mistake and should be deleted. Make sure to recompile :file:`random_.o` on
+    your machine following the instructions below.
 
 .. tab-set::
 
@@ -804,7 +808,7 @@ Fortran compilers, you should already have the necessary C compilers installed
         .. versionchanged:: 0.15.0
             |calc| versions between 0.14.1 (included) and 0.15.0 do not support
             executing the structure-optimization :ref:`section<sec_search>`
-            with TensErLEED versions earlier than v1.7.0.
+            with TensErLEED < v1.7.0 natively on Windows.
 
         To compile the random-number generation library for a certain
         TensErLEED version, navigate to the respective
@@ -822,7 +826,6 @@ Fortran compilers, you should already have the necessary C compilers installed
         .. code-block:: bat
 
             icx /c random_.c /Fo:random_.o /O3
-            copy /y random_.o MPIrandom_.o
 
         .. note::
             For earlier versions of |oneAPI| that do not include the ``icx``
