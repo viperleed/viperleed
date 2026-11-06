@@ -31,6 +31,8 @@ class TestCheckCanRunGui:
 
     _err_msg = ('Cannot execute the ViPErLEED graphical user '
                 'interface because ')
+    _checking = 'Checking graphics capabilities...'
+    _done = 'Done\n'
     _install = {
         'not found': '',
         'found': 'sudo apt install lib_one lib_two',
@@ -121,7 +123,10 @@ If your system has a display, you can start the GUI anyway with
         context = pytest.raises(SystemExit) if err_msg else nullcontext()
         with context:
             cli.check_can_run_gui()
-        stderr = capsys.readouterr().err.strip()
+        captured = capsys.readouterr()
+        # The line ends before any error is printed
+        assert captured.out == self._checking + self._done
+        stderr = captured.err.strip()
         if sanity is PyQtSanity.OK:
             assert not stderr
         else:
@@ -131,6 +136,18 @@ If your system has a display, you can start the GUI anyway with
             find_deps.assert_not_called()
         else:
             find_deps.assert_called_once()
+
+    def test_message_before_check(self, mocker, capsys):
+        """Ensure users are told about the check before it starts."""
+        def _check_sanity():
+            # Only the start of the line is out when checking
+            assert capsys.readouterr().out == self._checking
+            return PyQtSanity.OK
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', side_effect=_check_sanity)
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value={})
+        ViPErLEEDGUICLI().check_can_run_gui()
+        assert capsys.readouterr().out == self._done
 
     def test_sanity_invalid(self, mocker):
         """Check that an invalid sanity fails with a KeyError."""

@@ -119,7 +119,11 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         err_msg = (
             'Cannot execute the ViPErLEED graphical user interface because {}'
             )
+        # The check may take a few seconds, e.g., on systems without
+        # a display. Tell users, and end the line before any errors.
+        print('Checking graphics capabilities...', flush=True, end='')
         sanity = check_pyqt_sanity()
+        print('Done', flush=True)
         details = _SANITY_TO_ERR_MSG[sanity]  # Let KeyError propagate
         if sanity is PyQtSanity.NOT_FOUND:
             # This is the only case in which it makes no sense to
