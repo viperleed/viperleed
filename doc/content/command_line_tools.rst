@@ -117,10 +117,5 @@ a display.
         :usagesection:
         :showusagemain: viperleed gui, viperleed.gui
 
-        --skip-graphics-check
-            Use this if ``viperleed gui`` reports that the system has no
-            graphics capability, or that loading :program:`PyQt5` did not
-            complete in time, although your system has a display.
-
 .. versionadded:: 0.15.0
     The ``--skip-graphics-check`` argument.
