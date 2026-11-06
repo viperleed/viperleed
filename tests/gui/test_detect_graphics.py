@@ -17,6 +17,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.detect_graphics import _DISPLAY_TIMEOUT
+from viperleed.gui.detect_graphics import _EXIT_CODE_OFFSET
 from viperleed.gui.detect_graphics import _QtUnixPlatformsGetter
 from viperleed.gui.detect_graphics import _STARTUP_TIMEOUT
 from viperleed.gui.detect_graphics import PyQtSanity
@@ -123,7 +124,7 @@ class TestInitDummyQapp:
         mock_qapp.return_value.primaryScreen.return_value = screen
         with pytest.raises(SystemExit) as excinfo:
             _init_dummy_qapp()
-        assert excinfo.value.code == expect.value
+        assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
 
 
 @parametrize(pyqt_present=(True, False))
@@ -180,7 +181,8 @@ class TestImportDummyPyqtAndRunApp:
                      side_effect=ImportError)
         with pytest.raises(SystemExit) as excinfo:
             _import_dummy_pyqt_and_run_app(imports_done)
-        assert excinfo.value.code == PyQtSanity.IMPORT_ERROR.value
+        assert excinfo.value.code == (_EXIT_CODE_OFFSET
+                                      + PyQtSanity.IMPORT_ERROR.value)
         imports_done.send.assert_not_called()
 
     @parametrize(module=_modules)
@@ -193,7 +195,8 @@ class TestImportDummyPyqtAndRunApp:
                      side_effect=_fail_module_import)
         with pytest.raises(SystemExit) as excinfo:
             _import_dummy_pyqt_and_run_app(imports_done)
-        assert excinfo.value.code == PyQtSanity.IMPORT_ERROR.value
+        assert excinfo.value.code == (_EXIT_CODE_OFFSET
+                                      + PyQtSanity.IMPORT_ERROR.value)
         imports_done.send.assert_not_called()
 
     def test_pyqt_not_found(self, imports_done, mocker):
@@ -202,7 +205,8 @@ class TestImportDummyPyqtAndRunApp:
                      side_effect=ModuleNotFoundError)
         with pytest.raises(SystemExit) as excinfo:
             _import_dummy_pyqt_and_run_app(imports_done)
-        assert excinfo.value.code == PyQtSanity.NOT_FOUND.value
+        assert excinfo.value.code == (_EXIT_CODE_OFFSET
+                                      + PyQtSanity.NOT_FOUND.value)
         imports_done.send.assert_not_called()
 
     def test_success(self, imports_done, mocker, mock_dummy_qapp):
@@ -393,14 +397,16 @@ class TestPyQtSanityChecker:
         mock_do_check.assert_called_once_with()
 
     _exit_codes = {
-        0: PyQtSanity.OK,
-        1: PyQtSanity.NOT_FOUND,
-        2: PyQtSanity.IMPORT_ERROR,
-        3: PyQtSanity.RUNTIME_CRASH,
-        4: PyQtSanity.NO_DISPLAY,
+        # Offset exit codes are mapped to the PyQtSanity members
+        **{_EXIT_CODE_OFFSET + s.value: s for s in PyQtSanity},
+        # Any other exit code is a crash. In particular, the ones that
+        # coincide with the values of PyQtSanity members, like 1 for
+        # an unhandled exception, must not be taken as such members.
+        **{s.value: PyQtSanity.RUNTIME_CRASH for s in PyQtSanity},
         -6: PyQtSanity.RUNTIME_CRASH,   # SIGABRT
         134: PyQtSanity.RUNTIME_CRASH,  # SIGABRT on Unix
-        'any code': PyQtSanity.RUNTIME_CRASH
+        _EXIT_CODE_OFFSET - 1: PyQtSanity.RUNTIME_CRASH,
+        _EXIT_CODE_OFFSET + len(PyQtSanity): PyQtSanity.RUNTIME_CRASH,
         }
 
     @staticmethod

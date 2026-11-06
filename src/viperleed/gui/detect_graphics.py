@@ -29,6 +29,11 @@ _STARTUP_TIMEOUT = 60
 # How long (in seconds) to wait for a QApplication to be created,
 # after PyQt5 was imported, before deciding there's no graphics.
 _DISPLAY_TIMEOUT = 5
+# The checker subprocess exits with _EXIT_CODE_OFFSET + PyQtSanity.
+# The offset keeps the exit codes away from those used by Python
+# itself (e.g., 1 for an unhandled exception, also while the
+# subprocess is being started), which then count as crashes.
+_EXIT_CODE_OFFSET = 100
 _UNIX_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR', '')
 
 
@@ -110,7 +115,7 @@ class PyQtSanityChecker:
             return PyQtSanity.NO_DISPLAY
         # Pick the sanity based on the exit code
         try:
-            return PyQtSanity(proc.exitcode)
+            return PyQtSanity(proc.exitcode - _EXIT_CODE_OFFSET)
         except ValueError:
             # Assume there was a crash. One could in principle
             # check whether the exit code is negative, or one
@@ -298,7 +303,8 @@ def _import_dummy_pyqt_and_run_app(imports_done):
     crashing the current interpreter if the Qt installation is broken.
     Calling this may block forever on a system that has no graphical
     capability. It will also exit the interpreter if importing PyQt5
-    fails. In this case, the exit code gives information on the cause.
+    fails. In this case, the exit code gives information on the cause
+    (see _exit_with).
 
     Parameters
     ----------
@@ -319,9 +325,9 @@ def _import_dummy_pyqt_and_run_app(imports_done):
     try:
         importlib.import_module('PyQt5')
     except ModuleNotFoundError:
-        sys.exit(PyQtSanity.NOT_FOUND.value)
+        _exit_with(PyQtSanity.NOT_FOUND)
     except ImportError:
-        sys.exit(PyQtSanity.IMPORT_ERROR.value)
+        _exit_with(PyQtSanity.IMPORT_ERROR)
     sub_modules = (
         'PyQt5.QtCore',
         'PyQt5.QtWidgets',  # Also loads QtGui
@@ -330,10 +336,15 @@ def _import_dummy_pyqt_and_run_app(imports_done):
         try:
             importlib.import_module(module)
         except ImportError:
-            sys.exit(PyQtSanity.IMPORT_ERROR.value)
+            _exit_with(PyQtSanity.IMPORT_ERROR)
     imports_done.send(True)
     imports_done.close()
     _init_dummy_qapp()
+
+
+def _exit_with(sanity):
+    """Exit the checker subprocess with an exit code for `sanity`."""
+    sys.exit(_EXIT_CODE_OFFSET + sanity.value)
 
 
 def _init_dummy_qapp():
@@ -354,7 +365,7 @@ def _init_dummy_qapp():
     app = qtw.QApplication([])
     has_screen = app.primaryScreen() is not None
     sanity = PyQtSanity.OK if has_screen else PyQtSanity.NO_DISPLAY
-    sys.exit(sanity.value)
+    _exit_with(sanity)
 
 
 # This class is really just a container
