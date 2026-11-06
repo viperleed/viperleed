@@ -488,7 +488,7 @@ def fixture_mock_pyqt_root(mocker, mock_import_module):
     mock_pyqt = mocker.MagicMock()
     mock_pyqt.__file__ = f'{mock_root}/__init__.py'
     mock_import_module(PyQt5=mock_pyqt)
-    mocker.patch('pathlib.Path.exists', resturn_value=True)
+    mocker.patch('pathlib.Path.exists', return_value=True)
     return Path(mock_root).resolve()
 
 
@@ -545,6 +545,7 @@ class TestQt5DependencyFinder:
         'validplatform',
         )
 
+    @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(platform=_supported)
     def test_find_install_for_libs_supported(self, platform, mocker):
         """Check result of find_install_for_libs on supported platforms."""
@@ -605,6 +606,7 @@ class TestQt5DependencyFinder:
         with pytest.raises(NotImplementedError):
             finder.find_missing_dependencies()
 
+    @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(exc=(FileNotFoundError, SubprocessError))
     def test_find_missing_dependencies_implementation_fails(self, exc, mocker):
         """Check find_missing_dependencies when implementation raises."""
