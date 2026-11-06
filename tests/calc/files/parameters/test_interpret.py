@@ -10,6 +10,8 @@ __created__ = '2023-06-09'
 __license__ = 'GPLv3+'
 
 import logging
+import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -608,6 +610,9 @@ class TestFortranComp(_TestInterpretBase):
         # pylint: enable=protected-access
         attr_name = self.param + ('_MPI' if 'mpi' in flag else '')
         compiler = getattr(rpars,  attr_name)
+        if os.name == 'nt' and val == 'ifort':
+            self._check_default_ifort_on_windows(*compiler)
+            return
         if pre is not None:
             with subtests.test('Check pre'):
                 assert pre in compiler[0]
@@ -637,6 +642,12 @@ class TestFortranComp(_TestInterpretBase):
         compiler, post = rpars.FORTRAN_COMP_MPI
         assert compiler == expect
         assert not post
+
+    def _check_default_ifort_on_windows(self, pre, post):
+        """Check the default flags for ifort on Windows."""
+        mkl_path = Path(os.environ['MKLROOT'], 'include').resolve()
+        assert pre == f'ifort -O2 -I"{mkl_path}"'
+        assert post == '-Qmkl:parallel -traceback'
 
 
 class TestIntpolDeg(_TestInterpretBase):

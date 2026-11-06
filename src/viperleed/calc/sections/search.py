@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -443,8 +443,6 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
-    if rp.TL_VERSION >= Version('1.7.0'):
-        rf_info_content = ''  # search reads from rf.info since v1.7
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
@@ -492,6 +490,12 @@ def search(sl, rp):
             )
         logger.warning(f'{reason}. The search will be run without '
                        'parallelization. This will be much slower!')
+
+    if rp.TL_VERSION >= Version('1.7.0'):
+        rf_info_content = ''  # search reads from rf.info since v1.7
+    elif rp.TL_VERSION >= Version('1.6.0') and usempi:
+        # MPI versions read from rf.info at least since v1.6
+        rf_info_content = ''
 
     _find_compiler = None
     if usempi and not rp.FORTRAN_COMP_MPI[0]:
@@ -541,7 +545,7 @@ def search(sl, rp):
         else:
             hashname = ""
 
-        randname = 'MPIrandom_.o' if usempi else 'random_.o'
+        randname = 'random_.o'
         if rp.TL_VERSION <= Version('1.7.3'):
             # Try to copy randomizer lib object file
             # These are short C scripts - use pre-compiled versions
@@ -570,26 +574,6 @@ def search(sl, rp):
     # Prepare to compile fortran files
     searchname = f'search-{rp.timestamp}'
     fcomp = rp.FORTRAN_COMP_MPI if usempi else rp.FORTRAN_COMP
-
-    # On Windows with ifort, older versions that need the rf.info
-    # contents to be piped are known not to work correctly (they
-    # stall forever). There are also some problems in the random
-    # number generator external module (which affect up to v1.7.3)
-    # but we can let the compiler fail in that case.
-    known_unsupported = (
-        rp.TL_VERSION < Version('1.7.0')
-        and IS_WINDOWS
-        and 'ifort' in fcomp[0]
-        )
-    if known_unsupported:
-        logger.error('Old TensErLEED versions are not supported on Windows. '
-                     'Please upgrade your TensErLEED code to at least '
-                     # Suggest the version that uses Fortran's random
-                     # so people don't have to bother modifying and
-                     # manually compiling random_.c (see also #151).
-                     'version 1.7.4')
-        rp.setHaltingLevel(3)
-        return
 
     logger.info('Compiling fortran input files...')
 
