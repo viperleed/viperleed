@@ -41,6 +41,12 @@ following:
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
 
+# Part of error message emitted if the result of the sanity check
+# may be wrong (e.g., on a slow machine with a display)
+_SKIP_CHECK_MSG = '''
+If your system has a display, you can start the GUI anyway with
+    viperleed gui --skip-graphics-check'''
+
 # Error messages emitted if the sanity check fails
 _SANITY_TO_ERR_MSG = {
     PyQtSanity.NOT_FOUND: 'PyQt5 is not installed.',
@@ -54,8 +60,12 @@ _SANITY_TO_ERR_MSG = {
         ),
     PyQtSanity.NO_DISPLAY: (
         'the system appears to have no graphics capability (i.e., no '
-        'monitor was detected). Try once more if this is the first '
-        'time you execute the GUI, or if you just updated viperleed.'
+        'monitor was detected).' + _SKIP_CHECK_MSG
+        ),
+    PyQtSanity.UNRESPONSIVE: (
+        'loading PyQt5 did not complete in time. '
+        'Try once more, or check whether your system is very busy.'
+        + _SKIP_CHECK_MSG
         ),
     }
 
@@ -68,7 +78,11 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         args = self.parse_cli_args(args)
         if args.nogui:
             return commandline_main()
-        self.check_can_run_gui()
+        if args.skip_graphics_check:
+            # Also prevent later checks, e.g., in has_pyqt()
+            check_pyqt_sanity.assume_ok()
+        else:
+            self.check_can_run_gui()
         return gui_main()
 
     def add_parser_arguments(self, parser):
@@ -78,6 +92,15 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             '--nogui',
             help=('run the ViPErLEED graphical user interface in '
                   'command-line mode, i.e., without any windows'),
+            action='store_true',
+            )
+        parser.add_argument(
+            '--skip-graphics-check',
+            help=('do not check whether PyQt5 works and the system '
+                  'has a display before starting the graphical user '
+                  'interface. Use this if the check wrongly reports '
+                  'that no display is available. If PyQt5 is broken, '
+                  'Python may crash without further explanation'),
             action='store_true',
             )
 

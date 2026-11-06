@@ -10,14 +10,15 @@ __license__ = 'GPLv3+'
 import os
 from pathlib import Path
 from subprocess import SubprocessError
-
+from types import SimpleNamespace
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.gui.detect_graphics import _DISPLAY_TIMEOUT
 from viperleed.gui.detect_graphics import _QtUnixPlatformsGetter
-from viperleed.gui.detect_graphics import _TIMEOUT
+from viperleed.gui.detect_graphics import _STARTUP_TIMEOUT
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import PyQtSanityChecker
 from viperleed.gui.detect_graphics import Qt5DependencyFinder
@@ -39,8 +40,8 @@ _MODULE = 'viperleed.gui.detect_graphics'
 
 
 @fixture(name='mock_multiprocessing')
-def fixture_mock_process(mocker):
-    """Replace multiprocessing.Process with a mock.
+def fixture_mock_multiprocessing(mocker):
+    """Replace the multiprocessing tools of the checker with mocks.
 
     Notice that it is necessary to do so in order to correctly
     test the behavior of has_display. In fact, we can't mock
@@ -48,28 +49,81 @@ def fixture_mock_process(mocker):
     by multiprocessing. We could, in principle, mock the target
     of multiprocessing.Process, i.e., _init_dummy_qapp. However,
     I tried without success to do so.
+
+    The returned factory takes the following arguments:
+    ready : {'imports', 'exited', 'none'}
+        Which of the waited-for objects is ready within the start-up
+        time: the pipe (PyQt5 was imported), the process sentinel
+        (the subprocess exited before), or none of them.
+    alive : bool
+        Whether the subprocess is still alive after the QApplication
+        time limit, i.e., whether creating the QApplication hangs.
+    exitcode : object
+        The exit code of the subprocess.
     """
-    def _mock(has_display):
-        mock_process = mocker.MagicMock()
-        mock_process_cls = mocker.MagicMock(return_value=mock_process)
-        # Mimic the expected behavior when a display is not present
-        mock_process.is_alive.return_value = not has_display
-        mocker.patch(f'{_MODULE}.Process', mock_process_cls)
-        return mock_process, mock_process_cls
+    def _mock(ready='imports', alive=False, exitcode=0):
+        imports_done = mocker.MagicMock(name='imports_done')
+        child_end = mocker.MagicMock(name='child_end')
+        process = mocker.MagicMock(name='process', exitcode=exitcode)
+        process.is_alive.return_value = alive
+        ready_objects = {
+            'imports': [imports_done],
+            'exited': [process.sentinel],
+            'none': [],
+            }
+        order = []  # Names of selected calls, in the order they're made
+        process.start.side_effect = lambda: order.append('start')
+        child_end.close.side_effect = lambda: order.append('close_child')
+
+        def _wait(*_):
+            order.append('wait')
+            return ready_objects[ready]
+        return SimpleNamespace(
+            order=order,
+            imports_done=imports_done,
+            child_end=child_end,
+            process=process,
+            pipe=mocker.patch(f'{_MODULE}.Pipe',
+                              return_value=(imports_done, child_end)),
+            process_cls=mocker.patch(f'{_MODULE}.Process',
+                                     return_value=process),
+            wait=mocker.patch(f'{_MODULE}.wait', side_effect=_wait),
+            )
     return _mock
 
 
-def test_init_dummy_qapp(mocker):
-    """Check calls in _init_dummy_qapp."""
-    mock_suppress = mocker.patch(
-        f'{_MODULE}.suppress_file_permission_warnings'
-        )
-    mock_qtwidgets = mocker.patch('importlib.import_module').return_value
-    mock_qapp = mock_qtwidgets.QApplication
-    with pytest.raises(SystemExit):
-        _init_dummy_qapp()
-    mock_suppress.assert_called_once_with()
-    mock_qapp.assert_called_once_with([])
+class TestInitDummyQapp:
+    """Tests for the _init_dummy_qapp subprocess worker."""
+
+    @fixture(name='mock_qapp')
+    def fixture_mock_qapp(self, mocker):
+        """Replace QApplication with a mock."""
+        mocker.patch(f'{_MODULE}.suppress_file_permission_warnings')
+        mock_qtwidgets = mocker.patch('importlib.import_module').return_value
+        return mock_qtwidgets.QApplication
+
+    def test_calls(self, mock_qapp, mocker):
+        """Check calls in _init_dummy_qapp."""
+        mock_suppress = mocker.patch(
+            f'{_MODULE}.suppress_file_permission_warnings'
+            )
+        with pytest.raises(SystemExit):
+            _init_dummy_qapp()
+        mock_suppress.assert_called_once_with()
+        mock_qapp.assert_called_once_with([])
+
+    _screen = {
+        'with screen': (object(), PyQtSanity.OK),
+        'no screen': (None, PyQtSanity.NO_DISPLAY),
+        }
+
+    @parametrize('screen,expect', _screen.values(), ids=_screen)
+    def test_exit_code(self, screen, expect, mock_qapp):
+        """Check the exit code with and without a primary screen."""
+        mock_qapp.return_value.primaryScreen.return_value = screen
+        with pytest.raises(SystemExit) as excinfo:
+            _init_dummy_qapp()
+        assert excinfo.value.code == expect.value
 
 
 @parametrize(pyqt_present=(True, False))
@@ -115,16 +169,22 @@ class TestImportDummyPyqtAndRunApp:
         # without graphics.
         return mocker.patch(f'{_MODULE}._init_dummy_qapp')
 
-    def test_cant_import_pyqt(self, mocker):
+    @fixture(name='imports_done')
+    def fixture_imports_done(self, mocker):
+        """Return a fake sending end of a pipe."""
+        return mocker.MagicMock(name='imports_done')
+
+    def test_cant_import_pyqt(self, imports_done, mocker):
         """Check the expected exit code when importing PyQt5 fails."""
         mocker.patch('importlib.import_module',
                      side_effect=ImportError)
         with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app()
+            _import_dummy_pyqt_and_run_app(imports_done)
         assert excinfo.value.code == PyQtSanity.IMPORT_ERROR.value
+        imports_done.send.assert_not_called()
 
     @parametrize(module=_modules)
-    def test_cant_import_pyqt_submodule(self, module, mocker):
+    def test_cant_import_pyqt_submodule(self, module, imports_done, mocker):
         """Check the expected exit code when importing PyQt5 fails."""
         def _fail_module_import(mod_name):
             if mod_name == module:
@@ -132,32 +192,42 @@ class TestImportDummyPyqtAndRunApp:
         mocker.patch('importlib.import_module',
                      side_effect=_fail_module_import)
         with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app()
+            _import_dummy_pyqt_and_run_app(imports_done)
         assert excinfo.value.code == PyQtSanity.IMPORT_ERROR.value
+        imports_done.send.assert_not_called()
 
-    def test_pyqt_not_found(self, mocker):
+    def test_pyqt_not_found(self, imports_done, mocker):
         """Check the expected exit code when PyQt5 is not found."""
         mocker.patch('importlib.import_module',
                      side_effect=ModuleNotFoundError)
         with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app()
+            _import_dummy_pyqt_and_run_app(imports_done)
         assert excinfo.value.code == PyQtSanity.NOT_FOUND.value
+        imports_done.send.assert_not_called()
 
-    def test_success(self, mocker, mock_dummy_qapp):
+    def test_success(self, imports_done, mocker, mock_dummy_qapp):
         """Test an execution that does not cause the interpreter to exit."""
         # NB: normally, the interpreter always exits when
         # _import_dummy_pyqt_and_run_app is called. The only
         # reason why we don't exit here is the patching of
         # _init_dummy_qapp via mock_dummy_qapp.
         mock_import = mocker.patch('importlib.import_module')
-        _import_dummy_pyqt_and_run_app()
+        calls = mocker.MagicMock()
+        calls.attach_mock(imports_done, 'imports_done')
+        calls.attach_mock(mock_dummy_qapp, 'init_dummy_qapp')
+        _import_dummy_pyqt_and_run_app(imports_done)
 
         expect_calls = [
             mocker.call('PyQt5'),
             *(mocker.call(m) for m in self._modules)
             ]
         mock_import.assert_has_calls(expect_calls, any_order=True)
-        mock_dummy_qapp.assert_called_once_with()
+        # The parent must be told before creating the QApplication
+        assert calls.mock_calls == [
+            mocker.call.imports_done.send(True),
+            mocker.call.imports_done.close(),
+            mocker.call.init_dummy_qapp(),
+            ]
 
 
 class TestFindMissingDependencies:
@@ -306,40 +376,85 @@ class TestPyQtSanityChecker:
         # pylint: disable-next=magic-value-comparison
         assert mock_do_check.call_count == 2
 
+    def test_assume_ok(self, mocker):
+        """Ensure that assuming a sane PyQt5 skips checking."""
+        # Reset status manually, just in case it was checked already
+        mocker.patch.object(PyQtSanityChecker, '_status', None)
+        mock_do_check = mocker.patch.object(PyQtSanityChecker,
+                                            '_check_pyqt_sanity')
+        checker = PyQtSanityChecker()
+        checker.assume_ok()
+        assert checker() is PyQtSanity.OK
+        mock_do_check.assert_not_called()
+
+        # forget_status undoes it
+        checker.forget_status()
+        assert checker() is mock_do_check.return_value
+        mock_do_check.assert_called_once_with()
+
     _exit_codes = {
         0: PyQtSanity.OK,
         1: PyQtSanity.NOT_FOUND,
         2: PyQtSanity.IMPORT_ERROR,
         3: PyQtSanity.RUNTIME_CRASH,
         4: PyQtSanity.NO_DISPLAY,
+        5: PyQtSanity.RUNTIME_CRASH,    # Not an exit code of the child
         -6: PyQtSanity.RUNTIME_CRASH,   # SIGABRT
         134: PyQtSanity.RUNTIME_CRASH,  # SIGABRT on Unix
         'any code': PyQtSanity.RUNTIME_CRASH
         }
 
-    @parametrize(has_display=(True, False))
+    @staticmethod
+    def check_common_calls(mocks):
+        """Check the calls made whatever the outcome of the check."""
+        mocks.pipe.assert_called_once_with(duplex=False)
+        mocks.process_cls.assert_called_once_with(
+            target=_import_dummy_pyqt_and_run_app,
+            args=(mocks.child_end,),
+            )
+        mocks.process.start.assert_called_once_with()
+        mocks.child_end.close.assert_called_once_with()
+        mocks.wait.assert_called_once_with(
+            (mocks.imports_done, mocks.process.sentinel),
+            _STARTUP_TIMEOUT,
+            )
+        mocks.imports_done.close.assert_called_once_with()
+        # The parent closes its copy of the child's end of the
+        # pipe right after starting, i.e., before waiting.
+        assert mocks.order == ['start', 'close_child', 'wait']
+
+    @parametrize(ready=('imports', 'exited'))
     @parametrize('exit_code,expect', _exit_codes.items())
-    # pylint: disable-next=too-many-arguments   # 2/6 fixtures
-    def test_check_sanity(self, has_display, exit_code, expect,
-                          mock_multiprocessing, mocker):
-        """Check expected return value when no display is available."""
-        proc, proc_cls = mock_multiprocessing(has_display)
-        proc.exitcode = exit_code
-        expect_calls = {
-            'start': mocker.call(),
-            'join': mocker.call(_TIMEOUT),
-            'is_alive': mocker.call(),
-            }
-        if not has_display:
-            expect_calls['terminate'] = mocker.call()
-            expect = PyQtSanity.NO_DISPLAY
+    def test_check_sanity_exits(self, ready, exit_code, expect,
+                                mock_multiprocessing):
+        """Check the result when the subprocess exits by itself."""
+        mocks = mock_multiprocessing(ready=ready, exitcode=exit_code)
         # pylint: disable-next=protected-access
         result = PyQtSanityChecker._check_pyqt_sanity()
         assert result is expect
-        proc_cls.assert_called_once_with(target=_import_dummy_pyqt_and_run_app)
-        for method_name, call in expect_calls.items():
-            method = getattr(proc, method_name)
-            assert method.mock_calls == [call]
+        self.check_common_calls(mocks)
+        mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
+        mocks.process.terminate.assert_not_called()
+
+    def test_check_sanity_no_display(self, mock_multiprocessing):
+        """Check the result when creating a QApplication hangs."""
+        mocks = mock_multiprocessing(ready='imports', alive=True)
+        # pylint: disable-next=protected-access
+        result = PyQtSanityChecker._check_pyqt_sanity()
+        assert result is PyQtSanity.NO_DISPLAY
+        self.check_common_calls(mocks)
+        mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
+        mocks.process.terminate.assert_called_once_with()
+
+    def test_check_sanity_unresponsive(self, mock_multiprocessing):
+        """Check the result when importing PyQt5 does not finish in time."""
+        mocks = mock_multiprocessing(ready='none', alive=True)
+        # pylint: disable-next=protected-access
+        result = PyQtSanityChecker._check_pyqt_sanity()
+        assert result is PyQtSanity.UNRESPONSIVE
+        self.check_common_calls(mocks)
+        mocks.process.join.assert_not_called()
+        mocks.process.terminate.assert_called_once_with()
 
 
 @fixture(name='mock_pyqt_root')

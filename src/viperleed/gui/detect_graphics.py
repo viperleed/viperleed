@@ -7,20 +7,28 @@ of displaying widgets.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-22'
 __license__ = 'GPLv3+'
 
 from enum import IntEnum
 import importlib
+from multiprocessing import Pipe
+from multiprocessing import Process
+from multiprocessing.connection import wait
 import os
 from pathlib import Path
-from multiprocessing import Process
 import subprocess
 import sys
 
-# How long (in seconds) to wait before deciding there's no graphics?
-_TIMEOUT = 1
+# How long (in seconds) to wait for the checker subprocess to start
+# and import PyQt5. This can take several seconds, e.g., on the first
+# execution on macOS or with a cold disk cache. It is not related to
+# the presence of a display, hence the generous value.
+_STARTUP_TIMEOUT = 60
+# How long (in seconds) to wait for a QApplication to be created,
+# after PyQt5 was imported, before deciding there's no graphics.
+_DISPLAY_TIMEOUT = 5
 _UNIX_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR', '')
 
 
@@ -32,6 +40,17 @@ class PyQtSanity(IntEnum):
     IMPORT_ERROR = 2   # ImportError: perhaps a Qt version mismatch
     RUNTIME_CRASH = 3  # "Aborted (core dumped)", typical ABI mismatch
     NO_DISPLAY = 4     # OK, but graphics support is missing
+    UNRESPONSIVE = 5   # Importing PyQt5 did not finish in time
+
+
+# The exit codes that _import_dummy_pyqt_and_run_app uses on purpose.
+# Any other exit code of the checker subprocess signals a crash.
+_CHECKER_EXIT_CODES = frozenset((
+    PyQtSanity.OK.value,
+    PyQtSanity.NOT_FOUND.value,
+    PyQtSanity.IMPORT_ERROR.value,
+    PyQtSanity.NO_DISPLAY.value,
+    ))
 
 
 class PyQtSanityChecker:
@@ -52,31 +71,60 @@ class PyQtSanityChecker:
         return cls._status
 
     @classmethod
+    def assume_ok(cls):
+        """Take PyQt5 as usable without checking the environment."""
+        cls._status = PyQtSanity.OK
+
+    @classmethod
     def forget_status(cls):
         """Forget any previous checks of the environment."""
         cls._status = None
 
     @staticmethod
     def _check_pyqt_sanity():
-        """Check whether the current PyQt5 is usable."""
-        # Use a subprocess not to crash the current interpreter
-        proc = Process(target=_import_dummy_pyqt_and_run_app)
+        """Check whether the current PyQt5 is usable.
+
+        The check runs in a subprocess, not to crash the current
+        interpreter. Two time limits apply. The subprocess has up
+        to _STARTUP_TIMEOUT seconds to start and import PyQt5. It
+        then has _DISPLAY_TIMEOUT seconds to create a QApplication.
+        Creating a QApplication may hang on a system that has no
+        working display (e.g., if the DISPLAY environment variable
+        points to an X server that does not answer).
+
+        Returns
+        -------
+        PyQtSanity
+            The status of the current PyQt5 installation.
+        """
+        imports_done, child_end = Pipe(duplex=False)
+        proc = Process(target=_import_dummy_pyqt_and_run_app,
+                       args=(child_end,))
         proc.start()
-        proc.join(_TIMEOUT)
+        # Close our copy of the child's end, so that imports_done
+        # becomes ready (end of file) also if the subprocess dies
+        child_end.close()
+        try:
+            # Wait until PyQt5 was imported or the subprocess exited
+            ready = wait((imports_done, proc.sentinel), _STARTUP_TIMEOUT)
+        finally:
+            imports_done.close()
+        if not ready:
+            proc.terminate()
+            return PyQtSanity.UNRESPONSIVE
+        proc.join(_DISPLAY_TIMEOUT)
         if proc.is_alive():
             # The QApplication did not crash the interpreter, but it is
             # still trying to start up. This means we have no display.
             proc.terminate()
             return PyQtSanity.NO_DISPLAY
-        # Pick the sanity based on the exit code
-        try:
+        # Pick the sanity based on the exit code. Any unexpected code
+        # is taken as a crash. One could in principle check whether the
+        # exit code is negative, or one of the signals, but this keeps
+        # this checker as OS-independent as possible.
+        if proc.exitcode in _CHECKER_EXIT_CODES:
             return PyQtSanity(proc.exitcode)
-        except ValueError:
-            # Assume there was a crash. One could in principle
-            # check whether the exit code is negative, or one
-            # of the signals, but this keeps this checker as
-            # OS-independent as possible.
-            return PyQtSanity.RUNTIME_CRASH
+        return PyQtSanity.RUNTIME_CRASH
 
 
 check_pyqt_sanity = PyQtSanityChecker()
@@ -85,8 +133,8 @@ check_pyqt_sanity = PyQtSanityChecker()
 def has_graphics():
     """Return whether the system has graphical capabilities.
 
-    This function will block for one second on systems that do not
-    have graphical capabilities.
+    On systems that do not have graphical capabilities, this function
+    may block for a few seconds (see PyQtSanityChecker).
 
     Returns
     -------
@@ -251,14 +299,20 @@ class Qt5DependencyFinder:
         return install_libs
 
 
-def _import_dummy_pyqt_and_run_app():
+def _import_dummy_pyqt_and_run_app(imports_done):
     """Attempt importing PyQt5 and its modules.
 
     This function is meant to be used in a child process to prevent
     crashing the current interpreter if the Qt installation is broken.
-    Calling this will block forever on a system that has no graphical
+    Calling this may block forever on a system that has no graphical
     capability. It will also exit the interpreter if importing PyQt5
     fails. In this case, the exit code gives information on the cause.
+
+    Parameters
+    ----------
+    imports_done : multiprocessing.connection.Connection
+        The sending end of a pipe. A message is sent, and the
+        connection closed, once all PyQt5 modules were imported.
 
     Returns
     -------
@@ -285,6 +339,8 @@ def _import_dummy_pyqt_and_run_app():
             importlib.import_module(module)
         except ImportError:
             sys.exit(PyQtSanity.IMPORT_ERROR.value)
+    imports_done.send(True)
+    imports_done.close()
     _init_dummy_qapp()
 
 
@@ -292,8 +348,10 @@ def _init_dummy_qapp():
     """Initialize a dummy QApplication instance.
 
     This function is only meant to be used for checking whether the
-    current platform has graphical capabilities. Calling this will
-    block forever on a system that has no graphical capability.
+    current platform has graphical capabilities. Calling this may
+    block forever on a system that has no graphical capability. It
+    always exits the interpreter otherwise, with exit code NO_DISPLAY
+    if the QApplication has no screen, OK if it has one.
 
     Returns
     -------
@@ -301,8 +359,10 @@ def _init_dummy_qapp():
     """
     suppress_file_permission_warnings()
     qtw = importlib.import_module('PyQt5.QtWidgets')
-    _ = qtw.QApplication([])
-    sys.exit(PyQtSanity.OK.value)
+    app = qtw.QApplication([])
+    has_screen = app.primaryScreen() is not None
+    sanity = PyQtSanity.OK if has_screen else PyQtSanity.NO_DISPLAY
+    sys.exit(sanity.value)
 
 
 # This class is really just a container
