@@ -766,7 +766,9 @@ Fortran compilers, you should already have the necessary C compiler installed
 .. versionchanged:: 0.15.0
     Earlier |calc| versions would also look for an :file:`MPIrandom_.o` file
     when running the structure optimization in a parallelized manner. However,
-    this file is identical to :file:`random_.o`.
+    this file is identical to :file:`random_.o`. If you need to use an earlier
+    |calc| version, you can duplicate file :file:`random_.o` (compiled as
+    described below) and rename it to :file:`MPIrandom_.o`.
 
 .. note::
     Make sure to compile ``random_.o`` with the same compiler
