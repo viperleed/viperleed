@@ -786,17 +786,24 @@ Fortran compilers, you should already have the necessary C compiler installed
     .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         To compile the random-number generation library for a certain
-        TensErLEED version, navigate in your terminal to the respective
+        TensErLEED version, navigate in your terminal to the :file:`lib`
+        subfolder of the respective
         :ref:`directory containing the TensErLEED source files<install_tensorleed>`
-        and call either ``make intel`` or ``make gcc`` to compile
-        them using the Intel or GCC :term:`C` compilers, respectively.
+        and compile :file:`random_.c` with the C compiler matching your
+        Fortran compiler, i.e., either
 
-        .. note::
-           The ``Makefile`` for Intel compilers uses ``icc``/``mpiicc``. These
-           compilers may be unavailable on recent |oneAPI| versions, as they
-           were discontinued in favor of ``icx``/``mpiicx``. If this is the
-           case, replace ``icc``/``mpiicc`` by ``icx``/``mpiicx`` in the
-           ``Makefile``, then call ``make intel`` once again.
+        .. code-block:: bash
+
+            gcc -O3 -c random_.c -o random_.o
+
+        for GCC, or
+
+        .. code-block:: bash
+
+            icx -O3 -c random_.c -o random_.o
+
+        for Intel. For earlier versions of |oneAPI| that do not include
+        ``icx``, use ``icc`` instead.
 
     .. tab-item:: Windows, native
 
@@ -806,7 +813,7 @@ Fortran compilers, you should already have the necessary C compiler installed
             incompatible with Windows.
 
         .. versionchanged:: 0.15.0
-            |calc| versions between 0.14.1 (included) and 0.15.0 do not support
+            |calc| versions starting at 0.14.1 and earlier than 0.15.0 do not support
             executing the structure-optimization :ref:`section<sec_search>`
             with TensErLEED < v1.7.0 natively on Windows.
 
