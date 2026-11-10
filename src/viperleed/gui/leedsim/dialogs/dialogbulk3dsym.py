@@ -119,7 +119,8 @@ class Bulk3DSymDialog(qtw.QDialog):
         # Change resizing policy for some widgets:
         # - Done and Cancel buttons should not resize
         for but in buttons.values():
-            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Fixed)
 
         # Place widgets into the layout
         layout = qtw.QVBoxLayout()

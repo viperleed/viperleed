@@ -84,10 +84,12 @@ class RotationBlock(TextBoxWithButtons):
 
         # set size policies and adjust the sizes to account for the new font
         for lab in [rotBulkLab, oneZeroLab, zeroOneLab]:
-            lab.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+            lab.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Preferred)
             lab.adjustSize()
         for but in np.ravel(horVerButs):
-            but.setSizePolicy(qtw.QSizePolicy.Policy.Preferred, qtw.QSizePolicy.Policy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Preferred,
+                              qtw.QSizePolicy.Policy.Fixed)
             but.setMaximumHeight(
                 round(qtw.QPushButton().sizeHint().height()*.84)
                 )
@@ -108,10 +110,13 @@ class RotationBlock(TextBoxWithButtons):
         # now add the widgets to the layout
         bWLay.addWidget(rotBulkLab, 0, 0, 1, 3, qtc.Qt.AlignmentFlag.AlignLeft)
         bWLay.addWidget(oneZeroLab, 1, 0, 1, 1,
-                        qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignLeft)
+                        qtc.Qt.AlignmentFlag.AlignHCenter
+                        | qtc.Qt.AlignmentFlag.AlignLeft)
         bWLay.addWidget(zeroOneLab, 2, 0, 1, 1,
-                        qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignLeft)
-        [bWLay.addWidget(horVerButs[i][j], i+1, j+1, 1, 1, qtc.Qt.AlignmentFlag.AlignCenter)
+                        qtc.Qt.AlignmentFlag.AlignHCenter
+                        | qtc.Qt.AlignmentFlag.AlignLeft)
+        [bWLay.addWidget(horVerButs[i][j], i+1, j+1, 1, 1,
+                         qtc.Qt.AlignmentFlag.AlignCenter)
          for i in range(2) for j in range(2)]
 
         # set the minimum heights of rows and columns
@@ -131,6 +136,7 @@ class RotationBlock(TextBoxWithButtons):
         angle = self.window().real.angle_for_horizontal_bulk(direction)
         if vert:
             angle += 90
-        if qtw.QApplication.instance().keyboardModifiers() == qtc.Qt.KeyboardModifier.ControlModifier:
+        modifiers = qtw.QApplication.instance().keyboardModifiers()
+        if modifiers == qtc.Qt.KeyboardModifier.ControlModifier:
             angle += 180
         self.text.updateText(angle)

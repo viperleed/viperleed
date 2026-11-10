@@ -30,7 +30,8 @@ class DomsBlock(qtw.QWidget):
 
         # The next line is useful only if I ever want to place this in a
         # layout
-        self.setSizePolicy(qtw.QSizePolicy.Policy.Minimum, qtw.QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(qtw.QSizePolicy.Policy.Minimum,
+                           qtw.QSizePolicy.Policy.Minimum)
         self.text = qtw.QLabel('\u2014 inequivalent domain(s)')
         self.toggle = ToggleButton(self.toggleText[self.hide])
 
@@ -59,7 +60,10 @@ class DomsBlock(qtw.QWidget):
                                   qtw.QSizePolicy.Policy.Minimum)
         self.toggle.adjustSize()
 
-        self.text.setAlignment(qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignBaseline)
+        self.text.setAlignment(
+            qtc.Qt.AlignmentFlag.AlignRight
+            | qtc.Qt.AlignmentFlag.AlignBaseline
+            )
         self.text.setSizePolicy(qtw.QSizePolicy.Policy.Expanding,
                                 qtw.QSizePolicy.Policy.Minimum)
         self.text.adjustSize()
@@ -76,7 +80,11 @@ class DomsBlock(qtw.QWidget):
         lay.addWidget(self.toggle)
         lay.addStretch(1)
         lay.setAlignment(self.text, self.text.alignment())
-        lay.setAlignment(self.toggle, qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
+        lay.setAlignment(
+            self.toggle,
+            qtc.Qt.AlignmentFlag.AlignRight
+            | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
 
         self.setLayout(lay)
 

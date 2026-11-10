@@ -148,15 +148,18 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.tBar.setFloatable(False)
         self.tBar.setIconSize(0.7*self.tBar.iconSize())
 
-        newF = qtg.QAction(self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_FileIcon),
-                           'New structure', self)
+        newF = qtg.QAction(
+            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_FileIcon),
+            'New structure', self)
         newF.setStatusTip(
             'Create a new experiment symmetry or edit the current one (Ctrl+N)'
             )
         newF.triggered.connect(self.fileNewDialog)
 
         openF = qtg.QAction(
-            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_DialogOpenButton),
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DialogOpenButton
+                ),
             'Open an experiment-symmetry file', self)
         openF.setStatusTip(
             'Load an experiment-symmetry file (Ctrl+O)'
@@ -164,7 +167,9 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         openF.triggered.connect(self.fileOpenDialog)
 
         saveF = qtg.QAction(
-            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_DialogSaveButton),
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DialogSaveButton
+                ),
             'Save experiment-symmetry to file', self)
         saveF.setStatusTip(
             'Save current experiment-symmetry to file (Ctrl+S)'
@@ -172,7 +177,9 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         saveF.triggered.connect(self.fileSavePressed)
 
         exportAct = qtg.QAction(
-            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_DriveFDIcon),
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DriveFDIcon
+                ),
             'Export spot-pattern file', self)
         exportAct.setStatusTip(
             'Export a spot-pattern file (Ctrl+E)'
@@ -499,7 +506,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.cellShapes.setStatusTip('Open or drag-drop a LEED pattern file'
                                      'to print the shapes and symmetry'
                                      'groups of the system!')
-        self.cellShapes.setAlignment(qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignBaseline)
+        self.cellShapes.setAlignment(
+            qtc.Qt.AlignmentFlag.AlignHCenter
+            | qtc.Qt.AlignmentFlag.AlignBaseline
+            )
         self.cellShapes.setSizePolicy(qtw.QSizePolicy.Policy.Expanding,
                                       qtw.QSizePolicy.Policy.Preferred)
         self.cellShapes.adjustSize()
@@ -630,8 +640,11 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                         #(qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
             shapesLay = qtw.QHBoxLayout()
             shapesLay.addStretch(1)
-            shapesLay.addWidget(self.cellShapes,
-                                qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignTop)
+            shapesLay.addWidget(
+                self.cellShapes,
+                qtc.Qt.AlignmentFlag.AlignHCenter
+                | qtc.Qt.AlignmentFlag.AlignTop
+                )
             shapesLay.addStretch(1)
             topLayout.addLayout(shapesLay, 1, 0, 1, topLayout.columnCount())#,qtc.Qt.AlignCenter)
             # topLayout.setRowStretch(0,100)
@@ -819,7 +832,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         reply = qtw.QMessageBox.question(self,
                                      'Message',
                                      'Are you sure to quit?',
-                                     qtw.QMessageBox.StandardButton.Yes | qtw.QMessageBox.StandardButton.No,
+                                     (qtw.QMessageBox.StandardButton.Yes
+                                      | qtw.QMessageBox.StandardButton.No),
                                      qtw.QMessageBox.StandardButton.No)
 
         if reply == qtw.QMessageBox.StandardButton.Yes:

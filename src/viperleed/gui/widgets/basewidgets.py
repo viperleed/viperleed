@@ -30,7 +30,8 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
             raise
 
         super().__init__(parent)
-        self.setSizePolicy(qtw.QSizePolicy.Policy.Expanding, qtw.QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(qtw.QSizePolicy.Policy.Expanding,
+                           qtw.QSizePolicy.Policy.Expanding)
         self.setParent(parent)
 
         self.color = color

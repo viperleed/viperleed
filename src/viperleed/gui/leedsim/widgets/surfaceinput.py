@@ -383,8 +383,10 @@ class SurfaceStructureInput(qtw.QWidget):
         else:
             # Representable. See if we already have it in the
             # list (.findText returns index >= 0 if found)
-            found = woods_combo.findText(new_woods,
-                                         flags=qtc.Qt.MatchFlag.MatchExactly) >= 0
+            found = woods_combo.findText(
+                new_woods,
+                flags=qtc.Qt.MatchFlag.MatchExactly
+                ) >= 0
             if not found:
                 woods_combo.addItem(new_woods)
                 self.__woods.add_example(new_woods, self.bulk.cell_shape)
@@ -490,8 +492,10 @@ class SurfaceStructureInput(qtw.QWidget):
         layout = qtw.QHBoxLayout()
         layout.addWidget(self._ctrls['lattice'])
         layout.addLayout(superstructure_layout)
-        layout.setAlignment(self._ctrls['lattice'], qtc.Qt.AlignmentFlag.AlignTop)
-        layout.setAlignment(superstructure_layout, qtc.Qt.AlignmentFlag.AlignTop)
+        layout.setAlignment(self._ctrls['lattice'],
+                            qtc.Qt.AlignmentFlag.AlignTop)
+        layout.setAlignment(superstructure_layout,
+                            qtc.Qt.AlignmentFlag.AlignTop)
 
         self.setLayout(layout)
 
@@ -647,19 +651,22 @@ class SurfaceStructureInput(qtw.QWidget):
         except (ValueError, WoodsSyntaxError):
             # Text is not an acceptable Wood's notation
             self.user_gave_invalid_input.emit("Invalid Wood's syntax.", 1000)
-            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.GlobalColor.red)
+            change_control_text_color(woods_combo.lineEdit(),
+                                      qtc.Qt.GlobalColor.red)
             return
         except WoodsInvalidForBasisError:
             self.user_gave_invalid_input.emit(
                 f"{woods_txt} incommensurate for this bulk basis.",
                 7000
                 )
-            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.GlobalColor.red)
+            change_control_text_color(woods_combo.lineEdit(),
+                                      qtc.Qt.GlobalColor.red)
             return
 
         woods_combo.setCurrentText(self.__woods.string)
         self._ctrls['superlattice'].matrix = self.__woods.matrix
-        change_control_text_color(woods_combo.lineEdit(), qtc.Qt.GlobalColor.black)
+        change_control_text_color(woods_combo.lineEdit(),
+                                  qtc.Qt.GlobalColor.black)
 
     @dev_.print_call
     def _update_superlattice_from_surf_basis(self, surf_basis=None):

@@ -138,7 +138,8 @@ class NewFileDialog(qtw.QDialog):
         lattParBoxes = [*self.bulkParams, *self.surfParams]
         for tbox in lattParBoxes:
             tbox.setFont(labFont)
-            tbox.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
+            tbox.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Fixed)
             tbox.setMaximumWidth(self.bulkShape.width())
 
         allWidgs.extend([*lattLabels, *lattParBoxes])
@@ -170,7 +171,8 @@ class NewFileDialog(qtw.QDialog):
         self.highSymBut = qtw.QPushButton('Reduce to higher symmetry')
         for widg in [self.highSymTxt, self.highSymBut]:
             widg.setFont(smallText)
-            widg.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+            widg.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
         _min_width = round(self.highSymBut.width()*0.4)
         self.highSymBut.setMinimumWidth(_min_width)
         self.highSymTxt.setMinimumWidth(_min_width)
@@ -180,14 +182,19 @@ class NewFileDialog(qtw.QDialog):
         superstructLab.setFont(labFont)
         woodsLab = qtw.QLabel("Wood's:")
         woodsLab.setFont(smallText)
-        woodsLab.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+        woodsLab.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
         self.woods = qtw.QComboBox()
         self.woods.setEditable(True)
-        self.woods.setInsertPolicy(qtw.QComboBox.InsertPolicy.InsertAlphabetically)
+        self.woods.setInsertPolicy(
+            qtw.QComboBox.InsertPolicy.InsertAlphabetically
+            )
         self.woods.setFont(smallText)
         self.woods.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
                                  qtw.QSizePolicy.Policy.Preferred)
-        self.woods.setSizeAdjustPolicy(qtw.QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.woods.setSizeAdjustPolicy(
+            qtw.QComboBox.SizeAdjustPolicy.AdjustToContents
+            )
         self.woods.setMinimumContentsLength(12)
 
         superlatticeLab = qtw.QLabel('M = ')
@@ -204,7 +211,8 @@ class NewFileDialog(qtw.QDialog):
         for mij in self.superlattice.ravel():
             mij.setFont(labFont)
             mij.setMaximumWidth(35)
-            mij.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+            mij.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Preferred)
             mij.setValidator(intValidator)
 
         allWidgs.extend([superstructLab, self.woods, superlatticeLab,
@@ -214,7 +222,8 @@ class NewFileDialog(qtw.QDialog):
         emaxLab = qtw.QLabel('Max. Energy:')
         self.eMax = qtw.QLineEdit()
         for ctrl in [emaxLab, self.eMax]:
-            ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+            ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
             ctrl.setFont(labFont)
         self.eMax.setMaximumWidth(70)
         allWidgs.extend([emaxLab,self.eMax])
@@ -224,7 +233,8 @@ class NewFileDialog(qtw.QDialog):
         self.cancelBut = qtw.QPushButton('&Cancel')
         for but in [self.doneBut, self.cancelBut]:
             but.setFont(AllGUIFonts().buttonFont)
-            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Preferred)
         allWidgs.extend([self.doneBut, self.cancelBut])
 
         # status bar
@@ -271,7 +281,11 @@ class NewFileDialog(qtw.QDialog):
         for lab in [lattInputLabel, self.bulkInput, self.surfInput]:
             lattsLay.setAlignment(lab, qtc.Qt.AlignmentFlag.AlignCenter)
         for lab in [*lattLabels, groupLab]:
-            lattsLay.setAlignment(lab, qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
+            lattsLay.setAlignment(
+                lab,
+                qtc.Qt.AlignmentFlag.AlignRight
+                | qtc.Qt.AlignmentFlag.AlignVCenter
+                )
 
         matrixLay = qtw.QGridLayout()
         matrixLay.setSpacing(2)
@@ -304,7 +318,11 @@ class NewFileDialog(qtw.QDialog):
         eLay.addWidget(emaxLab)
         eLay.addWidget(self.eMax)
         eLay.addStretch(1)
-        eLay.setAlignment(emaxLab, qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
+        eLay.setAlignment(
+            emaxLab,
+            qtc.Qt.AlignmentFlag.AlignRight
+            | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
 
         botButsLay = qtw.QHBoxLayout()
         botButsLay.addWidget(self.sBar)
@@ -324,7 +342,10 @@ class NewFileDialog(qtw.QDialog):
         diagLay.addLayout(eLay, 1, 2, 1, 1)
         diagLay.addLayout(botButsLay, 2, 0, 1, 3)
         diagLay.setColumnMinimumWidth(1, 15)
-        diagLay.setAlignment(eLay, qtc.Qt.AlignmentFlag.AlignLeft | qtc.Qt.AlignmentFlag.AlignVCenter)
+        diagLay.setAlignment(
+            eLay,
+            qtc.Qt.AlignmentFlag.AlignLeft | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
         diagLay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
 
         self.setLayout(diagLay)

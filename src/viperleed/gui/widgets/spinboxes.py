@@ -148,7 +148,8 @@ class TextBox(qtw.QLineEdit):
         if (isinstance(event, qtg.QKeyEvent)
             and os.name == 'posix'
             and event.key() == qtc.Qt.Key.Key_E
-                and event.modifiers() == qtc.Qt.KeyboardModifier.ControlModifier):
+            and event.modifiers()
+                == qtc.Qt.KeyboardModifier.ControlModifier):
             # Returning False causes the event to be propagated to
             # the parent, de facto disabling the 'go to end of line'
             # behavior it would normally have on Linux.
@@ -163,7 +164,8 @@ class TextBox(qtw.QLineEdit):
             # multiples of 1/8 of a degree; for trackpad, the number
             # returned corresponds to the number of pixels of scrolling
             movement = event.angleDelta().y()/8
-            if event.source() == qtc.Qt.MouseEventSource.MouseEventSynthesizedBySystem:
+            by_system = qtc.Qt.MouseEventSource.MouseEventSynthesizedBySystem
+            if event.source() == by_system:
                 # track-pad
                 movement /= 1  # fractional movement
             else:  # true mouse wheel
@@ -253,7 +255,8 @@ class TextBoxWithButtons(qtw.QWidget):
         self.bottomWidget.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
                                         qtw.QSizePolicy.Policy.Expanding)
         for but in [self.topBut, self.botBut]:
-            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Fixed)
 
         self.text.setMinimumHeight(2*self.smallButtonDims)
         self.text.setMaximumWidth(self.textBoxWidth)
@@ -339,7 +342,9 @@ class TextBoxWithButtons(qtw.QWidget):
     def on_buttonPressed(self, pressed):
         if pressed in [self.topBut, self.botBut]:
             step = self.text.baseStep
-            if qtw.QApplication.instance().keyboardModifiers() == qtc.Qt.KeyboardModifier.ControlModifier:
+            app = qtw.QApplication.instance()
+            if (app.keyboardModifiers()
+                    == qtc.Qt.KeyboardModifier.ControlModifier):
                 step = self.text.smallStep
             if self.text.stepType == 'scale':
                 step -= 1

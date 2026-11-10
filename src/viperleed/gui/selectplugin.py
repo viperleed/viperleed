@@ -94,7 +94,8 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
             reply = qtw.QMessageBox.question(
                 self, 'Message',
                 'Are you sure to quit?\nThis will close all modules!',
-                qtw.QMessageBox.StandardButton.Yes | qtw.QMessageBox.StandardButton.No,
+                (qtw.QMessageBox.StandardButton.Yes
+                 | qtw.QMessageBox.StandardButton.No),
                 qtw.QMessageBox.StandardButton.No
                 )
             if reply == qtw.QMessageBox.StandardButton.No:
@@ -106,8 +107,9 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
         """Reimpement to catch Ctrl+Q and Ctrl+W for quitting."""
+        ctrl = qtc.Qt.KeyboardModifier.ControlModifier
         if (event.key() in (qtc.Qt.Key.Key_Q, qtc.Qt.Key.Key_W)
-                and event.modifiers() == qtc.Qt.KeyboardModifier.ControlModifier):
+                and event.modifiers() == ctrl):
             self.close()
         super().keyPressEvent(event)
 
@@ -115,7 +117,8 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
         """Place children widgets."""
         layout = qtw.QVBoxLayout()
 
-        layout.addWidget(logo_one_line(), alignment=qtc.Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(logo_one_line(),
+                         alignment=qtc.Qt.AlignmentFlag.AlignHCenter)
 
         for module, (icon_fname, cls) in self.modules.items():
             icon = qtg.QIcon(os.path.join(resources_path('gui/icons'),
@@ -124,7 +127,8 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
             button.setIcon(icon)
             button.setIconSize(qtc.QSize(200, 122))
             button.clicked.connect(self._on_module_open_requested)
-            button.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
+            button.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                 qtw.QSizePolicy.Policy.Fixed)
             layout.addWidget(button)
 
             if cls is None:

@@ -135,7 +135,8 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
     def center_on_screen(self):
         """Center the window in the current screen."""
         window_rect = self.frameGeometry()
-        screen_center = qtw.QApplication.instance().desktop().availableGeometry(self).center()
+        desktop = qtw.QApplication.instance().desktop()
+        screen_center = desktop.availableGeometry(self).center()
         window_rect.moveCenter(screen_center)
         self.move(window_rect.topLeft())
 
@@ -298,7 +299,8 @@ class AboutViPErLEED(qtw.QWidget):
         txt.setOpenExternalLinks(True)
         txt.ensurePolished()
 
-        layout.addWidget(logo_one_line(), alignment=qtc.Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(logo_one_line(),
+                         alignment=qtc.Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(txt)
         layout.addWidget(self.__close_btn)
 

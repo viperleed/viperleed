@@ -387,7 +387,11 @@ class LatticeInput(qtw.QWidget):
         layout.setAlignment(title, qtc.Qt.AlignmentFlag.AlignCenter)
         for i, label in enumerate(labels):
             layout.addWidget(label, i + 1, 0, 1, 1)
-            layout.setAlignment(label, qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
+            layout.setAlignment(
+                label,
+                qtc.Qt.AlignmentFlag.AlignRight
+                | qtc.Qt.AlignmentFlag.AlignVCenter
+                )
 
         # (iii) Controls
         ctrl_column = 1 if with_labels else 0
@@ -417,7 +421,8 @@ class LatticeInput(qtw.QWidget):
         ctrl = self._ctrls['group']
 
         ctrl.setFont(AllGUIFonts().smallTextFont)
-        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                           qtw.QSizePolicy.Policy.Preferred)
         ctrl.setMinimumWidth(self._ctrls['a'].width())
         ctrl.ensurePolished()
 
@@ -427,7 +432,8 @@ class LatticeInput(qtw.QWidget):
 
         ctrl.setText('Make high\nsymmetry')
         ctrl.setFont(AllGUIFonts().buttonFont)
-        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                           qtw.QSizePolicy.Policy.Preferred)
         ctrl.setMinimumWidth(self._ctrls['shape'].width())
         ctrl.ensurePolished()
         ctrl.setAutoDefault(False)
@@ -450,7 +456,8 @@ class LatticeInput(qtw.QWidget):
             ctrl.addItem('_None')
             ctrl.setCurrentText('_None')
         ctrl.setCurrentText('')
-        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                           qtw.QSizePolicy.Policy.Preferred)
         ctrl.ensurePolished()
         ctrl.adjustSize()
         ctrl.setEnabled(self.edit_enabled)

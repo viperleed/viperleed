@@ -79,14 +79,16 @@ class MatricesPopup(qtw.QWidget):
         nCols = int(nMatrices/nRows)
 
         lay = qtw.QGridLayout()
-        [lay.addWidget(matrix, index//nCols, index % nCols, qtc.Qt.AlignmentFlag.AlignCenter)
+        [lay.addWidget(matrix, index//nCols, index % nCols,
+                       qtc.Qt.AlignmentFlag.AlignCenter)
          for (index, matrix) in enumerate(self.matrices)]
 
         if hasattr(self, 'firstDomMatrix'):
             # More than one domain. Add anyway the matrix of the first domain
             # for changing its color when domains are toggled. Initially
             # hide (toggling the button will show it).
-            lay.addWidget(self.firstDomMatrix, 0, 0, qtc.Qt.AlignmentFlag.AlignCenter)
+            lay.addWidget(self.firstDomMatrix, 0, 0,
+                          qtc.Qt.AlignmentFlag.AlignCenter)
             self.firstDomMatrix.hide()
 
         sizes = [(matrix.sizeHint().width(), matrix.sizeHint().height())
@@ -97,8 +99,8 @@ class MatricesPopup(qtw.QWidget):
          for col in range(lay.columnCount())]
         [lay.setRowMinimumHeight(row, max(heights))
          for row in range(lay.rowCount())]
-        lay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)  # This makes the window
-                                                         # not re-sizable
+        # This makes the window not re-sizable
+        lay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
         self.setLayout(lay)
         self.layout().activate()
 

@@ -218,9 +218,11 @@ class MPLFigureCanvas(FigureCanvas):
             # This might be an issue for resizing
             self.mplLayout.setAlignment(
                 self.title,
-                qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignBaseline
+                qtc.Qt.AlignmentFlag.AlignHCenter
+                | qtc.Qt.AlignmentFlag.AlignBaseline
                 )
-            self.mplLayout.setAlignment(self, qtc.Qt.AlignmentFlag.AlignHCenter)
+            self.mplLayout.setAlignment(self,
+                                        qtc.Qt.AlignmentFlag.AlignHCenter)
 
             # self.mplLayout.setStretchFactor(self.title, 1)
             # self.mplLayout.setStretchFactor(self, 20)

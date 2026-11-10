@@ -32,7 +32,8 @@ class ExportCSVDialog(qtw.QDialog):
         self.leed = leed
         self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint  # disable close button
+        # Disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint
         self.setWindowFlags(flags)
         self.setWindowTitle('Select export data')
 
@@ -78,7 +79,8 @@ class ExportCSVDialog(qtw.QDialog):
         self.cancelBut = qtw.QPushButton('Cancel')
         for but in [self.doneBut, self.cancelBut]:
             but.setFont(font)
-            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Fixed)
         butsLay = qtw.QHBoxLayout()
         butsLay.addStretch(1)
         butsLay.addWidget(self.doneBut)
@@ -90,9 +92,11 @@ class ExportCSVDialog(qtw.QDialog):
             tick.setFont(font)
             tick.setText('Dom. %d' % (dom + 1))
             p = tick.palette()  # for coloring text the same as the domains
-            p.setColor(qtg.QPalette.ColorRole.WindowText, qtg.QColor.fromRgbF(*color))
+            p.setColor(qtg.QPalette.ColorRole.WindowText,
+                       qtg.QColor.fromRgbF(*color))
             tick.setPalette(p)
-            tick.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
+            tick.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
             tick.hide()
 
         # and arrange them in a QGridLayout, in a similar manner as the

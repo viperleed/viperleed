@@ -57,7 +57,8 @@ class ErrorBox(qtw.QMessageBox):
         self.silent = silent
 
         super().__init__(qtw.QMessageBox.Icon.Critical, title, text,
-                         buttons=qtw.QMessageBox.StandardButton.Ok, parent=parent)
+                         buttons=qtw.QMessageBox.StandardButton.Ok,
+                         parent=parent)
 
     def exec(self, extra_text=""):
         """Open the dialog as modal if there is an exception.

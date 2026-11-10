@@ -123,9 +123,11 @@ def drawText(painter, text, transform=None, combine=False):
 
     painter.save()
     paths = [rawFont.pathForGlyph(index) for index in indexes]
-    advances = rawFont.advancesForGlyphIndexes(indexes,
-                                               qtg.QRawFont.LayoutFlag.UseDesignMetrics
-                                               | qtg.QRawFont.LayoutFlag.KernedAdvances)
+    advances = rawFont.advancesForGlyphIndexes(
+        indexes,
+        qtg.QRawFont.LayoutFlag.UseDesignMetrics
+        | qtg.QRawFont.LayoutFlag.KernedAdvances
+        )
     if transform is not None:
         painter.setWorldTransform(transform, combine=combine)
     for (path,advance) in zip(paths,advances):

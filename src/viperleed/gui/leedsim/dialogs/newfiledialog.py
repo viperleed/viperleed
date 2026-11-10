@@ -66,7 +66,8 @@ class NewFileDialog(qtw.QDialog):
         # Set the appearance of the window
         self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint  # Disable close button
+        # Disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint
         self.setWindowFlags(flags)
         self.setWindowTitle('Create/edit LEED input')
 
@@ -361,8 +362,10 @@ class NewFileDialog(qtw.QDialog):
         emax_layout.setContentsMargins(5, 5, 5, 5)
         emax_layout.addWidget(emax_label)
         emax_layout.addWidget(self._ctrls['e_max'])
-        emax_layout.setAlignment(emax_label,
-                                 qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
+        emax_layout.setAlignment(
+            emax_label,
+            qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
 
         status_and_buttons_layout = qtw.QHBoxLayout()
         for key in ('status_bar', 'done', 'cancel'):
@@ -378,13 +381,17 @@ class NewFileDialog(qtw.QDialog):
         dialog_layout.addWidget(self._ctrls['live_view'], 3, 0, 1, 1)
         dialog_layout.addLayout(emax_layout, 3, 1, 1, 1)
         dialog_layout.addLayout(status_and_buttons_layout, 4, 0, 1, 2)
-        dialog_layout.setAlignment(emax_layout,
-                                   qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
+        dialog_layout.setAlignment(
+            emax_layout,
+            qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
         self.setLayout(dialog_layout)
 
         # (4) Take care of widgets that do not belong to a layout
         self._ctrls['edit_surf_name'].setFont(AllGUIFonts().smallTextFont)
-        self._ctrls['edit_surf_name'].setAlignment(qtc.Qt.AlignmentFlag.AlignCenter)
+        self._ctrls['edit_surf_name'].setAlignment(
+            qtc.Qt.AlignmentFlag.AlignCenter
+            )
         self._ctrls['edit_surf_name'].hide()
 
     def _connect(self):
@@ -664,8 +671,9 @@ class NewFileDialog(qtw.QDialog):
             valid = False
 
         self._glob['e_max_valid'] = valid
-        change_control_text_color(self._ctrls['e_max'],
-                                  qtc.Qt.GlobalColor.black if valid else qtc.Qt.GlobalColor.red)
+        color = (qtc.Qt.GlobalColor.black if valid
+                 else qtc.Qt.GlobalColor.red)
+        change_control_text_color(self._ctrls['e_max'], color)
         self._update_done_enabled()
 
         if not valid:
@@ -871,7 +879,8 @@ class BulkHighSymReductionDialog(qtw.QDialog):
         # Set the appearance of the window
         self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint  # Disable close button
+        # Disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint
         self.setWindowFlags(flags)
         self.setWindowTitle('Make bulk lattice high symmetry')
 

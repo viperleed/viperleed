@@ -121,14 +121,18 @@ def default_file_menu():
                 'New/Edit experiment-symmetry file',
                 '_on_file_new_or_edit_pressed',
                 False),
-        'open': (style.standardIcon(qtw.QStyle.StandardPixmap.SP_DialogOpenButton),
+        'open': (style.standardIcon(
+                     qtw.QStyle.StandardPixmap.SP_DialogOpenButton
+                     ),
                  '&Open...',
                  'Ctrl+O',
                  'Open experiment symmetry',
                  'Open experiment-symmetry file',
                  '_on_file_open_pressed',
                  False),
-        'save': (style.standardIcon(qtw.QStyle.StandardPixmap.SP_DialogSaveButton),
+        'save': (style.standardIcon(
+                     qtw.QStyle.StandardPixmap.SP_DialogSaveButton
+                     ),
                  '&Save',
                  'Ctrl+S',
                  'Save experiment symmetry',
@@ -583,7 +587,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         domains = self._ctrls['domains']
         domains.setFont(AllGUIFonts().labelFont)
         domains.ensurePolished()
-        domains.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
+        domains.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Fixed)
 
         # (4) Place controls in the layout
         layout = self.centralWidget().layout()
@@ -598,13 +603,16 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                          alignment=qtc.Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._ctrls['rotation'],
                          0, 2,
-                         alignment=qtc.Qt.AlignmentFlag.AlignTop | qtc.Qt.AlignmentFlag.AlignLeft)
+                         alignment=(qtc.Qt.AlignmentFlag.AlignTop
+                                    | qtc.Qt.AlignmentFlag.AlignLeft))
         layout.addWidget(self._ctrls['energy'],
                          0, 2,
-                         alignment=qtc.Qt.AlignmentFlag.AlignTop | qtc.Qt.AlignmentFlag.AlignRight)
+                         alignment=(qtc.Qt.AlignmentFlag.AlignTop
+                                    | qtc.Qt.AlignmentFlag.AlignRight))
         layout.addWidget(domains,
                          0, 2,
-                         alignment=qtc.Qt.AlignmentFlag.AlignBottom | qtc.Qt.AlignmentFlag.AlignRight)
+                         alignment=(qtc.Qt.AlignmentFlag.AlignBottom
+                                    | qtc.Qt.AlignmentFlag.AlignRight))
         # layout.setColumnStretch(0, 2)
         # layout.setColumnStretch(3, 2)
 
@@ -649,7 +657,9 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         # ...and its contents:
         # * Export list of beams to *.csv
         export_csv = qtg.QAction(
-            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_DriveFDIcon),
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DriveFDIcon
+                ),
             '&Export spot-pattern file...', self)
         export_csv.setShortcut('Ctrl+E')
         shortcut = export_csv.shortcut().toString()

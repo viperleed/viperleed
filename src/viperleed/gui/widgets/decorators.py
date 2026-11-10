@@ -140,7 +140,8 @@ def broadcast_mouse(cls, _, args, kwargs):
         # QMainWindow: if the centralWidget was already set (and consequently
         # already handled by childEvent above) when a new widget is added
         # as its child, no child event is emitted without the next lines
-        if event.type() in (qtc.QEvent.Type.ChildPolished, qtc.QEvent.Type.ChildRemoved):
+        if event.type() in (qtc.QEvent.Type.ChildPolished,
+                            qtc.QEvent.Type.ChildRemoved):
             self.childEvent(event)
 
         if event.type() in mouse_event_types:
@@ -156,7 +157,10 @@ def broadcast_mouse(cls, _, args, kwargs):
                     else:
                         edited_event = event
                     if not self.__skip_event_broadcast(child, edited_event):
-                        qtw.QApplication.instance().sendEvent(child, edited_event)
+                        qtw.QApplication.instance().sendEvent(
+                            child,
+                            edited_event
+                            )
                 self.__last_broadcasted[child] = event.timestamp()
         return __orig_eventFilter(self, target, event)
 
@@ -202,14 +206,17 @@ def broadcast_mouse(cls, _, args, kwargs):
         For future extension to other cases that I have not thought about,
         return a logic OR of the conditions
         """
+        transparent = qtc.Qt.WidgetAttribute.WA_TransparentForMouseEvents
         if (not target.isEnabled()
-            or target.testAttribute(qtc.Qt.WidgetAttribute.WA_TransparentForMouseEvents)):
+                or target.testAttribute(transparent)):
             return True
 
         skip_line_edit = (isinstance(target, qtw.QLineEdit)
                           and not target.hasFocus()
-                          and event.type() in (qtc.QEvent.Type.MouseButtonDblClick,
-                                               qtc.QEvent.Type.MouseMove))
+                          and event.type() in (
+                              qtc.QEvent.Type.MouseButtonDblClick,
+                              qtc.QEvent.Type.MouseMove,
+                              ))
         return skip_line_edit
 
 
