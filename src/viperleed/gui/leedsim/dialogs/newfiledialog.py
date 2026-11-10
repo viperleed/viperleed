@@ -310,7 +310,7 @@ class NewFileDialog(qtw.QDialog):
         # select the 'add' tab. This would otherwise
         # happen when removing the 'last' structure
         self._ctrls['surfaces'].tabBar().setSelectionBehaviorOnRemove(
-            self._ctrls['surfaces'].tabBar().SelectLeftTab
+            self._ctrls['surfaces'].tabBar().SelectionBehavior.SelectLeftTab
             )
 
         self._ctrls['add_surface_tab'].setDefaultAction(

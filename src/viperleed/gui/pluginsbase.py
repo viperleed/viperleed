@@ -306,7 +306,7 @@ class AboutViPErLEED(qtw.QWidget):
         self.setLayout(layout)
         self.setMaximumWidth(max_width)
         palette = self.palette()
-        palette.setColor(palette.Background, qtc.Qt.GlobalColor.white)
+        palette.setColor(palette.ColorRole.Window, qtc.Qt.GlobalColor.white)
         self.setAutoFillBackground(True)
         self.setPalette(palette)
         self.adjustSize()

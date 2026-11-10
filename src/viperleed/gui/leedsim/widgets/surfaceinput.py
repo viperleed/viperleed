@@ -370,7 +370,7 @@ class SurfaceStructureInput(qtw.QWidget):
         # happened as a result of an improper text input (set
         # in _on_woods_selected).
         palette = woods_combo.lineEdit().palette()
-        palette.setColor(palette.Text, qtc.Qt.GlobalColor.black)
+        palette.setColor(palette.ColorRole.Text, qtc.Qt.GlobalColor.black)
         woods_combo.lineEdit().setPalette(palette)
 
         # See if the superlattice matrix is Wood's-representable

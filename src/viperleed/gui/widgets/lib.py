@@ -42,11 +42,11 @@ def change_control_text_color(ctrl, color):
     color = qtg.QColor(color)
     palette = ctrl.palette()
     if isinstance(ctrl, qtw.QPushButton):
-        palette.setColor(palette.ButtonText, color)
+        palette.setColor(palette.ColorRole.ButtonText, color)
     elif isinstance(ctrl, qtw.QLabel):
-        palette.setColor(palette.WindowText, color)
+        palette.setColor(palette.ColorRole.WindowText, color)
     else:
-        palette.setColor(palette.Text, color)
+        palette.setColor(palette.ColorRole.Text, color)
     ctrl.setPalette(palette)
 
 

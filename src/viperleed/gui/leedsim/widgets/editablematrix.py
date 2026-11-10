@@ -159,7 +159,7 @@ class EditableMatrix(qtw.QWidget):
         color : QColor
         """
         palette = self._ctrls.ravel()[0].palette()
-        palette.setColor(palette.Text, color)
+        palette.setColor(palette.ColorRole.Text, color)
         for ctrl in self._ctrls.ravel():
             ctrl.setPalette(palette)
 
