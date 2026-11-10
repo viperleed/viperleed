@@ -68,13 +68,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.openedFile = None  # Keep track of the name of the currently
                                 # open file. This is used for exporting.
         self.initUI()
-        self.centerOnScreen()
-
-    def centerOnScreen(self):
-        qr = self.frameGeometry()
-        cp = qtw.QDesktopWidget().availableGeometry(self).center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        self.center_on_screen()
 
     def setMenu(self):
         menubar = self.menuBar()
@@ -719,7 +713,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     def sizeHint(self):
         self.ensurePolished()
         screenFraction = 0.8
-        screensize = qtw.QDesktopWidget().availableGeometry(self).size()
+        screensize = self.screen().availableGeometry().size()
         sH = screenFraction*screensize
         return sH
 

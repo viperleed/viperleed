@@ -135,8 +135,7 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
     def center_on_screen(self):
         """Center the window in the current screen."""
         window_rect = self.frameGeometry()
-        desktop = qtw.QApplication.instance().desktop()
-        screen_center = desktop.availableGeometry(self).center()
+        screen_center = self.screen().availableGeometry().center()
         window_rect.moveCenter(screen_center)
         self.move(window_rect.topLeft())
 
