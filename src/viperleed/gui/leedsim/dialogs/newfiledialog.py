@@ -183,7 +183,7 @@ class NewFileDialog(qtw.QDialog):
             # Always have live-view mode on when no parameters
             # are given. This way we can force a plot of the
             # default lattices and LEED
-            self._ctrls['live_view'].setChecked(qtc.Qt.CheckState.Checked)
+            self._ctrls['live_view'].setChecked(True)
 
         self._init_lattices()
         self._init_controls()
@@ -338,7 +338,7 @@ class NewFileDialog(qtw.QDialog):
         to_be_polished = [emax_label, self._ctrls['e_max']]
 
         # (1.3) Live-view mode check-box
-        self._ctrls['live_view'].setChecked(qtc.Qt.CheckState.Checked)
+        self._ctrls['live_view'].setChecked(True)
         self._ctrls['live_view'].setFont(AllGUIFonts().labelFont)
         to_be_polished.append(self._ctrls['live_view'])
 
