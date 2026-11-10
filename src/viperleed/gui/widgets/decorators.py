@@ -12,19 +12,19 @@ __created__ = '2020-01-29'
 __license__ = 'GPLv3+'
 
 import wrapt
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.decorators import ensure_decorates_class
 from viperleed.gui.widgets.lib import get_all_children_widgets
 
 mouse_event_types = (
-    qtc.QEvent.MouseButtonPress,
-    qtc.QEvent.MouseButtonRelease,
-    qtc.QEvent.MouseButtonDblClick,
-    qtc.QEvent.MouseMove,
-    qtc.QEvent.Wheel,
+    qtc.QEvent.Type.MouseButtonPress,
+    qtc.QEvent.Type.MouseButtonRelease,
+    qtc.QEvent.Type.MouseButtonDblClick,
+    qtc.QEvent.Type.MouseMove,
+    qtc.QEvent.Type.Wheel,
     )
 
 @ensure_decorates_class(qtw.QWidget)
@@ -140,7 +140,7 @@ def broadcast_mouse(cls, _, args, kwargs):
         # QMainWindow: if the centralWidget was already set (and consequently
         # already handled by childEvent above) when a new widget is added
         # as its child, no child event is emitted without the next lines
-        if event.type() in (qtc.QEvent.ChildPolished, qtc.QEvent.ChildRemoved):
+        if event.type() in (qtc.QEvent.Type.ChildPolished, qtc.QEvent.Type.ChildRemoved):
             self.childEvent(event)
 
         if event.type() in mouse_event_types:
@@ -156,7 +156,7 @@ def broadcast_mouse(cls, _, args, kwargs):
                     else:
                         edited_event = event
                     if not self.__skip_event_broadcast(child, edited_event):
-                        qtw.qApp.sendEvent(child, edited_event)
+                        qtw.QApplication.instance().sendEvent(child, edited_event)
                 self.__last_broadcasted[child] = event.timestamp()
         return __orig_eventFilter(self, target, event)
 
@@ -170,8 +170,8 @@ def broadcast_mouse(cls, _, args, kwargs):
         new_local_pos = top_left - qtc.QPoint(5, 5)
         window_pos = target.mapTo(target.window(), new_local_pos)
         screen_pos = target.mapToGlobal(new_local_pos)
-        new_source = qtc.Qt.MouseEventSynthesizedByApplication
-        if event.type() == qtc.QEvent.Wheel:
+        new_source = qtc.Qt.MouseEventSource.MouseEventSynthesizedByApplication
+        if event.type() == qtc.QEvent.Type.Wheel:
             new_event = qtg.QWheelEvent(new_local_pos, screen_pos,
                                         event.pixelDelta(), event.angleDelta(),
                                         event.buttons(), event.modifiers(),
@@ -203,13 +203,13 @@ def broadcast_mouse(cls, _, args, kwargs):
         return a logic OR of the conditions
         """
         if (not target.isEnabled()
-            or target.testAttribute(qtc.Qt.WA_TransparentForMouseEvents)):
+            or target.testAttribute(qtc.Qt.WidgetAttribute.WA_TransparentForMouseEvents)):
             return True
 
         skip_line_edit = (isinstance(target, qtw.QLineEdit)
                           and not target.hasFocus()
-                          and event.type() in (qtc.QEvent.MouseButtonDblClick,
-                                               qtc.QEvent.MouseMove))
+                          and event.type() in (qtc.QEvent.Type.MouseButtonDblClick,
+                                               qtc.QEvent.Type.MouseMove))
         return skip_line_edit
 
 

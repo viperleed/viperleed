@@ -12,9 +12,9 @@ __license__ = 'GPLv3+'
 
 from matplotlib.figure import Figure
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.mpl_graphics import import_figure_canvas
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -218,9 +218,9 @@ class MPLFigureCanvas(FigureCanvas):
             # This might be an issue for resizing
             self.mplLayout.setAlignment(
                 self.title,
-                qtc.Qt.AlignHCenter | qtc.Qt.AlignBaseline
+                qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignBaseline
                 )
-            self.mplLayout.setAlignment(self, qtc.Qt.AlignHCenter)
+            self.mplLayout.setAlignment(self, qtc.Qt.AlignmentFlag.AlignHCenter)
 
             # self.mplLayout.setStretchFactor(self.title, 1)
             # self.mplLayout.setStretchFactor(self, 20)

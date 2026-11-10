@@ -14,9 +14,9 @@ __license__ = 'GPLv3+'
 
 import os
 
-from PyQt5 import QtCore as qtc
-from PyQt5 import QtGui as qtg
-from PyQt5 import QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed import __version__
 from viperleed.gui.helpers import resources_path
@@ -57,7 +57,7 @@ def show_pre_release_popup(module_name=''):
            "for public distribution!<p> Contact us at <a href="
            u''"'mailto:riva@iap.tuwien.ac.at'"'>riva@iap.tuwien.ac.at</a> '
            "</p>")
-    msg_box = qtw.QMessageBox(qtw.QMessageBox.Information,
+    msg_box = qtw.QMessageBox(qtw.QMessageBox.Icon.Information,
                               "Pre-release notice", txt)
     msg_box.exec()
 
@@ -94,10 +94,10 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
             reply = qtw.QMessageBox.question(
                 self, 'Message',
                 'Are you sure to quit?\nThis will close all modules!',
-                qtw.QMessageBox.Yes | qtw.QMessageBox.No,
-                qtw.QMessageBox.No
+                qtw.QMessageBox.StandardButton.Yes | qtw.QMessageBox.StandardButton.No,
+                qtw.QMessageBox.StandardButton.No
                 )
-            if reply == qtw.QMessageBox.No:
+            if reply == qtw.QMessageBox.StandardButton.No:
                 event.ignore()
                 return
             for module in open_modules:
@@ -106,8 +106,8 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
         """Reimpement to catch Ctrl+Q and Ctrl+W for quitting."""
-        if (event.key() in (qtc.Qt.Key_Q, qtc.Qt.Key_W)
-                and event.modifiers() == qtc.Qt.ControlModifier):
+        if (event.key() in (qtc.Qt.Key.Key_Q, qtc.Qt.Key.Key_W)
+                and event.modifiers() == qtc.Qt.KeyboardModifier.ControlModifier):
             self.close()
         super().keyPressEvent(event)
 
@@ -115,7 +115,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
         """Place children widgets."""
         layout = qtw.QVBoxLayout()
 
-        layout.addWidget(logo_one_line(), alignment=qtc.Qt.AlignHCenter)
+        layout.addWidget(logo_one_line(), alignment=qtc.Qt.AlignmentFlag.AlignHCenter)
 
         for module, (icon_fname, cls) in self.modules.items():
             icon = qtg.QIcon(os.path.join(resources_path('gui/icons'),
@@ -124,7 +124,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
             button.setIcon(icon)
             button.setIconSize(qtc.QSize(200, 122))
             button.clicked.connect(self._on_module_open_requested)
-            button.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+            button.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
             layout.addWidget(button)
 
             if cls is None:
@@ -139,7 +139,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
         self.setFixedSize(self.size())
 
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowMinimizeButtonHint
+        flags &= ~qtc.Qt.WindowType.WindowMinimizeButtonHint
         self.setWindowFlags(flags)
 
         self.move(5, 5)

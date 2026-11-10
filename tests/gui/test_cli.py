@@ -220,10 +220,10 @@ class TestGuiMain:
         qapp = mocks['app']
         selector = mocks['select']
         result = gui_main()
-        assert result is qapp.exec_.return_value
+        assert result is qapp.exec.return_value
 
         # Check important calls
-        qapp.exec_.assert_called_once_with()
+        qapp.exec.assert_called_once_with()
         selector.show.assert_called_once_with()
 
         # Check also printing

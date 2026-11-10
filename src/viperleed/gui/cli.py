@@ -190,7 +190,7 @@ def gui_main():
     plugin_selector_window = plugin_selector()
     plugin_selector_window.show()
     print('Done', flush=True)
-    return app.exec_()
+    return app.exec()
 
 
 def import_graphics_modules():
