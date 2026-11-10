@@ -85,7 +85,7 @@ classifiers = [
 
     [project.optional-dependencies]
     GUI = [
-        'PyQt5',
+        'PyQt5>=5.15',  # Scoped enums, QWidget.screen()
         'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
