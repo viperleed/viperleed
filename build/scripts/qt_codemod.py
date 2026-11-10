@@ -37,15 +37,22 @@ files resolve with that binding. With PyQt5, --verify also reports
 short members of PyQt5 enumerations accessed via objects, including
 those that PyQt6 removed.
 
+Use --compare REV in an environment with PyQt5 to check that the
+rewritten code means the same as it did at git revision REV (e.g.,
+the commit before running the script): all Qt attribute chains that
+changed must resolve to the same objects (e.g., Qt.AlignLeft and
+Qt.AlignmentFlag.AlignLeft). Short enum members accessed via objects
+(see --fix-instance-enums) are not checked.
+
 Usage:
-    python qt_codemod.py [--check | --verify] [--strings]
-                         [--fix-instance-enums] PATH [...]
+    python qt_codemod.py [--check | --verify | --compare REV]
+                         [--strings] [--fix-instance-enums] PATH [...]
 
 PATH may be a file or a folder (searched recursively for *.py files).
 Files of the viperleed.gui.qt_compat package are skipped. The exit
 code is 1 if --check finds files to change, or if anything is
-reported (including chains that do not resolve with --verify). It is
-0 otherwise.
+reported (including chains that do not resolve with --verify, and
+chains that changed meaning with --compare). It is 0 otherwise.
 """
 
 __authors__ = (
@@ -57,11 +64,13 @@ __license__ = 'GPLv3+'
 
 import argparse
 import ast
-from collections import namedtuple
+from collections import Counter, namedtuple
+import difflib
 import enum
 import importlib
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 COMPAT = 'viperleed.gui.qt_compat'
@@ -90,6 +99,7 @@ REMOVED_MEMBERS = {
     'MidButton': Removed('Qt', 'MouseButton', 'MiddleButton'),
     }
 SIP_ENUM_TYPE = 'enumtype'  # The metaclass of PyQt5 enumerations
+MISSING = object()  # Marks Qt attributes that do not exist
 QT_STRING_MARKERS = ('PyQt5', 'PyQt6', 'qt5agg', 'Qt5Agg')
 MAX_LINE_LENGTH = 79
 # Shortest name of an object used to guess its Qt class (e.g., 'pal'
@@ -115,7 +125,7 @@ Missing = namedtuple('Missing', ('chain', 'qt_module', 'path', 'index',
 class QtFile:
     """A Python file that may use Qt."""
 
-    def __init__(self, path, qt_modules):
+    def __init__(self, path, qt_modules, source=None):
         """Initialize instance.
 
         Parameters
@@ -125,10 +135,15 @@ class QtFile:
         qt_modules : dict
             Keys are names of Qt modules (e.g., 'QtCore'), values the
             corresponding modules that are used to resolve names.
+        source : str, optional
+            The source code to process. If not given, it is read
+            from `path`.
         """
         self.path = path
         self.qt_modules = qt_modules
-        self.source = path.read_bytes().decode('utf-8')
+        if source is None:
+            source = path.read_bytes().decode('utf-8')
+        self.source = source
         self.tree = ast.parse(self.source, filename=str(path))
         self.edits = []
         self.reports = []
@@ -258,6 +273,22 @@ class QtFile:
             nodes.reverse()
             names = [nodes[0].id, *(n.attr for n in nodes[1:])]
             yield Chain(nodes, names)
+
+    def qt_chains(self):
+        """Return the chains rooted at Qt names, in source order."""
+        chains = [c for c in self._iter_chains() if c.names[0] in self.roots]
+        return sorted(chains, key=lambda c: (c.nodes[0].lineno,
+                                             c.nodes[0].col_offset))
+
+    def resolve(self, chain):
+        """Return the object that a Qt `chain` refers to, or MISSING."""
+        qt_module, prefix = self.roots[chain.names[0]]
+        obj = self.qt_modules[qt_module]
+        for attr in (*prefix, *chain.names[1:]):
+            obj = getattr(obj, attr, MISSING)
+            if obj is MISSING:
+                break
+        return obj
 
     def rename_methods(self):
         """Rename methods such as exec_, regardless of the object.
@@ -734,6 +765,120 @@ def _iter_enum_members(cls, name):
         yield name, type(value)
 
 
+def _read_at_revision(path, rev):
+    """Return the source of `path` at git revision `rev`, or None."""
+    result = subprocess.run(  # noqa: S603
+        ('git', 'show', f'{rev}:./{path.name}'),  # noqa: S607
+        cwd=path.parent,
+        capture_output=True,
+        check=False,
+        )
+    return result.stdout.decode('utf-8') if not result.returncode else None
+
+
+def _object_key(qt_file, chain):
+    """Return a hashable key for the object that `chain` refers to.
+
+    Two chains have the same key if they refer to the same object
+    with the installed binding (e.g., Qt.AlignLeft and
+    Qt.AlignmentFlag.AlignLeft). Enumeration members are compared
+    by type and value, as PyQt5 may give equal but distinct objects.
+    qApp and QApplication.instance (that replaces it) cannot be
+    resolved to the same object without a running QApplication, and
+    have the same special key.
+    """
+    if QAPP in chain.names or chain.names[-2:] == ['QApplication',
+                                                    'instance']:
+        return (QAPP,)
+    obj = qt_file.resolve(chain)
+    if obj is MISSING:
+        return (MISSING, _dotted(chain))
+    if isinstance(obj, int):
+        return (int, type(obj).__module__, type(obj).__qualname__,
+                int(obj))
+    try:
+        hash(obj)
+    except TypeError:
+        return (id, id(obj))
+    return (object, obj)
+
+
+def _dotted(chain):
+    """Return the dotted name of `chain`."""
+    return '.'.join(chain.names)
+
+
+def _get_qt_chains(path, qt_modules, source=None):
+    """Return the Qt chains in `path` and keys of their objects."""
+    qt_file = QtFile(path, qt_modules, source)
+    qt_file.find_imports(rewrite=False)
+    chains = qt_file.qt_chains()
+    return chains, [_object_key(qt_file, chain) for chain in chains]
+
+
+def _find_unmatched(old, new):
+    """Return the keys of chains in only one of `old` and `new`.
+
+    Parameters
+    ----------
+    old, new : tuple
+        The chains and their keys, as returned by _get_qt_chains.
+
+    Returns
+    -------
+    removed, added : Counter
+        The keys of chains only in `old` and only in `new`.
+    examples : dict
+        One chain for each key, from `old` for removed keys.
+    """
+    matcher = difflib.SequenceMatcher(a=old[1], b=new[1], autojunk=False)
+    blocks = matcher.get_matching_blocks()
+    matched = (
+        {b.a + i for b in blocks for i in range(b.size)},
+        {b.b + i for b in blocks for i in range(b.size)},
+        )
+    counters = Counter(), Counter()
+    examples = {}
+    for (chains, keys), counter, matched_ids in zip((old, new), counters,
+                                                    matched):
+        for i, (chain, key) in enumerate(zip(chains, keys)):
+            if i not in matched_ids:
+                counter[key] += 1
+                examples.setdefault(key, chain)
+    return (*counters, examples)
+
+
+def _compare(path, rev, qt_modules):
+    """Return messages for Qt chains of `path` that changed since `rev`.
+
+    The Qt attribute chains of the file at `rev` and of the current
+    file are resolved with the installed binding, and the sequences
+    of objects compared. Objects that only appear in one version are
+    reported, unless they just moved within the file (e.g., into a
+    local variable). Chains that changed but resolve to the same
+    object (e.g., Qt.AlignLeft -> Qt.AlignmentFlag.AlignLeft) are not.
+    """
+    old_source = _read_at_revision(path, rev)
+    if old_source is None:
+        print(f'{path}: not in {rev}, skipped', file=sys.stderr)
+        return []
+    removed, added, examples = _find_unmatched(
+        _get_qt_chains(path, qt_modules, old_source),
+        _get_qt_chains(path, qt_modules),
+        )
+    messages = []
+    for key in removed - added:
+        chain = examples[key]
+        messages.append(f'{path}: {_dotted(chain)} (line '
+                        f'{chain.nodes[0].lineno} in {rev}) has no '
+                        'equivalent any longer')
+    for key in added - removed:
+        chain = examples[key]
+        messages.append(f'{path}:{chain.nodes[0].lineno}: '
+                        f'{_dotted(chain)} is new since {rev}')
+    return messages
+
+
 def _parse_args(argv):
     """Return the command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -745,6 +890,11 @@ def _parse_args(argv):
     mode.add_argument('--verify', action='store_true',
                       help=('Do not write files. Check that Qt attribute '
                             'chains resolve with the installed binding.'))
+    mode.add_argument('--compare', metavar='REV',
+                      help=('Do not write files. Check that the Qt '
+                            'attribute chains that changed since git '
+                            'revision REV resolve to the same objects '
+                            'with the installed binding.'))
     parser.add_argument('--strings', action='store_true',
                         help=('Also report strings (e.g., docstrings) '
                               'that mention PyQt5, PyQt6, or Qt5.'))
@@ -754,8 +904,9 @@ def _parse_args(argv):
                               'palette.Text. Review the changes!'))
     parser.add_argument('paths', nargs='+', metavar='PATH')
     args = parser.parse_args(argv)
-    if args.verify and args.fix_instance_enums:
-        parser.error('--fix-instance-enums cannot be used with --verify')
+    if (args.verify or args.compare) and args.fix_instance_enums:
+        parser.error('--fix-instance-enums cannot be used with --verify '
+                     'or --compare')
     return args
 
 
@@ -789,6 +940,14 @@ def main(argv=None):
     if sys.version_info < (3, 8):
         sys.exit('qt_codemod requires Python 3.8 or later')
     args = _parse_args(argv)
+    if args.compare:
+        qt_modules = _import_qt_modules(COMPAT)
+        messages = [message
+                    for path in _iter_files(args.paths)
+                    for message in _compare(path, args.compare, qt_modules)]
+        for message in messages:
+            print(message)
+        return int(bool(messages))
     if args.verify:
         qt_modules = _import_qt_modules(COMPAT)
     else:
