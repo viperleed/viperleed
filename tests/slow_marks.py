@@ -34,7 +34,7 @@ def _has_case(params, part):
     return f'-{part}-' in params
 
 
-def _is_listed(item, cases):
+def _is_listed_slow(item, cases):
     """Return whether `item` is one of the `cases` of SLOW_CASES."""
     test, params = _split_case_id(item.nodeid)
     parts = cases.get(test, ())
@@ -61,7 +61,7 @@ def pytest_itemcollected(item):
     collected.append((item.nodeid, frozenset(item.fixturenames)))
 
 
-def _find_stale_cases(collected_items, cases):
+def _find_stale_slow_cases(collected_items, cases):
     """Return descriptions of `cases` entries matching no node id.
 
     Only entries of modules with at least one collected node id are
@@ -139,7 +139,7 @@ _TABLES = (
     (
         'SLOW_CASES',
         f'the cases that take {tiers.SLOW_THRESHOLD} s or more',
-        _find_stale_cases,
+        _find_stale_slow_cases,
         ),
     (
         'RELEASE_CASES',
@@ -211,7 +211,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if tiers.TENSORLEED_FIXTURES.intersection(item.fixturenames):
             item.add_marker(pytest.mark.tensorleed)
-        if _is_listed(item, tiers.SLOW_CASES):
+        if _is_listed_slow(item, tiers.SLOW_CASES):
             item.add_marker(pytest.mark.slow)
         if _is_release_case(item, tiers.RELEASE_CASES):
             item.add_marker(pytest.mark.release)
