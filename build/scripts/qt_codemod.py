@@ -16,20 +16,30 @@ Only attribute chains that start at a name imported from a Qt module
 (e.g., qtc, qtw, Qt, QMessageBox) can be handled, as well as short
 enumeration members accessed via self in methods of classes that
 derive from Qt classes (e.g., self.Ok in a QMessageBox subclass).
-Everything else that needs attention (e.g., removed classes, ambiguous
-enumeration members, lines that became too long) is reported, but left
-untouched. The rest of each file is kept byte by byte, including its
-line endings. Running the script again on its output changes nothing.
+Short enumeration members accessed via other objects (e.g., palette.Text
+or bar.tabBar().SelectLeftTab) are reported, as the type of the object
+is unknown. With --fix-instance-enums, they are also fixed, guessing the
+enumeration from the name of the object if the member is ambiguous
+(e.g., palette.Text -> palette.ColorRole.Text, not OpenModeFlag). These
+changes should be reviewed. A few members removed in Qt 6 (e.g.,
+QPalette.Background) are replaced as well. Everything else that needs
+attention (e.g., removed classes, ambiguous enumeration members, lines
+that became too long) is reported, but left untouched. The rest of
+each file is kept byte by byte, including its line endings. Running
+the script again on its output changes nothing.
 With --strings, strings mentioning PyQt5, PyQt6, or Qt5 (e.g., in
 docstrings or in calls to importlib.import_module) are also reported.
 
 Requires Python 3.8 or later. The fully scoped names are taken from
 PyQt6, which must be installed. Use --verify in an environment with
 PyQt5 (or PyQt6) to check that all the Qt attribute chains in the
-files resolve with that binding.
+files resolve with that binding. With PyQt5, --verify also reports
+short members of PyQt5 enumerations accessed via objects, including
+those that PyQt6 removed.
 
 Usage:
-    python qt_codemod.py [--check | --verify] [--strings] PATH [...]
+    python qt_codemod.py [--check | --verify] [--strings]
+                         [--fix-instance-enums] PATH [...]
 
 PATH may be a file or a folder (searched recursively for *.py files).
 Files of the viperleed.gui.qt_compat package are skipped. The exit
@@ -72,8 +82,19 @@ MOVED_TO_QTGUI = (
     )
 QAPP = 'qApp'
 RENAMED_METHODS = {'exec_': 'exec'}
+# Enumeration members removed in Qt 6, with their replacement
+Removed = namedtuple('Removed', ('qt_class', 'enum', 'replacement'))
+REMOVED_MEMBERS = {
+    'Background': Removed('QPalette', 'ColorRole', 'Window'),
+    'Foreground': Removed('QPalette', 'ColorRole', 'WindowText'),
+    'MidButton': Removed('Qt', 'MouseButton', 'MiddleButton'),
+    }
+SIP_ENUM_TYPE = 'enumtype'  # The metaclass of PyQt5 enumerations
 QT_STRING_MARKERS = ('PyQt5', 'PyQt6', 'qt5agg', 'Qt5Agg')
 MAX_LINE_LENGTH = 79
+# Shortest name of an object used to guess its Qt class (e.g., 'pal'
+# would match QPalette, while 'p' would match too many classes)
+MIN_GUESS_LENGTH = 3
 CRLF = '\r\n'
 
 # A replacement of the text between two (line, column) positions
@@ -318,6 +339,153 @@ class QtFile:
                 self.edits.append(Edit(self_end, self_end,
                                        f'.{enum_name}'))
 
+    def fix_instance_enums(self, enum_index, rewrite):
+        """Report (or fix) short enum members accessed via instances.
+
+        These are, e.g., palette.Text or widget.tabBar().SelectLeftTab:
+        the type of the object is unknown, so any attribute named like
+        a short member of a Qt enumeration is suspicious. Attributes of
+        Qt module names (handled by fix_chains), of self and cls (see
+        fix_self_enums), of names imported or of classes defined in
+        this file, as well as attributes this file assigns, are skipped.
+
+        Parameters
+        ----------
+        enum_index : dict
+            Keys are the names of members of Qt enumerations, values
+            sets of (Qt class name, enumeration name) for each Qt
+            enumeration that has such a member.
+        rewrite : bool
+            If True, '.EnumName' is inserted before the member if all
+            candidates have the same enumeration name. Otherwise, the
+            member is only reported.
+        """
+        skipped_roots = {*self.roots, 'self', 'cls',
+                         *self._imported_names(), *self._class_names()}
+        assigned = {
+            node.attr for node in ast.walk(self.tree)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.ctx, ast.Store)
+            }
+        for node in ast.walk(self.tree):
+            if (not isinstance(node, ast.Attribute)
+                    or node.attr not in enum_index
+                    or node.attr in assigned
+                    or isinstance(node.ctx, ast.Store)):
+                continue
+            candidates = enum_index[node.attr]
+            enum_names = sorted({enum for _, enum in candidates})
+            _, removed_enum, replacement = REMOVED_MEMBERS.get(
+                node.attr, Removed(None, None, None)
+                )
+            scoped = (isinstance(node.value, ast.Attribute)
+                      and node.value.attr in enum_names)
+            if ((scoped and not replacement)
+                    or self._root_name(node.value) in skipped_roots):
+                continue
+            if replacement:
+                enum_names = [removed_enum]
+            elif len(enum_names) > 1:
+                enum_names = self._guess_enum(node.value, candidates)
+            if rewrite and len(enum_names) == 1:
+                self._scope_member(node, enum_names[0], scoped, replacement)
+                continue
+            obj = ast.get_source_segment(self.source, node.value)
+            owners = ', '.join(sorted(f'{cls}.{enum}.{node.attr}'
+                                      for cls, enum in candidates))
+            if replacement:
+                hint = f'Removed in Qt 6: use {removed_enum}.{replacement}'
+            elif len(enum_names) == 1:
+                hint = f'Likely {enum_names[0]}'
+            else:
+                hint = 'Ambiguous: please fix manually'
+            self.report(node, f'{obj}.{node.attr} may be a short enum '
+                              f'member. Candidates: {owners}. {hint}.')
+
+    def _scope_member(self, node, enum_name, scoped, replacement):
+        """Make the member that `node` accesses fully scoped.
+
+        Parameters
+        ----------
+        node : ast.Attribute
+            The node accessing a short enumeration member.
+        enum_name : str
+            The name of the enumeration to insert before the member.
+        scoped : bool
+            Whether `node` already accesses the member via `enum_name`.
+        replacement : str or None
+            The new name of the member, if it was removed in Qt 6.
+        """
+        if not replacement:
+            value_end = self._end(node.value)
+            self.edits.append(Edit(value_end, value_end, f'.{enum_name}'))
+            return
+        end = self._end(node)
+        start = (end[0], end[1] - len(node.attr))
+        new_text = replacement if scoped else f'{enum_name}.{replacement}'
+        self.edits.append(Edit(start, end, new_text))
+
+    @staticmethod
+    def _guess_enum(node, candidates):
+        """Return the enumeration names whose class matches `node`.
+
+        The match is by name: e.g., palette or self.palette() match
+        QPalette, tab_bar or tabBar() match QTabBar.
+
+        Parameters
+        ----------
+        node : ast.AST
+            The expression whose attribute is a short enum member.
+        candidates : set
+            (Qt class name, enumeration name) for all the enumerations
+            with that member.
+
+        Returns
+        -------
+        enum_names : list
+            The sorted names of the enumerations whose class name is
+            similar to the name of `node`. All candidate enumerations
+            if none matches.
+        """
+        if isinstance(node, ast.Call):
+            node = node.func
+        if isinstance(node, ast.Attribute):
+            name = node.attr
+        elif isinstance(node, ast.Name):
+            name = node.id
+        else:
+            name = ''
+        name = name.replace('_', '').lower()
+
+        def _matches(cls_name):
+            cls_name = cls_name[1:].lower()  # Drop the leading 'Q'
+            return len(name) >= MIN_GUESS_LENGTH and (
+                cls_name.startswith(name) or name.startswith(cls_name)
+                )
+        matching = {enum for cls, enum in candidates if _matches(cls)}
+        return sorted(matching or {enum for _, enum in candidates})
+
+    @staticmethod
+    def _root_name(node):
+        """Return the identifier at the root of an attribute chain."""
+        while isinstance(node, ast.Attribute):
+            node = node.value
+        return node.id if isinstance(node, ast.Name) else None
+
+    def _imported_names(self):
+        """Yield the names bound by import statements in this file."""
+        for node in ast.walk(self.tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                for alias in node.names:
+                    yield (alias.asname
+                           or alias.name.partition('.')[0])
+
+    def _class_names(self):
+        """Yield the names of the classes defined in this file."""
+        for node in ast.walk(self.tree):
+            if isinstance(node, ast.ClassDef):
+                yield node.name
+
     def _iter_qt_classes(self):
         """Yield (ClassDef, Qt base) for each subclass of a Qt class."""
         qt_bases = {}   # {class name: Qt base class}
@@ -506,6 +674,66 @@ def _import_qt_modules(package):
     return modules
 
 
+def _build_enum_index(qt_modules):
+    """Return the members of the enumerations of Qt classes.
+
+    Parameters
+    ----------
+    qt_modules : dict
+        Keys are names of Qt modules, values the modules.
+
+    Returns
+    -------
+    enum_index : dict
+        Keys are names of members of Qt enumerations (only those that
+        start with an uppercase letter), values sets of (Qt class name,
+        enumeration name) for each Qt enumeration that has the member.
+    """
+    enum_index = {
+        member: {(cls_name, enum_name)}
+        for member, (cls_name, enum_name, _) in REMOVED_MEMBERS.items()
+        }
+    # Names such as QIcon are also members (of QMetaType.Type) but
+    # are far more likely to refer to the classes. Skip them.
+    module_names = {name for module in qt_modules.values()
+                    for name in dir(module)}
+    for module in qt_modules.values():
+        for cls_name in dir(module):
+            cls = getattr(module, cls_name)
+            if not isinstance(cls, type) or issubclass(cls, enum.Enum):
+                continue
+            for name in dir(cls):
+                if name.startswith('_'):
+                    continue
+                for member, enum_type in _iter_enum_members(cls, name):
+                    if member[0].isupper() and member not in module_names:
+                        # Use the class that defines the enumeration
+                        # rather than those inheriting it (e.g., all
+                        # QIODevice subclasses have QIODeviceBase's
+                        # OpenModeFlag).
+                        qualname = enum_type.__qualname__
+                        owner, _, enum_name = qualname.rpartition('.')
+                        enum_index.setdefault(member, set()).add(
+                            (owner or cls_name, enum_name)
+                            )
+    return enum_index
+
+
+def _iter_enum_members(cls, name):
+    """Yield (member name, enumeration) for attribute `name` of `cls`.
+
+    In PyQt6, enumerations are Enum subclasses: if attribute `name` is
+    one of them, yield all its members. In PyQt5, enumerations are sip
+    enumtype instances and members are attributes of `cls`: if `name`
+    is one of these members, yield only that.
+    """
+    value = getattr(cls, name, None)
+    if isinstance(value, type) and issubclass(value, enum.Enum):
+        yield from ((member, value) for member in value.__members__)
+    elif type(type(value)).__name__ == SIP_ENUM_TYPE:
+        yield name, type(value)
+
+
 def _parse_args(argv):
     """Return the command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -520,11 +748,18 @@ def _parse_args(argv):
     parser.add_argument('--strings', action='store_true',
                         help=('Also report strings (e.g., docstrings) '
                               'that mention PyQt5, PyQt6, or Qt5.'))
+    parser.add_argument('--fix-instance-enums', action='store_true',
+                        help=('Also fix (rather than only report) short '
+                              'enum members accessed via instances, e.g., '
+                              'palette.Text. Review the changes!'))
     parser.add_argument('paths', nargs='+', metavar='PATH')
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.verify and args.fix_instance_enums:
+        parser.error('--fix-instance-enums cannot be used with --verify')
+    return args
 
 
-def _process(path, args, qt_modules):
+def _process(path, args, qt_modules, enum_index):
     """Process one file. Return whether it was (or would be) changed."""
     rewrite = not args.verify
     qt_file = QtFile(path, qt_modules)
@@ -536,6 +771,7 @@ def _process(path, args, qt_modules):
     if qt_file.roots:
         qt_file.fix_chains(rewrite)
         qt_file.fix_self_enums(rewrite)
+    qt_file.fix_instance_enums(enum_index, args.fix_instance_enums)
     new_source = qt_file.new_source() if rewrite else qt_file.source
     qt_file.report_long_lines(new_source)
     for line in qt_file.reports:
@@ -558,7 +794,8 @@ def main(argv=None):
     else:
         os.environ.setdefault('QT_API', 'pyqt6')
         qt_modules = _import_qt_modules('PyQt6')
-    results = [_process(path, args, qt_modules)
+    enum_index = _build_enum_index(qt_modules)
+    results = [_process(path, args, qt_modules, enum_index)
                for path in _iter_files(args.paths)]
     n_changed = sum(changed for changed, _ in results)
     if not args.verify:
