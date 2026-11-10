@@ -12,9 +12,9 @@ __created__ = '2021-06-01'
 __license__ = 'GPLv3+'
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.widgets.lib import AllGUIFonts
 
@@ -206,8 +206,8 @@ class EditableMatrix(qtw.QWidget):
         for m_ij in self._ctrls.ravel():
             m_ij.setFont(label_font)
             m_ij.setMaximumWidth(35 if self._dtype == int else 50)
-            m_ij.setSizePolicy(qtw.QSizePolicy.Fixed,
-                               qtw.QSizePolicy.Preferred)
+            m_ij.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
             m_ij.setValidator(validator)
             m_ij.ensurePolished()
 
@@ -232,7 +232,7 @@ class EditableMatrix(qtw.QWidget):
         layout = qtw.QHBoxLayout()
         for qlabel in labels:
             layout.addWidget(qlabel)
-            layout.setAlignment(qlabel, qtc.Qt.AlignCenter)
+            layout.setAlignment(qlabel, qtc.Qt.AlignmentFlag.AlignCenter)
         layout.insertLayout(len(labels) - 1, matrix_layout)
         layout.addStretch(1)
 
@@ -265,6 +265,6 @@ class EditableMatrix(qtw.QWidget):
         # QIntValidator and QDoubleValidator, but mandatory from
         # the signature. Both validators return a tuple:
         # (state, text, cursor_pos), where state is what we need
-        if not validate(new_element, 0)[0] == qtg.QValidator.Acceptable:
+        if not validate(new_element, 0)[0] == qtg.QValidator.State.Acceptable:
             return
         self.matrix_edited.emit(self.matrix)

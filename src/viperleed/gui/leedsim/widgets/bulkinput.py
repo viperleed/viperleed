@@ -10,8 +10,8 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-06-01'
 __license__ = 'GPLv3+'
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
 from viperleed.gui.leedsim.widgets.latticeinput import LatticeInput
@@ -66,8 +66,8 @@ class BulkInput(LatticeInput):
         # Extra control for the bulk 3D symmetry
         self._ctrls['3d_sym'] = qtw.QPushButton('Add bulk sym.\noperations')
         self._ctrls['3d_sym'].setFont(AllGUIFonts().buttonFont)
-        self._ctrls['3d_sym'].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                             qtw.QSizePolicy.Preferred)
+        self._ctrls['3d_sym'].setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                             qtw.QSizePolicy.Policy.Preferred)
         self._ctrls['3d_sym'].setMinimumWidth(self._ctrls['a'].width())
         self._ctrls['3d_sym'].ensurePolished()
         # Prevent the button to be fired automatically when
@@ -106,7 +106,7 @@ class BulkInput(LatticeInput):
         """
         self.bulk_3d_sym_dialog.update_operations(self.lattice)
 
-        if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.Accepted:
+        if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.DialogCode.Accepted:
             old_3d = self.lattice.group.screws_glides
             operations = self.bulk_3d_sym_dialog.extra_operations()
             self.lattice.group.set_screws_glides(operations,

@@ -13,8 +13,8 @@ __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.widgets.lib import AllGUIFonts
 from viperleed.gui.widgets.spinboxes import TextBoxWithButtons
@@ -84,10 +84,10 @@ class RotationBlock(TextBoxWithButtons):
 
         # set size policies and adjust the sizes to account for the new font
         for lab in [rotBulkLab, oneZeroLab, zeroOneLab]:
-            lab.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            lab.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Preferred)
             lab.adjustSize()
         for but in np.ravel(horVerButs):
-            but.setSizePolicy(qtw.QSizePolicy.Preferred, qtw.QSizePolicy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Preferred, qtw.QSizePolicy.Policy.Fixed)
             but.setMaximumHeight(
                 round(qtw.QPushButton().sizeHint().height()*.84)
                 )
@@ -106,12 +106,12 @@ class RotationBlock(TextBoxWithButtons):
             but.setToolTip(tip)
 
         # now add the widgets to the layout
-        bWLay.addWidget(rotBulkLab, 0, 0, 1, 3, qtc.Qt.AlignLeft)
+        bWLay.addWidget(rotBulkLab, 0, 0, 1, 3, qtc.Qt.AlignmentFlag.AlignLeft)
         bWLay.addWidget(oneZeroLab, 1, 0, 1, 1,
-                        qtc.Qt.AlignHCenter | qtc.Qt.AlignLeft)
+                        qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignLeft)
         bWLay.addWidget(zeroOneLab, 2, 0, 1, 1,
-                        qtc.Qt.AlignHCenter | qtc.Qt.AlignLeft)
-        [bWLay.addWidget(horVerButs[i][j], i+1, j+1, 1, 1, qtc.Qt.AlignCenter)
+                        qtc.Qt.AlignmentFlag.AlignHCenter | qtc.Qt.AlignmentFlag.AlignLeft)
+        [bWLay.addWidget(horVerButs[i][j], i+1, j+1, 1, 1, qtc.Qt.AlignmentFlag.AlignCenter)
          for i in range(2) for j in range(2)]
 
         # set the minimum heights of rows and columns
@@ -131,6 +131,6 @@ class RotationBlock(TextBoxWithButtons):
         angle = self.window().real.angle_for_horizontal_bulk(direction)
         if vert:
             angle += 90
-        if qtw.qApp.keyboardModifiers() == qtc.Qt.ControlModifier:
+        if qtw.QApplication.instance().keyboardModifiers() == qtc.Qt.KeyboardModifier.ControlModifier:
             angle += 180
         self.text.updateText(angle)

@@ -15,9 +15,9 @@ __license__ = 'GPLv3+'
 import os
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.classes.lattice2d import Lattice2D
 from viperleed.gui.helpers import resources_path
@@ -64,9 +64,9 @@ class NewFileDialog(qtw.QDialog):
         super().__init__(parent)
 
         # Set the appearance of the window
-        self.setWindowModality(qtc.Qt.WindowModal)
+        self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowCloseButtonHint  # Disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint  # Disable close button
         self.setWindowFlags(flags)
         self.setWindowTitle('Create/edit LEED input')
 
@@ -149,11 +149,11 @@ class NewFileDialog(qtw.QDialog):
         None.
         """
         focus_widget = self.focusWidget()
-        if event.key() in (qtc.Qt.Key_Enter, qtc.Qt.Key_Return):
+        if event.key() in (qtc.Qt.Key.Key_Enter, qtc.Qt.Key.Key_Return):
             if focus_widget in (self._ctrls['cancel'], self._ctrls['done']):
                 focus_widget.click()
                 return
-        if (event.key() == qtc.Qt.Key_Escape
+        if (event.key() == qtc.Qt.Key.Key_Escape
                 and focus_widget == self._ctrls['edit_surf_name']):
             self._glob['surface_being_edited'] = -1
             focus_widget.hide()
@@ -182,7 +182,7 @@ class NewFileDialog(qtw.QDialog):
             # Always have live-view mode on when no parameters
             # are given. This way we can force a plot of the
             # default lattices and LEED
-            self._ctrls['live_view'].setChecked(qtc.Qt.Checked)
+            self._ctrls['live_view'].setChecked(qtc.Qt.CheckState.Checked)
 
         self._init_lattices()
         self._init_controls()
@@ -313,7 +313,7 @@ class NewFileDialog(qtw.QDialog):
             )
 
         self._ctrls['add_surface_tab'].setDefaultAction(
-            qtw.QAction(
+            qtg.QAction(
                 qtg.QIcon(
                     os.path.join(resources_path('gui/icons'),
                                  'plus_button_48x48.png')
@@ -324,28 +324,28 @@ class NewFileDialog(qtw.QDialog):
 
         self._ctrls['surfaces'].setCornerWidget(
             self._ctrls['add_surface_tab'],
-            qtc.Qt.TopLeftCorner
+            qtc.Qt.Corner.TopLeftCorner
             )
 
         # (1.2) Maximum LEED energy
         emax_label = qtw.QLabel('Max. Energy:')
         for ctrl in [emax_label, self._ctrls['e_max']]:
-            ctrl.setSizePolicy(qtw.QSizePolicy.Fixed,
-                               qtw.QSizePolicy.Preferred)
+            ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
             ctrl.setFont(AllGUIFonts().labelFont)
         self._ctrls['e_max'].setMaximumWidth(70)
         to_be_polished = [emax_label, self._ctrls['e_max']]
 
         # (1.3) Live-view mode check-box
-        self._ctrls['live_view'].setChecked(qtc.Qt.Checked)
+        self._ctrls['live_view'].setChecked(qtc.Qt.CheckState.Checked)
         self._ctrls['live_view'].setFont(AllGUIFonts().labelFont)
         to_be_polished.append(self._ctrls['live_view'])
 
         # (1.4) 'Done' and 'Cancel' buttons
         for key in ('done', 'cancel'):
             self._ctrls[key].setFont(AllGUIFonts().buttonFont)
-            self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                           qtw.QSizePolicy.Fixed)
+            self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                           qtw.QSizePolicy.Policy.Fixed)
             to_be_polished.append(self._ctrls[key])
 
         # (1.5) Status bar
@@ -362,7 +362,7 @@ class NewFileDialog(qtw.QDialog):
         emax_layout.addWidget(emax_label)
         emax_layout.addWidget(self._ctrls['e_max'])
         emax_layout.setAlignment(emax_label,
-                                 qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+                                 qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
 
         status_and_buttons_layout = qtw.QHBoxLayout()
         for key in ('status_bar', 'done', 'cancel'):
@@ -379,12 +379,12 @@ class NewFileDialog(qtw.QDialog):
         dialog_layout.addLayout(emax_layout, 3, 1, 1, 1)
         dialog_layout.addLayout(status_and_buttons_layout, 4, 0, 1, 2)
         dialog_layout.setAlignment(emax_layout,
-                                   qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+                                   qtc.Qt.AlignmentFlag.AlignRight | qtc.Qt.AlignmentFlag.AlignVCenter)
         self.setLayout(dialog_layout)
 
         # (4) Take care of widgets that do not belong to a layout
         self._ctrls['edit_surf_name'].setFont(AllGUIFonts().smallTextFont)
-        self._ctrls['edit_surf_name'].setAlignment(qtc.Qt.AlignCenter)
+        self._ctrls['edit_surf_name'].setAlignment(qtc.Qt.AlignmentFlag.AlignCenter)
         self._ctrls['edit_surf_name'].hide()
 
     def _connect(self):
@@ -570,12 +570,12 @@ class NewFileDialog(qtw.QDialog):
         error_txt = ("Keeping constant lattice parameters for structure {} "
                      "makes the lattice incommensurate. Can only transform "
                      "with constant superlattice matrix.")
-        error_msg = qtw.QMessageBox(qtw.QMessageBox.Critical,
+        error_msg = qtw.QMessageBox(qtw.QMessageBox.Icon.Critical,
                                     "Cannot keep constant lattice parameters",
                                     error_txt)
         surf_tabs = self._ctrls['surfaces']
 
-        if diag.exec_() == diag.keep_constant_parameters:
+        if diag.exec() == diag.keep_constant_parameters:
             # Since the default behavior is to keep the superlattice
             # matrix constant, we rather try to set the superlattice
             # matrix to the correct values. Since Bs = M Bb, when Bb
@@ -590,7 +590,7 @@ class NewFileDialog(qtw.QDialog):
                 if np.any(np.abs(superlattice - superlattice.round()) > 1e-3):
                     # Lattice would be incommensurate. Signal the problem
                     error_msg.setText(error_txt.format(surf_tabs.tabText(i)))
-                    error_msg.exec_()
+                    error_msg.exec()
                     continue
                 # Matrix is ok. Set it and update the Wood's notation
                 surf_i.superlattice = superlattice.round().astype(int)
@@ -665,7 +665,7 @@ class NewFileDialog(qtw.QDialog):
 
         self._glob['e_max_valid'] = valid
         change_control_text_color(self._ctrls['e_max'],
-                                  qtc.Qt.black if valid else qtc.Qt.red)
+                                  qtc.Qt.GlobalColor.black if valid else qtc.Qt.GlobalColor.red)
         self._update_done_enabled()
 
         if not valid:
@@ -852,7 +852,7 @@ class NewFileDialog(qtw.QDialog):
             valid = surf.valid_input
             self._ctrls['surfaces'].tabBar().setTabTextColor(
                 i,
-                qtc.Qt.black if valid else qtc.Qt.red
+                qtc.Qt.GlobalColor.black if valid else qtc.Qt.GlobalColor.red
                 )
             enabled &= valid
         self._ctrls['done'].setEnabled(enabled)
@@ -861,17 +861,17 @@ class NewFileDialog(qtw.QDialog):
 class BulkHighSymReductionDialog(qtw.QDialog):
     """Pick how surfaces are transformed when symmetrizing the bulk."""
 
-    keep_constant_parameters = qtw.QDialog.Accepted
-    keep_constant_superlattice = qtw.QDialog.Accepted
+    keep_constant_parameters = qtw.QDialog.DialogCode.Accepted
+    keep_constant_superlattice = qtw.QDialog.DialogCode.Accepted
 
     def __init__(self, parent=None):
         """Initialize dialog."""
         super().__init__(parent)
 
         # Set the appearance of the window
-        self.setWindowModality(qtc.Qt.WindowModal)
+        self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowCloseButtonHint  # Disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint  # Disable close button
         self.setWindowFlags(flags)
         self.setWindowTitle('Make bulk lattice high symmetry')
 

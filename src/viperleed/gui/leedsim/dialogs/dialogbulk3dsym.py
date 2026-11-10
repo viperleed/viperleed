@@ -13,9 +13,9 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.classes import planegroup
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -55,9 +55,9 @@ class Bulk3DSymDialog(qtw.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setWindowModality(qtc.Qt.WindowModal)
+        self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowCloseButtonHint #disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint #disable close button
         self.setWindowFlags(flags)
         self.setWindowTitle('Add bulk symmetry operations')
 
@@ -119,7 +119,7 @@ class Bulk3DSymDialog(qtw.QDialog):
         # Change resizing policy for some widgets:
         # - Done and Cancel buttons should not resize
         for but in buttons.values():
-            but.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
 
         # Place widgets into the layout
         layout = qtw.QVBoxLayout()
@@ -131,7 +131,7 @@ class Bulk3DSymDialog(qtw.QDialog):
         buttons_layout = qtw.QHBoxLayout()
         for button in buttons.values():
             buttons_layout.addWidget(button)
-            buttons_layout.setAlignment(qtc.Qt.AlignRight)
+            buttons_layout.setAlignment(qtc.Qt.AlignmentFlag.AlignRight)
         layout.addLayout(buttons_layout)
 
         self.setLayout(layout)
@@ -206,7 +206,7 @@ class Bulk3DSymDialog(qtw.QDialog):
 
     def __done_pressed(self):
         """Return with code == qtw.QDialog.Accepted."""
-        super().done(qtw.QDialog.Accepted)
+        super().done(qtw.QDialog.DialogCode.Accepted)
         # self.accept()
         # self.close()
 
@@ -225,10 +225,10 @@ class Bulk3DSymDialog(qtw.QDialog):
             return
 
         # toggle check state
-        if item.checkState() == qtc.Qt.Unchecked:
-            checked = qtc.Qt.Checked
+        if item.checkState() == qtc.Qt.CheckState.Unchecked:
+            checked = qtc.Qt.CheckState.Checked
         else:
-            checked = qtc.Qt.Unchecked
+            checked = qtc.Qt.CheckState.Unchecked
         item.setCheckState(checked)
 
         # If the user checks an operation, others related to it via
@@ -307,13 +307,13 @@ class Bulk3DSymDialog(qtw.QDialog):
                 txt = str(extra_op)
 
             item = qtg.QStandardItem(txt)
-            item.setFlags(qtc.Qt.ItemIsEnabled)
+            item.setFlags(qtc.Qt.ItemFlag.ItemIsEnabled)
 
             if op in bulk.group.screws_glides:
-                checked = qtc.Qt.Checked
+                checked = qtc.Qt.CheckState.Checked
             else:
-                checked = qtc.Qt.Unchecked
-            item.setData(checked, qtc.Qt.CheckStateRole)
+                checked = qtc.Qt.CheckState.Unchecked
+            item.setData(checked, qtc.Qt.ItemDataRole.CheckStateRole)
             model.setItem(r, 0, item)
 
         self.__all_widgets['extra_ops'].setModel(model)
@@ -340,9 +340,9 @@ class Bulk3DSymDialog(qtw.QDialog):
         screws = []
 
         for i in range(self.n_extra_ops):
-            if items(i).checkState() == qtc.Qt.Unchecked:
+            if items(i).checkState() == qtc.Qt.CheckState.Unchecked:
                 continue
-            data = items(i).data(qtc.Qt.DisplayRole)
+            data = items(i).data(qtc.Qt.ItemDataRole.DisplayRole)
             if 'mirror' in data:       # take direction
                 glides.append(data.split('mirror/glide across ')[1])
             elif 'rotation' in data:   # take order

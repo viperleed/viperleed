@@ -18,8 +18,9 @@ from pathlib import Path
 import warnings
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed import __version__
 from viperleed.calc.files import experiment_symmetry
@@ -113,21 +114,21 @@ def default_file_menu():
     """
     style = qtw.QWidget().style()
     settings = {
-        'new': (style.standardIcon(qtw.QStyle.SP_FileIcon),
+        'new': (style.standardIcon(qtw.QStyle.StandardPixmap.SP_FileIcon),
                 '&New/edit...',
                 'Ctrl+N',
                 'New/Edit experiment symmetry',
                 'New/Edit experiment-symmetry file',
                 '_on_file_new_or_edit_pressed',
                 False),
-        'open': (style.standardIcon(qtw.QStyle.SP_DialogOpenButton),
+        'open': (style.standardIcon(qtw.QStyle.StandardPixmap.SP_DialogOpenButton),
                  '&Open...',
                  'Ctrl+O',
                  'Open experiment symmetry',
                  'Open experiment-symmetry file',
                  '_on_file_open_pressed',
                  False),
-        'save': (style.standardIcon(qtw.QStyle.SP_DialogSaveButton),
+        'save': (style.standardIcon(qtw.QStyle.StandardPixmap.SP_DialogSaveButton),
                  '&Save',
                  'Ctrl+S',
                  'Save experiment symmetry',
@@ -162,10 +163,10 @@ def show_use_betatest_version_popup():
         f'{_betatest}/releases/latest>viperleed-betatest'
         '</a> GitHub repository (file gui.zip).</p>'
         )
-    msgBox = qtw.QMessageBox(qtw.QMessageBox.Information,
+    msgBox = qtw.QMessageBox(qtw.QMessageBox.Icon.Information,
                              'Use betatest version',
                              txt)
-    msgBox.exec_()
+    msgBox.exec()
 
 
 # TODO: remember last directories, also across sessions
@@ -306,7 +307,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
     def closeEvent(self, event):
         """Extend closeEvent to ask for saving changes."""
-        reply = qtw.QMessageBox.No
+        reply = qtw.QMessageBox.StandardButton.No
 
         # self.filename is None only if no file was ever loaded
         # and if no edit was ever done when starting from scratch
@@ -314,15 +315,15 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             reply = qtw.QMessageBox.question(
                 self, 'Unsaved changes',
                 f"Save changes to file {self.filename} before closing?",
-                qtw.QMessageBox.Yes
-                | qtw.QMessageBox.No
-                | qtw.QMessageBox.Cancel,
-                qtw.QMessageBox.Yes
+                qtw.QMessageBox.StandardButton.Yes
+                | qtw.QMessageBox.StandardButton.No
+                | qtw.QMessageBox.StandardButton.Cancel,
+                qtw.QMessageBox.StandardButton.Yes
                 )
-        if reply == qtw.QMessageBox.Cancel:
+        if reply == qtw.QMessageBox.StandardButton.Cancel:
             event.ignore()
             return
-        if reply == qtw.QMessageBox.Yes:
+        if reply == qtw.QMessageBox.StandardButton.Yes:
             self._on_file_save_pressed()
         super().closeEvent(event)
 
@@ -582,7 +583,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         domains = self._ctrls['domains']
         domains.setFont(AllGUIFonts().labelFont)
         domains.ensurePolished()
-        domains.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+        domains.setSizePolicy(qtw.QSizePolicy.Policy.Fixed, qtw.QSizePolicy.Policy.Fixed)
 
         # (4) Place controls in the layout
         layout = self.centralWidget().layout()
@@ -591,19 +592,19 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
         layout.addLayout(lattices.mplLayout,                                    # TODO: snake
                          0, 1,
-                         alignment=qtc.Qt.AlignCenter)
+                         alignment=qtc.Qt.AlignmentFlag.AlignCenter)
         layout.addLayout(leed.mplLayout,                                        # TODO: snake
                          0, 2,
-                         alignment=qtc.Qt.AlignCenter)
+                         alignment=qtc.Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._ctrls['rotation'],
                          0, 2,
-                         alignment=qtc.Qt.AlignTop | qtc.Qt.AlignLeft)
+                         alignment=qtc.Qt.AlignmentFlag.AlignTop | qtc.Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self._ctrls['energy'],
                          0, 2,
-                         alignment=qtc.Qt.AlignTop | qtc.Qt.AlignRight)
+                         alignment=qtc.Qt.AlignmentFlag.AlignTop | qtc.Qt.AlignmentFlag.AlignRight)
         layout.addWidget(domains,
                          0, 2,
-                         alignment=qtc.Qt.AlignBottom | qtc.Qt.AlignRight)
+                         alignment=qtc.Qt.AlignmentFlag.AlignBottom | qtc.Qt.AlignmentFlag.AlignRight)
         # layout.setColumnStretch(0, 2)
         # layout.setColumnStretch(3, 2)
 
@@ -625,9 +626,9 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                    tooltip, statustip,
                    handler, to_enable) in default_file_menu().items():
             if icon:
-                action = qtw.QAction(icon, text, self)
+                action = qtg.QAction(icon, text, self)
             else:
-                action = qtw.QAction(text, self)
+                action = qtg.QAction(text, self)
             action.setShortcut(shortcut)
             shortcut = action.shortcut().toString()
             action.setToolTip(tooltip + f" ({shortcut})")
@@ -647,8 +648,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
         # ...and its contents:
         # * Export list of beams to *.csv
-        export_csv = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
+        export_csv = qtg.QAction(
+            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_DriveFDIcon),
             '&Export spot-pattern file...', self)
         export_csv.setShortcut('Ctrl+E')
         shortcut = export_csv.shortcut().toString()
@@ -697,10 +698,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     def unsavedPopup(self):                                                     # TODO: fix & doc
         reply = qtw.QMessageBox.question(self, 'Edits unsaved',
                                         'Would you like to save changes?',
-                                        qtw.QMessageBox.Yes
-                                        | qtw.QMessageBox.No,
-                                        qtw.QMessageBox.Yes)
-        if reply == qtw.QMessageBox.Yes:
+                                        qtw.QMessageBox.StandardButton.Yes
+                                        | qtw.QMessageBox.StandardButton.No,
+                                        qtw.QMessageBox.StandardButton.Yes)
+        if reply == qtw.QMessageBox.StandardButton.Yes:
             self._on_file_save_pressed()
 
     def initRealAndLEED(self, active):                                          # TODO: reimplement, rename & doc
@@ -850,14 +851,14 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             self.statusBar().showMessage(
                 f"Invalid experiment-symmetry file(s): {err.args[0]}.", 5000
                 )
-            error_msg.exec_(self.statusBar().currentMessage())
+            error_msg.exec(self.statusBar().currentMessage())
             return LEEDParametersList()
         except (ValueError, RuntimeError) as err:
             # Invalid data
             self.statusBar().showMessage(
                 f"Invalid experiment-symmetry file(s): {err.args[0]}", 5000
                 )
-            error_msg.exec_(self.statusBar().currentMessage())
+            error_msg.exec(self.statusBar().currentMessage())
             return LEEDParametersList()
 
         if not params:
@@ -865,7 +866,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                 raise EOFError(f"The selected file(s) contain no data.")
             except EOFError as err:
                 self.statusBar().showMessage("File(s) are empty", 5000)
-                error_msg.exec_(
+                error_msg.exec(
                     f"Invalid experiment-symmetry file: {err.args[0]}"
                     )
                 return LEEDParametersList()
