@@ -446,11 +446,12 @@ def search_files_ag100(displacements, deltas,
     return files
 
 
-@fixture(scope='session', name='chain_tl_version',
-         params=CHAIN_TL_VERSIONS, ids=[f'v{v}' for v in CHAIN_TL_VERSIONS])
-def fixture_chain_tl_version(request):
+@fixture(scope='session', name='chain_tl_version')
+@parametrize(version=CHAIN_TL_VERSIONS,
+             ids=[f'v{v}' for v in CHAIN_TL_VERSIONS])
+def fixture_chain_tl_version(version):
     """Return the TensErLEED version that a full chain runs with."""
-    return request.param
+    return version
 
 
 @fixture(scope='session', name='chain_files_ag100')
