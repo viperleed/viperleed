@@ -29,7 +29,6 @@ from contextlib import contextmanager
 from pathlib import Path
 import re
 import shutil
-import subprocess
 from zipfile import ZipFile
 
 import pytest
@@ -87,9 +86,6 @@ CHAIN_R_FACTORS = {
                                          'superpos': 0.1712},
     }
 CHAIN_TL_VERSIONS = tuple(Version(v) for v in CHAIN_R_FACTORS)
-# Versions whose precompiled randomizer objects cannot be linked
-# (see fixture tensorleed_chain_path)
-_NON_PIC_TL_VERSIONS = (_OLD_CHAIN_TL_VERSION,)
 CHAIN_DISPLACEMENTS = 'DISPLACEMENTS_z'
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z': 'Deltas_z.zip',
@@ -457,69 +453,9 @@ def fixture_chain_tl_version(request):
     return request.param
 
 
-@fixture(scope='session', name='tensorleed_chain_path')
-def fixture_tensorleed_chain_path(tensorleed_path, tmp_path_factory,
-                                  chain_tl_version):
-    """Return a TensErLEED tree whose `chain_tl_version` can be linked.
-
-    The precompiled randomizer objects (MPIrandom_.o, random_.o) in
-    the lib folder of TensErLEED v1.6.1 are not position-independent.
-    Linking them fails with the default (PIE) options of recent
-    toolchains. For that version, the returned tree is a copy of
-    `tensorleed_path` in which they are recompiled. Everything else
-    is a link to the original tree. For other versions,
-    `tensorleed_path` is returned.
-
-    Returns
-    -------
-    tree : Path
-        The path to the TensErLEED tree to use.
-    """
-    fail_if_tl_version_missing(tensorleed_path, chain_tl_version)
-    if chain_tl_version not in _NON_PIC_TL_VERSIONS:
-        return tensorleed_path
-    chain_source, = (
-        s.path for s in tenserleed.get_tenserleed_sources(tensorleed_path)
-        if s.version == chain_tl_version
-        )
-    tree = tmp_path_factory.mktemp('tensorleed_chain')
-    chain_source_name = None
-    for entry in Path(tensorleed_path).iterdir():
-        if entry.resolve() == chain_source:
-            chain_source_name = entry.name
-            shutil.copytree(entry, tree / entry.name)
-        else:
-            (tree / entry.name).symlink_to(entry)
-    lib = tree / chain_source_name / 'lib'
-    source_c = lib / 'random_.c'
-    compilers = [('gcc', 'random_.o')]
-    if shutil.which('mpicc'):  # Otherwise, calc uses a serial search
-        compilers.append(('mpicc', 'MPIrandom_.o'))
-    for compiler, obj in compilers:
-        command = [compiler, '-fPIC', '-c', str(source_c),
-                   '-o', str(lib / obj)]
-        try:
-            # S603: the command is built from fixed names and paths
-            subprocess.run(  # noqa: S603
-                command,
-                check=True,
-                capture_output=True,
-                text=True,
-                )
-        except FileNotFoundError:
-            pytest.fail(f'Cannot rebuild {obj} for TensErLEED '
-                        f'v{chain_tl_version}: {compiler} not found.')
-        except subprocess.CalledProcessError as exc:
-            command_line = ' '.join(command)
-            pytest.fail(f'Failed to rebuild {obj} for TensErLEED '
-                        f'v{chain_tl_version}: {command_line}\n'
-                        f'{exc.stderr}')
-    return tree
-
-
 @fixture(scope='session', name='chain_files_ag100')
 def fixture_chain_files_ag100(make_section_tempdir,
-                              tensorleed_chain_path,
+                              tensorleed_path,
                               chain_tl_version):
     """Run INITIALIZATION to SEARCH for Ag(100) for each chain version.
 
@@ -544,7 +480,7 @@ def fixture_chain_files_ag100(make_section_tempdir,
     files.copy_displacements(disp_source)
     with _short_search_eval_time():
         files.run_calc_from_setup(
-            source=tensorleed_chain_path,
+            source=tensorleed_path,
             preset_params={'RUN': [0, 1, 2, 3],
                            'TL_VERSION': chain_tl_version}
             )
