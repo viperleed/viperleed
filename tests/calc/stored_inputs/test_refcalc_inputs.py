@@ -24,6 +24,7 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
 from .conftest import GROUPS
+from .conftest import reference_group
 from .conftest import PRESET_CASES
 from .conftest import STORED_CASES
 
@@ -53,7 +54,7 @@ FILES_BY_GROUP = {
     '1.6.0-1.6.1': (*_FILES, 'AUXBEAMS'),
     '1.7.3-': _FILES,
     }
-assert set(FILES_BY_GROUP) == set(GROUPS)
+assert set(FILES_BY_GROUP) == set(map(reference_group, GROUPS))
 
 
 def _reference_name(case, part):
@@ -64,7 +65,8 @@ def _reference_name(case, part):
 PARAMS = [
     pytest.param((group, case, part, name),
                  id=f'{group}-{_reference_name(case, part)}-{name}')
-    for group, names in FILES_BY_GROUP.items()
+    for group in GROUPS
+    for names in (FILES_BY_GROUP[reference_group(group)],)
     for case, parts in CASES.items()
     for part in parts
     for name in names
@@ -108,7 +110,8 @@ def fixture_written_and_reference(request, refcalc_folder, data_path):
     """
     group, case, part, name = request.param
     reference = (data_path / 'stored_inputs/refcalc'
-                 / _reference_name(case, part) / group / name)
+                 / _reference_name(case, part) / reference_group(group)
+                 / name)
     return refcalc_folder(group, case, part) / name, reference
 
 

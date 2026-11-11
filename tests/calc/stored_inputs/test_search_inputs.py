@@ -34,6 +34,7 @@ from viperleed.calc.lib.context import execute_in_dir
 from ...helpers import TEST_DATA
 from .conftest import DISPLACEMENTS
 from .conftest import GROUPS
+from .conftest import reference_group
 
 SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f'
 SEARCH_POPULATION = 4
@@ -112,7 +113,8 @@ def factory_search_folders(prepared_deltas):
 def fixture_written_and_reference(request, search_folders, data_path):
     """Return a written file and its reference."""
     group, variant, name = request.param
-    reference = data_path / 'stored_inputs/search' / variant / group / name
+    reference = (data_path / 'stored_inputs/search' / variant
+                 / reference_group(group) / name)
     return search_folders(group, variant) / name, reference
 
 
@@ -129,4 +131,5 @@ def test_max_generations_limited(group, prepared_deltas):
     folder = _write_search_inputs(prepared, max_gen=HUGE_MAX_GEN)
     lines = (folder / 'search.steu').read_text().splitlines()
     generations = next(line for line in lines if 'desired number' in line)
-    assert int(generations.split()[0]) == MAX_GEN_WRITTEN[group]
+    expected = MAX_GEN_WRITTEN[reference_group(group)]
+    assert int(generations.split()[0]) == expected

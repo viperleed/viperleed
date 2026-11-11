@@ -10,7 +10,8 @@ the writers on the slabs and Rparams of the case.
 Fixtures
 --------
 group
-    Version group of the reference files (parametrized).
+    Run of the tests, i.e., a version group (or a version of it)
+    (parametrized).
 initialized_case (factory)
     Return the CaseState of a case in a version group.
 prepared_deltas (factory)
@@ -62,12 +63,22 @@ THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
 TENSOR_INDEX = 1  # As after a reference calculation
 DISPLACEMENTS = 'DISPLACEMENTS'
 
-# Version groups of the reference files: name of the reference folder
-# and the TensErLEED version with which the tests of the group run.
+# Runs of the tests: name of the run and the TensErLEED version used.
+# The reference files are grouped by version group, i.e., by the range
+# of TensErLEED versions that share them. Each group runs at the highest
+# version it contains, and, if it contains more than one TensErLEED
+# version with different code paths, also at the lowest one. The latter
+# are named '<group>@<version>' and use the references of <group>.
 GROUPS = {
     '1.6.0-1.6.1': '1.6.1',
     '1.7.3-': '2.1.0',
+    '1.7.3-@1.7.4': '1.7.4',
     }
+
+
+def reference_group(group):
+    """Return the name of the reference folder of a run."""
+    return group.split('@')[0]
 
 # Cases with stored inputs. All files in 'source' (a folder in the test
 # data) are copied to the folders of the calculation. 'extra' are
@@ -169,10 +180,10 @@ def factory_initialized_case(tmp_path_factory):
     cache = {}
 
     def _initialize(case, group):
-        key = case, group
+        tl_version = GROUPS[group]
+        key = case, tl_version
         if key not in cache:
             tree = tmp_path_factory.mktemp('tree')
-            tl_version = GROUPS[group]
             # An empty folder is enough to find a TensErLEED version
             (tree / f'TensErLEED-v{tl_version}').mkdir()
             work = tmp_path_factory.mktemp(case.replace('/', '_'))

@@ -24,6 +24,7 @@ import pytest
 from ...helpers import TEST_DATA
 from .conftest import DISPLACEMENTS
 from .conftest import GROUPS
+from .conftest import reference_group
 
 DELTA_INPUT = 'delta-input'
 _AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
@@ -102,7 +103,8 @@ def fixture_written_and_reference(request, delta_folders, data_path):
     """Return a written file and its reference."""
     group, variant, part, name = request.param
     reference = (data_path / 'stored_inputs/deltas'
-                 / _reference_name(variant, part) / group / name)
+                 / _reference_name(variant, part) / reference_group(group)
+                 / name)
     folders, _ = delta_folders(group, variant)
     return folders[part] / name, reference
 
