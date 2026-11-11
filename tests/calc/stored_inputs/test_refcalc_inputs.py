@@ -40,6 +40,12 @@ assert set(CASES) <= set(STORED_CASES) | set(PRESET_CASES)
 
 PARAM_FILE = 'refcalc-PARAM'
 FIN_FILE = 'refcalc-FIN'
+PHASESHIFTS = 'PHASESHIFTS'
+# PHASESHIFTS is an input that refcalc-FIN contains verbatim. It is
+# stored as a placeholder, rather than copied to each reference.
+PHASESHIFTS_PLACEHOLDER = (
+    f'<{PHASESHIFTS}: verbatim copy of the work-dir {PHASESHIFTS}>\n'
+    )
 # TensErLEED v1.7.3 and later do not use an AUXBEAMS file
 _FILES = ('AUXLATGEO', 'AUXNONSTRUCT', 'AUXGEO', 'BEAMLIST', FIN_FILE,
           PARAM_FILE)
@@ -106,6 +112,22 @@ def fixture_written_and_reference(request, refcalc_folder, data_path):
     return refcalc_folder(group, case, part) / name, reference
 
 
-def test_refcalc_input(written_and_reference, check_reference):
+def _with_phaseshifts_placeholder(fin_file, tmp_path):
+    """Return a copy of `fin_file` with PHASESHIFTS as a placeholder."""
+    phaseshifts = (fin_file.parent / PHASESHIFTS).read_text(encoding='utf-8')
+    if not phaseshifts.endswith('\n'):  # As in collectFIN
+        phaseshifts += '\n'
+    fin = fin_file.read_text(encoding='utf-8')
+    assert fin.count(phaseshifts) == 1
+    result = tmp_path / FIN_FILE
+    result.write_text(fin.replace(phaseshifts, PHASESHIFTS_PLACEHOLDER),
+                      encoding='utf-8')
+    return result
+
+
+def test_refcalc_input(written_and_reference, check_reference, tmp_path):
     """Check a file written for a reference calculation."""
-    check_reference(*written_and_reference)
+    written, reference = written_and_reference
+    if written.name == FIN_FILE:
+        written = _with_phaseshifts_placeholder(written, tmp_path)
+    check_reference(written, reference)
