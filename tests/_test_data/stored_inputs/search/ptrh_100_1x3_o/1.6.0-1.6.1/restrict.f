@@ -23,6 +23,7 @@ C  etc.
 
 C  begin restrictions
 
+      PARIND(15,IPOP) = 1
 
 C  end restrictions
 

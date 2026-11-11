@@ -9,3 +9,5 @@
     = OCC_DELTA
         Me 3 = Pt 0.15 0.25 0.1, Rh 0.65 0.75 0.1
         Me 4 = Pt 0.15 0.25 0.1, Rh 0.65 0.75 0.1
+    = CONSTRAINT
+        occ Me 4 = ind(1)

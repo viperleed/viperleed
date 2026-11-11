@@ -1,4 +1,4 @@
-    9           number of independent parameters
+    8           number of independent parameters
  0.1000         gaussian width control parameter RMUT
     0           initialisation for random number generator - 0: use system time, 1,...: use init
     1           1: use RPe -- 2: use R2
