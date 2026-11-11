@@ -407,3 +407,28 @@ class TestLEEDPatternSimulator:
             qtbot.mouseClick(dialog._ctrls['done'],
                              qtc.Qt.MouseButton.LeftButton)
         assert not dialog.isVisible()
+
+
+def test_drag_matrices_popup(qtbot):
+    """Check that the pop-up with the matrices can be dragged."""
+    popup = _create_widget(
+        'viperleed.gui.leedsim.widgets.matricespopup:MatricesPopup'
+        )
+    _show(qtbot, popup)
+    start = popup.pos()
+    qtbot.mousePress(popup, qtc.Qt.MouseButton.LeftButton,
+                     pos=qtc.QPoint(5, 5))
+    # QTest.mouseMove does not report pressed buttons: send a move
+    # event with the left button pressed via the event handler itself
+    popup.mouseMoveEvent(_left_button_move_event(popup, qtc.QPoint(25, 35)))
+    assert popup.pos() - start == qtc.QPoint(20, 30)
+
+
+def _left_button_move_event(widget, local_pos):
+    """Return a mouse-move event at `local_pos` with the left button."""
+    qtg = _import('viperleed.gui.qt_compat.QtGui')
+    left = qtc.Qt.MouseButton.LeftButton
+    return qtg.QMouseEvent(qtc.QEvent.Type.MouseMove,
+                           qtc.QPointF(local_pos),
+                           qtc.QPointF(widget.mapToGlobal(local_pos)),
+                           left, left, qtc.Qt.KeyboardModifier.NoModifier)

@@ -12,6 +12,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.gui.qt_compat import QtCore as qtc
 from viperleed.gui.qt_compat import QtWidgets as qtw
+from viperleed.gui.qt_compat.events import get_global_position
 
 from viperleed.gui.widgets.basewidgets import PainterMatrix
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -106,8 +107,8 @@ class MatricesPopup(qtw.QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == qtc.Qt.MouseButton.LeftButton:
-            self.dragPosition = (event.globalPos()
-                                - self.frameGeometry().topLeft())
+            self.dragPosition = (get_global_position(event)
+                                 - self.frameGeometry().topLeft())
 
     def mouseReleaseEvent(self, event):
         event.accept()
@@ -117,7 +118,7 @@ class MatricesPopup(qtw.QWidget):
 
     def mouseMoveEvent(self, event):
         if event.buttons() == qtc.Qt.MouseButton.LeftButton:
-            self.move(event.globalPos() - self.dragPosition)
+            self.move(get_global_position(event) - self.dragPosition)
 
     def updateMatrices(self, domsHidden):
         if domsHidden:
