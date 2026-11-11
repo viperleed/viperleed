@@ -4,7 +4,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-19'
 __license__ = 'GPLv3+'
 
@@ -44,9 +44,7 @@ class TestInitialization:                                                       
 
     def test_successful_run(self, init_files):
         """Check that initialization exits without errors."""
-        assert not init_files.failed
-        assert init_files.records is not None
-        assert init_files.records.get_last_state_for_section('initialization')
+        assert init_files.section_ran('initialization')
 
     _expected_files = 'IVBEAMS', 'BEAMLIST', 'VIBROCC', 'PARAMETERS'
 
@@ -65,8 +63,7 @@ class TestInitialization:                                                       
 
     def test_does_not_write_out_suffixed(self, init_files):
         """Check that no _OUT-suffixed file is generated."""
-        out_suffixed = init_files.work_path.rglob('*_OUT*')
-        assert not any(out_suffixed)
+        assert not init_files.out_suffixed_files()
 
     def test_vibrocc_generated(self, init_files):
         """Check that VIBROCC_generated is written if needed."""

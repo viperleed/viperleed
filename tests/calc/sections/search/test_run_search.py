@@ -7,7 +7,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -40,9 +40,7 @@ class TestSearchAg100:
 
     def test_successful_run(self, search_files_ag100):
         """Check that structure search exits without errors."""
-        assert not search_files_ag100.failed
-        assert search_files_ag100.records is not None
-        assert search_files_ag100.records.get_last_state_for_section('search')
+        assert search_files_ag100.section_ran('search')
 
     @parametrize('expected_file', ('search.steu',))
     def test_search_input_exist(self, search_files_ag100, expected_file):
@@ -61,11 +59,7 @@ class TestSearchAg100:
 
     def test_does_not_write_out_suffixed(self, search_files_ag100):
         """Check that none of the files generated has an _OUT suffix."""
-        out_suffixed = search_files_ag100.work_path.rglob('*_OUT*')
-        # Skip R_OUT files
-        # pylint: disable-next=magic-value-comparison
-        out_suffixed = (f for f in out_suffixed if 'R=' not in f.name)
-        assert not any(out_suffixed)
+        assert not search_files_ag100.out_suffixed_files()
 
 
 class TestCheckSearchLog:

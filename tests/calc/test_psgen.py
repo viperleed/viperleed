@@ -4,7 +4,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -12,10 +12,11 @@ import numpy as np
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc import psgen
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.psgen import adjust_phaseshifts
-from viperleed.calc.psgen import runPhaseshiftGen_old
 
+from ..helpers import PSGEN_SEED
+from ..helpers import private_random
 from .poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 
 MIN_ENTRIES_IN_FIRST_LINE = 4
@@ -63,8 +64,8 @@ class TestPhaseshiftsGen:
         slab, rpars, _ = args
         rpars.paths.tensorleed = tensorleed_path
         rpars.THEO_ENERGIES = rpars.THEO_ENERGIES.from_value((50,100,5))
-        with execute_in_dir(tmp_path):
-            firstline, _ = runPhaseshiftGen_old(slab, rpars)
+        with execute_in_dir(tmp_path), private_random(psgen, PSGEN_SEED):
+            firstline, _ = psgen.runPhaseshiftGen_old(slab, rpars)
         assert firstline
 
 
@@ -97,17 +98,17 @@ class TestAdjustPhaseshifts:
     @parametrize(phaseshifts=mock_phaseshifts.values(), ids=mock_phaseshifts)
     def test_adjust_phaseshifts_is_constrained(self, phaseshifts):
         """Assert that the adjusted phaseshifts don't diverge."""
-        adjusted_ps = adjust_phaseshifts(phaseshifts)
+        adjusted_ps = psgen.adjust_phaseshifts(phaseshifts)
         assert np.max(np.abs(adjusted_ps)) < np.max(np.abs(phaseshifts))*3
 
     @parametrize(phaseshifts=mock_phaseshifts.values(), ids=mock_phaseshifts)
     def test_adjust_phaseshifts_is_continuous(self, phaseshifts):
         """Assert that the adjusted phaseshifts are continuous."""
-        adjusted_ps = adjust_phaseshifts(phaseshifts)
+        adjusted_ps = psgen.adjust_phaseshifts(phaseshifts)
         assert np.all(np.abs(np.diff(adjusted_ps)) < 0.2)
 
     @parametrize(phaseshifts=mock_phaseshifts.values(), ids=mock_phaseshifts)
     def test_adjust_phaseshifts_first_value_is_wrapped(self, phaseshifts):
         """Assert that the first value is wrapped."""
-        adjusted_ps = adjust_phaseshifts(phaseshifts)
+        adjusted_ps = psgen.adjust_phaseshifts(phaseshifts)
         assert np.abs(adjusted_ps[0]) < np.pi/2

@@ -2,9 +2,9 @@
 
 Defines fixtures and fixture factories used in multiple tests, and
 loads the plugins with the options and hooks of the test suite:
-check_slow.py (--check-slow), quick_option.py (--quick), rng_seed.py
-(--rng-seed) and slow_marks.py (slow and tensorleed marks, stale
-SLOW_CASES guard).
+check_slow.py (--check-slow), quick_option.py (--quick),
+release_option.py (--release), rng_seed.py (--rng-seed) and
+slow_marks.py (slow, release and tensorleed marks, stale-entry guard).
 
 Random-input tests (those requesting `draws`) check N_DRAWS draws
 seeded from the test id, so that outcomes are reproducible and known
@@ -59,6 +59,7 @@ pytest_plugins = (
     'pytester',  # For testing the options themselves
     'tests.check_slow',
     'tests.quick_option',
+    'tests.release_option',
     'tests.rng_seed',
     'tests.slow_marks',
     )

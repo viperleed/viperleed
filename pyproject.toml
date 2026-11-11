@@ -166,6 +166,7 @@ classifiers = [
     markers = [
         'slow: takes about half a second or more (quick tier: --quick)',
         'tensorleed: needs a TensErLEED tree (VIPERLEED_TENSORLEED)',
+        'release: TensErLEED test that only runs with --release',
         ]
     required_plugins = [
         'pytest-cases>=3.8.5',  # Fixes marks on fixtures (pytest 8)

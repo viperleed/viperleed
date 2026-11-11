@@ -8,7 +8,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -20,9 +20,7 @@ class TestRefCalc:
 
     def test_successful_run(self, refcalc_files):
         """Check that refcalc exits without errors."""
-        assert not refcalc_files.failed
-        assert refcalc_files.records is not None
-        assert refcalc_files.records.get_last_state_for_section('refcalc')
+        assert refcalc_files.section_ran('refcalc')
 
     @parametrize(expected_file=('THEOBEAMS.csv',))
     def test_refcalc_files_present(self, refcalc_files, expected_file):
