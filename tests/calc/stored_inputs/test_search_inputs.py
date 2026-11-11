@@ -1,6 +1,6 @@
 """Tests for the input files of the search.
 
-The PARAM, search.steu, and restrict.f files written by
+The PARAM, search.steu, restrict.f and searchpars.info files written by
 viperleed.calc.files.iosearch.generateSearchInput are compared to
 stored references, for each version group of TensErLEED (see
 conftest.py). The search.steu is the one written before any search
@@ -36,7 +36,7 @@ from .conftest import DISPLACEMENTS
 from .conftest import GROUPS
 from .conftest import reference_group
 
-SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f'
+SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f', 'searchpars.info'
 SEARCH_POPULATION = 4
 SEARCH_START = 'centered'
 HUGE_MAX_GEN = 10**9  # Above what the input file format allows

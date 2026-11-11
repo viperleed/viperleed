@@ -110,7 +110,8 @@ The references cover the input of :program:`eeasisss`, the reference
 calculation (:file:`refcalc-FIN`, :file:`refcalc-PARAM`, :file:`AUX*`,
 :file:`BEAMLIST`), the delta amplitudes (:file:`delta-input`,
 :file:`Delta_Compile_*-PARAM`), and the search (:file:`PARAM`,
-:file:`restrict.f`, :file:`search.steu`). Except for :program:`eeasisss`,
+:file:`restrict.f`, :file:`search.steu`, :file:`searchpars.info`). Except
+for :program:`eeasisss`,
 each case has one subdirectory for the files written for :term:`TensErLEED`
 1.6.0--1.6.1 and one for 1.7.3 and later (``1.6.0-1.6.1``, ``1.7.3-``). The
 :file:`PHASESHIFTS` line of :file:`refcalc-FIN` is a placeholder.
