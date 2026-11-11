@@ -114,11 +114,12 @@ calculation (:file:`refcalc-FIN`, :file:`refcalc-PARAM`, :file:`AUX*`,
 for :program:`eeasisss`,
 each case has one subdirectory for the files written for :term:`TensErLEED`
 1.6.0--1.6.1 and one for 1.7.3 and later (``1.6.0-1.6.1``, ``1.7.3-``). The
-:file:`PHASESHIFTS` line of :file:`refcalc-FIN` is a placeholder.
+:file:`PHASESHIFTS` block of :file:`refcalc-FIN` is replaced by a single
+placeholder line.
 The tests of the ``1.7.3-`` group run at both ends of it (:term:`TensErLEED`
 1.7.4 and 2.1.0) against the same references.
 The tests pin timestamps and paths (the timestamp, and the relative path
-of the :file:`seSernelius` directory), and the files are compared verbatim,
+of the :file:`seSernelius` file), and the files are compared verbatim,
 so the references hold them as written.
 
 Rewrite the references only if what ViPErLEED writes was intentionally
