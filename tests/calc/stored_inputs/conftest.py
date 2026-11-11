@@ -100,9 +100,13 @@ class CaseState:
         one entry per domain, named after the domain. `folder` is the
         directory in which the INITIALIZATION ran, i.e., where the
         input files for later sections can be written.
+    main : tuple
+        The (rpars, folder) of the main calculation. For single-surface
+        cases, this is the same as the Rparams and folder in `parts`.
     """
 
     parts: dict = field(default_factory=dict)
+    main: tuple = ()
 
 
 @pytest.fixture(name='group', params=tuple(GROUPS))
@@ -183,7 +187,7 @@ def _init_stored_case(case, tmp, tree, tl_version):
                  for dom in rpars.domainParams}
     for _, part_rpars, _ in parts.values():
         part_rpars.timestamp = TIMESTAMP
-    return CaseState(parts)
+    return CaseState(parts, (rpars, work))
 
 
 def _record_and_keep_files(patcher, captured):
@@ -235,10 +239,11 @@ def _init_preset_case(case, tmp, tree, tl_version):
                          name)
         slab.full_update(rpars)  # chemical elements of ELEMENT_MIX
         vibrocc.readVIBROCC(rpars, slab)
+        rpars.fileLoaded['VIBROCC'] = True
         slab.full_update(rpars)
         rpars.ivbeams = iobeams.readIVBEAMS()
         rpars.ivbeams_sorted = False
         rpars.fileLoaded['IVBEAMS'] = True
         rpars.updateDerivedParams()
         initialization.initialization(slab, rpars)
-    return CaseState({case: (slab, rpars, work)})
+    return CaseState({case: (slab, rpars, work)}, (rpars, work))
