@@ -46,7 +46,6 @@ SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f', 'searchpars.info'
 SEARCH_POPULATION = 4
 SEARCH_START = 'centered'
 CRANDOM_VARIANT = 'ag100_z_crandom'
-CRANDOM_AFTER = 'ag100_vib'  # Variant it follows in VARIANTS
 CRANDOM_SEED = 1
 # The default population is rounded up to a multiple of the cores. A
 # number of cores that does not divide it makes the rounding visible.
@@ -58,12 +57,9 @@ EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
 EXP_BEAMS = ((1, 0), (1, 1), (2, 0))
 
 # The variants of the delta inputs, plus one with the default population
-# and starting configuration (placed after ag100_vib).
-VARIANTS = {}
-for _name, _variant in conftest.VARIANTS.items():
-    VARIANTS[_name] = _variant
-    if _name == CRANDOM_AFTER:
-        VARIANTS[CRANDOM_VARIANT] = conftest.VARIANTS['ag100_z']
+# and starting configuration
+VARIANTS = {**conftest.VARIANTS,
+            CRANDOM_VARIANT: conftest.VARIANTS['ag100_z']}
 
 PARAMS = [
     pytest.param((group, variant, name), id=f'{group}-{variant}-{name}')
