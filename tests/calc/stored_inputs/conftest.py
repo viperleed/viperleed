@@ -425,9 +425,10 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
             for part_folder in set(folders.values()):
                 tensors = f'{DEFAULT_TENSORS}_{TENSOR_INDEX:03d}'
                 (part_folder / DEFAULT_TENSORS / tensors).mkdir(parents=True)
-            if rpars.domainParams:
-                tasks = deltas._prepare_deltas_for_domains(rpars)
-            else:
-                tasks = deltas._prepare_deltas_for_one_domain(slab, rpars)
+            tasks = (
+                deltas._prepare_deltas_for_domains(rpars)
+                if rpars.domainParams else
+                deltas._prepare_deltas_for_one_domain(slab, rpars)
+                )
         return PreparedDeltas(folder, folders, slab, rpars, tasks)
     return _prepare

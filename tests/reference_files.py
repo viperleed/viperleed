@@ -73,10 +73,11 @@ def fixture_check_reference(request):
         """
         written, reference = Path(written), Path(reference)
         written_text = written.read_text(encoding=_ENCODING)
-        if reference.is_file():
-            reference_text = reference.read_text(encoding=_ENCODING)
-        else:
-            reference_text = None
+        reference_text = (
+            reference.read_text(encoding=_ENCODING)
+            if reference.is_file() else
+            None
+            )
         if reference_text == written_text:
             return
         if rewrite:
