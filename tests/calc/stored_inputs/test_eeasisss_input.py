@@ -66,9 +66,9 @@ def fixture_written_input(stub_tree, tmp_path, mocker, pinned_clock):
         # Stop right after the input is written and 'run'
         mocker.patch.object(psgen.subprocess, 'run',
                             side_effect=CustomTestException)
-        with execute_in_dir(work), private_random(psgen, PSGEN_SEED):
-            with pytest.raises(CustomTestException):
-                psgen.runPhaseshiftGen_old(slab, rpars)
+        with execute_in_dir(work), private_random(psgen, PSGEN_SEED), \
+                pytest.raises(CustomTestException):
+            psgen.runPhaseshiftGen_old(slab, rpars)
         return work / INPUT_NAME
     return _write
 
