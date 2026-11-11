@@ -34,7 +34,7 @@ class BulkInput(LatticeInput):
 
         Parameters
         ---------
-        parent : PyQt5.QtWidgets.QWidget, default=None
+        parent : QWidget, default=None
             Parent widget that 'contains' this instance.
         bulk_lattice : Lattice2D
             The lattice instance that will be modified

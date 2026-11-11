@@ -53,7 +53,7 @@ class LatticeInput(qtw.QWidget):
 
         Parameters
         ----------
-        parent : PyQt5.QtWidgets.QWidget or None, optional
+        parent : QWidget or None, optional
             Parent widget that 'contains' this instance.
             Default is None.
         lattice : Lattice2D or None, optional

@@ -31,7 +31,7 @@ class EditableMatrix(qtw.QWidget):
 
         Parameters
         ----------
-        parent : PyQt5.QtWidgets.QWidget, default=None
+        parent : QWidget, default=None
             Parent widget that 'contains' this instance.
         shape : tuple, default=(2, 2)
             Shape of the matrix. Should have at most two

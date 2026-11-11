@@ -149,7 +149,7 @@ class SurfaceStructureInput(qtw.QWidget):
 
         Parameters
         ----------
-        parent : PyQt5.QtWidgets.QWidget or None, default=None
+        parent : QWidget or None, default=None
             Parent widget that 'contains' this instance.
         bulk_lattice : viperleed.Lattice
             The real-space lattice of the bulk. Can
