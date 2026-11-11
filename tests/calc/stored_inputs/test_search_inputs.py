@@ -26,6 +26,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
+import contextlib
 from itertools import product
 
 import pytest
@@ -120,8 +121,12 @@ def _write_search_inputs(prepared, max_gen=None, crandom=False):
         rpars.SEARCH_START = SEARCH_START
     if not rpars.expbeams:
         rpars.expbeams = _synthetic_exp_beams()
-    with execute_in_dir(prepared.folder), private_random(rparams,
-                                                         CRANDOM_SEED):
+    seeded = (
+        private_random(rparams, CRANDOM_SEED)
+        if crandom else
+        contextlib.nullcontext()
+        )
+    with execute_in_dir(prepared.folder), seeded:
         iosearch.generateSearchInput(prepared.slab, rpars)
     return prepared.folder
 
