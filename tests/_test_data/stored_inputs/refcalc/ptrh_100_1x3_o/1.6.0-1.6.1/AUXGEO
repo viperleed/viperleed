@@ -1,0 +1,94 @@
+-------------------------------------------------------------------
+--- define chem. and vib. properties for different atomic sites ---
+-------------------------------------------------------------------
+  2                       NSITE: number of different site types
+-   site type 1 ---
+ 1.0000 0.1200            Occ & VibAmp for O in O_def site
+ 0.0000 0.0000            
+ 0.0000 0.0000            
+-   site type 2 ---
+ 0.0000 0.0000            
+ 0.2500 0.0710            Occ & VibAmp for Pt in Me_def site
+ 0.6500 0.0650            Occ & VibAmp for Rh in Me_def site
+-------------------------------------------------------------------
+--- define different layer types                                ---
+-------------------------------------------------------------------
+  6                       NLTYPE: number of different layer types
+-   layer type 1 ---
+  1                       LAY = 1: layer type no. 1 has overlayer lateral periodicity
+  5                       number of Bravais sublayers in layer 1
+  1 0.0000 1.8254 1.3540  Atom N=1 (O)
+  1 0.0000 6.2986 1.3540  Atom N=2 (O)
+  2 0.5817 0.0000 1.3540  Atom N=3 (Me)
+  2 0.9628 2.7165 0.0000  Atom N=4 (Me)
+  2 0.9628 5.4075 0.0000  Atom N=5 (Me)
+-   layer type 2 ---
+  1                       LAY = 1: layer type no. 2 has overlayer lateral periodicity
+  3                       number of Bravais sublayers in layer 2
+  2 0.0000 4.0620 1.3540  Atom N=7 (Me)
+  2 0.0702 1.3540 1.3540  Atom N=6 (Me)
+  2 0.0702 6.7700 1.3540  Atom N=8 (Me)
+-   layer type 3 ---
+  1                       LAY = 1: layer type no. 3 has overlayer lateral periodicity
+  3                       number of Bravais sublayers in layer 3
+  2 0.0000 0.0000 0.0000  Atom N=9 (Me)
+  2 0.0000 2.7080 0.0000  Atom N=10 (Me)
+  2 0.0000 5.4160 0.0000  Atom N=11 (Me)
+-   layer type 4 ---
+  1                       LAY = 1: layer type no. 4 has overlayer lateral periodicity
+  3                       number of Bravais sublayers in layer 4
+  2 0.0000 1.3540 1.3540  Atom N=12 (Me)
+  2 0.0000 4.0620 1.3540  Atom N=13 (Me)
+  2 0.0000 6.7700 1.3540  Atom N=14 (Me)
+-   layer type 5 ---
+  1                       LAY = 1: layer type no. 5 has overlayer lateral periodicity
+  3                       number of Bravais sublayers in layer 5
+  2 0.0000 0.0000 0.0000  Atom N=15 (Me)
+  2 0.0000 2.7080 0.0000  Atom N=16 (Me)
+  2 0.0000 5.4160 0.0000  Atom N=17 (Me)
+-   layer type 6 ---
+  2                       LAY = 2: layer type no. 6 has bulk lateral periodicity
+  1                       number of Bravais sublayers in layer 6
+  2 0.0000 0.0000 0.0000  Atom N=18 (Me)
+-------------------------------------------------------------------
+--- define bulk stacking sequence                               ---
+-------------------------------------------------------------------
+  0                       TSLAB = 0: compute bulk using layer doubling
+ 1.9148 1.3540 1.3540     ASA interlayer vector between different bulk units
+  6                       top layer of bulk unit: layer type 6
+  6                       bottom layer of bulk unit: layer type 6
+ 1.9148 1.3540 1.3540     ASBULK between the two bulk unit layers (may differ from ASA)
+-------------------------------------------------------------------
+--- define layer stacking sequence and Tensor LEED output       ---
+-------------------------------------------------------------------
+  5                       NSTACK: number of layers stacked onto bulk
+  5 1.9148 1.3540 1.3540  layer 5: layer type 5, interlayer vector below
+  1                       0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_15                      Tensor file name, current layer, sublayer 1
+T_16                      Tensor file name, current layer, sublayer 2
+T_17                      Tensor file name, current layer, sublayer 3
+  4 1.9249 0.0000 0.0000  layer 4: layer type 4, interlayer vector below
+  1                       0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_12                      Tensor file name, current layer, sublayer 1
+T_13                      Tensor file name, current layer, sublayer 2
+T_14                      Tensor file name, current layer, sublayer 3
+  3 1.9048 0.0000 0.0000  layer 3: layer type 3, interlayer vector below
+  1                       0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_9                       Tensor file name, current layer, sublayer 1
+T_10                      Tensor file name, current layer, sublayer 2
+T_11                      Tensor file name, current layer, sublayer 3
+  2 1.8547 0.0000 0.0000  layer 2: layer type 2, interlayer vector below
+  1                       0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_7                       Tensor file name, current layer, sublayer 1
+T_6                       Tensor file name, current layer, sublayer 2
+T_8                       Tensor file name, current layer, sublayer 3
+  1 2.0862 0.0000 0.0000  layer 1: layer type 1, interlayer vector below
+  1                       0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_1                       Tensor file name, current layer, sublayer 1
+T_2                       Tensor file name, current layer, sublayer 2
+T_3                       Tensor file name, current layer, sublayer 3
+T_4                       Tensor file name, current layer, sublayer 4
+T_5                       Tensor file name, current layer, sublayer 5
+-------------------------------------------------------------------
+--- end geometrical input                                       ---
+-------------------------------------------------------------------

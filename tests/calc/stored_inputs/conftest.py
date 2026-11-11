@@ -1,0 +1,244 @@
+"""Test configuration for tests.calc.stored_inputs.
+
+Defines the cases of the stored-input tests, and a session-scoped
+factory fixture that brings each case to the state it has right after
+an INITIALIZATION, without a TensErLEED tree, a compiler, or any
+execution of TensErLEED code. The inputs written by later sections
+(reference calculation, deltas, search) can then be produced by calling
+the writers on the slabs and Rparams of the case.
+
+Fixtures
+--------
+group
+    Version group of the reference files (parametrized).
+initialized_case (factory)
+    Return the CaseState of a case in a version group.
+"""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
+__created__ = '2026-11-11'
+__license__ = 'GPLv3+'
+
+from dataclasses import dataclass
+from dataclasses import field
+from pathlib import Path
+import shutil
+
+import pytest
+
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files import vibrocc
+from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.version import Version
+from viperleed.calc.run import run_calc
+from viperleed.calc.sections import initialization
+from viperleed.calc.sections import run_sections
+
+from ...helpers import TEST_DATA
+from ..poscar_slabs import CasePOSCARSlabs
+
+SYSTEM_NAME = 'stored-input'
+TIMESTAMP = '260101-000000'
+N_CORES = 1
+THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
+
+# Version groups of the reference files: name of the reference folder
+# and the TensErLEED version with which the tests of the group run.
+GROUPS = {
+    '1.6.0-1.6.1': '1.6.1',
+    '1.7.3-': '2.1.0',
+    }
+
+# Cases with stored inputs. All files in 'source' (a folder in the test
+# data) are copied to the folders of the calculation. 'extra' are
+# {destination: source} pairs of files that are added on top. For
+# domain cases, 'domains' lists the sub-folders of 'source' to copy.
+STORED_CASES = {
+    'ag100': {
+        'source': 'Ag(100)/initialization',
+        },
+    'ag100_mixed': {
+        'source': 'Ag(100)/initialization',
+        'extra': {'VIBROCC': 'Ag(100)/mergeDisp/VIBROCC',
+                  'DISPLACEMENTS': 'Ag(100)/mergeDisp/DISPLACEMENTS_mixed'},
+        },
+    'ag100_el_rename': {
+        'source': 'Ag(100)_el_rename/initialization',
+        },
+    'telluride_stacking': {
+        'source': 'domains/telluride_stacking/deltas',
+        'domains': ('STA', 'FAU'),
+        },
+    }
+_NOT_COPIED = {'Tensors'}  # Tensors are never read: no stored data
+PRESET_CASES = {  # POSCAR_SLABS case methods, with synthetic PHASESHIFTS
+    'ptrh_100_1x3_o': 'case_poscar_ptrh_100_1x3_o',
+    }
+# Synthetic PHASESHIFTS of the preset cases: header (Rundgren
+# parameters of the muffin-tin potential, copied from a stored file),
+# energies (Hartree) that cover the theoretical energy range, number
+# of L values.
+_PS_HEADER = '{:3d}   -10.85    0.00  -67.83   13.72      synthetic'
+_PS_ENERGIES = (0.1, 2.0, 5.0, 10.0, 15.0)
+_PS_N_L = 18
+
+
+@dataclass
+class CaseState:
+    """Slabs and Rparams of a case after an initialization.
+
+    Attributes
+    ----------
+    parts : dict
+        Maps a name to a (slab, rpars, folder) tuple. Single-surface
+        cases have one entry, named after the case. Domain cases have
+        one entry per domain, named after the domain. `folder` is the
+        directory in which the INITIALIZATION ran, i.e., where the
+        input files for later sections can be written.
+    """
+
+    parts: dict = field(default_factory=dict)
+
+
+@pytest.fixture(name='group', params=tuple(GROUPS))
+def fixture_group(request):
+    """Return the name of a version group."""
+    return request.param
+
+
+@pytest.fixture(name='tl_version')
+def fixture_tl_version(group):
+    """Return the TensErLEED version used for a version group."""
+    return Version(GROUPS[group])
+
+
+@pytest.fixture(scope='session', name='initialized_case')
+def factory_initialized_case(tmp_path_factory):
+    """Return a function that initializes a case (cached)."""
+    cache = {}
+
+    def _initialize(case, group):
+        key = case, group
+        if key not in cache:
+            tree = tmp_path_factory.mktemp('tree')
+            tl_version = GROUPS[group]
+            # An empty folder is enough to find a TensErLEED version
+            (tree / f'TensErLEED-v{tl_version}').mkdir()
+            work = tmp_path_factory.mktemp(case.replace('/', '_'))
+            if case in PRESET_CASES:
+                cache[key] = _init_preset_case(case, work, tree, tl_version)
+            else:
+                cache[key] = _init_stored_case(case, work, tree, tl_version)
+        return cache[key]
+    return _initialize
+
+
+def _prepare_folder(folder, spec):
+    """Copy the stored inputs of a case to `folder`."""
+    source = TEST_DATA / spec['source']
+    domains = spec.get('domains', ())
+    for item in source.iterdir():
+        if item.name in _NOT_COPIED:
+            continue
+        if item.is_dir() and item.name not in domains:
+            continue
+        if item.is_dir():
+            shutil.copytree(item, folder / item.name,
+                            ignore=shutil.ignore_patterns(*_NOT_COPIED))
+        else:
+            shutil.copy2(item, folder)
+    for destination, extra_source in spec.get('extra', {}).items():
+        shutil.copy2(TEST_DATA / extra_source, folder / destination)
+
+
+def _init_stored_case(case, tmp, tree, tl_version):
+    """Run an INITIALIZATION on the stored inputs of `case`."""
+    spec = STORED_CASES[case]
+    work = tmp / DEFAULT_WORK
+    work.mkdir()
+    _prepare_folder(tmp, spec)
+    _prepare_folder(work, spec)
+    captured = {}
+    with pytest.MonkeyPatch.context() as patcher:
+        _record_and_keep_files(patcher, captured)
+        with execute_in_dir(work):
+            failed, _ = run_calc(
+                source=tree,
+                preset_params={'RUN': [0],
+                               'TL_VERSION': Version(tl_version),
+                               'N_CORES': N_CORES},
+                system_name=SYSTEM_NAME,
+                home=tmp,
+                )
+    assert not failed
+    rpars, slab = captured['args']
+    parts = {case: (slab, rpars, work)}
+    if spec.get('domains'):
+        parts = {dom.name: (dom.slab, dom.rpars, dom.workdir)
+                 for dom in rpars.domainParams}
+    for _, part_rpars, _ in parts.values():
+        part_rpars.timestamp = TIMESTAMP
+    return CaseState(parts)
+
+
+def _record_and_keep_files(patcher, captured):
+    """Make run_calc hand over its slab/Rparams, and not clean up."""
+    original = run_sections.section_loop
+
+    def _section_loop(rpars, slab):
+        captured['args'] = rpars, slab
+        return original(rpars, slab)
+
+    patcher.setattr('viperleed.calc.run.section_loop', _section_loop)
+    patcher.setattr(run_sections, 'cleanup', lambda *_: None)
+
+
+def _write_synthetic_phaseshifts(slab, rpars, filename):
+    """Write a deterministic PHASESHIFTS file that fits `slab`."""
+    n_blocks = sum(
+        len(rpars.ELEMENT_MIX.get(el, [el]))
+        * len([s for s in slab.sitelist if s.el == el])
+        for el in slab.elements
+        )
+    lines = [_PS_HEADER.format(n_blocks)]
+    for i_energy, energy in enumerate(_PS_ENERGIES):
+        lines.append(f'{energy:7.4f}')
+        for i_block in range(n_blocks):
+            values = [round((0.3*(i_block + 1) + 0.05*i_energy)/(n_l + 1), 4)
+                      for n_l in range(_PS_N_L)]
+            for start in range(0, _PS_N_L, 10):
+                chunk = values[start:start + 10]
+                lines.append(''.join(f'{v:7.4f}' for v in chunk))
+    Path(filename).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def _init_preset_case(case, tmp, tree, tl_version):
+    """Run an INITIALIZATION on a slab from the POSCAR presets."""
+    slab, rpars, *_ = getattr(CasePOSCARSlabs(), PRESET_CASES[case])()
+    work = tmp / DEFAULT_WORK
+    work.mkdir()
+    rpars.paths.tensorleed = tree
+    rpars.TL_VERSION = Version(tl_version)
+    rpars.systemName = SYSTEM_NAME
+    rpars.timestamp = TIMESTAMP
+    rpars.N_CORES = N_CORES
+    rpars.THEO_ENERGIES = TheoEnergies(*THEO_ENERGIES)
+    with execute_in_dir(work):
+        _write_synthetic_phaseshifts(slab, rpars, 'PHASESHIFTS')
+        for name in ('IVBEAMS', 'VIBROCC'):
+            shutil.copy2(TEST_DATA / 'stored_inputs/inputs' / case / name,
+                         name)
+        slab.full_update(rpars)  # chemical elements of ELEMENT_MIX
+        vibrocc.readVIBROCC(rpars, slab)
+        slab.full_update(rpars)
+        rpars.ivbeams = iobeams.readIVBEAMS()
+        rpars.ivbeams_sorted = False
+        rpars.fileLoaded['IVBEAMS'] = True
+        rpars.updateDerivedParams()
+        initialization.initialization(slab, rpars)
+    return CaseState({case: (slab, rpars, work)})

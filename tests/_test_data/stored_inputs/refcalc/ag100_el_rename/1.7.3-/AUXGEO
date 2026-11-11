@@ -1,0 +1,68 @@
+-------------------------------------------------------------------
+--- define chem. and vib. properties for different atomic sites ---
+-------------------------------------------------------------------
+  2                             NSITE: number of different site types
+-   site type 1 ---
+   1.0000   0.0510              Occ & VibAmp for Ax in Ax_def site
+   0.0000   0.0000              
+-   site type 2 ---
+   0.0000   0.0000              
+   1.0000   0.0690              Occ & VibAmp for Ag in Ag_def site
+-------------------------------------------------------------------
+--- define different layer types                                ---
+-------------------------------------------------------------------
+  6                             NLTYPE: number of different layer types
+-   layer type 1 ---
+  1                             LAY = 1: layer type no. 1 has overlayer lateral periodicity
+  1                             number of Bravais sublayers in layer 1
+  1   0.0000   0.0000   0.0000  Atom N=1 (Ax)
+-   layer type 2 ---
+  1                             LAY = 1: layer type no. 2 has overlayer lateral periodicity
+  1                             number of Bravais sublayers in layer 2
+  2   0.0000   0.0000   0.0000  Atom N=2 (Ag)
+-   layer type 3 ---
+  1                             LAY = 1: layer type no. 3 has overlayer lateral periodicity
+  1                             number of Bravais sublayers in layer 3
+  2   0.0000   0.0000   0.0000  Atom N=3 (Ag)
+-   layer type 4 ---
+  1                             LAY = 1: layer type no. 4 has overlayer lateral periodicity
+  1                             number of Bravais sublayers in layer 4
+  2   0.0000   0.0000   0.0000  Atom N=4 (Ag)
+-   layer type 5 ---
+  1                             LAY = 1: layer type no. 5 has overlayer lateral periodicity
+  1                             number of Bravais sublayers in layer 5
+  2   0.0000   0.0000   0.0000  Atom N=5 (Ag)
+-   layer type 6 ---
+  2                             LAY = 2: layer type no. 6 has bulk lateral periodicity
+  1                             number of Bravais sublayers in layer 6
+  2   0.0000   0.0000   0.0000  Atom N=6 (Ag)
+-------------------------------------------------------------------
+--- define bulk stacking sequence                               ---
+-------------------------------------------------------------------
+  0                             TSLAB = 0: compute bulk using layer doubling
+   2.0365   1.4400   1.4400     ASA interlayer vector between different bulk units
+  6                             top layer of bulk unit: layer type 6
+  6                             bottom layer of bulk unit: layer type 6
+   2.0365   1.4400   1.4400     ASBULK between the two bulk unit layers (may differ from ASA)
+-------------------------------------------------------------------
+--- define layer stacking sequence and Tensor LEED output       ---
+-------------------------------------------------------------------
+  5                             NSTACK: number of layers stacked onto bulk
+  5   2.0365   1.4400   1.4400  layer 5: layer type 5, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_5                             Tensor file name, current layer, sublayer 1
+  4   2.0365  -1.4400  -1.4400  layer 4: layer type 4, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_4                             Tensor file name, current layer, sublayer 1
+  3   2.0365   1.4400   1.4400  layer 3: layer type 3, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_3                             Tensor file name, current layer, sublayer 1
+  2   2.0365  -1.4400  -1.4400  layer 2: layer type 2, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_2                             Tensor file name, current layer, sublayer 1
+  1   2.0365   1.4400   1.4400  layer 1: layer type 1, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_1                             Tensor file name, current layer, sublayer 1
+-------------------------------------------------------------------
+--- end geometrical input                                       ---
+-------------------------------------------------------------------
