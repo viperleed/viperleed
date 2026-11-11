@@ -227,7 +227,11 @@ class CaseState:
 
 @pytest.fixture(name='group', params=tuple(GROUPS))
 def fixture_group(request):
-    """Return the name of a version group."""
+    """Return the name of a run of the tests (see GROUPS).
+
+    A run is a version group or one more version of it, whose
+    references are those of reference_group(group).
+    """
     return request.param
 
 
