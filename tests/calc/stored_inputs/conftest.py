@@ -168,12 +168,6 @@ def fixture_group(request):
     return request.param
 
 
-@pytest.fixture(name='tl_version')
-def fixture_tl_version(group):
-    """Return the TensErLEED version used for a version group."""
-    return Version(GROUPS[group])
-
-
 @pytest.fixture(scope='session', name='initialized_case')
 def factory_initialized_case(tmp_path_factory):
     """Return a function that initializes a case (cached)."""
