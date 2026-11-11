@@ -33,8 +33,11 @@ else:
     import matplotlib
     from matplotlib import rc_params_from_file
     from matplotlib import style as mpl_style
-    from matplotlib.style.core import STYLE_EXTENSION
     CAN_PLOT = True
+
+# The extension of matplotlib style files. Not imported from matplotlib,
+# as matplotlib.style.core.STYLE_EXTENSION is deprecated since v3.11.
+STYLE_EXTENSION = 'mplstyle'
 
 # The import position is actually correct. Import from viperleed after
 # other third-party modules. The problem is probably the conditionals
