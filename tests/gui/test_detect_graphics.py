@@ -97,10 +97,14 @@ class TestInitDummyQapp:
     """Tests for the _init_dummy_qapp subprocess worker."""
 
     @fixture(name='mock_qapp')
-    def fixture_mock_qapp(self, mocker):
+    def fixture_mock_qapp(self, mocker, mock_import_module):
         """Replace QApplication with a mock."""
         mocker.patch(f'{_MODULE}.suppress_file_permission_warnings')
-        mock_qtwidgets = mocker.patch('importlib.import_module').return_value
+        # Fake only QtWidgets: newer Pythons (e.g., 3.13) find the
+        # targets of mock.patch via importlib.import_module, and later
+        # patches (e.g., in test_calls) must reach the real modules.
+        mock_qtwidgets = mocker.MagicMock()
+        mock_import_module(**{'PyQt5.QtWidgets': mock_qtwidgets})
         return mock_qtwidgets.QApplication
 
     def test_calls(self, mock_qapp, mocker):
@@ -245,12 +249,15 @@ class TestImportDummyPyqtAndRunApp:
             *(mocker.call(m) for m in self._modules)
             ]
         mock_import.assert_has_calls(expect_calls, any_order=True)
-        # The parent must be told before creating the QApplication
-        assert calls.mock_calls == [
+        # The parent must be told before creating the QApplication.
+        # Build the expected calls outside the assert: code-quality
+        # checkers take mocker.call.<...>.send() for a real call.
+        expect_order = [
             mocker.call.imports_done.send(True),
             mocker.call.imports_done.close(),
             mocker.call.init_dummy_qapp(),
             ]
+        assert calls.mock_calls == expect_order
 
 
 class TestFindMissingDependencies:
