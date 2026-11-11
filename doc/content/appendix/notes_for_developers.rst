@@ -100,6 +100,37 @@ newer versions, are exercised in all sections:
 
     python -m pytest tests/calc/sections/test_chain.py -m tensorleed --no-cov
 
+The default tier also contains *stored-input* tests
+(:file:`tests/calc/stored_inputs`). They need neither :term:`TensErLEED` nor
+a compiler: starting from stored :file:`POSCAR`, :file:`PARAMETERS` and
+related files, they run only the step of ViPErLEED that writes the input of
+a :term:`TensErLEED` program (without executing it), and compare it with
+reference files in :file:`tests/_test_data/stored_inputs/<step>/<case>/`.
+The references cover the input of :program:`eeasisss`, the reference
+calculation (:file:`refcalc-FIN`, :file:`refcalc-PARAM`, :file:`AUX*`,
+:file:`BEAMLIST`), the delta amplitudes (:file:`delta-input`,
+:file:`Delta_Compile_*-PARAM`), and the search (:file:`PARAM`,
+:file:`restrict.f`, :file:`search.steu`). Except for :program:`eeasisss`,
+each case has one subdirectory for the files written for :term:`TensErLEED`
+1.6.0--1.6.1 and one for 1.7.3 and later (``1.6.0-1.6.1``, ``1.7.3-``). The
+:file:`PHASESHIFTS` line of :file:`refcalc-FIN` is a placeholder.
+Timestamps and the path of the :file:`seSernelius` directory are masked
+before comparing.
+
+Rewrite the references only if what ViPErLEED writes was intentionally
+changed, or when adding a group for a new :term:`TensErLEED` version. From the
+root of your local copy of the |repo|, run
+
+.. code-block:: bash
+
+    python -m pytest tests/calc/stored_inputs --rewrite-references
+
+Tests whose reference differs, or is missing, rewrite it and are reported as
+skipped (``reference rewritten: <path>``). Review the change with
+``git diff tests/_test_data/stored_inputs``, and then run the tests again
+without the option. Do not rewrite references to make an unexplained failure
+pass.
+
 Coverage (including branches) is collected by default, via the
 :program:`pytest-cov` plugin, which is among the test requirements. An HTML
 report is written to :file:`htmlcov/`; add ``--cov-report=term`` to also get
