@@ -23,6 +23,7 @@ from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
+from ...helpers import TEST_DATA
 from .conftest import GROUPS
 from .conftest import reference_group
 from .conftest import PRESET_CASES
@@ -134,3 +135,31 @@ def test_refcalc_input(written_and_reference, check_reference, tmp_path):
     if written.name == FIN_FILE:
         written = _with_phaseshifts_placeholder(written, tmp_path)
     check_reference(written, reference)
+
+
+# The PHASESHIFTS of the preset cases are written by the case set-up
+# itself, and have no stored input to compare with.
+_STORED_PHASESHIFTS = [
+    pytest.param((group, case, part), id=f'{group}-{case}-{part}')
+    for group in GROUPS
+    for case, parts in CASES.items()
+    if case in STORED_CASES
+    for part in parts
+    ]
+
+
+@pytest.fixture(name='phaseshifts_and_stored', params=_STORED_PHASESHIFTS)
+def fixture_phaseshifts_and_stored(request, refcalc_folder):
+    """Return the work-dir PHASESHIFTS and the stored input."""
+    group, case, part = request.param
+    source = TEST_DATA / STORED_CASES[case]['source']
+    if STORED_CASES[case].get('domains'):
+        source /= part
+    written = refcalc_folder(group, case, part) / PHASESHIFTS
+    return written, source / PHASESHIFTS
+
+
+def test_phaseshifts_is_stored_input(phaseshifts_and_stored):
+    """Check that the PHASESHIFTS in refcalc-FIN is the stored input."""
+    written, stored = phaseshifts_and_stored
+    assert written.read_bytes() == stored.read_bytes()
