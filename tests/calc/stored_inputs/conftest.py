@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 import shutil
+from types import SimpleNamespace
+import time
 
 import pytest
 
@@ -39,7 +41,9 @@ from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import vibrocc
+from viperleed.calc.lib import time_utils
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections import deltas
@@ -50,7 +54,9 @@ from ...helpers import TEST_DATA
 from ..poscar_slabs import CasePOSCARSlabs
 
 SYSTEM_NAME = 'stored-input'
-TIMESTAMP = '260101-000000'
+# The clock is pinned to this time, so that the timestamps written to
+# the inputs (format DateTimeFormat.FILE_SUFFIX) are '260101-000000'.
+PINNED_TIME = time.struct_time((2026, 1, 1, 0, 0, 0, 3, 1, -1))
 N_CORES = 1
 THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
 TENSOR_INDEX = 1  # As after a reference calculation
@@ -196,6 +202,23 @@ def _prepare_folder(folder, spec):
         shutil.copy2(TEST_DATA / extra_source, folder / destination)
 
 
+def pin_clock(patcher):
+    """Make viperleed.calc.lib.time_utils see a fixed time."""
+    patcher.setattr(
+        time_utils,
+        'time',
+        SimpleNamespace(strftime=time.strftime,
+                        localtime=lambda *_: PINNED_TIME,
+                        gmtime=lambda *_: PINNED_TIME),
+        )
+
+
+@pytest.fixture(name='pinned_clock')
+def fixture_pinned_clock(monkeypatch):
+    """Pin the clock used for timestamps."""
+    pin_clock(monkeypatch)
+
+
 def _init_stored_case(case, tmp, tree, tl_version):
     """Run an INITIALIZATION on the stored inputs of `case`."""
     spec = STORED_CASES[case]
@@ -205,6 +228,7 @@ def _init_stored_case(case, tmp, tree, tl_version):
     _prepare_folder(work, spec)
     captured = {}
     with pytest.MonkeyPatch.context() as patcher:
+        pin_clock(patcher)
         _record_and_keep_files(patcher, captured)
         with execute_in_dir(work):
             failed, _ = run_calc(
@@ -222,7 +246,7 @@ def _init_stored_case(case, tmp, tree, tl_version):
         parts = {dom.name: (dom.slab, dom.rpars, dom.workdir)
                  for dom in rpars.domainParams}
     for _, part_rpars, _ in parts.values():
-        part_rpars.timestamp = TIMESTAMP
+        part_rpars.timestamp = rpars.timestamp
     return CaseState(parts, (rpars, work))
 
 
@@ -265,7 +289,9 @@ def _init_preset_case(case, tmp, tree, tl_version):
     rpars.paths.tensorleed = tree
     rpars.TL_VERSION = Version(tl_version)
     rpars.systemName = SYSTEM_NAME
-    rpars.timestamp = TIMESTAMP
+    with pytest.MonkeyPatch.context() as patcher:
+        pin_clock(patcher)
+        rpars.timestamp = DateTimeFormat.FILE_SUFFIX.now()
     rpars.N_CORES = N_CORES
     rpars.THEO_ENERGIES = TheoEnergies(*THEO_ENERGIES)
     with execute_in_dir(work):

@@ -18,6 +18,7 @@ from pytest_cases import parametrize_with_cases
 from viperleed.calc import psgen
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
+from viperleed.calc.lib.time_utils import DateTimeFormat
 
 from ...helpers import CustomTestException
 from ...helpers import PSGEN_SEED
@@ -26,7 +27,6 @@ from ..poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 
 INPUT_NAME = 'eeasisss-input'
 SYSTEM_NAME = 'stored-input'
-TIMESTAMP = '260101-000000'
 
 # Cases of POSCARSlabs that carry parameters (presets or mixed sites)
 CASES = (
@@ -54,12 +54,12 @@ def fixture_stub_tree(tmp_path):
 
 
 @pytest.fixture(name='written_input')
-def fixture_written_input(stub_tree, tmp_path, mocker):
+def fixture_written_input(stub_tree, tmp_path, mocker, pinned_clock):
     """Return a function that writes the eeasisss input for a slab."""
     def _write(slab, rpars):
         rpars.paths.tensorleed = stub_tree
         rpars.systemName = SYSTEM_NAME
-        rpars.timestamp = TIMESTAMP
+        rpars.timestamp = DateTimeFormat.FILE_SUFFIX.now()
         rpars.initTheoEnergies()
         work = tmp_path / 'work'
         work.mkdir()
