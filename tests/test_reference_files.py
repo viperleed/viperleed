@@ -125,6 +125,7 @@ class TestCheckReference:
         reference = _reference(pytester, _BASE)
         result = _run(pytester, _BASE, reference, _REWRITE)
         result.assert_outcomes(passed=1)
+        assert result.ret is pytest.ExitCode.OK
         assert reference.read_text() == _BASE
 
     @pytest.mark.slow  # Subprocess, about 1 s
@@ -147,3 +148,24 @@ class TestCheckReference:
         reference = _reference(pytester, _BASE)
         result = _run(pytester, 'other\n', reference, '-n', '2')
         result.assert_outcomes(failed=1)
+
+    @pytest.mark.usefixtures('subprocess_path')
+    @pytest.mark.parametrize(
+        'args',
+        [
+            pytest.param((), id='plain'),
+            pytest.param(('--no-summary',), id='no-summary'),
+            pytest.param(('-p', 'no:terminal'), id='no-terminal'),
+            pytest.param(
+                ('-n', '2'),
+                id='xdist',
+                marks=pytest.mark.slow,  # Subprocess, about 1 s
+                ),
+            ],
+        )
+    def test_rewrite_exit_status(self, pytester, args):
+        """Check that a run that rewrote a reference exits non-zero."""
+        reference = _reference(pytester, _BASE)
+        result = _run(pytester, 'other\n', reference, _REWRITE, *args)
+        assert result.ret is pytest.ExitCode.TESTS_FAILED
+        assert reference.read_text() == 'other\n'

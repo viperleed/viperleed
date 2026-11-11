@@ -130,7 +130,8 @@ root of your local copy of the |repo|, run
     python -m pytest tests/calc/stored_inputs --rewrite-references
 
 Tests whose reference differs, or is missing, rewrite it and are reported as
-skipped (``reference rewritten: <path>``). Review the change with
+skipped (``reference rewritten: <path>``), and the run exits with a
+non-zero status, so that a rewrite is never mistaken for a pass. Review the change with
 ``git diff tests/_test_data/stored_inputs``, and then run the tests again
 without the option. Do not rewrite references to make an unexplained failure
 pass.

@@ -11,7 +11,10 @@ failing. The test then does not pass silently: if it would otherwise
 pass, its outcome is reported as skipped ("reference rewritten:
 <path>"), and the terminal summary lists all the rewritten files. The
 paths travel as user_properties of the test report, so that the list
-is complete also with pytest-xdist. Review the diff of the rewritten
+is complete also with pytest-xdist. A run that rewrote any reference
+(and would otherwise succeed) ends with exit status 1, so that a
+rewrite is never mistaken for a pass, also with --no-summary and
+-p no:terminal. Review the diff of the rewritten
 references (e.g., with git) before committing them.
 """
 
@@ -29,6 +32,7 @@ import pytest
 
 REWRITE_OPTION = '--rewrite-references'
 REWRITTEN_KEY = 'rewritten_reference'  # In user_properties of a report
+REWRITE_EXIT_STATUS = pytest.ExitCode.TESTS_FAILED
 _ENCODING = 'utf-8'
 
 
@@ -39,9 +43,10 @@ def pytest_addoption(parser):
         action='store_true',
         help=('Overwrite the stored reference files that differ from '
               'what the tests write, instead of failing. Tests that '
-              'rewrite a reference are reported as skipped, and the '
-              'rewritten files are listed at the end. Review the '
-              'changes before committing them.'),
+              'rewrite a reference are reported as skipped, the '
+              'rewritten files are listed at the end, and the run '
+              'exits with a non-zero status. Review the changes '
+              'before committing them.'),
         )
 
 
@@ -124,20 +129,40 @@ def pytest_runtest_makereport(item, call):
         )
 
 
-def pytest_terminal_summary(terminalreporter):
-    """List the references rewritten in this run."""
-    rewritten = sorted({
-        path
-        for reports in terminalreporter.stats.values()
-        for report in reports
-        if getattr(report, 'when', None) == 'call'
-        for path in _rewritten_paths(report)
-        })
-    if not rewritten:
-        return
-    terminalreporter.section('rewritten reference files')
-    for path in rewritten:
-        terminalreporter.write_line(path)
-    terminalreporter.write_line(
-        'Review these changes before committing them.'
-        )
+class _RewriteCollector:
+    """Collect the rewritten references and set the exit status."""
+
+    def __init__(self):
+        """Initialize an empty collection."""
+        self.rewritten = set()
+
+    def pytest_runtest_logreport(self, report):
+        """Collect the references rewritten by a test."""
+        # Also called for the reports that xdist workers send to the
+        # controller, and independent of the terminal plugin.
+        if report.when == 'call':
+            self.rewritten.update(_rewritten_paths(report))
+
+    @pytest.hookimpl(trylast=True)
+    def pytest_sessionfinish(self, session, exitstatus):
+        """Make a run that rewrote references exit non-zero."""
+        if hasattr(session.config, 'workerinput'):  # xdist worker
+            return
+        if self.rewritten and exitstatus == pytest.ExitCode.OK:
+            session.exitstatus = REWRITE_EXIT_STATUS
+
+    def pytest_terminal_summary(self, terminalreporter):
+        """List the references rewritten in this run."""
+        if not self.rewritten:
+            return
+        terminalreporter.section('rewritten reference files')
+        for path in sorted(self.rewritten):
+            terminalreporter.write_line(path)
+        terminalreporter.write_line(
+            'Review these changes before committing them.'
+            )
+
+
+def pytest_configure(config):
+    """Register the collector of rewritten references."""
+    config.pluginmanager.register(_RewriteCollector(), 'rewrite-collector')
