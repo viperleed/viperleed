@@ -438,7 +438,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             # NB: one cannot use += for in-place assignment since
             # .center is a property, which would then become a
             # standard attribute.
-            annot.center = qtc.QPoint(*annot.center.round()) + delta
+            center = annot.center.round().astype(int)
+            annot.center = qtc.QPoint(*center) + delta
             if annot.isVisible():
                 # Move only visible annotations, which will move
                 # together with the window. If one would have

@@ -197,7 +197,7 @@ class HoverAnnot(qtw.QWidget):
         h = np.round(rect_size.height())
         # notice that the return value is slightly over-sized even in the worst
         # case scenario, as one would strictly need to add only w/2 and h/2
-        return qtc.QSize(w + delta, h + delta)
+        return qtc.QSize(int(w + delta), int(h + delta))
 
     def minimumSizeHint(self):
         return self.sizeHint()
@@ -310,8 +310,8 @@ class HoverAnnot(qtw.QWidget):
         the annotation to make sure its position on the screen is correct
         """
         tip = self.tip_pos  # local position
-        tip_global = self.mapToGlobal(qtc.QPoint(tip.x(), tip.y()))
+        tip_global = self.mapToGlobal(tip.toPoint())
         new_pos = self.pos()
-        delta = qtc.QPoint(*self.head_pos.round()) - tip_global
+        delta = qtc.QPoint(*self.head_pos.round().astype(int)) - tip_global
         new_pos += delta
         self.move(new_pos)

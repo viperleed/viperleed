@@ -934,7 +934,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         for annot in self.recSpace.annots:
             # NB: one cannot use += for in-place assignment since this redefines
             # the .center attribute that is a @property!
-            annot.center = qtc.QPoint(*annot.center.round()) + delta
+            center = annot.center.round().astype(int)
+            annot.center = qtc.QPoint(*center) + delta
             if annot.isVisible():
                 # move only if visible to handle the situation in which the
                 # window is moved while the annotations are displayed: this way
