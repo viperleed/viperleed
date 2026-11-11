@@ -304,12 +304,6 @@ def pin_clock(patcher):
         )
 
 
-@pytest.fixture(name='pinned_clock')
-def fixture_pinned_clock(monkeypatch):
-    """Pin the clock used for timestamps."""
-    pin_clock(monkeypatch)
-
-
 def _init_stored_case(case, tmp, tree, tl_version):
     """Run an INITIALIZATION on the stored inputs of `case`."""
     spec = STORED_CASES[case]
