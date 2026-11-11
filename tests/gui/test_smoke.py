@@ -43,6 +43,7 @@ from viperleed.gui.qt_compat.binding import get_binding
 
 try:
     from viperleed.gui.qt_compat import QtCore as qtc
+    from viperleed.gui.qt_compat import QtGui as qtg
     from viperleed.gui.qt_compat import QtWidgets as qtw
 except QtBindingNotFoundError:
     pass  # All tests are skipped. See module docstring.
@@ -426,9 +427,28 @@ def test_drag_matrices_popup(qtbot):
 
 def _left_button_move_event(widget, local_pos):
     """Return a mouse-move event at `local_pos` with the left button."""
-    qtg = _import('viperleed.gui.qt_compat.QtGui')
     left = qtc.Qt.MouseButton.LeftButton
     return qtg.QMouseEvent(qtc.QEvent.Type.MouseMove,
                            qtc.QPointF(local_pos),
                            qtc.QPointF(widget.mapToGlobal(local_pos)),
                            left, left, qtc.Qt.KeyboardModifier.NoModifier)
+
+
+def test_wheel_on_text_box(qtbot):
+    """Check that the mouse wheel changes the value of a TextBox."""
+    text_box = _import('viperleed.gui.widgets.spinboxes:TextBox')('1.0')
+    text_box.setStep(1, 'add')
+    _show(qtbot, text_box)
+    text_box.setFocus()
+    qtbot.waitUntil(text_box.hasFocus)
+    center = qtc.QPointF(text_box.rect().center())
+    wheel = qtg.QWheelEvent(center, qtc.QPointF(text_box.mapToGlobal(
+                                center.toPoint())),
+                            qtc.QPoint(0, 0),
+                            qtc.QPoint(0, 160),  # One step with a mouse
+                            qtc.Qt.MouseButton.NoButton,
+                            qtc.Qt.KeyboardModifier.NoModifier,
+                            qtc.Qt.ScrollPhase.NoScrollPhase,
+                            False)
+    qtw.QApplication.sendEvent(text_box, wheel)
+    assert float(text_box.text()) == pytest.approx(2.0)

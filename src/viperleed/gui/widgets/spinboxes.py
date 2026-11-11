@@ -13,6 +13,7 @@ import numpy as np
 from viperleed.gui.qt_compat import QtCore as qtc
 from viperleed.gui.qt_compat import QtGui as qtg
 from viperleed.gui.qt_compat import QtWidgets as qtw
+from viperleed.gui.qt_compat.events import is_wheel_from_touchpad
 
 from viperleed.gui.widgets.decorators import receive_mouse_broadcast
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -164,9 +165,7 @@ class TextBox(qtw.QLineEdit):
             # multiples of 1/8 of a degree; for trackpad, the number
             # returned corresponds to the number of pixels of scrolling
             movement = event.angleDelta().y()/8
-            by_system = qtc.Qt.MouseEventSource.MouseEventSynthesizedBySystem
-            if event.source() == by_system:
-                # track-pad
+            if is_wheel_from_touchpad(event):
                 movement /= 1  # fractional movement
             else:  # true mouse wheel
                 movement /= 20
