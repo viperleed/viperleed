@@ -144,11 +144,12 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
         """Extend eventFilter to filter events.
 
         The following events are currently processed:
-            atc.QEvent.NonClientAreaMouseButtonRelease
+            QtCore.QEvent.NonClientAreaMouseButtonPress
+                Triggered when a mouse button is pressed on the
+                frame/title bar of the window.
+            QtCore.QEvent.NonClientAreaMouseButtonRelease
                 Triggered when the window has been moved and the
-                mouse button is release. The window is resized
-                to a dimension that fits the current screen. The
-                event is then processed normally.
+                mouse button is released.
 
         Returns
         -------
