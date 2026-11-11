@@ -21,6 +21,8 @@ def test_compare(check_reference, tmp_path):
     written.write_text(WRITTEN, encoding='utf-8')
     check_reference(written, REFERENCE)
 """
+_XDIST_OPTION = '-n'
+_CHANGED = 'other\n'
 _BASE = 'line 1\nline 2\nline 3\n'
 _TIMESTAMP_A = 'Ag(100) 261023-142446\n'
 _TIMESTAMP_B = 'Ag(100) 261024-090000\n'
@@ -36,7 +38,7 @@ def _run(pytester, written, reference, *args):
         )
     run = (
         pytester.runpytest_subprocess
-        if '-n' in args else
+        if _XDIST_OPTION in args else
         pytester.runpytest_inprocess
         )
     return run(*args, '-p', 'no:cacheprovider', '-p', conftest.__name__)
@@ -133,20 +135,21 @@ class TestCheckReference:
     def test_rewrite_xdist(self, pytester):
         """Check rewriting is reported with pytest-xdist."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, 'other\n', reference, _REWRITE, '-n', '2')
+        result = _run(pytester, _CHANGED, reference, _REWRITE,
+                      _XDIST_OPTION, '2')
         result.assert_outcomes(passed=0, skipped=1)
         result.stdout.fnmatch_lines([
             '*rewritten reference files*',
             f'{reference}',
             ])
-        assert reference.read_text(encoding='utf-8') == 'other\n'
+        assert reference.read_text(encoding='utf-8') == _CHANGED
 
     @pytest.mark.slow  # Subprocess, about 1 s
     @pytest.mark.usefixtures('subprocess_path')
     def test_mismatch_xdist(self, pytester):
         """Check a mismatch fails with pytest-xdist."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, 'other\n', reference, '-n', '2')
+        result = _run(pytester, _CHANGED, reference, _XDIST_OPTION, '2')
         result.assert_outcomes(failed=1)
 
     @pytest.mark.usefixtures('subprocess_path')
@@ -157,7 +160,7 @@ class TestCheckReference:
             pytest.param(('--no-summary',), id='no-summary'),
             pytest.param(('-p', 'no:terminal'), id='no-terminal'),
             pytest.param(
-                ('-n', '2'),
+                (_XDIST_OPTION, '2'),
                 id='xdist',
                 marks=pytest.mark.slow,  # Subprocess, about 1 s
                 ),
@@ -166,6 +169,6 @@ class TestCheckReference:
     def test_rewrite_exit_status(self, pytester, args):
         """Check that a run that rewrote a reference exits non-zero."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, 'other\n', reference, _REWRITE, *args)
+        result = _run(pytester, _CHANGED, reference, _REWRITE, *args)
         assert result.ret is pytest.ExitCode.TESTS_FAILED
-        assert reference.read_text(encoding='utf-8') == 'other\n'
+        assert reference.read_text(encoding='utf-8') == _CHANGED

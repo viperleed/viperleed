@@ -45,10 +45,12 @@ SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f', 'searchpars.info'
 SEARCH_POPULATION = 4
 SEARCH_START = 'centered'
 CRANDOM_VARIANT = 'ag100_z_crandom'
+CRANDOM_AFTER = 'ag100_vib'  # Variant it follows in VARIANTS
 CRANDOM_SEED = 1
 # The default population is rounded up to a multiple of the cores. A
 # number of cores that does not divide it makes the rounding visible.
 CRANDOM_N_CORES = 3
+MAX_GEN_LINE = 'desired number'  # In the comment of the value
 HUGE_MAX_GEN = 10**9  # Above what the input file format allows
 MAX_GEN_WRITTEN = {'1.6.0-1.6.1': 999999, '1.7.3-': 9999999}
 EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
@@ -59,7 +61,7 @@ EXP_BEAMS = ((1, 0), (1, 1), (2, 0))
 VARIANTS = {}
 for _name, _variant in conftest.VARIANTS.items():
     VARIANTS[_name] = _variant
-    if _name == 'ag100_vib':
+    if _name == CRANDOM_AFTER:
         VARIANTS[CRANDOM_VARIANT] = conftest.VARIANTS['ag100_z']
 
 PARAMS = [
@@ -163,6 +165,6 @@ def test_max_generations_limited(group, prepared_deltas):
     prepared = prepared_deltas(case, group, displacements)
     folder = _write_search_inputs(prepared, max_gen=HUGE_MAX_GEN)
     lines = (folder / 'search.steu').read_text(encoding='utf-8').splitlines()
-    generations = next(line for line in lines if 'desired number' in line)
+    generations = next(line for line in lines if MAX_GEN_LINE in line)
     expected = MAX_GEN_WRITTEN[reference_group(group)]
     assert int(generations.split()[0]) == expected

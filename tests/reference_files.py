@@ -34,6 +34,7 @@ REWRITE_OPTION = '--rewrite-references'
 REWRITTEN_KEY = 'rewritten_reference'  # In user_properties of a report
 REWRITE_EXIT_STATUS = pytest.ExitCode.TESTS_FAILED
 _ENCODING = 'utf-8'
+_TEST_PHASE = 'call'  # Phase of a report that holds the test outcome
 
 
 def pytest_addoption(parser):
@@ -117,7 +118,7 @@ def pytest_runtest_makereport(item, call):
     """Report a test that rewrote a reference as skipped, not passed."""
     outcome = yield
     report = outcome.get_result()
-    if call.when != 'call' or not report.passed:
+    if call.when != _TEST_PHASE or not report.passed:
         return
     rewritten = _rewritten_paths(report)
     if not rewritten:
@@ -141,7 +142,7 @@ class _RewriteCollector:
         """Collect the references rewritten by a test."""
         # Also called for the reports that xdist workers send to the
         # controller, and independent of the terminal plugin.
-        if report.when == 'call':
+        if report.when == _TEST_PHASE:
             self.rewritten.update(_rewritten_paths(report))
 
     @pytest.hookimpl(trylast=True)
