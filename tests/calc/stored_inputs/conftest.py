@@ -180,7 +180,7 @@ def factory_initialized_case(tmp_path_factory):
             tree = tmp_path_factory.mktemp('tree')
             # An empty folder is enough to find a TensErLEED version
             (tree / f'TensErLEED-v{tl_version}').mkdir()
-            work = tmp_path_factory.mktemp(case.replace('/', '_'))
+            work = tmp_path_factory.mktemp(case)
             if case in PRESET_CASES:
                 cache[key] = _init_preset_case(case, work, tree, tl_version)
             else:
