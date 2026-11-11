@@ -169,7 +169,7 @@ def test_max_generations_limited(group, prepared_deltas):
     case, displacements = VARIANTS['ag100_z']
     prepared = prepared_deltas(case, group, displacements)
     folder = _write_search_inputs(prepared, max_gen=HUGE_MAX_GEN)
-    lines = (folder / 'search.steu').read_text().splitlines()
+    lines = (folder / 'search.steu').read_text(encoding='utf-8').splitlines()
     generations = next(line for line in lines if 'desired number' in line)
     expected = MAX_GEN_WRITTEN[reference_group(group)]
     assert int(generations.split()[0]) == expected

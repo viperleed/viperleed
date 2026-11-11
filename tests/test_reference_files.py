@@ -18,7 +18,7 @@ _REWRITE = reference_files.REWRITE_OPTION
 _TEST_FILE = """
 def test_compare(check_reference, tmp_path):
     written = tmp_path / 'written'
-    written.write_text(WRITTEN)
+    written.write_text(WRITTEN, encoding='utf-8')
     check_reference(written, REFERENCE)
 """
 _BASE = 'line 1\nline 2\nline 3\n'
@@ -53,7 +53,7 @@ def _reference(pytester, text):
     """Store `text` as a reference file and return its path."""
     path = pytester.path / 'refs' / 'reference.txt'
     path.parent.mkdir(exist_ok=True)
-    path.write_text(text)
+    path.write_text(text, encoding='utf-8')
     return path
 
 
@@ -76,7 +76,7 @@ class TestCheckReference:
             '*-line 2',
             '*+line X',
             ])
-        assert reference.read_text() == _BASE  # Not rewritten
+        assert reference.read_text(encoding='utf-8') == _BASE  # Not rewritten
 
     @pytest.mark.parametrize(
         ('written', 'reference'),
@@ -91,7 +91,7 @@ class TestCheckReference:
         """Check that timestamps and paths are compared verbatim."""
         ref = _reference(pytester, reference)
         _run(pytester, written, ref).assert_outcomes(failed=1)
-        assert ref.read_text() == reference  # Not rewritten
+        assert ref.read_text(encoding='utf-8') == reference  # Not rewritten
 
     def test_missing_reference(self, pytester):
         """Check that a missing reference fails, naming the option."""
@@ -111,14 +111,14 @@ class TestCheckReference:
             '*rewritten reference files*',
             f'*reference rewritten: {reference}*',
             ])
-        assert reference.read_text() == written
+        assert reference.read_text(encoding='utf-8') == written
 
     def test_rewrite_creates_missing(self, pytester):
         """Check that the option creates a missing reference."""
         reference = pytester.path / 'new' / 'folder' / 'reference.txt'
         result = _run(pytester, _BASE, reference, _REWRITE)
         result.assert_outcomes(skipped=1)
-        assert reference.read_text() == _BASE
+        assert reference.read_text(encoding='utf-8') == _BASE
 
     def test_rewrite_equal_is_a_pass(self, pytester):
         """Check that an up-to-date reference is not touched."""
@@ -126,7 +126,7 @@ class TestCheckReference:
         result = _run(pytester, _BASE, reference, _REWRITE)
         result.assert_outcomes(passed=1)
         assert result.ret is pytest.ExitCode.OK
-        assert reference.read_text() == _BASE
+        assert reference.read_text(encoding='utf-8') == _BASE
 
     @pytest.mark.slow  # Subprocess, about 1 s
     @pytest.mark.usefixtures('subprocess_path')
@@ -139,7 +139,7 @@ class TestCheckReference:
             '*rewritten reference files*',
             f'{reference}',
             ])
-        assert reference.read_text() == 'other\n'
+        assert reference.read_text(encoding='utf-8') == 'other\n'
 
     @pytest.mark.slow  # Subprocess, about 1 s
     @pytest.mark.usefixtures('subprocess_path')
@@ -168,4 +168,4 @@ class TestCheckReference:
         reference = _reference(pytester, _BASE)
         result = _run(pytester, 'other\n', reference, _REWRITE, *args)
         assert result.ret is pytest.ExitCode.TESTS_FAILED
-        assert reference.read_text() == 'other\n'
+        assert reference.read_text(encoding='utf-8') == 'other\n'
