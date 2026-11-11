@@ -416,10 +416,10 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
             domain.workdir = folders[domain.name]
         if displacements:
             shutil.copy2(displacements, folder / DISPLACEMENTS)
-        for rp in (rpars, *(d.rpars for d in rpars.domainParams)):
-            rp.TENSOR_INDEX = TENSOR_INDEX
-            if 1 not in rp.runHistory:  # Original state is the initial
-                rp.runHistory.append(1)
+        for part_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
+            part_rpars.TENSOR_INDEX = TENSOR_INDEX
+            if 1 not in part_rpars.runHistory:  # Original state: initial
+                part_rpars.runHistory.append(1)
         with execute_in_dir(folder):
             readDISPLACEMENTS(rpars)
             for part_folder in set(folders.values()):

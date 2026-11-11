@@ -71,8 +71,8 @@ PARAMS = [
 def _synthetic_exp_beams():
     """Return experimental beams, for cases without an EXPBEAMS."""
     beams = []
-    for hk in EXP_BEAMS:
-        beam = Beam(hk)
+    for indices in EXP_BEAMS:
+        beam = Beam(indices)
         beam.intens = dict.fromkeys(EXP_ENERGIES, 1.0)
         beams.append(beam)
     return beams
@@ -107,8 +107,8 @@ def _write_search_inputs(prepared, max_gen=None, crandom=False):
             for name in atom.current_deltas:
                 (folder / name).touch()
     if crandom:
-        for rp in (rpars, *(d.rpars for d in rpars.domainParams)):
-            rp.N_CORES = CRANDOM_N_CORES
+        for part_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
+            part_rpars.N_CORES = CRANDOM_N_CORES
     else:
         rpars.SEARCH_POPULATION = SEARCH_POPULATION
         rpars.SEARCH_START = SEARCH_START
