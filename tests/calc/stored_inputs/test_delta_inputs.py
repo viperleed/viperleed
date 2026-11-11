@@ -83,7 +83,7 @@ def _param_files(compile_tasks):
 def factory_delta_folders(prepared_deltas):
     """Return a function that writes the delta inputs (cached).
 
-    The function returns a ({part: folder}, {PARAM names}) tuple.
+    The function returns a (PreparedDeltas, {PARAM names}) tuple.
     """
     cache = {}
 
@@ -93,7 +93,7 @@ def factory_delta_folders(prepared_deltas):
             case, _, displacements, _ = VARIANTS[variant]
             prepared = prepared_deltas(case, group, displacements)
             written = _param_files(prepared.tasks[0])
-            cache[key] = prepared.folders, {p.name for p in written}
+            cache[key] = prepared, {p.name for p in written}
         return cache[key]
     return _write
 
@@ -105,8 +105,8 @@ def fixture_written_and_reference(request, delta_folders, data_path):
     reference = (data_path / 'stored_inputs/deltas'
                  / _reference_name(variant, part) / reference_group(group)
                  / name)
-    folders, _ = delta_folders(group, variant)
-    return folders[part] / name, reference
+    prepared, _ = delta_folders(group, variant)
+    return prepared.folders[part] / name, reference
 
 
 def test_delta_input(written_and_reference, check_reference):
@@ -123,6 +123,36 @@ def fixture_written_param_names(request, delta_folders):
     group, variant = request.param
     _, written = delta_folders(group, variant)
     return variant, written
+
+
+@pytest.fixture(name='run_tasks', params=list(product(GROUPS, VARIANTS)),
+                ids='-'.join)
+def fixture_run_tasks(request, delta_folders):
+    """Return the delta-run tasks of a variant."""
+    prepared, _ = delta_folders(*request.param)
+    return prepared.tasks[1]
+
+
+def _read_with_newline(path):
+    """Return the contents of a file, with a terminating newline."""
+    contents = path.read_text(encoding='utf-8')
+    return contents if contents.endswith('\n') else contents + '\n'
+
+
+def test_piped_delta_input(run_tasks):
+    """Check the input piped to the delta executables.
+
+    It is the abbreviated input that is written to delta-input, with
+    the AUXBEAMS and PHASESHIFTS tags replaced by the files that are in
+    the work folder of the task.
+    """
+    assert run_tasks
+    for task in run_tasks:
+        auxbeams = _read_with_newline(task.io_dir / 'AUXBEAMS')
+        phaseshifts = _read_with_newline(task.io_dir / 'PHASESHIFTS')
+        expected = task.din_short.replace('[AUXBEAMS]\n', auxbeams)
+        expected = expected.replace('[PHASESHIFTS]\n', phaseshifts)
+        assert task.din == expected
 
 
 def test_no_other_param_files(written_param_names):
