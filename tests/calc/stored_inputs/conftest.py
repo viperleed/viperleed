@@ -425,10 +425,13 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
             for part_folder in set(folders.values()):
                 tensors = f'{DEFAULT_TENSORS}_{TENSOR_INDEX:03d}'
                 (part_folder / DEFAULT_TENSORS / tensors).mkdir(parents=True)
+            # There is no public entry point to the step under test
+            # pylint: disable=protected-access
             tasks = (
                 deltas._prepare_deltas_for_domains(rpars)
                 if rpars.domainParams else
                 deltas._prepare_deltas_for_one_domain(slab, rpars)
                 )
+            # pylint: enable=protected-access
         return PreparedDeltas(folder, folders, slab, rpars, tasks)
     return _prepare
