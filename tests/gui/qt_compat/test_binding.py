@@ -141,3 +141,62 @@ class TestQtApi:
         monkeypatch.setenv(QT_API_ENV, qt_api)
         fake_bindings(BOTH)
         assert get_binding() == PYQT6
+
+
+class TestGetCandidates:
+    """Tests for the get_candidates function."""
+
+    def test_default(self, fake_bindings):
+        """Check that both bindings are candidates, in order."""
+        mock_import = fake_bindings(())
+        assert binding.get_candidates() == (PYQT6, PYQT5)
+        mock_import.assert_not_called()
+
+    @parametrize(imported=BOTH)
+    def test_already_imported(self, imported, fake_bindings):
+        """Check that an already imported binding is the only one."""
+        mock_import = fake_bindings((), imported=(imported,))
+        assert binding.get_candidates() == (imported,)
+        mock_import.assert_not_called()
+
+    def test_requested(self, fake_bindings, monkeypatch):
+        """Check that a binding requested via QT_API is the only one."""
+        monkeypatch.setenv(QT_API_ENV, 'pyqt5')
+        fake_bindings((), imported=(PYQT6,))
+        assert binding.get_candidates() == (PYQT5,)
+
+    def test_unsupported(self, monkeypatch):
+        """Check complaints for an unsupported QT_API value."""
+        monkeypatch.setenv(QT_API_ENV, 'pyside6')
+        with pytest.raises(QtBindingNotFoundError):
+            binding.get_candidates()
+
+
+class TestSetBinding:
+    """Tests for the set_binding function."""
+
+    @parametrize(selected=BOTH)
+    def test_selects(self, selected, fake_bindings):
+        """Check that the binding is selected without importing it."""
+        mock_import = fake_bindings(())
+        binding.set_binding(selected)
+        assert get_binding() == selected
+        mock_import.assert_not_called()
+
+    def test_same_again(self):
+        """Check that selecting the same binding again is fine."""
+        binding.set_binding(PYQT5)
+        binding.set_binding(PYQT5)
+        assert get_binding() == PYQT5
+
+    def test_different(self):
+        """Check complaints when another binding was selected."""
+        binding.set_binding(PYQT5)
+        with pytest.raises(ValueError, match='already in use'):
+            binding.set_binding(PYQT6)
+
+    @parametrize(unsupported=('PySide6', 'pyqt5', None))
+    def test_unsupported(self, unsupported):
+        """Check complaints for an unsupported binding."""
+        with pytest.raises(ValueError, match='Unsupported'):
+            binding.set_binding(unsupported)

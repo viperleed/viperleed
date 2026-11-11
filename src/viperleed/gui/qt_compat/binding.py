@@ -15,6 +15,12 @@ according to these rules:
   Qt bindings cannot coexist in the same process.
 - Otherwise, the first binding that can be imported among PyQt6 and
   PyQt5 (in this order) is used.
+
+Which bindings would be tried, in which order, is returned by
+get_candidates, which imports none of them. This allows checking the
+candidates in a subprocess first (see viperleed.gui.detect_graphics),
+as a broken Qt installation may crash the interpreter when imported.
+The binding found to work can then be selected with set_binding.
 """
 
 __authors__ = (
@@ -64,6 +70,55 @@ def get_binding():
     return _SELECTED_BINDING
 
 
+def get_candidates():
+    """Return the bindings to be tried, in order, without importing.
+
+    Returns
+    -------
+    candidates : tuple
+        The names of the bindings that get_binding would try to
+        import, in the same order. A single binding if requested
+        via QT_API or already imported.
+
+    Raises
+    ------
+    QtBindingNotFoundError
+        If the QT_API environment variable has an unsupported value.
+    """
+    requested = _get_requested_binding()
+    if requested:
+        return (requested,)
+    already_imported = tuple(binding for binding in SUPPORTED_BINDINGS
+                             if f'{binding}.QtCore' in sys.modules)
+    return already_imported[:1] or SUPPORTED_BINDINGS
+
+
+def set_binding(binding):
+    """Select `binding`, without importing it.
+
+    Use this only for a binding that is known to work, e.g., one that
+    was successfully imported in a subprocess.
+
+    Parameters
+    ----------
+    binding : str
+        Either PYQT5 or PYQT6.
+
+    Raises
+    ------
+    ValueError
+        If `binding` is not supported, or if a different binding
+        was already selected.
+    """
+    global _SELECTED_BINDING  # pylint: disable=global-statement
+    if binding not in SUPPORTED_BINDINGS:
+        raise ValueError(f'Unsupported Qt binding {binding!r}')
+    if _SELECTED_BINDING not in (None, binding):
+        raise ValueError(f'Cannot select {binding}: {_SELECTED_BINDING} '
+                         'is already in use')
+    _SELECTED_BINDING = binding
+
+
 def _get_requested_binding():
     """Return the binding requested via QT_API, or None."""
     requested = os.environ.get(QT_API_ENV, '').strip()
@@ -82,12 +137,7 @@ def _get_requested_binding():
 def _select_binding():
     """Return the name of the binding that should be used."""
     requested = _get_requested_binding()
-    if requested:
-        candidates = (requested,)
-    else:
-        already_imported = tuple(binding for binding in SUPPORTED_BINDINGS
-                                 if f'{binding}.QtCore' in sys.modules)
-        candidates = already_imported[:1] or SUPPORTED_BINDINGS
+    candidates = get_candidates()
     errors = []
     for binding in candidates:
         try:
