@@ -14,9 +14,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
-import copy
-import shutil
-
 import pytest
 
 from viperleed.calc.files import iorefcalc
@@ -25,9 +22,11 @@ from viperleed.calc.sections import refcalc
 
 from ...helpers import TEST_DATA
 from .conftest import GROUPS
-from .conftest import reference_group
 from .conftest import PRESET_CASES
 from .conftest import STORED_CASES
+from .conftest import copy_case_state
+from .conftest import reference_group
+from .conftest import reference_name
 
 # Case (as in conftest) -> parts. The case 'ag100_mixed' is not here:
 # its VIBROCC offsets and DISPLACEMENTS only matter after a search, so
@@ -58,14 +57,9 @@ FILES_BY_GROUP = {
 assert set(FILES_BY_GROUP) == set(map(reference_group, GROUPS))
 
 
-def _reference_name(case, part):
-    """Return the name of the reference folder for a case and part."""
-    return case if len(CASES[case]) == 1 else f'{case}_{part}'
-
-
 PARAMS = [
     pytest.param((group, case, part, name),
-                 id=f'{group}-{_reference_name(case, part)}-{name}')
+                 id=f'{group}-{reference_name(case, parts, part)}-{name}')
     for group in GROUPS
     for names in (FILES_BY_GROUP[reference_group(group)],)
     for case, parts in CASES.items()
@@ -85,9 +79,7 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
             return cache[key]
         slab, rpars, source = initialized_case(case, group).parts[part]
         folder = tmp_path_factory.mktemp('refcalc')
-        shutil.copytree(source, folder, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('*.log'))
-        slab, rpars = copy.deepcopy((slab, rpars))
+        slab, rpars = copy_case_state(source, folder, slab, rpars)
         rpars.SUPPRESS_EXECUTION = True
         with execute_in_dir(folder):
             refcalc.refcalc(slab, rpars)
@@ -111,8 +103,8 @@ def fixture_written_and_reference(request, refcalc_folder, data_path):
     """
     group, case, part, name = request.param
     reference = (data_path / 'stored_inputs/refcalc'
-                 / _reference_name(case, part) / reference_group(group)
-                 / name)
+                 / reference_name(case, CASES[case], part)
+                 / reference_group(group) / name)
     return refcalc_folder(group, case, part) / name, reference
 
 

@@ -36,9 +36,8 @@ from viperleed.calc.classes.rparams import rparams
 from viperleed.calc.files import iosearch
 from viperleed.calc.lib.context import execute_in_dir
 
-from ...helpers import TEST_DATA
 from ...helpers import private_random
-from .conftest import DISPLACEMENTS
+from . import conftest
 from .conftest import GROUPS
 from .conftest import reference_group
 
@@ -54,20 +53,14 @@ HUGE_MAX_GEN = 10**9  # Above what the input file format allows
 MAX_GEN_WRITTEN = {'1.6.0-1.6.1': 999999, '1.7.3-': 9999999}
 EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
 EXP_BEAMS = ((1, 0), (1, 1), (2, 0))
-_AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
-_PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 
-# Variant name -> (case as in conftest, DISPLACEMENTS or None). A
-# DISPLACEMENTS of None means that the file of the case is used.
-VARIANTS = {
-    'ag100_z': ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z'),
-    'ag100_vib': ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_vib'),
-    CRANDOM_VARIANT: ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z'),
-    'ag100_z+vib': ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z+vib'),
-    'ag100_mixed': ('ag100_mixed', None),
-    'telluride_stacking': ('telluride_stacking', None),
-    'ptrh_100_1x3_o': ('ptrh_100_1x3_o', _PTRH_INPUTS / DISPLACEMENTS),
-    }
+# The variants of the delta inputs, plus one with the default population
+# and starting configuration (placed after ag100_vib).
+VARIANTS = {}
+for _name, _variant in conftest.VARIANTS.items():
+    VARIANTS[_name] = _variant
+    if _name == 'ag100_vib':
+        VARIANTS[CRANDOM_VARIANT] = conftest.VARIANTS['ag100_z']
 
 PARAMS = [
     pytest.param((group, variant, name), id=f'{group}-{variant}-{name}')

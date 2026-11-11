@@ -33,6 +33,7 @@ from pathlib import Path
 import shutil
 from types import SimpleNamespace
 import time
+from typing import NamedTuple
 
 import pytest
 
@@ -62,6 +63,8 @@ N_CORES = 1
 THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
 TENSOR_INDEX = 1  # As after a reference calculation
 DISPLACEMENTS = 'DISPLACEMENTS'
+AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
+PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 
 # Runs of the tests: name of the run and the TensErLEED version used.
 # The reference files are grouped by version group, i.e., by the range
@@ -79,6 +82,26 @@ GROUPS = {
 def reference_group(group):
     """Return the name of the reference folder of a run."""
     return group.split('@')[0]
+
+
+def reference_name(name, parts, part):
+    """Return the name of the reference folder of a part of a case.
+
+    Parameters
+    ----------
+    name : str
+        The name of the case or variant.
+    parts : Sequence
+        The names of all parts of the case.
+    part : str
+        The part to return the reference folder of.
+
+    Returns
+    -------
+    str
+        `name` for single-part cases, `name`_`part` otherwise.
+    """
+    return name if len(parts) == 1 else f'{name}_{part}'
 
 # Cases with stored inputs. All files in 'source' (a folder in the test
 # data) are copied to the folders of the calculation. 'extra' are
@@ -100,6 +123,35 @@ STORED_CASES = {
         'source': 'domains/telluride_stacking/deltas',
         'domains': ('STA', 'FAU'),
         },
+    }
+
+
+class Variant(NamedTuple):
+    """The case and DISPLACEMENTS of a variant of the tests.
+
+    Attributes
+    ----------
+    case : str
+        The name of the case, as in STORED_CASES or PRESET_CASES.
+    displacements : Path or None
+        The DISPLACEMENTS file to use. None means that the file of the
+        case (in its main folder) is used.
+    """
+
+    case: str
+    displacements: object
+
+
+# Variant name -> Variant. Shared by the tests of the delta and of the
+# search inputs.
+VARIANTS = {
+    'ag100_z': Variant('ag100', AG100_DISPLACEMENTS / 'DISPLACEMENTS_z'),
+    'ag100_vib': Variant('ag100', AG100_DISPLACEMENTS / 'DISPLACEMENTS_vib'),
+    'ag100_z+vib': Variant('ag100',
+                           AG100_DISPLACEMENTS / 'DISPLACEMENTS_z+vib'),
+    'ag100_mixed': Variant('ag100_mixed', None),
+    'telluride_stacking': Variant('telluride_stacking', None),
+    'ptrh_100_1x3_o': Variant('ptrh_100_1x3_o', PTRH_INPUTS / DISPLACEMENTS),
     }
 _NOT_COPIED = {'Tensors'}  # Tensors are never read: no stored data
 PRESET_CASES = {  # POSCAR_SLABS case methods, with synthetic PHASESHIFTS
@@ -187,6 +239,30 @@ def factory_initialized_case(tmp_path_factory):
                 cache[key] = _init_stored_case(case, work, tree, tl_version)
         return cache[key]
     return _initialize
+
+
+def copy_case_state(source, folder, slab, rpars):
+    """Copy a working folder, and return copies of a slab and Rparams.
+
+    Parameters
+    ----------
+    source : Path
+        The working folder to copy. Log files are not copied.
+    folder : Path
+        The (existing) destination folder.
+    slab : Slab
+        The slab to copy.
+    rpars : Rparams
+        The run parameters to copy.
+
+    Returns
+    -------
+    slab, rpars : tuple
+        Deep copies of the arguments.
+    """
+    shutil.copytree(source, folder, dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('*.log'))
+    return copy.deepcopy((slab, rpars))
 
 
 def _prepare_folder(folder, spec):
@@ -332,10 +408,8 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
         state = initialized_case(case, group)
         rpars, source = state.main
         folder = tmp_path_factory.mktemp('deltas')
-        shutil.copytree(source, folder, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('*.log'))
-        slab, rpars = copy.deepcopy((next(iter(state.parts.values()))[0],
-                                     rpars))
+        main_slab, *_ = next(iter(state.parts.values()))
+        slab, rpars = copy_case_state(source, folder, main_slab, rpars)
         folders = dict.fromkeys(state.parts, folder)
         for domain in rpars.domainParams:
             folders[domain.name] = folder / domain.workdir.relative_to(source)

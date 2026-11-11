@@ -24,9 +24,9 @@ from ...helpers import CustomTestException
 from ...helpers import PSGEN_SEED
 from ...helpers import private_random
 from ..poscar_slabs import CasePOSCARSlabs as POSCARSlabs
+from .conftest import SYSTEM_NAME
 
 INPUT_NAME = 'eeasisss-input'
-SYSTEM_NAME = 'stored-input'
 
 # Cases of POSCARSlabs that carry parameters (presets or mixed sites)
 CASES = (

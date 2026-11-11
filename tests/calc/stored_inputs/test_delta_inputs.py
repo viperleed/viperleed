@@ -18,40 +18,43 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 from itertools import product
+from typing import NamedTuple
 
 import pytest
 
-from ...helpers import TEST_DATA
-from .conftest import DISPLACEMENTS
 from .conftest import GROUPS
+from .conftest import VARIANTS
 from .conftest import reference_group
+from .conftest import reference_name
 
 DELTA_INPUT = 'delta-input'
-_AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
-_PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 
-# Variant name -> (case as in conftest, parts, DISPLACEMENTS or None,
-# number of PARAM files, i.e., different array dimensions, of each
-# part). A DISPLACEMENTS of
-# None means that the file of the case (in its main folder) is used.
-VARIANTS = {
-    'ag100_z': ('ag100', ('ag100',),
-                _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z', 1),
-    'ag100_vib': ('ag100', ('ag100',),
-                  _AG100_DISPLACEMENTS / 'DISPLACEMENTS_vib', 1),
-    'ag100_z+vib': ('ag100', ('ag100',),
-                    _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z+vib', 1),
-    'ag100_mixed': ('ag100_mixed', ('ag100_mixed',), None, 3),
-    'telluride_stacking': ('telluride_stacking', ('STA', 'FAU'), None, 2),
-    'ptrh_100_1x3_o': ('ptrh_100_1x3_o', ('ptrh_100_1x3_o',),
-                       _PTRH_INPUTS / DISPLACEMENTS, 3),
+
+class Layout(NamedTuple):
+    """The files written for a variant.
+
+    Attributes
+    ----------
+    parts : tuple
+        The names of the parts of the case, as in CaseState.
+    n_param : int
+        The number of PARAM files, i.e., of different array dimensions,
+        of each part.
+    """
+
+    parts: tuple
+    n_param: int
+
+
+LAYOUTS = {
+    'ag100_z': Layout(('ag100',), 1),
+    'ag100_vib': Layout(('ag100',), 1),
+    'ag100_z+vib': Layout(('ag100',), 1),
+    'ag100_mixed': Layout(('ag100_mixed',), 3),
+    'telluride_stacking': Layout(('STA', 'FAU'), 2),
+    'ptrh_100_1x3_o': Layout(('ptrh_100_1x3_o',), 3),
     }
-
-
-def _reference_name(variant, part):
-    """Return the name of the reference folder of a variant and part."""
-    parts = VARIANTS[variant][1]
-    return variant if len(parts) == 1 else f'{variant}_{part}'
+assert LAYOUTS.keys() == VARIANTS.keys()
 
 
 def _param_name(index):
@@ -61,9 +64,9 @@ def _param_name(index):
 
 PARAMS = [
     pytest.param((group, variant, part, name),
-                 id=f'{group}-{_reference_name(variant, part)}-{name}')
+                 id=f'{group}-{reference_name(variant, parts, part)}-{name}')
     for group in GROUPS
-    for variant, (_, parts, _, n_param) in VARIANTS.items()
+    for variant, (parts, n_param) in LAYOUTS.items()
     for part in parts
     for name in (DELTA_INPUT, *(_param_name(i) for i in range(n_param)))
     ]
@@ -90,7 +93,7 @@ def factory_delta_folders(prepared_deltas):
     def _write(group, variant):
         key = group, variant
         if key not in cache:
-            case, _, displacements, _ = VARIANTS[variant]
+            case, displacements = VARIANTS[variant]
             prepared = prepared_deltas(case, group, displacements)
             written = _param_files(prepared.tasks[0])
             cache[key] = prepared, {p.name for p in written}
@@ -102,9 +105,10 @@ def factory_delta_folders(prepared_deltas):
 def fixture_written_and_reference(request, delta_folders, data_path):
     """Return a written file and its reference."""
     group, variant, part, name = request.param
+    parts = LAYOUTS[variant].parts
     reference = (data_path / 'stored_inputs/deltas'
-                 / _reference_name(variant, part) / reference_group(group)
-                 / name)
+                 / reference_name(variant, parts, part)
+                 / reference_group(group) / name)
     prepared, _ = delta_folders(group, variant)
     return prepared.folders[part] / name, reference
 
@@ -158,5 +162,5 @@ def test_piped_delta_input(run_tasks):
 def test_no_other_param_files(written_param_names):
     """Check that no PARAM file is written that has no reference."""
     variant, written = written_param_names
-    *_, n_param = VARIANTS[variant]
+    n_param = LAYOUTS[variant].n_param
     assert written == {_param_name(i) for i in range(n_param)}
