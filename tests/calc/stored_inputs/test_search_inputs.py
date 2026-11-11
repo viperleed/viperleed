@@ -81,7 +81,7 @@ def _synthetic_exp_beams():
     return beams
 
 
-def _write_search_inputs(prepared, max_gen=None, crandom=False):
+def _write_search_inputs(prepared, *, max_gen=None, crandom=False):
     """Write the search inputs of PreparedDeltas, return the folder.
 
     Parameters

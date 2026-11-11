@@ -54,8 +54,11 @@ def fixture_stub_tree(tmp_path):
 
 
 @pytest.fixture(name='written_input')
-def fixture_written_input(stub_tree, tmp_path, mocker, pinned_clock):
+def fixture_written_input(stub_tree, tmp_path, mocker,
+                          pinned_clock):  # noqa: ARG001
     """Return a function that writes the eeasisss input for a slab."""
+    # pinned_clock is only requested for its effect on the timestamp
+    # pylint: disable=unused-argument
     def _write(slab, rpars):
         rpars.paths.tensorleed = stub_tree
         rpars.systemName = SYSTEM_NAME
