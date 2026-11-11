@@ -103,6 +103,7 @@ def reference_name(name, parts, part):
     """
     return name if len(parts) == 1 else f'{name}_{part}'
 
+
 @dataclass
 class StoredCase:
     """A case with stored inputs.
@@ -134,6 +135,7 @@ STORED_CASES = {
     'telluride_stacking': StoredCase('domains/telluride_stacking/deltas',
                                      domains=('STA', 'FAU')),
     }
+
 
 class Variant(NamedTuple):
     """The case and DISPLACEMENTS of a variant of the tests.
