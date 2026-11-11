@@ -54,14 +54,6 @@ _SELECTOR = 'viperleed.gui.selectplugin:ViPErLEEDSelectPlugin'
 _NOT_IMPORTABLE = (
     'viperleed.gui.__main__',  # Runs the GUI
     )
-# Message of the ImportError raised by mpl_graphics when PyQt5 is
-# missing. TODO: remove once detect_graphics and mpl_graphics support
-# PyQt6, together with NEEDS_MPL_CANVAS.
-_MPL_CANVAS_NEEDS_PYQT5 = 'PyQt5 not found.'
-NEEDS_MPL_CANVAS = pytest.mark.xfail(
-    reason='matplotlib canvases need PyQt5 (detect_graphics.has_pyqt)',
-    raises=ImportError,
-    )
 # A parameter for when nothing can be collected (e.g., no Qt binding):
 # the test is skipped via qtbot, or fails importing what is missing.
 _PLACEHOLDER = 'nothing-collected'
@@ -112,28 +104,6 @@ def _import_all_gui_modules():
 _GUI_MODULES = _import_all_gui_modules()
 
 
-def _needs_mpl_canvas(dotted_name):
-    """Return whether the module of `dotted_name` misses PyQt5."""
-    exc = _GUI_MODULES.get(dotted_name.partition(':')[0])
-    return (_get_binding() == PYQT6
-            and isinstance(exc, ImportError)
-            and str(exc) == _MPL_CANVAS_NEEDS_PYQT5)
-
-
-def _xfail_if_needs_mpl_canvas(dotted_name):
-    """Return a decorator applying NEEDS_MPL_CANVAS if appropriate."""
-    if _needs_mpl_canvas(dotted_name):
-        return NEEDS_MPL_CANVAS
-    return lambda decorated: decorated
-
-
-def _param(value, dotted_name=None):
-    """Return a pytest.param for `value`, marked if appropriate."""
-    needs_mpl_canvas = _needs_mpl_canvas(dotted_name or value)
-    marks = (NEEDS_MPL_CANVAS,) if needs_mpl_canvas else ()
-    return pytest.param(value, marks=marks)
-
-
 def _iter_widget_classes():
     """Yield 'module:Class' for QWidget subclasses in viperleed.gui."""
     for module_name, module in _GUI_MODULES.items():
@@ -151,7 +121,7 @@ def _collect_plugins():
     selector_module = _GUI_MODULES.get(_SELECTOR.partition(':')[0])
     if not isinstance(selector_module, ModuleType):
         # No Qt (skipped), or the import fails (reported by test_import)
-        return (_param(_PLACEHOLDER, _SELECTOR),)
+        return (_PLACEHOLDER,)
     plugins = selector_module.ViPErLEEDSelectPlugin.modules
     return tuple(name for name, (_, cls) in plugins.items() if cls)
 
@@ -241,7 +211,7 @@ def _widget_param(cls_name):
 
 _WIDGETS = (tuple(_widget_param(name)
                   for name in sorted(_iter_widget_classes()))
-            or (_param(_PLACEHOLDER),))
+            or (_PLACEHOLDER,))
 
 
 def _create_widget(cls_name):
@@ -315,7 +285,7 @@ def _show(qtbot, widget):
         widget.show()
 
 
-@parametrize(module=tuple(_param(name) for name in _GUI_MODULES))
+@parametrize(module=tuple(_GUI_MODULES))
 def test_import(module):
     """Check that a GUI module can be imported."""
     importlib.import_module(module)
@@ -375,7 +345,6 @@ def test_error_box(qtbot, mocker):
     assert _ERROR_MSG in box.detailedText()
 
 
-@_xfail_if_needs_mpl_canvas(_MAIN_WINDOW)
 class TestLEEDPatternSimulator:
     """Tests for the main paths of the (new) LEED-pattern simulator."""
 

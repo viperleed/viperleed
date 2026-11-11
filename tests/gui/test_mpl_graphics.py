@@ -41,7 +41,7 @@ class TestMatplotLibBackend:
         """Check the enumeration values."""
         # pylint: disable=magic-value-comparison
         assert MatplotLibBackend.AGG.module is None
-        assert MatplotLibBackend.AGG.mpl_use == 'qt5agg'
+        assert MatplotLibBackend.AGG.mpl_use == 'qtagg'
         assert MatplotLibBackend.CAIRO.module == 'mplcairo'
         assert MatplotLibBackend.CAIRO.mpl_use == 'module://mplcairo.qt'
         assert MatplotLibBackend.DEFAULT is MatplotLibBackend.CAIRO
@@ -144,7 +144,11 @@ class TestImportMatplotlib:
                                    return_value=mock_matplotlib)
         result = import_matplotlib()
         assert result is mock_backend
-        mock_import.assert_called_once_with('matplotlib')
+        # The Qt binding is imported first, for matplotlib to use it
+        assert mock_import.mock_calls == [
+            mocker.call('viperleed.gui.qt_compat.QtCore'),
+            mocker.call('matplotlib'),
+            ]
         mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use)
 
 
@@ -154,12 +158,12 @@ class TestImportFigureCanvas:
     def test_no_pyqt_raises(self, mock_pyqt):
         """Check complaints when called without PyQt."""
         mock_pyqt(False)
-        with pytest.raises(ImportError, match='PyQt5 not found'):
+        with pytest.raises(ImportError, match='No Qt binding'):
             import_figure_canvas()
 
     _canvas_for_backend = {
         MatplotLibBackend.AGG: (
-            'matplotlib.backends.backend_qt5agg.FigureCanvas'
+            'matplotlib.backends.backend_qtagg.FigureCanvas'
             ),
         MatplotLibBackend.CAIRO: 'mplcairo.qt.FigureCanvasQTCairo',
         }
