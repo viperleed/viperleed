@@ -38,6 +38,8 @@ from .conftest import GROUPS
 SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f'
 SEARCH_POPULATION = 4
 SEARCH_START = 'centered'
+HUGE_MAX_GEN = 10**9  # Above what the input file format allows
+MAX_GEN_WRITTEN = {'1.6.0-1.6.1': 999999, '1.7.3-': 9999999}
 EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
 EXP_BEAMS = ((1, 0), (1, 1), (2, 0))
 _AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
@@ -70,9 +72,11 @@ def _synthetic_exp_beams():
     return beams
 
 
-def _write_search_inputs(prepared):
+def _write_search_inputs(prepared, max_gen=None):
     """Write the search inputs of PreparedDeltas, return the folder."""
     rpars = prepared.rpars
+    if max_gen:
+        rpars.SEARCH_MAX_GEN = max_gen
     parts = [(prepared.slab, prepared.folder)]
     parts.extend((d.slab, d.workdir) for d in rpars.domainParams)
     for slab, folder in parts:
@@ -116,3 +120,13 @@ def test_search_input(written_and_reference, check_reference):
     """Check a file written for a search."""
     written, reference = written_and_reference
     check_reference(written, reference)
+
+
+def test_max_generations_limited(group, prepared_deltas):
+    """Check that too many generations are cut to what fits."""
+    case, displacements = VARIANTS['ag100_z']
+    prepared = prepared_deltas(case, group, displacements)
+    folder = _write_search_inputs(prepared, max_gen=HUGE_MAX_GEN)
+    lines = (folder / 'search.steu').read_text().splitlines()
+    generations = next(line for line in lines if 'desired number' in line)
+    assert int(generations.split()[0]) == MAX_GEN_WRITTEN[group]
