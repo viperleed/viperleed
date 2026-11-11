@@ -110,17 +110,15 @@ The references cover the input of :program:`eeasisss`, the reference
 calculation (:file:`refcalc-FIN`, :file:`refcalc-PARAM`, :file:`AUX*`,
 :file:`BEAMLIST`), the delta amplitudes (:file:`delta-input`,
 :file:`Delta_Compile_*-PARAM`), and the search (:file:`PARAM`,
-:file:`restrict.f`, :file:`search.steu`, :file:`searchpars.info`). Except
-for :program:`eeasisss`,
-each case has one subdirectory for the files written for :term:`TensErLEED`
-1.6.0--1.6.1 and one for 1.7.3 and later (``1.6.0-1.6.1``, ``1.7.3-``). The
-:file:`PHASESHIFTS` block of :file:`refcalc-FIN` is replaced by a single
-placeholder line.
-The tests of the ``1.7.3-`` group run at both ends of it (:term:`TensErLEED`
-1.7.4 and 2.1.0) against the same references.
-The tests pin timestamps and paths (the timestamp, and the relative path
-of the :file:`seSernelius` file), and the files are compared verbatim,
-so the references hold them as written.
+:file:`restrict.f`, :file:`search.steu`, :file:`searchpars.info`).
+Except for :program:`eeasisss`, each case has one subdirectory for the files
+written for :term:`TensErLEED` 1.6.0--1.6.1 and one for 1.7.3 and later
+(``1.6.0-1.6.1``, ``1.7.3-``). The :file:`PHASESHIFTS` block of
+:file:`refcalc-FIN` is replaced by a single placeholder line. The tests of the
+``1.7.3-`` group run at both ends of it (:term:`TensErLEED` 1.7.4 and 2.1.0)
+against the same references. The tests pin timestamps and paths (the
+timestamp, and the relative path of the :file:`seSernelius` file), and the
+files are compared verbatim, so the references hold them as written.
 
 Rewrite the references only if what ViPErLEED writes was intentionally
 changed, or when adding a group for a new :term:`TensErLEED` version. From the
@@ -132,10 +130,10 @@ root of your local copy of the |repo|, run
 
 Tests whose reference differs, or is missing, rewrite it and are reported as
 skipped (``reference rewritten: <path>``), and the run exits with a
-non-zero status, so that a rewrite is never mistaken for a pass. Review the change with
-``git diff tests/_test_data/stored_inputs``, and then run the tests again
-without the option. Do not rewrite references to make an unexplained failure
-pass.
+non-zero status, so that a rewrite is never mistaken for a pass. Review the
+change with ``git diff tests/_test_data/stored_inputs``, and then run the tests
+again without the option. Do not rewrite references to make an unexplained
+failure pass.
 
 Coverage (including branches) is collected by default, via the
 :program:`pytest-cov` plugin, which is among the test requirements. An HTML
