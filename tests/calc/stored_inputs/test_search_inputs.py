@@ -27,6 +27,7 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 import contextlib
+import functools
 from itertools import product
 
 import pytest
@@ -129,18 +130,12 @@ def _write_search_inputs(prepared, max_gen=None, crandom=False):
 @pytest.fixture(scope='session', name='search_folders')
 def factory_search_folders(prepared_deltas):
     """Return a function that writes the search inputs (cached)."""
-    cache = {}
-
+    @functools.lru_cache(maxsize=None)
     def _write(group, variant):
-        key = group, variant
-        if key not in cache:
-            case, displacements = VARIANTS[variant]
-            prepared = prepared_deltas(case, group, displacements)
-            cache[key] = _write_search_inputs(
-                prepared,
-                crandom=variant == CRANDOM_VARIANT,
-                )
-        return cache[key]
+        case, displacements = VARIANTS[variant]
+        prepared = prepared_deltas(case, group, displacements)
+        return _write_search_inputs(prepared,
+                                    crandom=variant == CRANDOM_VARIANT)
     return _write
 
 

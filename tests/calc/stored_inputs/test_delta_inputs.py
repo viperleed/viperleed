@@ -17,6 +17,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
+import functools
 from itertools import product
 from typing import NamedTuple
 
@@ -88,16 +89,12 @@ def factory_delta_folders(prepared_deltas):
 
     The function returns a (PreparedDeltas, {PARAM names}) tuple.
     """
-    cache = {}
-
+    @functools.lru_cache(maxsize=None)
     def _write(group, variant):
-        key = group, variant
-        if key not in cache:
-            case, displacements = VARIANTS[variant]
-            prepared = prepared_deltas(case, group, displacements)
-            written = _param_files(prepared.tasks[0])
-            cache[key] = prepared, {p.name for p in written}
-        return cache[key]
+        case, displacements = VARIANTS[variant]
+        prepared = prepared_deltas(case, group, displacements)
+        written = _param_files(prepared.tasks[0])
+        return prepared, {p.name for p in written}
     return _write
 
 
