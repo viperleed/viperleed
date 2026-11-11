@@ -9,11 +9,14 @@ the delta files only exist as names (empty stubs) that the atoms
 register as their current deltas, and the execution is never started.
 
 Everything that depends on the machine or on random numbers is pinned:
-the number of cores, the population, the starting configuration (a
-deterministic one rather than the default 'crandom'), the system name
-and the timestamp. The seed of the random-number generator written to
-search.steu is a constant (0, i.e., use the system time) and needs no
-patching.
+the number of cores, the system name and the timestamp. Most variants
+also pin the population and use a deterministic starting
+configuration. One variant (CRANDOM_VARIANT) instead keeps the
+default 'crandom' start and the default population (computed from the
+number of search parameters and cores), with the random numbers drawn
+by the 'crandom' start seeded. The seed of the random-number generator
+written to search.steu is a constant (0, i.e., use the system time)
+and needs no patching.
 """
 
 __authors__ = (
@@ -28,10 +31,12 @@ from itertools import product
 import pytest
 
 from viperleed.calc.classes.beam import Beam
+from viperleed.calc.classes.rparams import rparams
 from viperleed.calc.files import iosearch
 from viperleed.calc.lib.context import execute_in_dir
 
 from ...helpers import TEST_DATA
+from ...helpers import private_random
 from .conftest import DISPLACEMENTS
 from .conftest import GROUPS
 from .conftest import reference_group
@@ -39,6 +44,11 @@ from .conftest import reference_group
 SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f', 'searchpars.info'
 SEARCH_POPULATION = 4
 SEARCH_START = 'centered'
+CRANDOM_VARIANT = 'ag100_z_crandom'
+CRANDOM_SEED = 1
+# The default population is rounded up to a multiple of the cores. A
+# number of cores that does not divide it makes the rounding visible.
+CRANDOM_N_CORES = 3
 HUGE_MAX_GEN = 10**9  # Above what the input file format allows
 MAX_GEN_WRITTEN = {'1.6.0-1.6.1': 999999, '1.7.3-': 9999999}
 EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
@@ -51,6 +61,7 @@ _PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 VARIANTS = {
     'ag100_z': ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z'),
     'ag100_vib': ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_vib'),
+    CRANDOM_VARIANT: ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z'),
     'ag100_z+vib': ('ag100', _AG100_DISPLACEMENTS / 'DISPLACEMENTS_z+vib'),
     'ag100_mixed': ('ag100_mixed', None),
     'telluride_stacking': ('telluride_stacking', None),
@@ -73,8 +84,24 @@ def _synthetic_exp_beams():
     return beams
 
 
-def _write_search_inputs(prepared, max_gen=None):
-    """Write the search inputs of PreparedDeltas, return the folder."""
+def _write_search_inputs(prepared, max_gen=None, crandom=False):
+    """Write the search inputs of PreparedDeltas, return the folder.
+
+    Parameters
+    ----------
+    prepared : PreparedDeltas
+        The prepared delta inputs.
+    max_gen : int, optional
+        Value for SEARCH_MAX_GEN. Default is None, i.e., leave it.
+    crandom : bool, optional
+        Whether to keep the default population and 'crandom' start,
+        with seeded random numbers. Default is False, i.e., pin both.
+
+    Returns
+    -------
+    folder : Path
+        Where the files were written.
+    """
     rpars = prepared.rpars
     if max_gen:
         rpars.SEARCH_MAX_GEN = max_gen
@@ -85,11 +112,16 @@ def _write_search_inputs(prepared, max_gen=None):
         for atom in slab:  # Name-only stubs of the delta files
             for name in atom.current_deltas:
                 (folder / name).touch()
-    rpars.SEARCH_POPULATION = SEARCH_POPULATION
-    rpars.SEARCH_START = SEARCH_START
+    if crandom:
+        for rp in (rpars, *(d.rpars for d in rpars.domainParams)):
+            rp.N_CORES = CRANDOM_N_CORES
+    else:
+        rpars.SEARCH_POPULATION = SEARCH_POPULATION
+        rpars.SEARCH_START = SEARCH_START
     if not rpars.expbeams:
         rpars.expbeams = _synthetic_exp_beams()
-    with execute_in_dir(prepared.folder):
+    with execute_in_dir(prepared.folder), private_random(rparams,
+                                                         CRANDOM_SEED):
         iosearch.generateSearchInput(prepared.slab, rpars)
     return prepared.folder
 
@@ -104,7 +136,10 @@ def factory_search_folders(prepared_deltas):
         if key not in cache:
             case, displacements = VARIANTS[variant]
             prepared = prepared_deltas(case, group, displacements)
-            cache[key] = _write_search_inputs(prepared)
+            cache[key] = _write_search_inputs(
+                prepared,
+                crandom=variant == CRANDOM_VARIANT,
+                )
         return cache[key]
     return _write
 
