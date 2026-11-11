@@ -17,23 +17,15 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
-import copy
 from itertools import product
-import shutil
 
 import pytest
 
-from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files.displacements import readDISPLACEMENTS
-from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.sections import deltas
-
 from ...helpers import TEST_DATA
+from .conftest import DISPLACEMENTS
 from .conftest import GROUPS
 
 DELTA_INPUT = 'delta-input'
-TENSOR_INDEX = 1  # As after a reference calculation
-DISPLACEMENTS = 'DISPLACEMENTS'
 _AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
 _PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 
@@ -87,46 +79,20 @@ def _param_files(compile_tasks):
 
 
 @pytest.fixture(scope='session', name='delta_folders')
-def factory_delta_folders(initialized_case, tmp_path_factory):
+def factory_delta_folders(prepared_deltas):
     """Return a function that writes the delta inputs (cached).
 
-    The function returns a {part: folder} dictionary.
+    The function returns a ({part: folder}, {PARAM names}) tuple.
     """
     cache = {}
 
     def _write(group, variant):
         key = group, variant
-        if key in cache:
-            return cache[key]
-        case, _, displacements, _ = VARIANTS[variant]
-        state = initialized_case(case, group)
-        rpars, source = state.main
-        folder = tmp_path_factory.mktemp('deltas')
-        shutil.copytree(source, folder, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('*.log'))
-        slab, rpars = copy.deepcopy((next(iter(state.parts.values()))[0],
-                                     rpars))
-        folders = dict.fromkeys(state.parts, folder)
-        for domain in rpars.domainParams:
-            folders[domain.name] = folder / domain.workdir.relative_to(source)
-            domain.workdir = folders[domain.name]
-        if displacements:
-            shutil.copy2(displacements, folder / DISPLACEMENTS)
-        for rp in (rpars, *(d.rpars for d in rpars.domainParams)):
-            rp.TENSOR_INDEX = TENSOR_INDEX
-            if 1 not in rp.runHistory:  # Original state is the initial
-                rp.runHistory.append(1)
-        with execute_in_dir(folder):
-            readDISPLACEMENTS(rpars)
-            for part_folder in set(folders.values()):
-                tensors = f'{DEFAULT_TENSORS}_{TENSOR_INDEX:03d}'
-                (part_folder / DEFAULT_TENSORS / tensors).mkdir(parents=True)
-            if rpars.domainParams:
-                tasks = deltas._prepare_deltas_for_domains(rpars)
-            else:
-                tasks = deltas._prepare_deltas_for_one_domain(slab, rpars)
-        written = _param_files(tasks[0])
-        cache[key] = folders, {p.name for p in written}
+        if key not in cache:
+            case, _, displacements, _ = VARIANTS[variant]
+            prepared = prepared_deltas(case, group, displacements)
+            written = _param_files(prepared.tasks[0])
+            cache[key] = prepared.folders, {p.name for p in written}
         return cache[key]
     return _write
 

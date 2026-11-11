@@ -13,6 +13,9 @@ group
     Version group of the reference files (parametrized).
 initialized_case (factory)
     Return the CaseState of a case in a version group.
+prepared_deltas (factory)
+    Prepare the delta-amplitude inputs of a case in a copy of its
+    working folder.
 """
 
 __authors__ = (
@@ -22,6 +25,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
+import copy
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -30,12 +34,15 @@ import shutil
 import pytest
 
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import vibrocc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
+from viperleed.calc.sections import deltas
 from viperleed.calc.sections import initialization
 from viperleed.calc.sections import run_sections
 
@@ -46,6 +53,8 @@ SYSTEM_NAME = 'stored-input'
 TIMESTAMP = '260101-000000'
 N_CORES = 1
 THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
+TENSOR_INDEX = 1  # As after a reference calculation
+DISPLACEMENTS = 'DISPLACEMENTS'
 
 # Version groups of the reference files: name of the reference folder
 # and the TensErLEED version with which the tests of the group run.
@@ -86,6 +95,33 @@ PRESET_CASES = {  # POSCAR_SLABS case methods, with synthetic PHASESHIFTS
 _PS_HEADER = '{:3d}   -10.85    0.00  -67.83   13.72      synthetic'
 _PS_ENERGIES = (0.1, 2.0, 5.0, 10.0, 15.0)
 _PS_N_L = 18
+
+
+@dataclass
+class PreparedDeltas:
+    """Result of preparing the delta inputs of a case.
+
+    Attributes
+    ----------
+    folder : Path
+        The working folder of the (main) calculation.
+    folders : dict
+        Maps the name of each part (see CaseState.parts) to the folder
+        in which its delta inputs were written.
+    slab : Slab
+        The slab of the (main) calculation, with the delta files
+        registered in the `current_deltas` of its atoms.
+    rpars : Rparams
+        The (main) run parameters.
+    tasks : tuple
+        The (compile tasks, run tasks) of the delta calculation.
+    """
+
+    folder: object
+    folders: dict
+    slab: object
+    rpars: object
+    tasks: tuple
 
 
 @dataclass
@@ -247,3 +283,46 @@ def _init_preset_case(case, tmp, tree, tl_version):
         rpars.updateDerivedParams()
         initialization.initialization(slab, rpars)
     return CaseState({case: (slab, rpars, work)}, (rpars, work))
+
+
+@pytest.fixture(scope='session', name='prepared_deltas')
+def factory_prepared_deltas(initialized_case, tmp_path_factory):
+    """Return a function that prepares the delta inputs (not cached).
+
+    The function takes the case, the version group, and the path to
+    a DISPLACEMENTS file to use (None to use the one of the case), and
+    returns a PreparedDeltas. Slabs and Rparams are copies, so that
+    the cached state of the case is not modified. The Tensors folder
+    only has to exist: its contents are never read, as the
+    original-state files are those of the initialization, and no delta
+    files exist yet.
+    """
+    def _prepare(case, group, displacements):
+        state = initialized_case(case, group)
+        rpars, source = state.main
+        folder = tmp_path_factory.mktemp('deltas')
+        shutil.copytree(source, folder, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns('*.log'))
+        slab, rpars = copy.deepcopy((next(iter(state.parts.values()))[0],
+                                     rpars))
+        folders = dict.fromkeys(state.parts, folder)
+        for domain in rpars.domainParams:
+            folders[domain.name] = folder / domain.workdir.relative_to(source)
+            domain.workdir = folders[domain.name]
+        if displacements:
+            shutil.copy2(displacements, folder / DISPLACEMENTS)
+        for rp in (rpars, *(d.rpars for d in rpars.domainParams)):
+            rp.TENSOR_INDEX = TENSOR_INDEX
+            if 1 not in rp.runHistory:  # Original state is the initial
+                rp.runHistory.append(1)
+        with execute_in_dir(folder):
+            readDISPLACEMENTS(rpars)
+            for part_folder in set(folders.values()):
+                tensors = f'{DEFAULT_TENSORS}_{TENSOR_INDEX:03d}'
+                (part_folder / DEFAULT_TENSORS / tensors).mkdir(parents=True)
+            if rpars.domainParams:
+                tasks = deltas._prepare_deltas_for_domains(rpars)
+            else:
+                tasks = deltas._prepare_deltas_for_one_domain(slab, rpars)
+        return PreparedDeltas(folder, folders, slab, rpars, tasks)
+    return _prepare
