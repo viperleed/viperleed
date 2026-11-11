@@ -103,28 +103,37 @@ def reference_name(name, parts, part):
     """
     return name if len(parts) == 1 else f'{name}_{part}'
 
-# Cases with stored inputs. All files in 'source' (a folder in the test
-# data) are copied to the folders of the calculation. 'extra' are
-# {destination: source} pairs of files that are added on top. For
-# domain cases, 'domains' lists the sub-folders of 'source' to copy.
-STORED_CASES = {
-    'ag100': {
-        'source': 'Ag(100)/initialization',
-        },
-    'ag100_mixed': {
-        'source': 'Ag(100)/initialization',
-        'extra': {'VIBROCC': 'Ag(100)/mergeDisp/VIBROCC',
-                  'DISPLACEMENTS': 'Ag(100)/mergeDisp/DISPLACEMENTS_mixed'},
-        },
-    'ag100_el_rename': {
-        'source': 'Ag(100)_el_rename/initialization',
-        },
-    'telluride_stacking': {
-        'source': 'domains/telluride_stacking/deltas',
-        'domains': ('STA', 'FAU'),
-        },
-    }
+@dataclass
+class StoredCase:
+    """A case with stored inputs.
 
+    Attributes
+    ----------
+    source : str
+        A folder in the test data. All files in it are copied to the
+        folders of the calculation.
+    extra : dict
+        {destination: source} pairs of files that are added on top.
+    domains : tuple
+        For domain cases, the sub-folders of `source` to copy.
+    """
+
+    source: str
+    extra: dict = field(default_factory=dict)
+    domains: tuple = ()
+
+
+STORED_CASES = {
+    'ag100': StoredCase('Ag(100)/initialization'),
+    'ag100_mixed': StoredCase(
+        'Ag(100)/initialization',
+        extra={'VIBROCC': 'Ag(100)/mergeDisp/VIBROCC',
+               'DISPLACEMENTS': 'Ag(100)/mergeDisp/DISPLACEMENTS_mixed'},
+        ),
+    'ag100_el_rename': StoredCase('Ag(100)_el_rename/initialization'),
+    'telluride_stacking': StoredCase('domains/telluride_stacking/deltas',
+                                     domains=('STA', 'FAU')),
+    }
 
 class Variant(NamedTuple):
     """The case and DISPLACEMENTS of a variant of the tests.
@@ -267,19 +276,18 @@ def copy_case_state(source, folder, slab, rpars):
 
 def _prepare_folder(folder, spec):
     """Copy the stored inputs of a case to `folder`."""
-    source = TEST_DATA / spec['source']
-    domains = spec.get('domains', ())
+    source = TEST_DATA / spec.source
     for item in source.iterdir():
         if item.name in _NOT_COPIED:
             continue
-        if item.is_dir() and item.name not in domains:
+        if item.is_dir() and item.name not in spec.domains:
             continue
         if item.is_dir():
             shutil.copytree(item, folder / item.name,
                             ignore=shutil.ignore_patterns(*_NOT_COPIED))
         else:
             shutil.copy2(item, folder)
-    for destination, extra_source in spec.get('extra', {}).items():
+    for destination, extra_source in spec.extra.items():
         shutil.copy2(TEST_DATA / extra_source, folder / destination)
 
 
@@ -323,7 +331,7 @@ def _init_stored_case(case, tmp, tree, tl_version):
     assert not failed
     rpars, slab = captured['args']
     parts = {case: (slab, rpars, work)}
-    if spec.get('domains'):
+    if spec.domains:
         parts = {dom.name: (dom.slab, dom.rpars, dom.workdir)
                  for dom in rpars.domainParams}
     for _, part_rpars, _ in parts.values():

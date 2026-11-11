@@ -144,8 +144,8 @@ _STORED_PHASESHIFTS = [
 def fixture_phaseshifts_and_stored(request, refcalc_folder):
     """Return the work-dir PHASESHIFTS and the stored input."""
     group, case, part = request.param
-    source = TEST_DATA / STORED_CASES[case]['source']
-    if STORED_CASES[case].get('domains'):
+    source = TEST_DATA / STORED_CASES[case].source
+    if STORED_CASES[case].domains:
         source /= part
     written = refcalc_folder(group, case, part) / PHASESHIFTS
     return written, source / PHASESHIFTS
