@@ -13,7 +13,7 @@ as defined in this module in the <defaults> dictionary.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-04-11'
 __license__ = 'GPLv3+'
 
@@ -347,9 +347,14 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         # All the others will be correctly converted with str().
         for structure in dictionary.values():
             for key, value in structure.items():
-                if (self.optionxform(key) in ('SUPERLATTICE', 'surfBasis')
-                        and isinstance(value, np.ndarray)):
+                is_matrix = (self.optionxform(key)
+                             in ('SUPERLATTICE', 'surfBasis'))
+                if is_matrix and isinstance(value, np.ndarray):
                     structure[key] = array_to_string(value)
+                elif is_matrix and not isinstance(value, str):
+                    # Sequences may contain numpy scalars, whose str()
+                    # is, e.g., 'np.float64(1.0)' since numpy 2.0
+                    structure[key] = str(np.asarray(value).tolist())
                 elif self.optionxform(key) == 'bulk3Dsym':
                     structure[key] = str(value)
 
