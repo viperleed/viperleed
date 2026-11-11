@@ -114,8 +114,9 @@ calculation (:file:`refcalc-FIN`, :file:`refcalc-PARAM`, :file:`AUX*`,
 each case has one subdirectory for the files written for :term:`TensErLEED`
 1.6.0--1.6.1 and one for 1.7.3 and later (``1.6.0-1.6.1``, ``1.7.3-``). The
 :file:`PHASESHIFTS` line of :file:`refcalc-FIN` is a placeholder.
-Timestamps and the path of the :file:`seSernelius` directory are masked
-before comparing.
+The tests pin timestamps and paths (the timestamp, and the relative path
+of the :file:`seSernelius` directory), and the files are compared verbatim,
+so the references hold them as written.
 
 Rewrite the references only if what ViPErLEED writes was intentionally
 changed, or when adding a group for a new :term:`TensErLEED` version. From the

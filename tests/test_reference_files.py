@@ -83,21 +83,15 @@ class TestCheckReference:
         [
             (_TIMESTAMP_A, _TIMESTAMP_B),
             (_PATH_A, _PATH_B),
-            (_TIMESTAMP_A + _PATH_A, _TIMESTAMP_B + _PATH_B),
             ],
-        ids=('timestamp', 'seSernelius path', 'both'),
+        ids=('timestamp', 'path'),
         )
-    def test_masked_difference_passes(self, pytester, written, reference):
-        """Check that differences in the masked parts are ignored."""
+    def test_timestamp_or_path_difference_fails(self, pytester,
+                                                written, reference):
+        """Check that timestamps and paths are compared verbatim."""
         ref = _reference(pytester, reference)
-        _run(pytester, written, ref).assert_outcomes(passed=1)
+        _run(pytester, written, ref).assert_outcomes(failed=1)
         assert ref.read_text() == reference  # Not rewritten
-
-    def test_mask_is_narrow(self, pytester):
-        """Check that other timestamp-like text is not masked."""
-        reference = _reference(pytester, 'x 261023-142446 y\n')
-        result = _run(pytester, 'x 261024-142446 y\n', reference)
-        result.assert_outcomes(failed=1)
 
     def test_missing_reference(self, pytester):
         """Check that a missing reference fails, naming the option."""
@@ -117,7 +111,7 @@ class TestCheckReference:
             '*rewritten reference files*',
             f'*reference rewritten: {reference}*',
             ])
-        assert reference.read_text() == written  # Unmasked
+        assert reference.read_text() == written
 
     def test_rewrite_creates_missing(self, pytester):
         """Check that the option creates a missing reference."""
@@ -128,10 +122,10 @@ class TestCheckReference:
 
     def test_rewrite_equal_is_a_pass(self, pytester):
         """Check that an up-to-date reference is not touched."""
-        reference = _reference(pytester, _TIMESTAMP_B)
-        result = _run(pytester, _TIMESTAMP_A, reference, _REWRITE)
+        reference = _reference(pytester, _BASE)
+        result = _run(pytester, _BASE, reference, _REWRITE)
         result.assert_outcomes(passed=1)
-        assert reference.read_text() == _TIMESTAMP_B
+        assert reference.read_text() == _BASE
 
     @pytest.mark.slow  # Subprocess, about 1 s
     @pytest.mark.usefixtures('subprocess_path')

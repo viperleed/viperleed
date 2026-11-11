@@ -1,8 +1,9 @@
 """Pytest plugin to compare written files to stored references.
 
 Provides the fixture `check_reference`, which compares a file written
-by a test to its stored reference after masking the pieces that are not
-reproducible (see MASKS), and the option --rewrite-references.
+by a test to its stored reference, text for text, and the option
+--rewrite-references. Tests must therefore pin whatever depends on the
+time or on the location of the run (e.g., timestamps and paths).
 
 With the option, a reference that differs from the written file (or
 does not exist yet) is overwritten with the written file instead of
@@ -23,32 +24,12 @@ __license__ = 'GPLv3+'
 
 import difflib
 from pathlib import Path
-import re
 
 import pytest
 
 REWRITE_OPTION = '--rewrite-references'
 REWRITTEN_KEY = 'rewritten_reference'  # In user_properties of a report
 _ENCODING = 'utf-8'
-
-# Masks are (compiled pattern, replacement) pairs. They cover only the
-# pieces of the written input files that depend on the time or on the
-# location of the run:
-# - The timestamp (rp.timestamp, format %y%m%d-%H%M%S) that ends the
-#   header line "<systemName> <timestamp>" of delta-input, of
-#   AUXLATGEO (refcalc-FIN), and of line 2 of eeasisss-input.
-# - The path of the seSernelius file in eeasisss-input, which is
-#   relative or absolute depending on the depth of the working folder.
-TIMESTAMP_MASK = (
-    re.compile(r' \d{6}-\d{6}$', re.MULTILINE),
-    ' <timestamp>',
-    )
-SESERNELIUS_MASK = (
-    re.compile(r"^'[^\n]*seSernelius' \|exchange-correlation file$",
-               re.MULTILINE),
-    "'<seSernelius>' |exchange-correlation file",
-    )
-MASKS = (TIMESTAMP_MASK, SESERNELIUS_MASK)
 
 
 def pytest_addoption(parser):
@@ -64,20 +45,13 @@ def pytest_addoption(parser):
         )
 
 
-def apply_masks(text, masks):
-    """Return `text` with the (pattern, replacement) `masks` applied."""
-    for pattern, replacement in masks:
-        text = pattern.sub(replacement, text)
-    return text
-
-
 @pytest.fixture(name='check_reference')
 def fixture_check_reference(request):
     """Return a function to compare a written file to its reference."""
     rewrite = request.config.getoption('rewrite_references')
 
-    def _check(written, reference, masks=MASKS):
-        """Check that `written` equals `reference` after masking.
+    def _check(written, reference):
+        """Check that `written` has the same text as `reference`.
 
         Parameters
         ----------
@@ -85,14 +59,11 @@ def fixture_check_reference(request):
             The file written by the test.
         reference : str or Path
             The stored reference file.
-        masks : Sequence, optional
-            (compiled pattern, replacement) pairs applied to both
-            texts before comparing. Default is MASKS.
 
         Raises
         ------
         pytest.fail.Exception
-            If the masked texts differ, or the reference is missing
+            If the texts differ, or the reference is missing
             and --rewrite-references was not given.
         """
         written, reference = Path(written), Path(reference)
@@ -101,11 +72,8 @@ def fixture_check_reference(request):
             reference_text = reference.read_text(encoding=_ENCODING)
         else:
             reference_text = None
-        if reference_text is not None:
-            masked_ref = apply_masks(reference_text, masks)
-            masked_written = apply_masks(written_text, masks)
-            if masked_ref == masked_written:
-                return
+        if reference_text == written_text:
+            return
         if rewrite:
             reference.parent.mkdir(parents=True, exist_ok=True)
             reference.write_text(written_text, encoding=_ENCODING)
@@ -118,15 +86,14 @@ def fixture_check_reference(request):
                         f'{REWRITE_OPTION} to create it from {written}.',
                         pytrace=False)
         diff = difflib.unified_diff(
-            masked_ref.splitlines(),
-            masked_written.splitlines(),
+            reference_text.splitlines(),
+            written_text.splitlines(),
             fromfile=f'reference: {reference}',
             tofile=f'written: {written}',
             lineterm='',
             )
-        pytest.fail('Written file differs from its reference (after '
-                    'masking). Run with '
-                    f'{REWRITE_OPTION} to update the reference.\n'
+        pytest.fail('Written file differs from its reference. '
+                    f'Run with {REWRITE_OPTION} to update the reference.\n'
                     + '\n'.join(diff),
                     pytrace=False)
 
