@@ -15,6 +15,8 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 import pytest
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
@@ -68,7 +70,7 @@ PARAMS = [
     ]
 
 
-@pytest.fixture(scope='session', name='refcalc_folder')
+@fixture(scope='session', name='refcalc_folder')
 def factory_refcalc_folder(initialized_case, tmp_path_factory):
     """Return a function that writes the refcalc inputs (cached)."""
     cache = {}
@@ -94,14 +96,15 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
     return _write
 
 
-@pytest.fixture(name='written_and_reference', params=PARAMS)
-def fixture_written_and_reference(request, refcalc_folder, data_path):
+@fixture(name='written_and_reference')
+@parametrize('key', PARAMS)
+def fixture_written_and_reference(key, refcalc_folder, data_path):
     """Return a written file and its reference.
 
     Preparing the inputs (once per case) happens in this fixture, so
     that the time of the test itself is that of the comparison.
     """
-    group, case, part, name = request.param
+    group, case, part, name = key
     reference = (data_path / 'stored_inputs/refcalc'
                  / reference_name(case, CASES[case], part)
                  / reference_group(group) / name)
@@ -140,10 +143,11 @@ _STORED_PHASESHIFTS = [
     ]
 
 
-@pytest.fixture(name='phaseshifts_and_stored', params=_STORED_PHASESHIFTS)
-def fixture_phaseshifts_and_stored(request, refcalc_folder):
+@fixture(name='phaseshifts_and_stored')
+@parametrize('key', _STORED_PHASESHIFTS)
+def fixture_phaseshifts_and_stored(key, refcalc_folder):
     """Return the work-dir PHASESHIFTS and the stored input."""
-    group, case, part = request.param
+    group, case, part = key
     source = TEST_DATA / STORED_CASES[case].source
     if STORED_CASES[case].domains:
         source /= part
