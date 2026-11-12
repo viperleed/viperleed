@@ -36,6 +36,8 @@ import time
 from typing import NamedTuple
 
 import pytest
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.constants import DEFAULT_TENSORS
@@ -225,17 +227,18 @@ class CaseState:
     main: tuple = ()
 
 
-@pytest.fixture(name='group', params=tuple(GROUPS))
-def fixture_group(request):
+@fixture(name='group')
+@parametrize(group=tuple(GROUPS))
+def fixture_group(group):
     """Return the name of a run of the tests (see GROUPS).
 
     A run is a version group or one more version of it, whose
     references are those of reference_group(group).
     """
-    return request.param
+    return group
 
 
-@pytest.fixture(scope='session', name='initialized_case')
+@fixture(scope='session', name='initialized_case')
 def factory_initialized_case(tmp_path_factory):
     """Return a function that initializes a case (cached)."""
     cache = {}
@@ -400,7 +403,7 @@ def _init_preset_case(case, tmp, tree, tl_version):
     return CaseState({case: (slab, rpars, work)}, (rpars, work))
 
 
-@pytest.fixture(scope='session', name='prepared_deltas')
+@fixture(scope='session', name='prepared_deltas')
 def factory_prepared_deltas(initialized_case, tmp_path_factory):
     """Return a function that prepares the delta inputs (not cached).
 
