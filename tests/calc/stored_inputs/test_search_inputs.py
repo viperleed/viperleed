@@ -31,6 +31,8 @@ import functools
 from itertools import product
 
 import pytest
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams import rparams
@@ -123,7 +125,7 @@ def _write_search_inputs(prepared, *, max_gen=None, crandom=False):
     return prepared.folder
 
 
-@pytest.fixture(scope='session', name='search_folders')
+@fixture(scope='session', name='search_folders')
 def factory_search_folders(prepared_deltas):
     """Return a function that writes the search inputs (cached)."""
     @functools.lru_cache(maxsize=None)
@@ -135,10 +137,11 @@ def factory_search_folders(prepared_deltas):
     return _write
 
 
-@pytest.fixture(name='written_and_reference', params=PARAMS)
-def fixture_written_and_reference(request, search_folders, data_path):
+@fixture(name='written_and_reference')
+@parametrize('key', PARAMS)
+def fixture_written_and_reference(key, search_folders, data_path):
     """Return a written file and its reference."""
-    group, variant, name = request.param
+    group, variant, name = key
     reference = (data_path / 'stored_inputs/search' / variant
                  / reference_group(group) / name)
     return search_folders(group, variant) / name, reference
