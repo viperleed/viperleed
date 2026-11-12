@@ -64,7 +64,7 @@ VARIANTS = {**conftest.VARIANTS,
             CRANDOM_VARIANT: conftest.VARIANTS['ag100_z']}
 
 PARAMS = [
-    pytest.param((group, variant, name), id=f'{group}-{variant}-{name}')
+    pytest.param(group, variant, name, id=f'{group}-{variant}-{name}')
     for group, variant, name in product(GROUPS, VARIANTS, SEARCH_FILES)
     ]
 
@@ -138,10 +138,10 @@ def factory_search_folders(prepared_deltas):
 
 
 @fixture(name='written_and_reference')
-@parametrize('key', PARAMS)
-def fixture_written_and_reference(key, search_folders, data_path):
+@parametrize('group,variant,name', PARAMS)
+def fixture_written_and_reference(group, variant, name,
+                                  search_folders, data_path):
     """Return a written file and its reference."""
-    group, variant, name = key
     reference = (data_path / 'stored_inputs/search' / variant
                  / reference_group(group) / name)
     return search_folders(group, variant) / name, reference

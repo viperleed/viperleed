@@ -60,7 +60,7 @@ assert set(FILES_BY_GROUP) == {reference_group(group) for group in GROUPS}
 
 
 PARAMS = [
-    pytest.param((group, case, part, name),
+    pytest.param(group, case, part, name,
                  id=f'{group}-{reference_name(case, parts, part)}-{name}')
     for group in GROUPS
     for names in (FILES_BY_GROUP[reference_group(group)],)
@@ -97,14 +97,15 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
 
 
 @fixture(name='written_and_reference')
-@parametrize('key', PARAMS)
-def fixture_written_and_reference(key, refcalc_folder, data_path):
+@parametrize('group,case,part,name', PARAMS)
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def fixture_written_and_reference(group, case, part, name,
+                                  refcalc_folder, data_path):
     """Return a written file and its reference.
 
     Preparing the inputs (once per case) happens in this fixture, so
     that the time of the test itself is that of the comparison.
     """
-    group, case, part, name = key
     reference = (data_path / 'stored_inputs/refcalc'
                  / reference_name(case, CASES[case], part)
                  / reference_group(group) / name)
@@ -135,7 +136,7 @@ def test_refcalc_input(written_and_reference, check_reference, tmp_path):
 # The PHASESHIFTS of the preset cases are written by the case set-up
 # itself, and have no stored input to compare with.
 _STORED_PHASESHIFTS = [
-    pytest.param((group, case, part), id=f'{group}-{case}-{part}')
+    pytest.param(group, case, part, id=f'{group}-{case}-{part}')
     for group in GROUPS
     for case, parts in CASES.items()
     if case in STORED_CASES
@@ -144,10 +145,9 @@ _STORED_PHASESHIFTS = [
 
 
 @fixture(name='phaseshifts_and_stored')
-@parametrize('key', _STORED_PHASESHIFTS)
-def fixture_phaseshifts_and_stored(key, refcalc_folder):
+@parametrize('group,case,part', _STORED_PHASESHIFTS)
+def fixture_phaseshifts_and_stored(group, case, part, refcalc_folder):
     """Return the work-dir PHASESHIFTS and the stored input."""
-    group, case, part = key
     source = TEST_DATA / STORED_CASES[case].source
     if STORED_CASES[case].domains:
         source /= part

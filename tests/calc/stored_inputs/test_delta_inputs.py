@@ -65,7 +65,7 @@ def _param_name(index):
 
 
 PARAMS = [
-    pytest.param((group, variant, part, name),
+    pytest.param(group, variant, part, name,
                  id=f'{group}-{reference_name(variant, parts, part)}-{name}')
     for group in GROUPS
     for variant, (parts, n_param) in LAYOUTS.items()
@@ -100,10 +100,11 @@ def factory_delta_folders(prepared_deltas):
 
 
 @fixture(name='written_and_reference')
-@parametrize('key', PARAMS)
-def fixture_written_and_reference(key, delta_folders, data_path):
+@parametrize('group,variant,part,name', PARAMS)
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def fixture_written_and_reference(group, variant, part, name,
+                                  delta_folders, data_path):
     """Return a written file and its reference."""
-    group, variant, part, name = key
     parts = LAYOUTS[variant].parts
     reference = (data_path / 'stored_inputs/deltas'
                  / reference_name(variant, parts, part)
