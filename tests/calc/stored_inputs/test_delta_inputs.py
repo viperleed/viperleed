@@ -18,10 +18,11 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 import functools
-from itertools import product
 from typing import NamedTuple
 
 import pytest
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from .conftest import GROUPS
 from .conftest import VARIANTS
@@ -83,7 +84,7 @@ def _param_files(compile_tasks):
     return paths
 
 
-@pytest.fixture(scope='session', name='delta_folders')
+@fixture(scope='session', name='delta_folders')
 def factory_delta_folders(prepared_deltas):
     """Return a function that writes the delta inputs (cached).
 
@@ -98,10 +99,11 @@ def factory_delta_folders(prepared_deltas):
     return _write
 
 
-@pytest.fixture(name='written_and_reference', params=PARAMS)
-def fixture_written_and_reference(request, delta_folders, data_path):
+@fixture(name='written_and_reference')
+@parametrize('key', PARAMS)
+def fixture_written_and_reference(key, delta_folders, data_path):
     """Return a written file and its reference."""
-    group, variant, part, name = request.param
+    group, variant, part, name = key
     parts = LAYOUTS[variant].parts
     reference = (data_path / 'stored_inputs/deltas'
                  / reference_name(variant, parts, part)
@@ -116,21 +118,19 @@ def test_delta_input(written_and_reference, check_reference):
     check_reference(written, reference)
 
 
-@pytest.fixture(name='written_param_names',
-                params=list(product(GROUPS, VARIANTS)),
-                ids='-'.join)
-def fixture_written_param_names(request, delta_folders):
+@fixture(name='written_param_names')
+@parametrize(variant=tuple(VARIANTS))
+def fixture_written_param_names(group, variant, delta_folders):
     """Return the names of the PARAM files written for a variant."""
-    group, variant = request.param
     _, written = delta_folders(group, variant)
     return variant, written
 
 
-@pytest.fixture(name='run_tasks', params=list(product(GROUPS, VARIANTS)),
-                ids='-'.join)
-def fixture_run_tasks(request, delta_folders):
+@fixture(name='run_tasks')
+@parametrize(variant=tuple(VARIANTS))
+def fixture_run_tasks(group, variant, delta_folders):
     """Return the delta-run tasks of a variant."""
-    prepared, _ = delta_folders(*request.param)
+    prepared, _ = delta_folders(group, variant)
     return prepared.tasks[1]
 
 
