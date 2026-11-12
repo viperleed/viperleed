@@ -13,6 +13,7 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 import pytest
+from pytest_cases import fixture
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc import psgen
@@ -40,7 +41,7 @@ CASES = (
     )
 
 
-@pytest.fixture(name='stub_tree')
+@fixture(name='stub_tree')
 def fixture_stub_tree(tmp_path):
     """Return a fake TensErLEED directory with stub eeasisss/data."""
     tree = tmp_path / 'TensErLEED'
@@ -54,7 +55,7 @@ def fixture_stub_tree(tmp_path):
     return tree
 
 
-@pytest.fixture(name='written_input')
+@fixture(name='written_input')
 def fixture_written_input(stub_tree, tmp_path, mocker, monkeypatch):
     """Return a function that writes the eeasisss input for a slab."""
     pin_clock(monkeypatch)
@@ -78,9 +79,9 @@ def fixture_written_input(stub_tree, tmp_path, mocker, monkeypatch):
 
 @parametrize_with_cases('args', cases=CASES)
 def test_eeasisss_input(args, written_input, check_reference, data_path,
-                        request):
+                        current_cases):
     """Check the eeasisss-input file written for a slab."""
     slab, rpars, *_ = args
-    case_id = request.node.callspec.id
+    case_id = current_cases['args'].id
     reference = data_path / 'stored_inputs/eeasisss' / case_id / INPUT_NAME
     check_reference(written_input(slab, rpars), reference)
