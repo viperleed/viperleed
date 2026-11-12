@@ -228,14 +228,14 @@ class CaseState:
 
 
 @fixture(name='group')
-@parametrize(group=tuple(GROUPS))
-def fixture_group(group):
+@parametrize(run=tuple(GROUPS), ids=[f'group={run}' for run in GROUPS])
+def fixture_group(run):
     """Return the name of a run of the tests (see GROUPS).
 
     A run is a version group or one more version of it, whose
-    references are those of reference_group(group).
+    references are those of reference_group(run).
     """
-    return group
+    return run
 
 
 @fixture(scope='session', name='initialized_case')
