@@ -47,6 +47,7 @@ _MODULE = 'viperleed.calc.cli'
 _UNUSED_LEVEL = logging.WARNING + 1
 
 
+@pytest.mark.slow
 def test_calc_never_loads_graphics():
     """Ensure that 'viperleed calc' does not load graphics modules.
 
