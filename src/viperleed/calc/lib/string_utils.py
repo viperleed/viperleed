@@ -9,7 +9,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
@@ -66,6 +66,10 @@ def range_to_str(integers, sep=', ', range_sep='-'):
     integers : Iterable
         The list of integers to be sorted and compressed. This function
         will consume one-pass iterators.
+
+        .. versionchanged:: 0.15.0
+            Items of type bool now raise TypeError, rather than
+            being silently treated as the integers 0 and 1.
     sep : str, optional
         The separator to use if multiple non-contiguous ranges are
         found in `integers`. Default is ', '.
@@ -83,11 +87,16 @@ def range_to_str(integers, sep=', ', range_sep='-'):
     Raises
     ------
     TypeError
-        If any of the items in integers is not an int.
+        If any of the items in integers is not an int. Items of
+        type bool are not accepted, even though bool is a subclass
+        of int.
     """
     integers, type_check = itertools.tee(integers, 2)
-    not_an_int = next((type(v) for v in type_check if not isinstance(v, int)),
-                      None)
+    not_an_int = next(
+        (type(v) for v in type_check
+         if not isinstance(v, int) or isinstance(v, bool)),
+        None,
+        )
     if not_an_int:
         raise TypeError('range_to_str: expected list of int, '
                         f'found type {not_an_int.__name__!r}')

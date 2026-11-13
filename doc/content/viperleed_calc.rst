@@ -38,7 +38,7 @@ in your own Python code. See :ref:`api_index` for more details.
 
 .. toctree::
     :maxdepth: 1
-    
+
     calc/install_tensor_leed
     calc/examples
     calc/conventions

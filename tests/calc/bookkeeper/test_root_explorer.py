@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-16'
 __license__ = 'GPLv3+'
 
@@ -667,6 +667,7 @@ class TestRootExplorerMarkEditedFiles:
         explorer.mark_edited_files()
         self.check_has_edited_files(explorer, ())
 
+    @pytest.mark.slow
     def test_earlier(self, explorer, make_calc_inputs, make_calc_log):
         """Check that no files are _edited when they predate calc."""
         # Prepare contents of the root directory
@@ -679,6 +680,7 @@ class TestRootExplorerMarkEditedFiles:
         explorer.mark_edited_files()
         self.check_has_edited_files(explorer, ())
 
+    @pytest.mark.slow
     @pytest.mark.usefixtures('mock_edited_after_calc')
     def test_later_no_ori(self, explorer, caplog, mocker):
         """Check _edited files when they follow calc and there's no ori."""
@@ -699,6 +701,7 @@ class TestRootExplorerMarkEditedFiles:
         self.check_warns_edited(caplog.text, MOCK_STATE_FILES)
         assert f'Failed to rename {failed}' in caplog.text
 
+    @pytest.mark.slow
     @pytest.mark.usefixtures('mock_edited_after_calc')
     def test_later_with_ori(self, explorer, mocker, caplog):
         """Check _edited files when they follow calc."""
@@ -718,6 +721,7 @@ class TestRootExplorerMarkEditedFiles:
         self.check_warns_edited(caplog.text, expect_edited)
         assert same_contents not in caplog.text  # No warning if same
 
+    @pytest.mark.slow
     @pytest.mark.usefixtures('mock_edited_after_calc')
     def test_root_file_missing(self, explorer, caplog):
         """Check no _edited version is created for a missing input file."""
@@ -979,19 +983,9 @@ class TestTensorsAndDeltasInfo:
     _attr_needs_update = (
         'most_recent',
         )
-    _method_needs_update = (
-        # None for now
-        )
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, tensors, attr):
         """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             attrgetter(attr)(tensors)
-
-    @parametrize(method_name=_method_needs_update)
-    def test_too_early_method_call(self, tensors, method_name):
-        """Check that calling methods before collection fails."""
-        method = attrgetter(method_name)(tensors)
-        with pytest.raises(AttributeError, match=r'.*collect.*'):
-            method()

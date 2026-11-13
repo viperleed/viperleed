@@ -15,7 +15,7 @@ of a |LEED-IV| calculation in ViPErLEED.
 
 An in-depth description of all parts of the tensor-LEED approach is presented
 in Refs. :cite:alp:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`.
-The original publication of the TensErLEED software explains 
+The original publication of the TensErLEED software explains
 how the tensor-LEED approach is implemented in TensErLEED
 :cite:p:`blumFastLEEDIntensity2001a`.
 

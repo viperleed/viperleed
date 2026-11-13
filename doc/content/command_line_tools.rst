@@ -5,14 +5,13 @@
 Command-line tools
 ==================
 
-.. todo:: viperleed gui
-
 The ViPErLEED Python package ``viperleed`` provides a number of command-line
 tools that can be used to run calculations, invoke the
 :ref:`bookkeeper<bookkeeper>`, and run the :ref:`utilities<utilities>`
 and :ref:`poscar utilities<poscar_utils>`. The ViPErLEED graphical user
-interface can also be invoked from the command line via ``viperleed gui``
-(currently, only on systems that have access to a graphical display).
+interface can also be invoked from the command line via
+:ref:`viperleed gui<cli_gui>` (currently, only on systems that have access
+to a graphical display).
 
 .. _cli_viperleed:
 
@@ -31,7 +30,7 @@ interface can also be invoked from the command line via ``viperleed gui``
 
         command
             See also :ref:`cli_calc`,
-            ``viperleed gui``,
+            :ref:`cli_gui`,
             :ref:`cli_bookkeeper`,
             :ref:`utilities`,
             and :ref:`poscar_utils`
@@ -96,3 +95,27 @@ tool for running |LEED-IV| calculations.
 .. versionchanged:: 0.13.0
     Removed the ``--delete-workdir`` argument, whose default was ``False``.
     It is replaced by ``--keep-workdir``.
+
+
+.. _cli_gui:
+
+``viperleed gui``
+-----------------
+
+``viperleed gui`` starts the ViPErLEED graphical user interface. Before
+opening any window, it checks that :program:`PyQt5` can be loaded and that
+the system has a display. This check takes a few seconds on systems without
+a display.
+
+    .. argparse::
+        :module: viperleed.cli
+        :class:  ViPErLEEDMain
+        :func:   parser
+        :prog:   viperleed
+        :path:   gui
+        :nodefaultconst:
+        :usagesection:
+        :showusagemain: viperleed gui, viperleed.gui
+
+.. versionadded:: 0.15.0
+    The ``--skip-graphics-check`` argument.

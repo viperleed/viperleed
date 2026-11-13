@@ -1,10 +1,9 @@
 [build-system]
-# Note for pip install -e .: requires pip >=21.3 that introduced
-# editable-install capabilities from a pyproject.toml file instead
-# of setup.py or setup.conf
-requires = ['setuptools']
+# setuptools>=61 reads the [project] table. setuptools>=64 supports
+# editable installs (pip install -e .) via PEP 660, which pip uses
+# since v21.3. Older pip versions use 'setup.py develop' instead.
+requires = ['setuptools>=64']
 build-backend = 'setuptools.build_meta'
-# TODO: check version of setuptools
 # TODO: take a look at https://docs.pytest.org/en/7.1.x/explanation/goodpractices.html
 # for good practices suggested by pytest on the builder
 
@@ -12,12 +11,10 @@ build-backend = 'setuptools.build_meta'
 name = 'viperleed'
 description = 'Tools for quantitative low-energy electron diffraction'
 requires-python = '>=3.7'
-dynamic = ['version']
-license = {file = 'LICENSE.md'}
-# TODO: the next lines will be needed in 2026 when setuptools will
-# raise exceptions instead of issuing warnings. See also #364.
-# license = 'GPL-3.0-or-later'
-# license-files = ['LICENSE.md']
+# The license is set in setup.py: PEP 639 metadata needs setuptools>=77,
+# which does not support Python<=3.8. See #364. LICENSE.md is picked up
+# automatically by setuptools as a license file.
+dynamic = ['license', 'version']
 readme = 'README.md'
 dependencies = [
     'fortranformat',
@@ -153,6 +150,8 @@ classifiers = [
     [tool.pytest.ini_options]
     addopts = [
         '--import-mode=importlib',
+        '--strict-markers',
+        '-m', 'not tensorleed',
         '--cov=viperleed',
         '--cov=tests',
         '--cov-report=html',
@@ -161,13 +160,22 @@ classifiers = [
     pythonpath = ['.', '..']
     # Turn all warnings into errors. See also "How to capture warnings"
     filterwarnings = ['error',]
+    markers = [
+        'slow: takes about half a second or more (quick tier: --quick)',
+        'tensorleed: needs a TensErLEED tree (VIPERLEED_TENSORLEED)',
+        'release: TensErLEED test that only runs with --release',
+        ]
     required_plugins = [
         'pytest-cases>=3.8.5',  # Fixes marks on fixtures (pytest 8)
         'pytest-cov>=2.5',      # Added --cov-branch
         'pytest-mock>=3',
         'pytest-timeout',
+        'pytest-xdist',
         ]
     xfail_strict = true
+    # An empty parameter set (e.g., an emptied list of POSCARs) is an
+    # error at collection, rather than a silent skip
+    empty_parameter_set_mark = 'fail_at_collect'
 
 
 

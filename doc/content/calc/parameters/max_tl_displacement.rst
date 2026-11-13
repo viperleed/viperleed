@@ -31,11 +31,11 @@ last reference calculation took less than 30 minutes, and to stop otherwise.
    ! only define different threshold values:
    MAX_TL_DISPLACEMENT = 0.1       ! sets the threshold to 0.1 Angstrom for both geo and vib
    MAX_TL_DISPLACEMENT = 0.1 0.05  ! 0.1 Angstrom for geometric displacements, 0.05 Angstrom for vibrations
-   
+
    ! define thresholds using flags:
    MAX_TL_DISPLACEMENT geo = 0.1   ! same as above, 'geo' is the default
    MAX_TL_DISPLACEMENT vib = 0.01  ! re-define the vibration threshold, leaving geo unchanged
-   
+
    ! define the action:
    MAX_TL_DISPLACEMENT action = stop           ! Always stop when a total displacement becomes too large
    MAX_TL_DISPLACEMENT action = ignore         ! Ignore large displacements, only print warnings
@@ -46,7 +46,7 @@ last reference calculation took less than 30 minutes, and to stop otherwise.
    MAX_TL_DISPLACEMENT action = refcalc        ! Perform new reference calculations and continue, no matter how long it takes
 
 **Acceptable values:** One or two positive floats if no flags are given.
-One positive float for flags ``geo`` and ``vib``. 
+One positive float for flags ``geo`` and ``vib``.
 
 Acceptable values for the ``action`` flag are:
 
@@ -54,7 +54,7 @@ Acceptable values for the ``action`` flag are:
 - ``ignore``: Proceed without a new reference calculation. A warning will be printed.
 - ``refcalc``: Perform a reference calculation, then continue with the next block in :ref:`DISPLACEMENTS`. If a second (positive float) value is passed, this is interpreted as a time and compared to the time taken by the previous reference calculation. If the reference calculation took longer than this value, the action will be to ``stop`` instead. Values are interpreted as seconds by default, or as hours or minutes if ``h`` or ``m`` is appended to indicate the unit.
 
-.. note:: 
+.. note::
     If ``MAX_TL_DISPLACEMENT`` is triggered, the ``action`` is ``refcalc`` and
     no reference calculation has so far been performed in the current run, then
     the maximum time will be ignored, and a reference calculation will be

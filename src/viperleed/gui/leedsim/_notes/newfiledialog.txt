@@ -128,7 +128,7 @@ Current behavior of widgets used in NewFileDialog on user edit
 
 	L._on_high_sym_pressed
 		|
-		o--- L.high_sym_pressed --->	
+		o--- L.high_sym_pressed --->
 		|
 		|--> L.lattice.make_high_symmetry
 		|--> L.update_controls_from_lattice
@@ -483,7 +483,7 @@ Bulk lattice parameters, group, shape and B.valid_input are up to date.
 		o--- B.high_sym_pressed --->
 		|		|
 		|		|--> NFD._on_bulk_high_sym_pressed
-		|			 (FOR NOW DOES NOTHING)	
+		|			 (FOR NOW DOES NOTHING)
 		|
 		|--> B.lattice.make_high_symmetry
 		|--> B.update_controls_from_lattice
@@ -529,7 +529,7 @@ Bulk lattice parameters, group, shape and B.valid_input are up to date.
 [SURF]
 	L._on_high_sym_pressed
 		|
-		o--- L.high_sym_pressed --->	
+		o--- L.high_sym_pressed --->
 		|
 		|--> L.lattice.make_high_symmetry
 		|--> L.update_controls_from_lattice
@@ -538,7 +538,3 @@ Bulk lattice parameters, group, shape and B.valid_input are up to date.
 		|      [o--- L.shape_changed ---> ]
 		|
 		o--- L.lattice_parameters_changed --->
-
-
-
-

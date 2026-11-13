@@ -8,7 +8,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -22,9 +22,7 @@ class TestDeltasAg100:
 
     def test_successful_run(self, delta_files_ag100):
         """Check that delta-amplitude calculation exits without errors."""
-        assert not delta_files_ag100.failed
-        assert delta_files_ag100.records is not None
-        assert delta_files_ag100.records.get_last_state_for_section('delta')
+        assert delta_files_ag100.section_ran('delta')
 
     def test_delta_input_written(self, delta_files_ag100):
         """Check that an input file was correctly written."""
@@ -49,6 +47,4 @@ class TestDeltasDomains:
 
     def test_successful_run(self, delta_domains):
         """Check that delta-amplitude calculation exits without errors."""
-        assert not delta_domains.failed
-        assert delta_domains.records is not None
-        assert delta_domains.records.get_last_state_for_section('delta')
+        assert delta_domains.section_ran('delta')

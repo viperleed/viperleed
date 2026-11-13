@@ -36,8 +36,8 @@ Energies are given in Hartree.
 
 For each energy, there is **one block per site and element occupying**
 **that site**, where sites are defined by :ref:`SITEDEF` and
-elements are at least the elements from the :ref:`POSCAR` 
-file, with additional entries if elements were added via 
+elements are at least the elements from the :ref:`POSCAR`
+file, with additional entries if elements were added via
 the :ref:`ELEMENT_MIX` parameter.
 
 In each such block, there is **one floating point value per angular**

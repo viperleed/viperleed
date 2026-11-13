@@ -54,9 +54,9 @@ Further specialized segments include:
    :ref:`delta amplitudes<sec_deltas>` for variations of a single parameter,
    and outputs the |R factor| for every single configuration along that axis.
 -  :ref:`fdoptimization`: Optimizes parameters that are not accessible to
-   |t-LEED|, like :ref:`BEAMINCIDENCE`, :ref:`V0_IMAG`, or unit-cell scaling. 
-   This is achieved by performing multiple full-dynamic (i.e., "reference") 
-   calculations (but without producing Tensor files). The behavior is 
+   |t-LEED|, like :ref:`BEAMINCIDENCE`, :ref:`V0_IMAG`, or unit-cell scaling.
+   This is achieved by performing multiple full-dynamic (i.e., "reference")
+   calculations (but without producing Tensor files). The behavior is
    controlled by the :ref:`OPTIMIZE` parameter.
 
 The pages listed above cover normal operation, in which the theoretical beams

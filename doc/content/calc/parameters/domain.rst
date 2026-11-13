@@ -29,7 +29,7 @@ accepts paths to either directories or to Tensors.zip files.
 Paths can be absolute or relative. When given as a relative path, the directory
 in which |calc| was started is considered first. Then, the temporary
 directory in which calculations are executed (see also :ref:`how_to_run` and
-the ``--work`` :ref:`command-line argument<cli_calc>`) is searched. 
+the ``--work`` :ref:`command-line argument<cli_calc>`) is searched.
 Input files from the different domains will then be compared to determine if a
 new reference calculation is needed. If the source is a Tensors.zip file, the
 input files saved in the .zip archive will be compared.

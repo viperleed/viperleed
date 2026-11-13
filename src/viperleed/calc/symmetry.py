@@ -3,7 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -61,9 +61,9 @@ def getSymPosLists(sl, rp, pointlist, output=False):
                     logger.debug(description+": "
                                  + str(int((i+1)/t)*10)+"%")
             if usepoint[i]:
-                for j in tree.query_ball_point(p, eps,
-                                               eps=approximate)[1:]:
-                    usepoint[j] = False
+                for j in tree.query_ball_point(p, eps, eps=approximate):
+                    if j != i:
+                        usepoint[j] = False
         spl = list(itertools.compress(spl, usepoint))
         return(spl)
 

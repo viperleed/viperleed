@@ -212,7 +212,7 @@ These files are stored in the ``SUPP`` subfolder of the root directory.
 .. todo::
     "manifest" is missing from the above table, but present in the
     toctree below.
-    
+
     delta-input names a generic "PARAM" but I guess this is named differently
     in SUPP. Perhaps would be better to list the files like the others?
 

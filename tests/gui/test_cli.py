@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-27'
 __license__ = 'GPLv3+'
 
@@ -21,6 +21,7 @@ from viperleed.gui.cli import commandline_main
 from viperleed.gui.cli import gui_main
 from viperleed.gui.cli import import_graphics_modules
 from viperleed.gui.detect_graphics import PyQtSanity
+from viperleed.gui.detect_graphics import has_pyqt
 
 _MODULE = 'viperleed.gui.cli'
 
@@ -30,6 +31,8 @@ class TestCheckCanRunGui:
 
     _err_msg = ('Cannot execute the ViPErLEED graphical user '
                 'interface because ')
+    _checking = 'Checking graphics capabilities...'
+    _done = 'Done\n'
     _install = {
         'not found': '',
         'found': 'sudo apt install lib_one lib_two',
@@ -84,14 +87,22 @@ following:
        installed viperleed globally.
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
+    _mock_skip_msg = '''
+If your system has a display, you can start the GUI anyway with
+    viperleed gui --skip-graphics-check'''
     _can_run = {
         'normal gui': (PyQtSanity.OK, ''),
         'no qt': (PyQtSanity.NOT_FOUND, 'PyQt5 is not installed.'),
         'no graphics': (
             PyQtSanity.NO_DISPLAY,
             ('the system appears to have no graphics capability (i.e., '
-             'no monitor was detected). Try once more if this is the first '
-             'time you execute the GUI, or if you just updated viperleed.'),
+             'no monitor was detected).' + _mock_skip_msg),
+            ),
+        'unresponsive': (
+            PyQtSanity.UNRESPONSIVE,
+            ('loading PyQt5 did not complete in time. '
+             'Try once more, or check whether your system is very busy.'
+             + _mock_skip_msg),
             ),
         'import fail': (
             PyQtSanity.IMPORT_ERROR,
@@ -112,7 +123,10 @@ open an issue under https://github.com/viperleed/viperleed/issues.'''
         context = pytest.raises(SystemExit) if err_msg else nullcontext()
         with context:
             cli.check_can_run_gui()
-        stderr = capsys.readouterr().err.strip()
+        captured = capsys.readouterr()
+        # The line ends before any error is printed
+        assert captured.out == self._checking + self._done
+        stderr = captured.err.strip()
         if sanity is PyQtSanity.OK:
             assert not stderr
         else:
@@ -122,6 +136,18 @@ open an issue under https://github.com/viperleed/viperleed/issues.'''
             find_deps.assert_not_called()
         else:
             find_deps.assert_called_once()
+
+    def test_message_before_check(self, mocker, capsys):
+        """Ensure users are told about the check before it starts."""
+        def _check_sanity():
+            # Only the start of the line is out when checking
+            assert capsys.readouterr().out == self._checking
+            return PyQtSanity.OK
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', side_effect=_check_sanity)
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value={})
+        ViPErLEEDGUICLI().check_can_run_gui()
+        assert capsys.readouterr().out == self._done
 
     def test_sanity_invalid(self, mocker):
         """Check that an invalid sanity fails with a KeyError."""
@@ -253,6 +279,7 @@ class TestImportGrpahicsModules:
 
     def test_success(self, mocker):
         """Check expected result of importing modules."""
+        mocker.patch(f'{_MODULE}.has_pyqt', return_value=True)
         mock_import = mocker.patch(f'{_MODULE}.import_module')
         result = import_graphics_modules()
         imported_modules = (
@@ -271,7 +298,12 @@ class TestViPErLEEDGUICLI:
     """Tests for the ViPErLEEDGUICLI class."""
 
     _valid_args = (
-        (['--nogui'], {'nogui': True}),
+        ([], {'nogui': False, 'skip_graphics_check': False}),
+        (['--nogui'], {'nogui': True, 'skip_graphics_check': False}),
+        (['--skip-graphics-check'],
+         {'nogui': False, 'skip_graphics_check': True}),
+        (['--nogui', '--skip-graphics-check'],
+         {'nogui': True, 'skip_graphics_check': True}),
         )
 
     @parametrize('args,attrs', _valid_args)
@@ -282,26 +314,61 @@ class TestViPErLEEDGUICLI:
         for attr_name, attr_value in attrs.items():
             assert getattr(parsed, attr_name) == attr_value
 
-    def test_call_commandline_mode(self, mocker):
+    @fixture(name='mocks')
+    def fixture_mock_calls(self, mocker):
+        """Replace the functions called by ViPErLEEDGUICLI with mocks."""
+        cli = ViPErLEEDGUICLI()
+        mock_check_sanity = mocker.patch(f'{_MODULE}.check_pyqt_sanity')
+        mocks = mocker.MagicMock()  # Also records the order of calls
+        mocks.attach_mock(mocker.patch(f'{_MODULE}.commandline_main'),
+                          'commandline_main')
+        mocks.attach_mock(mocker.patch(f'{_MODULE}.gui_main'), 'gui_main')
+        mocks.attach_mock(mocker.patch.object(cli, 'check_can_run_gui'),
+                          'check_can_run_gui')
+        mocks.attach_mock(mock_check_sanity.assume_ok, 'assume_ok')
+        return cli, mocks
+
+    @parametrize(skip_check=(False, True))
+    def test_call_commandline_mode(self, skip_check, mocks, mocker):
         """Check inner calls when running in command-line mode."""
-        cli = ViPErLEEDGUICLI()
-        mock_cmd = mocker.patch(f'{_MODULE}.commandline_main')
-        mock_parse = mocker.patch.object(cli, 'parse_cli_args')
-        mock_parse.return_value.nogui = True
+        cli, mocks = mocks
+        args = ['--nogui', *(['--skip-graphics-check'] if skip_check else [])]
+        result = cli(args)
+        assert result is mocks.commandline_main.return_value
+        assert mocks.mock_calls == [mocker.call.commandline_main()]
 
-        result = cli([])
-        assert result is mock_cmd.return_value
-        mock_cmd.assert_called_once_with()
-
-    def test_call_gui_mode(self, mocker):
+    def test_call_gui_mode(self, mocks, mocker):
         """Check inner calls when running in GUI mode."""
-        cli = ViPErLEEDGUICLI()
-        mock_cmd = mocker.patch(f'{_MODULE}.gui_main')
-        mock_check_gui = mocker.patch.object(cli, 'check_can_run_gui')
-        mock_parse = mocker.patch.object(cli, 'parse_cli_args')
-        mock_parse.return_value.nogui = False
-
+        cli, mocks = mocks
         result = cli([])
-        assert result is mock_cmd.return_value
-        mock_cmd.assert_called_once_with()
-        mock_check_gui.assert_called_once_with()
+        assert result is mocks.gui_main.return_value
+        assert mocks.mock_calls == [
+            mocker.call.check_can_run_gui(),
+            mocker.call.gui_main(),
+            ]
+
+    def test_call_skip_graphics_check(self, mocks, mocker):
+        """Check inner calls when skipping the check of graphics."""
+        cli, mocks = mocks
+        mock_process = mocker.patch('viperleed.gui.detect_graphics.Process')
+        result = cli(['--skip-graphics-check'])
+        assert result is mocks.gui_main.return_value
+        # Sanity must be assumed before starting the GUI, so
+        # that the GUI does not check it again via has_pyqt
+        assert mocks.mock_calls == [
+            mocker.call.assume_ok(),
+            mocker.call.gui_main(),
+            ]
+        mock_process.assert_not_called()
+
+    def test_skip_check_prevents_later_checks(self, mocker):
+        """Ensure that has_pyqt does not check after skipping the check."""
+        detect_graphics = 'viperleed.gui.detect_graphics'
+        mocker.patch(f'{detect_graphics}.PyQtSanityChecker._status', None)
+        mock_process = mocker.patch(f'{detect_graphics}.Process')
+        mock_gui_main = mocker.patch(f'{_MODULE}.gui_main',
+                                     side_effect=has_pyqt)
+        cli = ViPErLEEDGUICLI()
+        assert cli(['--skip-graphics-check'])
+        mock_gui_main.assert_called_once_with()
+        mock_process.assert_not_called()

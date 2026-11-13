@@ -95,8 +95,8 @@ are performed before the actual calculation starts:
     are collected. They are then compiled **at run time** (compilation
     information saved to :file:`SUPP/compile_logs/compile-search.log`).
     When using early TensErLEED versions (< v1.7.4) the precompiled object
-    files :file:`random_.o` or :file:`MPIrandom_.o` must be available at
-    this stage. More information on compiling these files can be found in
+    file :file:`random_.o` must be available at this stage.
+    More information on compiling this file can be found in
     :ref:`this<mpirandom>` part of the :ref:`installation` section.
 #.  The :ref:`search log file<log_files>` :file:`search-<timestamp>.log` is
     created. It will be filled with progress information as the search

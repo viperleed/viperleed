@@ -253,7 +253,7 @@ optimization to get optimal |x| and |y| for that |z|, then start again with
    </loop>
    </loop>
 
-.. note:: 
+.. note::
     If looped searches are interrupted by :ref:`max_tl_displacement` for
     a reference calculation and then continued, the previous |R factor| to
     compare to will be discarded, as very different values may be obtained. Each

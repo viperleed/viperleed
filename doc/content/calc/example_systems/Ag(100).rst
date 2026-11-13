@@ -217,7 +217,7 @@ above, |calc| has also created files :ref:`ivbeams` and :ref:`vibrocc`
 based on the inputs given in files :file:`EXPBEAMS.csv`, and
 |POSCAR|/|PARAMETERS|, respectively.
 
-As introduced in the :ref:`dir_organization_output` section, and described 
+As introduced in the :ref:`dir_organization_output` section, and described
 in detail on the :ref:`bookkeeper` page, the results of each |calc| run are
 automatically collected into a :file:`history` folder.
 A plain-text :file:`history.info` file contains a summary of information about

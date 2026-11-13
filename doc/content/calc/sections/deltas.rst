@@ -20,7 +20,7 @@ Delta-amplitudes calculation in ViPErLEED
 -----------------------------------------
 
 When a delta calculation is requested, ViPErLEED loads the
-:ref:`tensor files<tensorszip>` and reads the :ref:`DISPLACEMENTS` file. Both 
+:ref:`tensor files<tensorszip>` and reads the :ref:`DISPLACEMENTS` file. Both
 are checked for consistency before proceeding. The :ref:`PHASESHIFTS` file —
 needed to handle chemical substitutions — is also loaded, or generated
 anew if required.
@@ -36,9 +36,9 @@ needed TensErLEED source files to a temporary subfolder of the work directory
 (\ :file:`Delta_Compile_<index>`) and compiles them **at run time**, storing
 the :file:`SUPP/compile_logs/Delta_Compile_<index>.log`
 :ref:`log file<log_files>`.
-The input files (based on the :ref:`DISPLACEMENTS` file and the system 
+The input files (based on the :ref:`DISPLACEMENTS` file and the system
 symmetry) are written in the format expected by TensErLEED. Then
-calculations for each atom are executed independently. Again, the 
+calculations for each atom are executed independently. Again, the
 parameter :ref:`ncores` determines how many processes run in parallel.
 
 Once finished, ViPErLEED packs the resulting :ref:`delta files<deltaszip>`

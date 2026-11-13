@@ -7,7 +7,7 @@ additional 3D symmetry operations for the bulk of their sample.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-05-17'
 __license__ = 'GPLv3+'
 
@@ -359,8 +359,3 @@ class Bulk3DSymDialog(qtw.QDialog):
         if glides:
             txt.append(f"m({', '.join(glides)})")
         return ', '.join(txt)
-
-
-
-
-

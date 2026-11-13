@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
@@ -33,4 +33,3 @@ def test_realspace_wrong_input_types():
         params[key] = dict()
         with pytest.raises((ValueError, TypeError, RuntimeError)):              # TODO: RuntimeError is an awful exception
             RealSpace(params)
-    

@@ -45,16 +45,16 @@ as single layers by cutting at the appropriate heights (using a list and
 restricting cutting by interlayer distance to higher layers in LAYER_CUTS),
 and ``N_BULK_LAYERS = 2``.
 
-By default, as many layers *above* the bulk as are present *within* the bulk 
-are used to determine the bulk repeat vector, see :ref:`BULK_REPEAT`. If not 
-enough bulk-like layers are found, :ref:`BULK_REPEAT` will instead be defined 
-as parallel to the POSCAR |c| vector, using only the |z| position of the 
-bottommost non-bulk atom. See the page on the :ref:`BULK_REPEAT` parameter 
+By default, as many layers *above* the bulk as are present *within* the bulk
+are used to determine the bulk repeat vector, see :ref:`BULK_REPEAT`. If not
+enough bulk-like layers are found, :ref:`BULK_REPEAT` will instead be defined
+as parallel to the POSCAR |c| vector, using only the |z| position of the
+bottommost non-bulk atom. See the page on the :ref:`BULK_REPEAT` parameter
 for more complicated cases.
 
 Correct identification of the bulk layers and bulk repeat vectors can be
 checked by looking at the :ref:`POSCAR_bulk and POSCAR_bulk_appended<POSCAR>`
 files, created during initialization.
 
-**See also**: :ref:`BULK_LIKE_BELOW`, another way to specify which layers of 
+**See also**: :ref:`BULK_LIKE_BELOW`, another way to specify which layers of
 the input file are used as bulk.
