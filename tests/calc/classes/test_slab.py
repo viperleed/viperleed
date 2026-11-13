@@ -16,7 +16,7 @@ from random import shuffle
 
 import numpy as np
 import pytest
-from pytest_cases import fixture, fixture_ref
+from pytest_cases import case, fixture, fixture_ref
 from pytest_cases import parametrize, parametrize_with_cases
 from scipy.spatial.distance import cdist as euclid_distance
 
@@ -1984,11 +1984,44 @@ class TestUnitCellTransforms:
         assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
 
+def _poscar_infos(minimal):
+    """Return the infos of POSCAR slabs with(out) a minimal ab cell."""
+    infos = poscar_slabs.POSCARS_WITH_LITTLE_SYMMETRY_INFO
+    return tuple(info for info in infos
+                 if (info.poscar.n_cells == 1) == minimal)
+
+
+# The next two cases split CasePOSCARSlabs.case_poscar by
+# the number of ab cells in the POSCAR, keeping its case IDs
+@parametrize(info=_poscar_infos(minimal=True),
+             idgen=poscar_slabs.make_poscar_ids())
+@case(id='poscar')
+def case_poscar_minimal_cell(info):
+    """Return a slab with a minimal ab cell, an Rparams and info."""
+    return CasePOSCARSlabs().case_poscar(info)
+
+
+@parametrize(info=_poscar_infos(minimal=False),
+             idgen=poscar_slabs.make_poscar_ids())
+@case(id='poscar', tags=Tag.NON_MINIMAL_CELL)
+def case_poscar_non_minimal_cell(info):
+    """Return a slab with a non-minimal ab cell, an Rparams and info."""
+    return CasePOSCARSlabs().case_poscar(info)
+
+
+def _is_minimal_cell_case(case_func):
+    """Return whether case_func gives only slabs with a minimal ab cell."""
+    return (exclude_tags(Tag.NON_MINIMAL_CELL, Tag.NO_INFO)(case_func)
+            and case_func.__name__ != 'case_poscar')
+
+
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
-    @parametrize_with_cases('args', cases=poscar_slabs,
-                            has_tag=Tag.NON_MINIMAL_CELL)
+    _non_minimal = {'cases': (poscar_slabs, case_poscar_non_minimal_cell),
+                    'has_tag': Tag.NON_MINIMAL_CELL}
+
+    @parametrize_with_cases('args', **_non_minimal)
     def test_ab_cell_minimization(self, args):
         """Check correct identification of minimal ab cell (by area)."""
         slab, rpars, info = args
@@ -1996,7 +2029,21 @@ class TestUnitCellReduction:
         ab_small = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
                                             rpars.SYMMETRY_EPS.z)
         area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
-        assert area_ratio == pytest.approx(info.poscar.n_cells)
+        assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization_subcell(self, args):
+        """Check that the minimal ab cell gives a valid subcell.
+
+        This is what INITIALIZATION does when the POSCAR
+        cell is not minimal (to write POSCAR_mincell).
+        """
+        slab, rpars, info = args
+        mincell = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                           rpars.SYMMETRY_EPS.z)
+        transform = slab.ab_cell.T.dot(np.linalg.inv(mincell)).round()
+        subcell = slab.make_subcell(rpars, transform)
+        assert subcell.n_atoms * info.poscar.n_cells == slab.n_atoms
 
     # Position noise much smaller than SYMMETRY_EPS, as for
     # structures coming from DFT or other programs (Angstrom)
@@ -2013,14 +2060,7 @@ class TestUnitCellReduction:
             atom.cartpos[:2] += noise * direction
         slab.update_fractional_from_cartesian()
 
-    _noise_bug = pytest.mark.xfail(
-        reason='Area ratio checked with a fixed 1e-6 tolerance',
-        strict=True,
-        )
-
-    @_noise_bug
-    @parametrize_with_cases('args', cases=poscar_slabs,
-                            has_tag=Tag.NON_MINIMAL_CELL)
+    @parametrize_with_cases('args', **_non_minimal)
     def test_ab_cell_minimization_noisy(self, args, draws):
         """Check that small position noise does not hinder reduction."""
         slab, rpars, info = args
@@ -2036,7 +2076,6 @@ class TestUnitCellReduction:
 
         check_draws(draws, _check)
 
-    @_noise_bug
     @parametrize('eps,noise', (
         (0.1, 1e-5),
         (0.1, 3e-4),
@@ -2096,9 +2135,49 @@ class TestUnitCellReduction:
 
         check_draws(draws, _check)
 
-    _minimal = {'cases': poscar_slabs,
-                'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
-                                       Tag.NO_INFO)}
+    @parametrize('candidate,n_atoms,eps,smaller', (
+        ((2.0, 0.0), 10, 0.1, False),  # Area ratio 2.5
+        ((2.3, 0.0), 10, 0.1, False),  # Ratio 2.17, > r/(2*n_atoms) off
+        ((2.5, 0.0), 10, 0.1, True),   # Area ratio 2
+        # Ratio 3.8: within r/(2*n_atoms), not within 1/(2*n_atoms)
+        ((5/3.8, 0.0), 4, 0.1, True),
+        # Ratio 2 is accepted for errors up to ~1.5*eps along a'
+        ((2.51, 0.0), 4, 0.01, True),
+        ((2.52, 0.0), 4, 0.01, False),
+        ((2.501, 0.0), 4, 0.001, True),
+        ((2.502, 0.0), 4, 0.001, False),
+        # Ratio 4.003 > n_atoms, area below A/n_atoms by over eps**2
+        ((1.249, 0.0), 4, 0.001, True),
+        # Ratios 4.9 and 6.3 round to more than n_atoms
+        ((5/4.9, 0.0), 4, 0.1, False),
+        ((5/6.3, 0.0), 4, 0.1, False),
+        ((5/1.02, 0.0), 4, 0.1, False),  # Ratio 1.02, not a reduction
+        ))
+    def test_minimize_ab_area_integer_ratio(self, candidate, n_atoms, eps,
+                                            smaller):
+        """Check that only cells with integer area ratios are kept."""
+        ab_cell = np.array([[5.0, 0.0], [0.0, 5.0]])
+        # pylint: disable-next=protected-access
+        reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms,
+                                            [np.array(candidate)], eps)
+        assert reduced is smaller
+
+    def test_minimize_ab_area_long_vectors(self):
+        """Check that long candidates do not pass a non-integer ratio.
+
+        For long candidate vectors and a large eps, the area tolerance
+        alone would accept area ratios far from an integer.
+        """
+        ab_cell = np.array([[10.0, 0.0], [0.0, 10.0]])
+        candidates = [np.array([100.0, 1.04])]
+        n_atoms, eps = 20, 5.0
+        # Area ratio 9.62, more than r/(2*n_atoms) off
+        # pylint: disable-next=protected-access
+        reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms, candidates, eps)
+        assert not reduced
+
+    _minimal = {'cases': (poscar_slabs, case_poscar_minimal_cell),
+                'filter': _is_minimal_cell_case}
 
     @parametrize_with_cases('args', **_minimal)
     def test_ab_cell_already_minimal(self, args):
