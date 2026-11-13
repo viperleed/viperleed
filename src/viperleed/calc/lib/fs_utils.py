@@ -7,7 +7,7 @@ functions available in the shutil standard-library module.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-03-11'
 __license__ = 'GPLv3+'
 
@@ -20,7 +20,7 @@ PY38 = 3, 8
 PY39 = 3, 9
 
 
-def copytree_exists_ok(source, destination):
+def copytree_exists_ok(source, destination, ignore=None):
     """Copy the whole tree at the `source` directory to `destination`.
 
     This is a wrapper around the shutil.copytree function that
@@ -34,6 +34,15 @@ def copytree_exists_ok(source, destination):
     destination : Path
         Path to the directory that will mirror source and its contents.
         It is created if it does not exist yet.
+    ignore : callable, optional
+        Same meaning as in shutil.copytree. Called as
+        ``ignore(directory, names)`` for each visited directory,
+        with `directory` a str and `names` the list of its entries.
+        It must return the names that are not to be copied.
+        Default is None, i.e., nothing is ignored.
+
+        .. versionchanged:: 0.15.0
+            Added the `ignore` parameter.
 
     Returns
     -------
@@ -42,7 +51,8 @@ def copytree_exists_ok(source, destination):
     if sys.version_info >= PY38:
         # dirs_exist_ok was introduced in python 3.8:
         # https://docs.python.org/3/library/shutil.html#shutil.copytree
-        shutil.copytree(source, destination, dirs_exist_ok=True)
+        shutil.copytree(source, destination, dirs_exist_ok=True,
+                        ignore=ignore)
         return
     # For earlier python versions, we need to do things manually. We
     # use a simplified version of the implementation of copytree from
@@ -54,10 +64,16 @@ def copytree_exists_ok(source, destination):
             f'[Errno 2] No such file or directory \'{source}\''
             )
     destination.mkdir(parents=True, exist_ok=True)
-    for srcentry in source.glob('*'):
+    entries = list(source.glob('*'))
+    ignored = set()
+    if ignore is not None:
+        ignored = set(ignore(str(source), [e.name for e in entries]))
+    for srcentry in entries:
+        if srcentry.name in ignored:
+            continue
         dstentry = destination / srcentry.name
         if srcentry.is_dir():
-            copytree_exists_ok(srcentry, dstentry)
+            copytree_exists_ok(srcentry, dstentry, ignore=ignore)
         else:  # file
             shutil.copy2(srcentry, dstentry)
     shutil.copystat(source, destination)
