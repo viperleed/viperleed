@@ -79,15 +79,13 @@ def _synthetic_exp_beams():
     return beams
 
 
-def _write_search_inputs(prepared, *, max_gen=None, crandom=False):
+def _write_search_inputs(prepared, *, crandom=False):
     """Write the search inputs of PreparedDeltas, return the folder.
 
     Parameters
     ----------
     prepared : PreparedDeltas
         The prepared delta inputs.
-    max_gen : int, optional
-        Value for SEARCH_MAX_GEN. Default is None, i.e., leave it.
     crandom : bool, optional
         Whether to keep the default population and 'crandom' start,
         with seeded random numbers. Default is False, i.e., pin both.
@@ -98,8 +96,6 @@ def _write_search_inputs(prepared, *, max_gen=None, crandom=False):
         Where the files were written.
     """
     rpars = prepared.rpars
-    if max_gen:
-        rpars.SEARCH_MAX_GEN = max_gen
     parts = [(prepared.slab, prepared.folder)]
     parts.extend((d.slab, d.workdir) for d in rpars.domainParams)
     for slab, folder in parts:
@@ -157,7 +153,8 @@ def test_max_generations_limited(group, prepared_deltas):
     """Check that too many generations are cut to what fits."""
     case, displacements = VARIANTS['ag100_z']
     prepared = prepared_deltas(case, group, displacements)
-    folder = _write_search_inputs(prepared, max_gen=HUGE_MAX_GEN)
+    prepared.rpars.SEARCH_MAX_GEN = HUGE_MAX_GEN
+    folder = _write_search_inputs(prepared)
     lines = (folder / 'search.steu').read_text(encoding='utf-8').splitlines()
     generations = next(line for line in lines if MAX_GEN_LINE in line)
     expected = MAX_GEN_WRITTEN[reference_group(group)]

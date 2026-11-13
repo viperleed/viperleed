@@ -196,15 +196,18 @@ class PreparedDeltas:
         registered in the `current_deltas` of its atoms.
     rpars : Rparams
         The (main) run parameters.
-    tasks : tuple
-        The (compile tasks, run tasks) of the delta calculation.
+    compile_tasks : Sequence
+        The tasks that compile the delta executables.
+    run_tasks : Sequence
+        The tasks that run the delta executables.
     """
 
     folder: object
     folders: dict
     slab: object
     rpars: object
-    tasks: tuple
+    compile_tasks: object
+    run_tasks: object
 
 
 @dataclass
@@ -448,5 +451,5 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
                 deltas._prepare_deltas_for_one_domain(slab, rpars)
                 )
             # pylint: enable=protected-access
-        return PreparedDeltas(folder, folders, slab, rpars, tasks)
+        return PreparedDeltas(folder, folders, slab, rpars, *tasks)
     return _prepare

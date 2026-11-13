@@ -94,7 +94,7 @@ def factory_delta_folders(prepared_deltas):
     def _write(group, variant):
         case, displacements = VARIANTS[variant]
         prepared = prepared_deltas(case, group, displacements)
-        written = _param_files(prepared.tasks[0])
+        written = _param_files(prepared.compile_tasks)
         return prepared, {p.name for p in written}
     return _write
 
@@ -132,7 +132,7 @@ def fixture_written_param_names(group, variant, delta_folders):
 def fixture_run_tasks(group, variant, delta_folders):
     """Return the delta-run tasks of a variant."""
     prepared, _ = delta_folders(group, variant)
-    return prepared.tasks[1]
+    return prepared.run_tasks
 
 
 def _read_with_newline(path):
