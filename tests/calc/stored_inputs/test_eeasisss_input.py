@@ -28,7 +28,6 @@ from ...helpers import PSGEN_SEED
 from ...helpers import private_random
 from ..poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 from .conftest import SYSTEM_NAME
-from .conftest import pin_clock
 
 INPUT_NAME = 'eeasisss-input'
 
@@ -59,10 +58,8 @@ def fixture_stub_tree(tmp_path):
 
 
 @fixture(name='written_input')
-def fixture_written_input(stub_tree, tmp_path, mocker, monkeypatch):
+def fixture_written_input(stub_tree, tmp_path, mocker):
     """Return a function that writes the eeasisss input for a slab."""
-    pin_clock(monkeypatch)
-
     def _write(slab, rpars):
         rpars.paths.tensorleed = stub_tree
         rpars.systemName = SYSTEM_NAME

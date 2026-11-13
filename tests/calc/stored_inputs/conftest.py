@@ -9,6 +9,9 @@ the writers on the slabs and Rparams of the case.
 
 Fixtures
 --------
+pinned_clock (autouse)
+    Pin the time seen by viperleed.calc.lib.time_utils, so that the
+    timestamps written to the inputs are reproducible.
 group
     Run of the tests, i.e., a version group (or a version of it)
     (parametrized).
@@ -235,6 +238,22 @@ class CaseState:
     main: tuple = ()
 
 
+@fixture(autouse=True, name='pinned_clock')
+def fixture_pinned_clock(mocker):
+    """Make viperleed.calc.lib.time_utils see a fixed time (PINNED_TIME).
+
+    The session-scoped factories run inside tests, hence they, too,
+    see the pinned clock.
+    """
+    mocker.patch.object(
+        time_utils,
+        'time',
+        SimpleNamespace(strftime=time.strftime,
+                        localtime=lambda *_: PINNED_TIME,
+                        gmtime=lambda *_: PINNED_TIME),
+        )
+
+
 @fixture(name='group')
 @parametrize(run=tuple(GROUPS), ids=[f'group={run}' for run in GROUPS])
 def fixture_group(run):
@@ -313,17 +332,6 @@ def _prepare_folder(folder, spec, data_path):
         shutil.copy2(data_path / extra_source, folder / destination)
 
 
-def pin_clock(patcher):
-    """Make viperleed.calc.lib.time_utils see a fixed time."""
-    patcher.setattr(
-        time_utils,
-        'time',
-        SimpleNamespace(strftime=time.strftime,
-                        localtime=lambda *_: PINNED_TIME,
-                        gmtime=lambda *_: PINNED_TIME),
-        )
-
-
 def _init_stored_case(case, tmp, tree, tl_version, data_path):
     """Run an INITIALIZATION on the stored inputs of `case`."""
     spec = STORED_CASES[case]
@@ -333,7 +341,6 @@ def _init_stored_case(case, tmp, tree, tl_version, data_path):
     _prepare_folder(work, spec, data_path)
     captured = {}
     with pytest.MonkeyPatch.context() as patcher:
-        pin_clock(patcher)
         _record_and_keep_files(patcher, captured)
         with execute_in_dir(work):
             failed, _ = run_calc(
@@ -394,9 +401,7 @@ def _init_preset_case(case, tmp, tree, tl_version, data_path):
     rpars.paths.tensorleed = tree
     rpars.TL_VERSION = Version(tl_version)
     rpars.systemName = SYSTEM_NAME
-    with pytest.MonkeyPatch.context() as patcher:
-        pin_clock(patcher)
-        rpars.timestamp = DateTimeFormat.FILE_SUFFIX.now()
+    rpars.timestamp = DateTimeFormat.FILE_SUFFIX.now()
     rpars.N_CORES = N_CORES
     rpars.THEO_ENERGIES = TheoEnergies(*THEO_ENERGIES)
     with execute_in_dir(work):
