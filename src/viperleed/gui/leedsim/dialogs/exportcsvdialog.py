@@ -13,9 +13,9 @@ __license__ = 'GPLv3+'
 from quicktions import Fraction
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.widgets.lib import AllGUIFonts
 from viperleed.gui.widgets.lib import get_all_children_widgets
@@ -30,9 +30,10 @@ class ExportCSVDialog(qtw.QDialog):
         _ = leed.n_domains  # Raise AttributeError for wrong type
         super().__init__(parent)
         self.leed = leed
-        self.setWindowModality(qtc.Qt.WindowModal)
+        self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowCloseButtonHint  # disable close button
+        # Disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint
         self.setWindowFlags(flags)
         self.setWindowTitle('Select export data')
 
@@ -78,7 +79,8 @@ class ExportCSVDialog(qtw.QDialog):
         self.cancelBut = qtw.QPushButton('Cancel')
         for but in [self.doneBut, self.cancelBut]:
             but.setFont(font)
-            but.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Fixed)
         butsLay = qtw.QHBoxLayout()
         butsLay.addStretch(1)
         butsLay.addWidget(self.doneBut)
@@ -90,9 +92,11 @@ class ExportCSVDialog(qtw.QDialog):
             tick.setFont(font)
             tick.setText('Dom. %d' % (dom + 1))
             p = tick.palette()  # for coloring text the same as the domains
-            p.setColor(qtg.QPalette.WindowText, qtg.QColor.fromRgbF(*color))
+            p.setColor(qtg.QPalette.ColorRole.WindowText,
+                       qtg.QColor.fromRgbF(*color))
             tick.setPalette(p)
-            tick.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            tick.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
             tick.hide()
 
         # and arrange them in a QGridLayout, in a similar manner as the

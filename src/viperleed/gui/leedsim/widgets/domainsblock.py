@@ -7,12 +7,12 @@ symmetry-induced domains.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.leedsim.widgets.matricespopup import MatricesPopup
 from viperleed.gui.leedsim.widgets.togglebutton import ToggleButton
@@ -30,7 +30,8 @@ class DomsBlock(qtw.QWidget):
 
         # The next line is useful only if I ever want to place this in a
         # layout
-        self.setSizePolicy(qtw.QSizePolicy.Minimum, qtw.QSizePolicy.Minimum)
+        self.setSizePolicy(qtw.QSizePolicy.Policy.Minimum,
+                           qtw.QSizePolicy.Policy.Minimum)
         self.text = qtw.QLabel('\u2014 inequivalent domain(s)')
         self.toggle = ToggleButton(self.toggleText[self.hide])
 
@@ -55,13 +56,16 @@ class DomsBlock(qtw.QWidget):
         self.toggle.setFont(AllGUIFonts().buttonFont)
 
         #set sizes
-        self.toggle.setSizePolicy(qtw.QSizePolicy.Minimum,
-                                  qtw.QSizePolicy.Minimum)
+        self.toggle.setSizePolicy(qtw.QSizePolicy.Policy.Minimum,
+                                  qtw.QSizePolicy.Policy.Minimum)
         self.toggle.adjustSize()
 
-        self.text.setAlignment(qtc.Qt.AlignRight | qtc.Qt.AlignBaseline)
-        self.text.setSizePolicy(qtw.QSizePolicy.Expanding,
-                                qtw.QSizePolicy.Minimum)
+        self.text.setAlignment(
+            qtc.Qt.AlignmentFlag.AlignRight
+            | qtc.Qt.AlignmentFlag.AlignBaseline
+            )
+        self.text.setSizePolicy(qtw.QSizePolicy.Policy.Expanding,
+                                qtw.QSizePolicy.Policy.Minimum)
         self.text.adjustSize()
         self.text.setMinimumSize(self.text.size())
         self.toggle.setMinimumSize(self.toggle.size())
@@ -76,7 +80,11 @@ class DomsBlock(qtw.QWidget):
         lay.addWidget(self.toggle)
         lay.addStretch(1)
         lay.setAlignment(self.text, self.text.alignment())
-        lay.setAlignment(self.toggle, qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+        lay.setAlignment(
+            self.toggle,
+            qtc.Qt.AlignmentFlag.AlignRight
+            | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
 
         self.setLayout(lay)
 

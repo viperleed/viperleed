@@ -10,7 +10,7 @@ base
     Qt-independent functions used in multiple spots in the GUI.
     Defines also the API use by calc for listing equivalent beams.
 basewidgets
-    Basic Qt widgets used in other parts of the GUI. Requires PyQt5.
+    Basic Qt widgets used in other parts of the GUI. Requires Qt.
 cli
     The startup functionality for invoking the GUI in graphical
     or command-line mode.
@@ -33,10 +33,10 @@ mpl_graphics
     plotting engine.
 pluginsbase
     Base functionality for any of the functional modules available
-    in the graphical user interface. Requires PyQt5.
+    in the graphical user interface. Requires Qt.
 selecplugin
     The main window of the GUI, allowing interactive selection of
-    which part of the GUI to use. Requires PyQt5.
+    which part of the GUI to use. Requires Qt.
 
 Packages
 --------
@@ -48,7 +48,7 @@ leedsim
 measure
     The LEED-IV measurement plugin.
 widgets
-    Custom widgets and widget-related functionality. Requires PyQt5.
+    Custom widgets and widget-related functionality. Requires Qt.
 
 Non-python data
 ---------------
@@ -61,6 +61,6 @@ icons
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-10'
 __license__ = 'GPLv3+'

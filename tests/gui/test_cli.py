@@ -22,12 +22,22 @@ from viperleed.gui.cli import gui_main
 from viperleed.gui.cli import import_graphics_modules
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
+from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import PYQT6
+from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 
 _MODULE = 'viperleed.gui.cli'
+_QT_COMPAT = 'viperleed.gui.qt_compat'
 
 
 class TestCheckCanRunGui:
     """Tests for the check_can_run_gui method of ViPErLEEDGUICLI."""
+
+    @fixture(autouse=True)
+    def fake_candidates(self, mocker):
+        """Look for both bindings, independently of the environment."""
+        mocker.patch(f'{_MODULE}.get_candidates',
+                     return_value=(PYQT6, PYQT5))
 
     _err_msg = ('Cannot execute the ViPErLEED graphical user '
                 'interface because ')
@@ -50,7 +60,7 @@ class TestCheckCanRunGui:
             return_value=missing_dict,
             )
         mock_find_install = mocker.patch(
-            f'{_MODULE}.Qt5DependencyFinder.find_install_for_libs',
+            f'{_MODULE}.QtDependencyFinder.find_install_for_libs',
             return_value=install,
             )
 
@@ -65,7 +75,7 @@ class TestCheckCanRunGui:
         mock_find_install.assert_called_once_with(missing)
 
         expect_err = self._err_msg + '''\
-the following PyQt5 dependencies are missing on your system:
+the following Qt dependencies are missing on your system:
     dep_one
     dep_two
     dep_three
@@ -92,7 +102,8 @@ If your system has a display, you can start the GUI anyway with
     viperleed gui --skip-graphics-check'''
     _can_run = {
         'normal gui': (PyQtSanity.OK, ''),
-        'no qt': (PyQtSanity.NOT_FOUND, 'PyQt5 is not installed.'),
+        'no qt': (PyQtSanity.NOT_FOUND,
+                  'no Qt binding is installed (looked for PyQt6 or PyQt5).'),
         'no graphics': (
             PyQtSanity.NO_DISPLAY,
             ('the system appears to have no graphics capability (i.e., '
@@ -100,17 +111,19 @@ If your system has a display, you can start the GUI anyway with
             ),
         'unresponsive': (
             PyQtSanity.UNRESPONSIVE,
-            ('loading PyQt5 did not complete in time. '
+            ('loading Qt (PyQt6 or PyQt5) did not complete in time. '
              'Try once more, or check whether your system is very busy.'
              + _mock_skip_msg),
             ),
         'import fail': (
             PyQtSanity.IMPORT_ERROR,
-            'PyQt5 was found, but it could not be loaded.' + _mock_abi_msg,
+            ('a Qt binding (PyQt6 or PyQt5) was found, but it could not '
+             'be loaded.' + _mock_abi_msg),
             ),
         'runtime crash': (
             PyQtSanity.RUNTIME_CRASH,
-            'PyQt5 was found, but the GUI crashed at startup.' + _mock_abi_msg,
+            ('a Qt binding (PyQt6 or PyQt5) was found, but the GUI '
+             'crashed at startup.' + _mock_abi_msg),
             ),
         }
 
@@ -136,6 +149,30 @@ If your system has a display, you can start the GUI anyway with
             find_deps.assert_not_called()
         else:
             find_deps.assert_called_once()
+
+    def test_requested_binding(self, mocker, capsys):
+        """Check that only a binding requested via QT_API is named."""
+        mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT5,))
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     return_value=PyQtSanity.NOT_FOUND)
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        assert stderr.endswith('no Qt binding is installed (looked for '
+                               'PyQt5).')
+
+    def test_invalid_qt_api(self, mocker, capsys):
+        """Check complaints when QT_API has an invalid value."""
+        msg = 'Unsupported value for QT_API'
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     side_effect=QtBindingNotFoundError(msg))
+        find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        captured = capsys.readouterr()
+        assert captured.out == self._checking + self._done
+        assert captured.err.strip().endswith(self._err_msg + msg)
+        find_deps.assert_not_called()
 
     def test_message_before_check(self, mocker, capsys):
         """Ensure users are told about the check before it starts."""
@@ -220,10 +257,10 @@ class TestGuiMain:
         qapp = mocks['app']
         selector = mocks['select']
         result = gui_main()
-        assert result is qapp.exec_.return_value
+        assert result is qapp.exec.return_value
 
         # Check important calls
-        qapp.exec_.assert_called_once_with()
+        qapp.exec.assert_called_once_with()
         selector.show.assert_called_once_with()
 
         # Check also printing
@@ -242,16 +279,23 @@ class TestGuiMain:
             mocker.call(str(base_path/'cmunrm.otf')),
             ]
 
-    def test_high_dpi_set(self, mocks, mocker):
-        """Ensure that the application is set to support high-DPI screens."""
+    @parametrize(binding=(PYQT5, PYQT6))
+    def test_high_dpi_set(self, binding, mocks, mocker):
+        """Ensure that the application is set to support high-DPI screens.
+
+        Only with PyQt5. Qt 6 always supports them, and does not have
+        the corresponding application attributes any longer.
+        """
+        mocker.patch(f'{_MODULE}.get_binding', return_value=binding)
         gui_main()
-        qtc = mocks['qtc']
+        attribute = mocks['qtc'].Qt.ApplicationAttribute
         qapp = mocks['qtg'].QGuiApplication
         set_high_dpi = qapp.setAttribute
-        assert set_high_dpi.mock_calls == [
-            mocker.call(qtc.Qt.AA_EnableHighDpiScaling),
-            mocker.call(qtc.Qt.AA_UseHighDpiPixmaps),
-            ]
+        expect_calls = [
+            mocker.call(attribute.AA_EnableHighDpiScaling),
+            mocker.call(attribute.AA_UseHighDpiPixmaps),
+            ] if binding == PYQT5 else []
+        assert set_high_dpi.mock_calls == expect_calls
 
     def test_icon_set(self, mocks):
         """Ensure that the application icon was set."""
@@ -284,9 +328,9 @@ class TestImportGrpahicsModules:
         result = import_graphics_modules()
         imported_modules = (
             'viperleed.gui.selectplugin',
-            'PyQt5.QtCore',
-            'PyQt5.QtGui',
-            'PyQt5.QtWidgets',
+            f'{_QT_COMPAT}.QtCore',
+            f'{_QT_COMPAT}.QtGui',
+            f'{_QT_COMPAT}.QtWidgets',
             )
         assert mock_import.mock_calls == [mocker.call(m)
                                           for m in imported_modules]

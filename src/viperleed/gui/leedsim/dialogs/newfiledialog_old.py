@@ -7,16 +7,16 @@ and surface periodicities and space groups.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 import re
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.classes.planegroup import _KNOWN_GROUPS
 from viperleed.gui.classes.lattice2d import Lattice2D as Lattice
@@ -36,9 +36,9 @@ class NewFileDialog(qtw.QDialog):
         # parameters
         #super(NewFileDialog, self).__init__(parent)
         super().__init__(parent)
-        self.setWindowModality(qtc.Qt.WindowModal)
+        self.setWindowModality(qtc.Qt.WindowModality.WindowModal)
         flags = self.windowFlags()
-        flags &= ~qtc.Qt.WindowCloseButtonHint #disable close button
+        flags &= ~qtc.Qt.WindowType.WindowCloseButtonHint #disable close button
         self.setWindowFlags(flags)
         self.setWindowTitle('Create new LEED input')
 
@@ -109,8 +109,8 @@ class NewFileDialog(qtw.QDialog):
             combo.setFont(smallText)
             combo.addItems(['Oblique', 'Rectangular', 'Square',
                             'Rhombic', 'Hexagonal'])
-            combo.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                qtw.QSizePolicy.Preferred)
+            combo.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                qtw.QSizePolicy.Policy.Preferred)
             combo.adjustSize()
         allWidgs.extend([self.bulkShape, self.surfShape])
 
@@ -138,7 +138,8 @@ class NewFileDialog(qtw.QDialog):
         lattParBoxes = [*self.bulkParams, *self.surfParams]
         for tbox in lattParBoxes:
             tbox.setFont(labFont)
-            tbox.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+            tbox.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Fixed)
             tbox.setMaximumWidth(self.bulkShape.width())
 
         allWidgs.extend([*lattLabels, *lattParBoxes])
@@ -150,8 +151,8 @@ class NewFileDialog(qtw.QDialog):
         self.surfGroup = qtw.QComboBox()
         for combo in [self.bulkGroup, self.surfGroup]:
             combo.setFont(smallText)
-            combo.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                qtw.QSizePolicy.Preferred)
+            combo.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                qtw.QSizePolicy.Policy.Preferred)
             combo.setMinimumWidth(self.aB.width())
 
         allWidgs.extend([self.bulkGroup, self.surfGroup])
@@ -159,8 +160,8 @@ class NewFileDialog(qtw.QDialog):
         # Button to input extra symmetry operations for bulk
         self.bulk_3d_sym = qtw.QPushButton('Extra bulk\nsymmetry')
         self.bulk_3d_sym.setFont(AllGUIFonts().buttonFont)
-        self.bulk_3d_sym.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                           qtw.QSizePolicy.Preferred)
+        self.bulk_3d_sym.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                           qtw.QSizePolicy.Policy.Preferred)
         self.bulk_3d_sym.setMinimumWidth(self.aB.width())
         allWidgs.append(self.bulk_3d_sym)
 
@@ -170,7 +171,8 @@ class NewFileDialog(qtw.QDialog):
         self.highSymBut = qtw.QPushButton('Reduce to higher symmetry')
         for widg in [self.highSymTxt, self.highSymBut]:
             widg.setFont(smallText)
-            widg.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            widg.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
         _min_width = round(self.highSymBut.width()*0.4)
         self.highSymBut.setMinimumWidth(_min_width)
         self.highSymTxt.setMinimumWidth(_min_width)
@@ -180,14 +182,19 @@ class NewFileDialog(qtw.QDialog):
         superstructLab.setFont(labFont)
         woodsLab = qtw.QLabel("Wood's:")
         woodsLab.setFont(smallText)
-        woodsLab.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+        woodsLab.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
         self.woods = qtw.QComboBox()
         self.woods.setEditable(True)
-        self.woods.setInsertPolicy(qtw.QComboBox.InsertAlphabetically)
+        self.woods.setInsertPolicy(
+            qtw.QComboBox.InsertPolicy.InsertAlphabetically
+            )
         self.woods.setFont(smallText)
-        self.woods.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                 qtw.QSizePolicy.Preferred)
-        self.woods.setSizeAdjustPolicy(qtw.QComboBox.AdjustToContents)
+        self.woods.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                 qtw.QSizePolicy.Policy.Preferred)
+        self.woods.setSizeAdjustPolicy(
+            qtw.QComboBox.SizeAdjustPolicy.AdjustToContents
+            )
         self.woods.setMinimumContentsLength(12)
 
         superlatticeLab = qtw.QLabel('M = ')
@@ -204,7 +211,8 @@ class NewFileDialog(qtw.QDialog):
         for mij in self.superlattice.ravel():
             mij.setFont(labFont)
             mij.setMaximumWidth(35)
-            mij.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            mij.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Preferred)
             mij.setValidator(intValidator)
 
         allWidgs.extend([superstructLab, self.woods, superlatticeLab,
@@ -214,7 +222,8 @@ class NewFileDialog(qtw.QDialog):
         emaxLab = qtw.QLabel('Max. Energy:')
         self.eMax = qtw.QLineEdit()
         for ctrl in [emaxLab, self.eMax]:
-            ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                               qtw.QSizePolicy.Policy.Preferred)
             ctrl.setFont(labFont)
         self.eMax.setMaximumWidth(70)
         allWidgs.extend([emaxLab,self.eMax])
@@ -224,7 +233,8 @@ class NewFileDialog(qtw.QDialog):
         self.cancelBut = qtw.QPushButton('&Cancel')
         for but in [self.doneBut, self.cancelBut]:
             but.setFont(AllGUIFonts().buttonFont)
-            but.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Preferred)
         allWidgs.extend([self.doneBut, self.cancelBut])
 
         # status bar
@@ -238,7 +248,7 @@ class NewFileDialog(qtw.QDialog):
         lattsLay = qtw.QGridLayout()
         lattsLay.setSpacing(5)
         lattsLay.setContentsMargins(5, 5, 5, 5)  # left, top, right, bottom
-        lattsLay.setSizeConstraint(qtw.QLayout.SetFixedSize)
+        lattsLay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
         lattsLay.addWidget(lattInputLabel, 0, 1, 1, 2)
         lattsLay.addWidget(self.bulkInput, 1, 1, 1, 1)
         lattsLay.addWidget(self.surfInput, 1, 2, 1, 1)
@@ -269,9 +279,13 @@ class NewFileDialog(qtw.QDialog):
         lattsLay.addLayout(hSymLay, 8, 0, 1, 3)
 
         for lab in [lattInputLabel, self.bulkInput, self.surfInput]:
-            lattsLay.setAlignment(lab, qtc.Qt.AlignCenter)
+            lattsLay.setAlignment(lab, qtc.Qt.AlignmentFlag.AlignCenter)
         for lab in [*lattLabels, groupLab]:
-            lattsLay.setAlignment(lab, qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+            lattsLay.setAlignment(
+                lab,
+                qtc.Qt.AlignmentFlag.AlignRight
+                | qtc.Qt.AlignmentFlag.AlignVCenter
+                )
 
         matrixLay = qtw.QGridLayout()
         matrixLay.setSpacing(2)
@@ -284,7 +298,7 @@ class NewFileDialog(qtw.QDialog):
         outerMatrixLay.addLayout(matrixLay)
         outerMatrixLay.addWidget(superlatticeRightP)
         for txt in [superlatticeLab, superlatticeLeftP, superlatticeRightP]:
-            outerMatrixLay.setAlignment(txt, qtc.Qt.AlignCenter)
+            outerMatrixLay.setAlignment(txt, qtc.Qt.AlignmentFlag.AlignCenter)
         outerMatrixLay.addStretch(1)
 
         woodsLay = qtw.QHBoxLayout()
@@ -304,7 +318,11 @@ class NewFileDialog(qtw.QDialog):
         eLay.addWidget(emaxLab)
         eLay.addWidget(self.eMax)
         eLay.addStretch(1)
-        eLay.setAlignment(emaxLab, qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+        eLay.setAlignment(
+            emaxLab,
+            qtc.Qt.AlignmentFlag.AlignRight
+            | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
 
         botButsLay = qtw.QHBoxLayout()
         botButsLay.addWidget(self.sBar)
@@ -324,8 +342,11 @@ class NewFileDialog(qtw.QDialog):
         diagLay.addLayout(eLay, 1, 2, 1, 1)
         diagLay.addLayout(botButsLay, 2, 0, 1, 3)
         diagLay.setColumnMinimumWidth(1, 15)
-        diagLay.setAlignment(eLay, qtc.Qt.AlignLeft | qtc.Qt.AlignVCenter)
-        diagLay.setSizeConstraint(qtw.QLayout.SetFixedSize)
+        diagLay.setAlignment(
+            eLay,
+            qtc.Qt.AlignmentFlag.AlignLeft | qtc.Qt.AlignmentFlag.AlignVCenter
+            )
+        diagLay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
 
         self.setLayout(diagLay)
 
@@ -445,7 +466,7 @@ class NewFileDialog(qtw.QDialog):
             newEl = self.superlattice[0, 0].text()
         #--- check that the input is an integer ---#
         v = self.superlattice[0, 0].validator()
-        valid = v.validate(newEl, 1)[0] == qtg.QValidator.Acceptable
+        valid = v.validate(newEl, 1)[0] == qtg.QValidator.State.Acceptable
 
         if valid: # update
             texts = [el.text() for el in self.superlattice.ravel()]
@@ -516,7 +537,7 @@ class NewFileDialog(qtw.QDialog):
 
     def on_bulk_3d_pressed(self, checked):
         self.bulk_3d_sym_dialog.update_operations(self.bulkLatt)
-        if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.Accepted:
+        if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.DialogCode.Accepted:
             operations = self.bulk_3d_sym_dialog.extra_operations()
             self.bulkLatt.group.set_screws_glides(operations,
                                                   self.bulkLatt.cell_shape)
@@ -601,7 +622,7 @@ class NewFileDialog(qtw.QDialog):
         woods = Woods().matrixToWoods(self.supMatrix, self.bulkLatt.basis)
         if woods is None:
             woods = 'None'
-        idx = self.woods.findText(woods, flags = qtc.Qt.MatchExactly)
+        idx = self.woods.findText(woods, flags = qtc.Qt.MatchFlag.MatchExactly)
         if idx < 0:  # item is not already present
             self.woods.addItem(woods)
             self.woodL.examples[self.bulkLatt.cell_shape] |= {woods}
@@ -782,7 +803,7 @@ class NewFileDialog(qtw.QDialog):
     # Cancel have keyboard focus fires them
 
     def keyPressEvent(self, event):
-        if event.key() in [qtc.Qt.Key_Enter or qtc.Qt.Key_Return]:
+        if event.key() in [qtc.Qt.Key.Key_Enter or qtc.Qt.Key.Key_Return]:
             focusWidg = self.focusWidget()
             if isinstance(focusWidg, qtw.QLineEdit):
                 return

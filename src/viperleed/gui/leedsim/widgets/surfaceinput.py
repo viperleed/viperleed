@@ -8,13 +8,13 @@ Wood's notation super-periodicity of a reconstructed surface.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-06-01'
 __license__ = 'GPLv3+'
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.classes.lattice2d import Lattice2D
 from viperleed.gui.classes.planegroup import PlaneGroup
@@ -149,7 +149,7 @@ class SurfaceStructureInput(qtw.QWidget):
 
         Parameters
         ----------
-        parent : PyQt5.QtWidgets.QWidget or None, default=None
+        parent : QWidget or None, default=None
             Parent widget that 'contains' this instance.
         bulk_lattice : viperleed.Lattice
             The real-space lattice of the bulk. Can
@@ -370,7 +370,7 @@ class SurfaceStructureInput(qtw.QWidget):
         # happened as a result of an improper text input (set
         # in _on_woods_selected).
         palette = woods_combo.lineEdit().palette()
-        palette.setColor(palette.Text, qtc.Qt.black)
+        palette.setColor(palette.ColorRole.Text, qtc.Qt.GlobalColor.black)
         woods_combo.lineEdit().setPalette(palette)
 
         # See if the superlattice matrix is Wood's-representable
@@ -383,8 +383,10 @@ class SurfaceStructureInput(qtw.QWidget):
         else:
             # Representable. See if we already have it in the
             # list (.findText returns index >= 0 if found)
-            found = woods_combo.findText(new_woods,
-                                         flags=qtc.Qt.MatchExactly) >= 0
+            found = woods_combo.findText(
+                new_woods,
+                flags=qtc.Qt.MatchFlag.MatchExactly
+                ) >= 0
             if not found:
                 woods_combo.addItem(new_woods)
                 self.__woods.add_example(new_woods, self.bulk.cell_shape)
@@ -453,19 +455,19 @@ class SurfaceStructureInput(qtw.QWidget):
                   'woods': qtw.QLabel("Wood's:")}
         labels['title'].setFont(label_font)
         labels['woods'].setFont(small_txt_font)
-        labels['woods'].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                      qtw.QSizePolicy.Preferred)
+        labels['woods'].setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                      qtw.QSizePolicy.Policy.Preferred)
 
         # (2) Woods combo box
         self._ctrls['woods'].setEditable(True)
         self._ctrls['woods'].setInsertPolicy(
-            qtw.QComboBox.InsertAlphabetically
+            qtw.QComboBox.InsertPolicy.InsertAlphabetically
             )
         self._ctrls['woods'].setFont(small_txt_font)
-        self._ctrls['woods'].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                            qtw.QSizePolicy.Preferred)
+        self._ctrls['woods'].setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                            qtw.QSizePolicy.Policy.Preferred)
         self._ctrls['woods'].setSizeAdjustPolicy(
-            qtw.QComboBox.AdjustToContents
+            qtw.QComboBox.SizeAdjustPolicy.AdjustToContents
             )
         self._ctrls['woods'].setMinimumContentsLength(12)
 
@@ -490,8 +492,10 @@ class SurfaceStructureInput(qtw.QWidget):
         layout = qtw.QHBoxLayout()
         layout.addWidget(self._ctrls['lattice'])
         layout.addLayout(superstructure_layout)
-        layout.setAlignment(self._ctrls['lattice'], qtc.Qt.AlignTop)
-        layout.setAlignment(superstructure_layout, qtc.Qt.AlignTop)
+        layout.setAlignment(self._ctrls['lattice'],
+                            qtc.Qt.AlignmentFlag.AlignTop)
+        layout.setAlignment(superstructure_layout,
+                            qtc.Qt.AlignmentFlag.AlignTop)
 
         self.setLayout(layout)
 
@@ -578,13 +582,13 @@ class SurfaceStructureInput(qtw.QWidget):
             If the new superlattice is acceptable
         """
         if abs(np.linalg.det(new_superlattice)) < 1e-3:
-            self._ctrls['superlattice'].set_text_color(qtc.Qt.red)
+            self._ctrls['superlattice'].set_text_color(qtc.Qt.GlobalColor.red)
             self.__valid_input = False
             self.user_gave_invalid_input.emit('Matrix is singular!', 2000)
             return
 
         self.__valid_input = True
-        self._ctrls['superlattice'].set_text_color(qtc.Qt.black)
+        self._ctrls['superlattice'].set_text_color(qtc.Qt.GlobalColor.black)
         # Update the basis of the underlying lattice
         # and the related controls
         lattice = self._ctrls['lattice']
@@ -647,19 +651,22 @@ class SurfaceStructureInput(qtw.QWidget):
         except (ValueError, WoodsSyntaxError):
             # Text is not an acceptable Wood's notation
             self.user_gave_invalid_input.emit("Invalid Wood's syntax.", 1000)
-            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
+            change_control_text_color(woods_combo.lineEdit(),
+                                      qtc.Qt.GlobalColor.red)
             return
         except WoodsInvalidForBasisError:
             self.user_gave_invalid_input.emit(
                 f"{woods_txt} incommensurate for this bulk basis.",
                 7000
                 )
-            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
+            change_control_text_color(woods_combo.lineEdit(),
+                                      qtc.Qt.GlobalColor.red)
             return
 
         woods_combo.setCurrentText(self.__woods.string)
         self._ctrls['superlattice'].matrix = self.__woods.matrix
-        change_control_text_color(woods_combo.lineEdit(), qtc.Qt.black)
+        change_control_text_color(woods_combo.lineEdit(),
+                                  qtc.Qt.GlobalColor.black)
 
     @dev_.print_call
     def _update_superlattice_from_surf_basis(self, surf_basis=None):

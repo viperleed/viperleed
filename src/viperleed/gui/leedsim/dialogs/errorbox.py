@@ -3,14 +3,14 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-07-15'
 __license__ = 'GPLv3+'
 
 
 import traceback
 
-from PyQt5 import QtWidgets as qtw
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 
 class ErrorBox(qtw.QMessageBox):
@@ -56,10 +56,11 @@ class ErrorBox(qtw.QMessageBox):
         self.base_text = text
         self.silent = silent
 
-        super().__init__(qtw.QMessageBox.Critical, title, text,
-                         buttons=qtw.QMessageBox.Ok, parent=parent)
+        super().__init__(qtw.QMessageBox.Icon.Critical, title, text,
+                         buttons=qtw.QMessageBox.StandardButton.Ok,
+                         parent=parent)
 
-    def exec_(self, extra_text=""):
+    def exec(self, extra_text=""):
         """Open the dialog as modal if there is an exception.
 
         Parameters
@@ -68,13 +69,13 @@ class ErrorBox(qtw.QMessageBox):
             Text to be appended to the one given at instantiation.
         """
         if self.silent:
-            return self.Ok
+            return self.StandardButton.Ok
 
         trace = traceback.format_exc()
         if trace.startswith('NoneType'):
             # Do not execute if there is no exception
-            return self.Ok
+            return self.StandardButton.Ok
 
         self.setText(self.base_text + extra_text)
         self.setDetailedText(f"Error details:\n{trace}")
-        return super().exec_()
+        return super().exec()

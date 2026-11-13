@@ -8,10 +8,14 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import ast
 import inspect
 import logging
 import os
+from pathlib import Path
+import subprocess
 import sys
+from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
@@ -43,34 +47,23 @@ _MODULE = 'viperleed.calc.cli'
 _UNUSED_LEVEL = logging.WARNING + 1
 
 
-def test_calc_never_loads_graphics(mocker):
-    """Ensure that 'viperleed calc' does not load graphics-related modules."""
-    mocker.patch('viperleed.gui.detect_graphics.has_pyqt',
-                 return_value=True)
-    cli = ViPErLEEDMain()
-    with pytest.raises(SystemExit):
-        cli(['calc', '--version'])
-    should_not_load = {  # NB: QtCore is acceptable
-        'ViPErLEEDSelectPlugin',
-        'qtw',
-        'qtg',
-        'QtWidgets',
-        'QtGui',
-        }
-    gui_modules = {name: module
-                   for name, module in sys.modules.items()
-                   if 'viperleed.gui' in name}
-    graphics_modules = {}
-    for module_name, module in gui_modules.items():
-        members = dict(inspect.getmembers(module))
-        unexpected = [
-            gui_obj
-            for gui_obj in should_not_load
-            if any(gui_obj in m for m in members)
-            ]
-        if unexpected:
-            graphics_modules[module_name] = unexpected
-    assert not graphics_modules
+def test_calc_never_loads_graphics():
+    """Ensure that 'viperleed calc' does not load graphics modules.
+
+    The check runs in a fresh process: in this one, other tests may
+    have loaded graphics modules already.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    check = ('from tests.calc.test_cli import _find_graphics_modules; '
+             'print(repr(_find_graphics_modules()))')
+    result = subprocess.run((sys.executable, '-c', check),  # noqa: S603
+                            capture_output=True,
+                            check=False,
+                            cwd=repo_root,
+                            text=True)
+    assert not result.returncode, result.stderr
+    *_, last_line = result.stdout.splitlines()
+    assert not ast.literal_eval(last_line)
 
 
 class TestCalcCliCall:
@@ -527,6 +520,7 @@ _presets = {  # cli_args: expected_presets
     ('verbose', 'very_verbose'): {'LOG_LEVEL': LOG_VERY_VERBOSE},
     }
 
+
 @parametrize('args,expect', _presets.items())
 def test_verbosity_to_log(args, expect, mocker):
     """Tests for the _verbosity_to_log_level helper."""
@@ -536,3 +530,42 @@ def test_verbosity_to_log(args, expect, mocker):
     presets = {}
     _verbosity_to_log_level(cli_args, presets)
     assert presets == expect
+
+
+def _find_graphics_modules():
+    """Return graphics-related objects loaded by 'viperleed calc'.
+
+    Run this in a fresh process (see test_calc_never_loads_graphics),
+    as other tests may have already loaded graphics modules.
+
+    Returns
+    -------
+    graphics_modules : dict
+        Keys are names of viperleed.gui modules, values the names of
+        the graphics-related objects that they contain.
+    """
+    with patch('viperleed.gui.detect_graphics.has_pyqt', return_value=True):
+        cli = ViPErLEEDMain()
+        with pytest.raises(SystemExit):
+            cli(['calc', '--version'])
+    should_not_load = {  # NB: QtCore is acceptable
+        'ViPErLEEDSelectPlugin',
+        'qtw',
+        'qtg',
+        'QtWidgets',
+        'QtGui',
+        }
+    gui_modules = {name: module
+                   for name, module in sys.modules.items()
+                   if 'viperleed.gui' in name}
+    graphics_modules = {}
+    for module_name, module in gui_modules.items():
+        members = dict(inspect.getmembers(module))
+        unexpected = [
+            gui_obj
+            for gui_obj in should_not_load
+            if any(gui_obj in m for m in members)
+            ]
+        if unexpected:
+            graphics_modules[module_name] = unexpected
+    return graphics_modules

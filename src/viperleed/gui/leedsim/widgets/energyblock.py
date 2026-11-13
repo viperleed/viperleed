@@ -7,12 +7,12 @@ in a simulated LEED pattern.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.widgets.lib import AllGUIFonts
 from viperleed.gui.widgets.spinboxes import TextBoxWithButtons
@@ -58,7 +58,10 @@ class EnergyBlock(TextBoxWithButtons):
         bwLay = qtw.QHBoxLayout()
         bwLay.setSpacing(0)
         bwLay.setContentsMargins(0,0,0,0)
-        bwLay.addWidget(self.limits, qtc.Qt.AlignLeft | qtc.Qt.AlignTop)
+        bwLay.addWidget(
+            self.limits,
+            qtc.Qt.AlignmentFlag.AlignLeft | qtc.Qt.AlignmentFlag.AlignTop
+            )
 
         self.bottomWidget.setLayout(bwLay)
         self.subWidgs.extend([self.limits])

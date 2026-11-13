@@ -139,6 +139,70 @@ marking. It only reports: it changes neither the selection nor the exit
 status. It also works with ``-n`` (:program:`pytest-xdist`).
 
 
+.. _gui_qt_bindings:
+
+Writing GUI code for PyQt5 and PyQt6
+------------------------------------
+
+The graphical user interface runs with either PyQt5 or PyQt6. PyQt5 is the
+one installed with ``viperleed[GUI]``, as Qt 6 does not run on Windows 7.
+Code in :file:`viperleed/gui` must work with both:
+
+- Import Qt modules only from ``viperleed.gui.qt_compat``, never from
+  ``PyQt5`` or ``PyQt6`` directly:
+
+  .. code-block:: python
+
+      from viperleed.gui.qt_compat import QtCore as qtc
+      from viperleed.gui.qt_compat import QtGui as qtg
+      from viperleed.gui.qt_compat import QtWidgets as qtw
+
+- Use fully scoped enumeration members, e.g.,
+  ``qtc.Qt.AlignmentFlag.AlignLeft`` rather than ``qtc.Qt.AlignLeft``, also
+  when accessing them via an object (``palette.ColorRole.Text`` rather than
+  ``palette.Text``).
+- Use ``.exec()`` rather than ``.exec_()``.
+- Take ``QAction``, ``QActionGroup``, ``QShortcut``, ``QUndoCommand``,
+  ``QUndoGroup``, ``QUndoStack``, and ``QFileSystemModel`` from ``QtGui``.
+- Where no method works with both bindings, use (or add) a function of
+  ``viperleed.gui.qt_compat.events``, e.g., ``get_global_position(event)``.
+
+The binding is selected the first time a Qt module is imported from
+``viperleed.gui.qt_compat``: the one requested via the ``QT_API``
+:term:`environment variable` (``pyqt5`` or ``pyqt6``), otherwise one that
+was already imported, otherwise PyQt6 if installed, otherwise PyQt5. To work
+with both, keep PyQt5 and PyQt6 in two separate virtual environments, rather
+than switching via ``QT_API`` in one.
+
+The GUI tests in :file:`tests/gui` use the binding installed. Run them in
+both environments. Without a display, set ``QT_QPA_PLATFORM=offscreen``.
+Tests that create widgets use the ``qtbot`` and ``qapp`` fixtures of
+`pytest-qt <https://pytest-qt.readthedocs.io>`__ (among the test
+requirements). Without a Qt binding, these tests are skipped (or fail with
+``--require-all``) rather than aborting the whole test session, as pytest-qt
+would do otherwise (see :file:`tests/qt_plugin.py`). The smoke tests in
+:file:`tests/gui/test_smoke.py` import all GUI modules, and create, show,
+and close all their widgets. They find these automatically: a new widget that
+needs arguments to be created is skipped until a factory for it is added to
+``_FACTORIES`` in that module.
+
+The script :file:`build/scripts/qt_codemod.py` turns code written for PyQt5
+into code that works with both bindings (e.g., when bringing in code from
+older branches). Run it with PyQt6 installed:
+
+.. code-block:: bash
+
+    python build/scripts/qt_codemod.py --check src/viperleed/gui  # report
+    python build/scripts/qt_codemod.py src/viperleed/gui          # rewrite
+
+It also reports what it cannot fix, and short enumeration members accessed
+via objects (add ``--fix-instance-enums`` to fix those too, and review the
+changes). In an environment with PyQt5, ``--verify`` checks that all Qt
+attribute chains exist, and ``--compare REV`` checks that the rewritten code
+refers to the same Qt objects as at git revision ``REV``. Run
+``python build/scripts/qt_codemod.py --help`` for all the options.
+
+
 .. _editable_install:
 
 Using editable installations

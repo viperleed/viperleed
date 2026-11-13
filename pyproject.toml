@@ -85,7 +85,7 @@ classifiers = [
 
     [project.optional-dependencies]
     GUI = [
-        'PyQt5',
+        'PyQt5>=5.15',  # Scoped enums, QWidget.screen()
         'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
@@ -186,8 +186,8 @@ classifiers = [
 [tool.pylint]
 
     [tool.pylint.master]
-    extension-pkg-whitelist = ['PyQt5', 'quicktions']
-    extension-pkg-allow-list = ['PyQt5', 'quicktions']
+    extension-pkg-whitelist = ['PyQt5', 'PyQt6', 'quicktions']
+    extension-pkg-allow-list = ['PyQt5', 'PyQt6', 'quicktions']
     load-plugins = [
         'pylint.extensions.bad_builtin',
         'pylint.extensions.broad_try_clause',
@@ -238,6 +238,16 @@ classifiers = [
 
     [tool.pylint.format]
     max-line-length = 79
+
+    [tool.pylint.typecheck]
+    generated-members = [
+        # Fully scoped members of Qt enumerations, e.g.,
+        # Qt.AlignmentFlag.AlignLeft: pylint does not find them
+        # with PyQt5, where enumerations are not Enum subclasses.
+        # build/scripts/qt_codemod.py --verify checks them.
+        '.*\.[A-PR-Z]\w*\.[A-Z]\w*$',
+        '.*\.GlobalColor\.\w+$',  # Members are lowercase
+        ]
 
     [tool.pylint.messages_control]
     enable = [

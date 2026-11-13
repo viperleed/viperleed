@@ -20,8 +20,9 @@ import re
 import copy
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed import __version__
 from viperleed.gui.classes.planegroup import PlaneGroup
@@ -67,13 +68,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.openedFile = None  # Keep track of the name of the currently
                                 # open file. This is used for exporting.
         self.initUI()
-        self.centerOnScreen()
-
-    def centerOnScreen(self):
-        qr = self.frameGeometry()
-        cp = qtw.QDesktopWidget().availableGeometry(self).center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        self.center_on_screen()
 
     def setMenu(self):
         menubar = self.menuBar()
@@ -85,19 +80,19 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         menubar.insertMenu(self.about_action, self.fileMenu)
 
         # File -> New
-        newF = qtw.QAction('&New...', self)
+        newF = qtg.QAction('&New...', self)
         newF.setShortcut('Ctrl+N')
         newF.setStatusTip('New/Edit experiment symmetry')
         newF.triggered.connect(self.fileNewDialog)
 
         # File -> Open
-        openF = qtw.QAction('&Open...', self)
+        openF = qtg.QAction('&Open...', self)
         openF.setShortcut('Ctrl+O')
         openF.setStatusTip('Open an experiment-symmetry file')
         openF.triggered.connect(self.fileOpenDialog)
 
         # File -> Save
-        saveF = qtw.QAction('&Save', self)
+        saveF = qtg.QAction('&Save', self)
         saveF.setShortcut('Ctrl+S')
         saveF.setStatusTip('Save experiment-symmetry file')
         saveF.triggered.connect(self.fileSavePressed)
@@ -105,7 +100,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.actionsToEnable.append(saveF)
 
         # File -> Save As...
-        svAs = qtw.QAction('&Save As...', self)
+        svAs = qtg.QAction('&Save As...', self)
         svAs.setShortcut('Ctrl+Shift+S')
         svAs.setStatusTip('Save experiment-symmetry file as...')
         svAs.triggered.connect(self.fileSaveAsPressed)
@@ -117,7 +112,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
         # ...and its contents:
         # * Export list of beams to *.csv
-        exportCSV = qtw.QAction('&Export spot-pattern file...', self)
+        exportCSV = qtg.QAction('&Export spot-pattern file...', self)
         exportCSV.setShortcut('Ctrl+E')
         exportCSV.setStatusTip('Export spot-pattern file to *.csv')
         exportCSV.triggered.connect(self.exportBeamsPressed)
@@ -126,10 +121,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         exportMenu.addAction(exportCSV)
 
         # File -> Exit
-        exit = qtw.QAction('&Exit', self)
+        exit = qtg.QAction('&Exit', self)
         exit.setShortcut('Ctrl+Q')
         exit.setStatusTip('Exit application')
-        exit.triggered.connect(qtw.qApp.quit)
+        exit.triggered.connect(qtw.QApplication.instance().quit)
         #exitAct.triggered.connect(self.close)
         # Replacing line 109 with 110 makes the popup appear also when
         # closing with CTRL+Q
@@ -147,31 +142,38 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.tBar.setFloatable(False)
         self.tBar.setIconSize(0.7*self.tBar.iconSize())
 
-        newF = qtw.QAction(self.style().standardIcon(qtw.QStyle.SP_FileIcon),
-                           'New structure', self)
+        newF = qtg.QAction(
+            self.style().standardIcon(qtw.QStyle.StandardPixmap.SP_FileIcon),
+            'New structure', self)
         newF.setStatusTip(
             'Create a new experiment symmetry or edit the current one (Ctrl+N)'
             )
         newF.triggered.connect(self.fileNewDialog)
 
-        openF = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton),
+        openF = qtg.QAction(
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DialogOpenButton
+                ),
             'Open an experiment-symmetry file', self)
         openF.setStatusTip(
             'Load an experiment-symmetry file (Ctrl+O)'
             )
         openF.triggered.connect(self.fileOpenDialog)
 
-        saveF = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton),
+        saveF = qtg.QAction(
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DialogSaveButton
+                ),
             'Save experiment-symmetry to file', self)
         saveF.setStatusTip(
             'Save current experiment-symmetry to file (Ctrl+S)'
             )
         saveF.triggered.connect(self.fileSavePressed)
 
-        exportAct = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
+        exportAct = qtg.QAction(
+            self.style().standardIcon(
+                qtw.QStyle.StandardPixmap.SP_DriveFDIcon
+                ),
             'Export spot-pattern file', self)
         exportAct.setStatusTip(
             'Export a spot-pattern file (Ctrl+E)'
@@ -416,10 +418,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     def unsavedPopup(self):
         reply = qtw.QMessageBox.question(self, 'Edits unsaved',
                                         'Would you like to save changes?',
-                                        qtw.QMessageBox.Yes
-                                        | qtw.QMessageBox.No,
-                                        qtw.QMessageBox.Yes)
-        if reply == qtw.QMessageBox.Yes:
+                                        qtw.QMessageBox.StandardButton.Yes
+                                        | qtw.QMessageBox.StandardButton.No,
+                                        qtw.QMessageBox.StandardButton.Yes)
+        if reply == qtw.QMessageBox.StandardButton.Yes:
             self.fileSavePressed()
 
     def loadLEEDInput(self, par_dict, readFile=False):
@@ -498,9 +500,12 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.cellShapes.setStatusTip('Open or drag-drop a LEED pattern file'
                                      'to print the shapes and symmetry'
                                      'groups of the system!')
-        self.cellShapes.setAlignment(qtc.Qt.AlignHCenter | qtc.Qt.AlignBaseline)
-        self.cellShapes.setSizePolicy(qtw.QSizePolicy.Expanding,
-                                      qtw.QSizePolicy.Preferred)
+        self.cellShapes.setAlignment(
+            qtc.Qt.AlignmentFlag.AlignHCenter
+            | qtc.Qt.AlignmentFlag.AlignBaseline
+            )
+        self.cellShapes.setSizePolicy(qtw.QSizePolicy.Policy.Expanding,
+                                      qtw.QSizePolicy.Policy.Preferred)
         self.cellShapes.adjustSize()
 
         # Prepare a list of controls
@@ -625,12 +630,15 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
         #### CELLS SHAPES/GROUPS ####
         if self.testConfig == 'layout':
-            self.cellShapes.setAlignment(qtc.Qt.AlignCenter)
+            self.cellShapes.setAlignment(qtc.Qt.AlignmentFlag.AlignCenter)
                         #(qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
             shapesLay = qtw.QHBoxLayout()
             shapesLay.addStretch(1)
-            shapesLay.addWidget(self.cellShapes,
-                                qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
+            shapesLay.addWidget(
+                self.cellShapes,
+                qtc.Qt.AlignmentFlag.AlignHCenter
+                | qtc.Qt.AlignmentFlag.AlignTop
+                )
             shapesLay.addStretch(1)
             topLayout.addLayout(shapesLay, 1, 0, 1, topLayout.columnCount())#,qtc.Qt.AlignCenter)
             # topLayout.setRowStretch(0,100)
@@ -705,7 +713,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     def sizeHint(self):
         self.ensurePolished()
         screenFraction = 0.8
-        screensize = qtw.QDesktopWidget().availableGeometry(self).size()
+        screensize = self.screen().availableGeometry().size()
         sH = screenFraction*screensize
         return sH
 
@@ -818,10 +826,11 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         reply = qtw.QMessageBox.question(self,
                                      'Message',
                                      'Are you sure to quit?',
-                                     qtw.QMessageBox.Yes | qtw.QMessageBox.No,
-                                     qtw.QMessageBox.No)
+                                     (qtw.QMessageBox.StandardButton.Yes
+                                      | qtw.QMessageBox.StandardButton.No),
+                                     qtw.QMessageBox.StandardButton.No)
 
-        if reply == qtw.QMessageBox.Yes:
+        if reply == qtw.QMessageBox.StandardButton.Yes:
             super().closeEvent(event)
         else:
             event.ignore()
@@ -925,7 +934,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         for annot in self.recSpace.annots:
             # NB: one cannot use += for in-place assignment since this redefines
             # the .center attribute that is a @property!
-            annot.center = qtc.QPoint(*annot.center.round()) + delta
+            center = annot.center.round().astype(int)
+            annot.center = qtc.QPoint(*center) + delta
             if annot.isVisible():
                 # move only if visible to handle the situation in which the
                 # window is moved while the annotations are displayed: this way

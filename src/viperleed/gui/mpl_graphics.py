@@ -10,7 +10,7 @@ imported if appropriate.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-26'  # Parts of this were in basewidgets
 __license__ = 'GPLv3+'
 
@@ -27,8 +27,10 @@ MIN_CAIRO = (1, 18, 0)  # See Issue #9. Surely 1.17.2 fails
 class MatplotLibBackend(Enum):
     """Supported back-ends for matplotlib."""
 
-    # module-to-import, string-for-matplotlib.use
-    AGG = (None, 'qt5agg')
+    # module-to-import, string-for-matplotlib.use. 'qtagg' (needs
+    # matplotlib >= 3.5) works with both PyQt5 and PyQt6: matplotlib
+    # uses the binding that viperleed.gui.qt_compat imported.
+    AGG = (None, 'qtagg')
     CAIRO = ('mplcairo', 'module://mplcairo.qt')
     DEFAULT = CAIRO
 
@@ -85,10 +87,10 @@ def get_cairo_version():
 def import_figure_canvas():
     """Return an appropriate FigureCanvas from the imported matplotlib."""
     if not has_pyqt():
-        raise ImportError('PyQt5 not found.')
+        raise ImportError('No Qt binding (PyQt5 or PyQt6) found.')
     backend = import_matplotlib()
     if backend is MatplotLibBackend.AGG:
-        module = importlib.import_module('matplotlib.backends.backend_qt5agg')
+        module = importlib.import_module('matplotlib.backends.backend_qtagg')
         return module.FigureCanvas
     if backend is MatplotLibBackend.CAIRO:
         module = importlib.import_module('mplcairo.qt')
@@ -97,16 +99,18 @@ def import_figure_canvas():
 
 
 def import_matplotlib():
-    """If PyQt5 is available, import matplotlib and set its backend.
+    """If Qt is available, import matplotlib and set its backend.
 
     Returns
     -------
     backend : MatplotLibBackend or None
         The backend that is currently in use.
-        None if PyQt5 is not present.
+        None if neither PyQt5 nor PyQt6 is present.
     """
     if not has_pyqt():
         return None
+    # Import the Qt binding first, so that matplotlib uses the same
+    importlib.import_module('viperleed.gui.qt_compat.QtCore')
     backend = find_and_import_backend()
     matplotlib = importlib.import_module('matplotlib')
     matplotlib.use(backend.mpl_use)

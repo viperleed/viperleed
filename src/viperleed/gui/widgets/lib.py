@@ -6,15 +6,15 @@ Library of functions that are common to several Qt objects.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 import re
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 
 ###############################################################################
@@ -42,11 +42,11 @@ def change_control_text_color(ctrl, color):
     color = qtg.QColor(color)
     palette = ctrl.palette()
     if isinstance(ctrl, qtw.QPushButton):
-        palette.setColor(palette.ButtonText, color)
+        palette.setColor(palette.ColorRole.ButtonText, color)
     elif isinstance(ctrl, qtw.QLabel):
-        palette.setColor(palette.WindowText, color)
+        palette.setColor(palette.ColorRole.WindowText, color)
     else:
-        palette.setColor(palette.Text, color)
+        palette.setColor(palette.ColorRole.Text, color)
     ctrl.setPalette(palette)
 
 
@@ -123,9 +123,11 @@ def drawText(painter, text, transform=None, combine=False):
 
     painter.save()
     paths = [rawFont.pathForGlyph(index) for index in indexes]
-    advances = rawFont.advancesForGlyphIndexes(indexes,
-                                               qtg.QRawFont.UseDesignMetrics
-                                               | qtg.QRawFont.KernedAdvances)
+    advances = rawFont.advancesForGlyphIndexes(
+        indexes,
+        qtg.QRawFont.LayoutFlag.UseDesignMetrics
+        | qtg.QRawFont.LayoutFlag.KernedAdvances
+        )
     if transform is not None:
         painter.setWorldTransform(transform, combine=combine)
     for (path,advance) in zip(paths,advances):
@@ -196,8 +198,8 @@ def move_to_front(window):  # TODO: move to a nicer place
     window.raise_()
     # Show as a window, also in case it is minimized
     window.setWindowState(window.windowState()
-                          & ~qtc.Qt.WindowMinimized
-                          | qtc.Qt.WindowActive)
+                          & ~qtc.Qt.WindowState.WindowMinimized
+                          | qtc.Qt.WindowState.WindowActive)
 
 
 def screen_fraction(obj, size):
@@ -250,4 +252,4 @@ class AllGUIFonts():  ## > Will handle in a different way!
         self.mathFont = qtg.QFont()
         self.mathFont.setFamily("CMU Serif")
         self.mathFont.setPointSize(15)
-        self.mathFont.setStyleStrategy(qtg.QFont.PreferAntialias)
+        self.mathFont.setStyleStrategy(qtg.QFont.StyleStrategy.PreferAntialias)

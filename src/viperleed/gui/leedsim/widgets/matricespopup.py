@@ -6,12 +6,13 @@ Defines the MatricesPopup widget for displaying superlattice matrices.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
+from viperleed.gui.qt_compat.events import get_global_position
 
 from viperleed.gui.widgets.basewidgets import PainterMatrix
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -43,7 +44,7 @@ class MatricesPopup(qtw.QWidget):
     def initPopup(self):
         # The next line makes the widget not steal focus from the main
         # window when it is shown
-        self.setAttribute(qtc.Qt.WA_ShowWithoutActivating)
+        self.setAttribute(qtc.Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setParent(self.parent)  # This should come before the next
                                      # lines to have the window stay on top
                                      # of the main, but not on top of other
@@ -58,9 +59,9 @@ class MatricesPopup(qtw.QWidget):
         #                          that it stays only on top of it (and not
         #                          on top of other apps)
         # Qt.WindowDoesNotAcceptFocus: prevent switching focus to the popup
-        self.setWindowFlags(qtc.Qt.Tool
-                            | qtc.Qt.CustomizeWindowHint
-                            | qtc.Qt.WindowDoesNotAcceptFocus)
+        self.setWindowFlags(qtc.Qt.WindowType.Tool
+                            | qtc.Qt.WindowType.CustomizeWindowHint
+                            | qtc.Qt.WindowType.WindowDoesNotAcceptFocus)
         editStyleSheet(self, 'background-color: white;')
 
         # The next attribute is used in the mousePressEvent and
@@ -79,14 +80,16 @@ class MatricesPopup(qtw.QWidget):
         nCols = int(nMatrices/nRows)
 
         lay = qtw.QGridLayout()
-        [lay.addWidget(matrix, index//nCols, index % nCols, qtc.Qt.AlignCenter)
+        [lay.addWidget(matrix, index//nCols, index % nCols,
+                       qtc.Qt.AlignmentFlag.AlignCenter)
          for (index, matrix) in enumerate(self.matrices)]
 
         if hasattr(self, 'firstDomMatrix'):
             # More than one domain. Add anyway the matrix of the first domain
             # for changing its color when domains are toggled. Initially
             # hide (toggling the button will show it).
-            lay.addWidget(self.firstDomMatrix, 0, 0, qtc.Qt.AlignCenter)
+            lay.addWidget(self.firstDomMatrix, 0, 0,
+                          qtc.Qt.AlignmentFlag.AlignCenter)
             self.firstDomMatrix.hide()
 
         sizes = [(matrix.sizeHint().width(), matrix.sizeHint().height())
@@ -97,15 +100,15 @@ class MatricesPopup(qtw.QWidget):
          for col in range(lay.columnCount())]
         [lay.setRowMinimumHeight(row, max(heights))
          for row in range(lay.rowCount())]
-        lay.setSizeConstraint(qtw.QLayout.SetFixedSize)  # This makes the window
-                                                         # not re-sizable
+        # This makes the window not re-sizable
+        lay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
         self.setLayout(lay)
         self.layout().activate()
 
     def mousePressEvent(self, event):
-        if event.button() == qtc.Qt.LeftButton:
-            self.dragPosition = (event.globalPos()
-                                - self.frameGeometry().topLeft())
+        if event.button() == qtc.Qt.MouseButton.LeftButton:
+            self.dragPosition = (get_global_position(event)
+                                 - self.frameGeometry().topLeft())
 
     def mouseReleaseEvent(self, event):
         event.accept()
@@ -114,8 +117,8 @@ class MatricesPopup(qtw.QWidget):
         event.accept()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == qtc.Qt.LeftButton:
-            self.move(event.globalPos() - self.dragPosition)
+        if event.buttons() == qtc.Qt.MouseButton.LeftButton:
+            self.move(get_global_position(event) - self.dragPosition)
 
     def updateMatrices(self, domsHidden):
         if domsHidden:

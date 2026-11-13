@@ -9,10 +9,10 @@ Modules
 exportcsv
     Qt-independent functionality for creating a "Spot Pattern File".
 mainwindow
-    The front panel of the LEED Pattern Simulator. Requires PyQt5.
+    The front panel of the LEED Pattern Simulator. Requires Qt.
 mainwindow_old
     An older version of the front panel that supports only a single
-    structural domain an normal beam incidence. Requires PyQt5.
+    structural domain an normal beam incidence. Requires Qt.
 utils
     Qt-independent functions used in multiple spots in leedsim. Exists
     mostly to prevent circular imports.
@@ -22,8 +22,7 @@ Packages
 classes
     Qt-independent objects used in leedsim.
 dialogs
-    Dialog-like (i.e., free-standing windows) Qt widgets. Requires
-    PyQt5.
+    Dialog-like (i.e., free-standing windows) Qt widgets. Requires Qt.
 widgets
     Qt QWidgets for leedsim.
 
@@ -39,6 +38,6 @@ input_examples
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-03'
 __license__ = 'GPLv3+'

@@ -26,6 +26,8 @@ def _run(pytester, *args):
     return pytester.runpytest_inprocess(
         *args,
         '-p', 'no:cacheprovider',
+        # Without tests/qt_plugin.py, pytest-qt aborts if Qt is missing
+        '-p', 'no:pytest-qt',
         plugins=[optional_dependencies],
         )
 
