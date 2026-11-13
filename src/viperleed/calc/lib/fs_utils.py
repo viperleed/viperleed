@@ -51,7 +51,9 @@ def copytree_exists_ok(source, destination, ignore=None):
     if sys.version_info >= PY38:
         # dirs_exist_ok was introduced in python 3.8:
         # https://docs.python.org/3/library/shutil.html#shutil.copytree
-        shutil.copytree(source, destination, dirs_exist_ok=True,
+        shutil.copytree(source,
+                        destination,
+                        dirs_exist_ok=True,
                         ignore=ignore)
         return
     # For earlier python versions, we need to do things manually. We

@@ -29,7 +29,8 @@ class TestCopytreeExistsOk:
         sh_copy = mocker.patch('shutil.copytree')
         args = mocker.MagicMock(), mocker.MagicMock()
         copytree_exists_ok(*args)
-        sh_copy.assert_called_once_with(*args, dirs_exist_ok=True,
+        sh_copy.assert_called_once_with(*args,
+                                        dirs_exist_ok=True,
                                         ignore=None)
 
     def test_before_py38(self, mocker, tmp_path):
@@ -95,7 +96,7 @@ class TestCopytreeExistsOk:
         assert filesystem_to_dict(tmp_path)['destination'] == expect
         assert all(isinstance(d, str) for d, _ in seen)
         assert (str(src), ['keep.txt', 'keepdir', 'skip.log', 'skipdir']
-                ) in [(d, sorted(n)) for d, n in seen]
+                ) in seen
 
 
 class TestMove:

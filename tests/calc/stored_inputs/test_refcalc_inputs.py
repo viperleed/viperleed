@@ -24,9 +24,9 @@ from viperleed.calc.sections import refcalc
 
 from . import cases_stored_inputs
 from .cases_stored_inputs import REFCALC
-from .cases_stored_inputs import tagged_inputs
 from .conftest import GROUPS
 from .conftest import copy_case_state
+from .conftest import group_case_domains
 from .conftest import reference_group
 from .conftest import reference_params
 
@@ -127,10 +127,8 @@ _STORED_PHASESHIFTS = [
                  inputs,
                  domain,
                  id=f'{group}-{case_id}-{domain or case_id}')
-    for group in GROUPS
-    for case_id, inputs in tagged_inputs(REFCALC)
+    for group, case_id, inputs, domain in group_case_domains(REFCALC)
     if not inputs.preset
-    for domain in inputs.domain_names
     ]
 
 

@@ -113,6 +113,31 @@ def reference_name(name, domain):
     return name if domain is None else f'{name}_{domain}'
 
 
+def group_case_domains(tag):
+    """Yield every version group, case and domain of the tagged cases.
+
+    Parameters
+    ----------
+    tag : str
+        The tag of the cases (see cases_stored_inputs.py).
+
+    Yields
+    ------
+    group : str
+        A version group (see GROUPS).
+    case_id : str
+        The id of the case.
+    inputs : StoredInputs
+        The inputs of the case.
+    domain : str or None
+        A domain of the case, None for single-surface cases.
+    """
+    for group in GROUPS:
+        for case_id, inputs in tagged_inputs(tag):
+            for domain in inputs.domain_names:
+                yield group, case_id, inputs, domain
+
+
 def reference_params(tag, file_names):
     """Return the parameters of a test per reference file.
 
@@ -139,9 +164,7 @@ def reference_params(tag, file_names):
                      ref_name,
                      name,
                      id=f'{group}-{ref_name}-{name}')
-        for group in GROUPS
-        for case_id, inputs in tagged_inputs(tag)
-        for domain in inputs.domain_names
+        for group, case_id, inputs, domain in group_case_domains(tag)
         for ref_name in (reference_name(case_id, domain),)
         for name in file_names(group, inputs)
         ]
@@ -273,7 +296,8 @@ def copy_case_state(source, folder, slab, rpars):
     slab, rpars : tuple
         Deep copies of the arguments.
     """
-    copytree_exists_ok(source, folder,
+    copytree_exists_ok(source,
+                       folder,
                        ignore=shutil.ignore_patterns('*.log'))
     return copy.deepcopy((slab, rpars))
 
@@ -321,7 +345,7 @@ def _init_stored_case(inputs, tmp, tree, tl_version, data_path):
     domains = {None: (slab, rpars, work)}
     if inputs.domains:
         domains = {dom.name: (dom.slab, dom.rpars, dom.workdir)
-                 for dom in rpars.domainParams}
+                   for dom in rpars.domainParams}
     for _, domain_rpars, _ in domains.values():
         domain_rpars.timestamp = rpars.timestamp
     return InitializedCase(domains, (rpars, work))
