@@ -141,7 +141,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             self.parser.error(err_msg.format(exc))
         print('Done', flush=True)
         details = _SANITY_TO_ERR_MSG[sanity]  # Let KeyError propagate
-        details = details.format(qt=_describe_candidates())
+        details = details.format(qt=self._describe_candidates())
         if sanity is PyQtSanity.NOT_FOUND:
             # This is the only case in which it makes no sense to
             # check for missing dependencies. All other non-sane
@@ -164,6 +164,15 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
                 ))
         if sanity is not PyQtSanity.OK:
             self.parser.error(err_msg.format(details))
+
+    @staticmethod
+    def _describe_candidates():
+        """Return the names of the Qt bindings looked for, as text."""
+        try:
+            candidates = get_candidates()
+        except QtBindingNotFoundError:  # Invalid QT_API
+            candidates = SUPPORTED_BINDINGS
+        return ' or '.join(candidates)
 
 
 def commandline_main():
@@ -223,12 +232,3 @@ def import_graphics_modules():
         import_module(f'{_QT_COMPAT}.QtWidgets'),
         gui_select.ViPErLEEDSelectPlugin,
         )
-
-
-def _describe_candidates():
-    """Return the names of the Qt bindings looked for, for messages."""
-    try:
-        candidates = get_candidates()
-    except QtBindingNotFoundError:  # Invalid QT_API
-        candidates = SUPPORTED_BINDINGS
-    return ' or '.join(candidates)

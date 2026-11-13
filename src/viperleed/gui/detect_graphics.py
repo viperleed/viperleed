@@ -111,8 +111,8 @@ class PyQtSanityChecker:
         cls._status = None
         cls._binding = None
 
-    @staticmethod
-    def _check_pyqt_sanity():
+    @classmethod
+    def _check_pyqt_sanity(cls):
         """Check whether a Qt binding is usable.
 
         The check runs in a subprocess, not to crash the current
@@ -140,7 +140,8 @@ class PyQtSanityChecker:
         # becomes ready (end of file) also if the subprocess dies
         child_end.close()
         try:
-            ready, binding = _wait_for_imports(imports_done, proc.sentinel)
+            ready, binding = cls._wait_for_imports(imports_done,
+                                                   proc.sentinel)
         finally:
             imports_done.close()
         if not ready:
@@ -152,9 +153,50 @@ class PyQtSanityChecker:
             # still trying to start up. This means we have no display.
             proc.terminate()
             return PyQtSanity.NO_DISPLAY, binding
-        sanity = _sanity_from_exit_code(proc.exitcode)
+        sanity = cls._sanity_from_exit_code(proc.exitcode)
         usable = sanity in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
         return sanity, binding if usable else None
+
+    @staticmethod
+    def _sanity_from_exit_code(exit_code):
+        """Return the PyQtSanity of the checker from its `exit_code`."""
+        try:
+            return PyQtSanity(exit_code - _EXIT_CODE_OFFSET)
+        except ValueError:
+            # Assume there was a crash. One could in principle
+            # check whether the exit code is negative, or one
+            # of the signals, but this keeps this checker as
+            # OS-independent as possible.
+            return PyQtSanity.RUNTIME_CRASH
+
+    @staticmethod
+    def _wait_for_imports(imports_done, sentinel):
+        """Wait until a binding was imported, or the subprocess exited.
+
+        Parameters
+        ----------
+        imports_done : multiprocessing.connection.Connection
+            The receiving end of the pipe, to which the checker
+            subprocess sends the name of the binding once it was
+            imported.
+        sentinel : int
+            The sentinel of the checker subprocess.
+
+        Returns
+        -------
+        ready : list
+            Those among `imports_done` and `sentinel` that are ready
+            within _STARTUP_TIMEOUT seconds.
+        binding : str or None
+            The name of the binding that was imported, if it was sent.
+        """
+        ready = wait((imports_done, sentinel), _STARTUP_TIMEOUT)
+        if imports_done not in ready:
+            return ready, None
+        try:
+            return ready, imports_done.recv()
+        except (EOFError, OSError):  # Subprocess ended without sending
+            return ready, None
 
 
 check_pyqt_sanity = PyQtSanityChecker()
@@ -440,18 +482,6 @@ def _init_dummy_qapp(binding):
     _exit_with(sanity)
 
 
-def _sanity_from_exit_code(exit_code):
-    """Return the PyQtSanity of the checker subprocess from `exit_code`."""
-    try:
-        return PyQtSanity(exit_code - _EXIT_CODE_OFFSET)
-    except ValueError:
-        # Assume there was a crash. One could in principle
-        # check whether the exit code is negative, or one
-        # of the signals, but this keeps this checker as
-        # OS-independent as possible.
-        return PyQtSanity.RUNTIME_CRASH
-
-
 def _try_importing(binding):
     """Return the PyQtSanity of importing the modules of `binding`."""
     try:
@@ -478,34 +508,6 @@ def _try_importing(binding):
         except ImportError:
             return PyQtSanity.IMPORT_ERROR
     return PyQtSanity.OK
-
-
-def _wait_for_imports(imports_done, sentinel):
-    """Wait until a binding was imported, or the subprocess exited.
-
-    Parameters
-    ----------
-    imports_done : multiprocessing.connection.Connection
-        The receiving end of the pipe, to which the checker subprocess
-        sends the name of the binding once it was imported.
-    sentinel : int
-        The sentinel of the checker subprocess.
-
-    Returns
-    -------
-    ready : list
-        Those among `imports_done` and `sentinel` that are ready
-        within _STARTUP_TIMEOUT seconds.
-    binding : str or None
-        The name of the binding that was imported, if it was sent.
-    """
-    ready = wait((imports_done, sentinel), _STARTUP_TIMEOUT)
-    if imports_done not in ready:
-        return ready, None
-    try:
-        return ready, imports_done.recv()
-    except (EOFError, OSError):  # The subprocess ended without sending
-        return ready, None
 
 
 # This class is really just a container
