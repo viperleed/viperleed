@@ -37,14 +37,14 @@ class Layout(NamedTuple):
 
     Attributes
     ----------
-    parts : tuple
-        The names of the parts of the case, as in CaseState.
+    domains : tuple
+        The names of the domains of the case, as in InitializedCase.
     n_param : int
         The number of PARAM files, i.e., of different array dimensions,
-        of each part.
+        of each domain.
     """
 
-    parts: tuple
+    domains: tuple
     n_param: int
 
 
@@ -65,11 +65,13 @@ def _param_name(index):
 
 
 PARAMS = [
-    pytest.param(group, variant, part, name,
-                 id=f'{group}-{reference_name(variant, parts, part)}-{name}')
+    pytest.param(
+        group, variant, domain, name,
+        id=f'{group}-{reference_name(variant, domains, domain)}-{name}',
+        )
     for group in GROUPS
-    for variant, (parts, n_param) in LAYOUTS.items()
-    for part in parts
+    for variant, (domains, n_param) in LAYOUTS.items()
+    for domain in domains
     for name in (DELTA_INPUT, *(_param_name(i) for i in range(n_param)))
     ]
 
@@ -100,17 +102,17 @@ def factory_delta_folders(prepared_deltas):
 
 
 @fixture(name='written_and_reference')
-@parametrize('group,variant,part,name', PARAMS)
+@parametrize('group,variant,domain,name', PARAMS)
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def fixture_written_and_reference(group, variant, part, name,
+def fixture_written_and_reference(group, variant, domain, name,
                                   delta_folders, data_path):
     """Return a written file and its reference."""
-    parts = LAYOUTS[variant].parts
+    domains = LAYOUTS[variant].domains
     reference = (data_path / 'stored_inputs/deltas'
-                 / reference_name(variant, parts, part)
+                 / reference_name(variant, domains, domain)
                  / reference_group(group) / name)
     prepared, _ = delta_folders(group, variant)
-    return prepared.folders[part] / name, reference
+    return prepared.folders[domain] / name, reference
 
 
 def test_delta_input(written_and_reference, check_reference):

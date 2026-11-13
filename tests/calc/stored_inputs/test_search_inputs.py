@@ -96,16 +96,16 @@ def _write_search_inputs(prepared, *, crandom=False):
         Where the files were written.
     """
     rpars = prepared.rpars
-    parts = [(prepared.slab, prepared.folder)]
-    parts.extend((d.slab, d.workdir) for d in rpars.domainParams)
-    for slab, folder in parts:
+    domains = [(prepared.slab, prepared.folder)]
+    domains.extend((d.slab, d.workdir) for d in rpars.domainParams)
+    for slab, folder in domains:
         slab.deltas_initialized = True
         for atom in slab:  # Name-only stubs of the delta files
             for name in atom.current_deltas:
                 (folder / name).touch()
     if crandom:
-        for part_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
-            part_rpars.N_CORES = CRANDOM_N_CORES
+        for domain_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
+            domain_rpars.N_CORES = CRANDOM_N_CORES
     else:
         rpars.SEARCH_POPULATION = SEARCH_POPULATION
         rpars.SEARCH_START = SEARCH_START

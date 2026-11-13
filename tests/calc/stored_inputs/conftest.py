@@ -16,7 +16,7 @@ group
     Run of the tests, i.e., a version group (or a version of it)
     (parametrized).
 initialized_case (factory)
-    Return the CaseState of a case in a version group.
+    Return the InitializedCase of a case in a version group.
 prepared_deltas (factory)
     Prepare the delta-amplitude inputs of a case in a copy of its
     working folder.
@@ -94,24 +94,25 @@ def reference_group(group):
     return group.split('@')[0]
 
 
-def reference_name(name, parts, part):
-    """Return the name of the reference folder of a part of a case.
+def reference_name(name, domains, domain):
+    """Return the name of the reference folder of a domain of a case.
 
     Parameters
     ----------
     name : str
         The name of the case or variant.
-    parts : Sequence
-        The names of all parts of the case.
-    part : str
-        The part to return the reference folder of.
+    domains : Sequence
+        The names of all domains of the case. Single-surface cases
+        have one entry (see InitializedCase.domains).
+    domain : str
+        The domain to return the reference folder of.
 
     Returns
     -------
     str
-        `name` for single-part cases, `name`_`part` otherwise.
+        `name` for single-surface cases, `name`_`domain` otherwise.
     """
-    return name if len(parts) == 1 else f'{name}_{part}'
+    return name if len(domains) == 1 else f'{name}_{domain}'
 
 
 @dataclass
@@ -196,8 +197,8 @@ class PreparedDeltas:
     folder : Path
         The working folder of the (main) calculation.
     folders : dict
-        Maps the name of each part (see CaseState.parts) to the folder
-        in which its delta inputs were written.
+        Maps the name of each domain (see InitializedCase.domains) to
+        the folder in which its delta inputs were written.
     slab : Slab
         The slab of the (main) calculation, with the delta files
         registered in the `current_deltas` of its atoms.
@@ -218,12 +219,12 @@ class PreparedDeltas:
 
 
 @dataclass
-class CaseState:
+class InitializedCase:
     """Slabs and Rparams of a case after an initialization.
 
     Attributes
     ----------
-    parts : dict
+    domains : dict
         Maps a name to a (slab, rpars, folder) tuple. Single-surface
         cases have one entry, named after the case. Domain cases have
         one entry per domain, named after the domain. `folder` is the
@@ -231,10 +232,10 @@ class CaseState:
         input files for later sections can be written.
     main : tuple
         The (rpars, folder) of the main calculation. For single-surface
-        cases, this is the same as the Rparams and folder in `parts`.
+        cases, this is the same as the Rparams and folder in `domains`.
     """
 
-    parts: dict = field(default_factory=dict)
+    domains: dict = field(default_factory=dict)
     main: tuple = ()
 
 
@@ -353,13 +354,13 @@ def _init_stored_case(case, tmp, tree, tl_version, data_path):
                 )
     assert not failed
     rpars, slab = captured['args']
-    parts = {case: (slab, rpars, work)}
+    domains = {case: (slab, rpars, work)}
     if spec.domains:
-        parts = {dom.name: (dom.slab, dom.rpars, dom.workdir)
+        domains = {dom.name: (dom.slab, dom.rpars, dom.workdir)
                  for dom in rpars.domainParams}
-    for _, part_rpars, _ in parts.values():
-        part_rpars.timestamp = rpars.timestamp
-    return CaseState(parts, (rpars, work))
+    for _, domain_rpars, _ in domains.values():
+        domain_rpars.timestamp = rpars.timestamp
+    return InitializedCase(domains, (rpars, work))
 
 
 def _record_and_keep_files(patcher, captured):
@@ -418,7 +419,7 @@ def _init_preset_case(case, tmp, tree, tl_version, data_path):
         rpars.fileLoaded['IVBEAMS'] = True
         rpars.updateDerivedParams()
         initialization.initialization(slab, rpars)
-    return CaseState({case: (slab, rpars, work)}, (rpars, work))
+    return InitializedCase({case: (slab, rpars, work)}, (rpars, work))
 
 
 @fixture(scope='session', name='prepared_deltas')
@@ -437,23 +438,23 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
         state = initialized_case(case, group)
         rpars, source = state.main
         folder = tmp_path_factory.mktemp('deltas')
-        main_slab, *_ = next(iter(state.parts.values()))
+        main_slab, *_ = next(iter(state.domains.values()))
         slab, rpars = copy_case_state(source, folder, main_slab, rpars)
-        folders = dict.fromkeys(state.parts, folder)
+        folders = dict.fromkeys(state.domains, folder)
         for domain in rpars.domainParams:
             folders[domain.name] = folder / domain.workdir.relative_to(source)
             domain.workdir = folders[domain.name]
         if displacements:
             shutil.copy2(displacements, folder / DISPLACEMENTS)
-        for part_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
-            part_rpars.TENSOR_INDEX = TENSOR_INDEX
-            if 1 not in part_rpars.runHistory:  # Original state: initial
-                part_rpars.runHistory.append(1)
+        for domain_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
+            domain_rpars.TENSOR_INDEX = TENSOR_INDEX
+            if 1 not in domain_rpars.runHistory:  # Original state: initial
+                domain_rpars.runHistory.append(1)
         with execute_in_dir(folder):
             readDISPLACEMENTS(rpars)
-            for part_folder in set(folders.values()):
+            for domain_folder in set(folders.values()):
                 tensors = f'{DEFAULT_TENSORS}_{TENSOR_INDEX:03d}'
-                (part_folder / DEFAULT_TENSORS / tensors).mkdir(parents=True)
+                (domain_folder / DEFAULT_TENSORS / tensors).mkdir(parents=True)
             # There is no public entry point to the step under test
             # pylint: disable=protected-access
             tasks = (

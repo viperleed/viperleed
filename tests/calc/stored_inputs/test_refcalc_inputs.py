@@ -29,7 +29,7 @@ from .conftest import copy_case_state
 from .conftest import reference_group
 from .conftest import reference_name
 
-# Case (as in conftest) -> parts. The case 'ag100_mixed' is not here:
+# Case (as in conftest) -> domains. The case 'ag100_mixed' is not here:
 # its VIBROCC offsets and DISPLACEMENTS only matter after a search, so
 # its reference calculation inputs are identical to those of 'ag100'.
 CASES = {
@@ -59,12 +59,12 @@ assert set(FILES_BY_GROUP) == {reference_group(group) for group in GROUPS}
 
 
 PARAMS = [
-    pytest.param(group, case, part, name,
-                 id=f'{group}-{reference_name(case, parts, part)}-{name}')
+    pytest.param(group, case, domain, name,
+                 id=f'{group}-{reference_name(case, domains, domain)}-{name}')
     for group in GROUPS
     for names in (FILES_BY_GROUP[reference_group(group)],)
-    for case, parts in CASES.items()
-    for part in parts
+    for case, domains in CASES.items()
+    for domain in domains
     for name in names
     ]
 
@@ -74,11 +74,11 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
     """Return a function that writes the refcalc inputs (cached)."""
     cache = {}
 
-    def _write(group, case, part):
-        key = group, case, part
+    def _write(group, case, domain):
+        key = group, case, domain
         if key in cache:
             return cache[key]
-        slab, rpars, source = initialized_case(case, group).parts[part]
+        slab, rpars, source = initialized_case(case, group).domains[domain]
         folder = tmp_path_factory.mktemp('refcalc')
         slab, rpars = copy_case_state(source, folder, slab, rpars)
         rpars.SUPPRESS_EXECUTION = True
@@ -96,9 +96,9 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
 
 
 @fixture(name='written_and_reference')
-@parametrize('group,case,part,name', PARAMS)
+@parametrize('group,case,domain,name', PARAMS)
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def fixture_written_and_reference(group, case, part, name,
+def fixture_written_and_reference(group, case, domain, name,
                                   refcalc_folder, data_path):
     """Return a written file and its reference.
 
@@ -106,9 +106,9 @@ def fixture_written_and_reference(group, case, part, name,
     that the time of the test itself is that of the comparison.
     """
     reference = (data_path / 'stored_inputs/refcalc'
-                 / reference_name(case, CASES[case], part)
+                 / reference_name(case, CASES[case], domain)
                  / reference_group(group) / name)
-    return refcalc_folder(group, case, part) / name, reference
+    return refcalc_folder(group, case, domain) / name, reference
 
 
 def _with_phaseshifts_placeholder(fin_file, tmp_path):
@@ -135,23 +135,23 @@ def test_refcalc_input(written_and_reference, check_reference, tmp_path):
 # The PHASESHIFTS of the preset cases are written by the case set-up
 # itself, and have no stored input to compare with.
 _STORED_PHASESHIFTS = [
-    pytest.param(group, case, part, id=f'{group}-{case}-{part}')
+    pytest.param(group, case, domain, id=f'{group}-{case}-{domain}')
     for group in GROUPS
-    for case, parts in CASES.items()
+    for case, domains in CASES.items()
     if case in STORED_CASES
-    for part in parts
+    for domain in domains
     ]
 
 
 @fixture(name='phaseshifts_and_stored')
-@parametrize('group,case,part', _STORED_PHASESHIFTS)
-def fixture_phaseshifts_and_stored(group, case, part, refcalc_folder,
+@parametrize('group,case,domain', _STORED_PHASESHIFTS)
+def fixture_phaseshifts_and_stored(group, case, domain, refcalc_folder,
                                   data_path):
     """Return the work-dir PHASESHIFTS and the stored input."""
     source = data_path / STORED_CASES[case].source
     if STORED_CASES[case].domains:
-        source /= part
-    written = refcalc_folder(group, case, part) / PHASESHIFTS
+        source /= domain
+    written = refcalc_folder(group, case, domain) / PHASESHIFTS
     return written, source / PHASESHIFTS
 
 
