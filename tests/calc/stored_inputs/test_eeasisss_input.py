@@ -12,6 +12,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
+import os
+
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize_with_cases
@@ -46,7 +48,8 @@ def fixture_stub_tree(tmp_path):
     """Return a fake TensErLEED directory with stub eeasisss/data."""
     tree = tmp_path / 'TensErLEED'
     tree.mkdir()
-    (tree / 'eeasisss').touch()
+    executable = 'eeasisss.exe' if os.name == 'nt' else 'eeasisss'
+    (tree / executable).touch()
     (tree / 'seSernelius').touch()
     for element in PERIODIC_TABLE:
         element_dir = tree / 'atom_density_files' / element
