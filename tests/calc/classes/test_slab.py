@@ -24,6 +24,7 @@ from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import errors as err
@@ -1996,6 +1997,104 @@ class TestUnitCellReduction:
                                             rpars.SYMMETRY_EPS.z)
         area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
         assert area_ratio == pytest.approx(info.poscar.n_cells)
+
+    # Position noise much smaller than SYMMETRY_EPS, as for
+    # structures coming from DFT or other programs (Angstrom)
+    position_noise = 1e-5
+
+    @staticmethod
+    def add_position_noise(slab, noise, rng):
+        """Move each atom in-plane by noise, in a random direction."""
+        # rng is a seeded generator (see the draws fixture in
+        # tests/conftest.py), so that the outcome is reproducible
+        for atom in slab:
+            direction = rng.standard_normal(2)
+            direction /= np.linalg.norm(direction)
+            atom.cartpos[:2] += noise * direction
+        slab.update_fractional_from_cartesian()
+
+    _noise_bug = pytest.mark.xfail(
+        reason='Area ratio checked with a fixed 1e-6 tolerance',
+        strict=True,
+        )
+
+    @_noise_bug
+    @parametrize_with_cases('args', cases=poscar_slabs,
+                            has_tag=Tag.NON_MINIMAL_CELL)
+    def test_ab_cell_minimization_noisy(self, args, draws):
+        """Check that small position noise does not hinder reduction."""
+        slab, rpars, info = args
+        ab_slab = slab.ab_cell.T.copy()
+
+        def _check(draw):
+            noisy_slab, = duplicate_all(slab)
+            self.add_position_noise(noisy_slab, self.position_noise, draw.rng)
+            ab_small = noisy_slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                                      rpars.SYMMETRY_EPS.z)
+            area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
+            assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
+
+        check_draws(draws, _check)
+
+    @_noise_bug
+    @parametrize('eps,noise', (
+        (0.1, 1e-5),
+        (0.1, 3e-4),
+        (0.1, 5e-3),   # The 5e-2 tolerance on SUPERLATTICE limits this
+        (0.01, 2e-3),  # eps/5, below the eps/4 limit of the symmetry check
+        ))
+    def test_minimal_bulk_ab_cell_noisy(self, eps, noise, draws):
+        """Check reduction of a noisy fcc(111) bulk to the 1x1 cell.
+
+        The in-plane cell is the (2*sqrt(3) x 2*sqrt(3))R30 cell,
+        i.e., 12 times the (1 x 1) one. Six ABC-stacked layers.
+        """
+        lattice_const, n_layers, vacuum = 2.7, 6, 10.0
+        hex_a = np.array([lattice_const, 0])
+        hex_b = np.array([lattice_const/2, lattice_const*np.sqrt(3)/2])
+        ab_cell = np.array([4*hex_a - 2*hex_b, -2*hex_a + 4*hex_b])
+        layer_dist = lattice_const*np.sqrt(2/3)
+        c_length = n_layers*layer_dist + vacuum
+        slab = Slab()
+        slab.ucell = np.zeros((3, 3))
+        slab.ucell[:2, :2] = ab_cell.T
+        slab.ucell[2, 2] = c_length
+        # The 12 points of the (1 x 1) lattice inside ab_cell. Their
+        # fractional coordinates are multiples of 1/12 (det = 12).
+        # Sorted, so that atoms are always created in the same order.
+        to_frac = np.linalg.inv(ab_cell.T)
+        in_cell = {
+            tuple(round(12*frac) % 12 / 12
+                  for frac in to_frac.dot(i*hex_a + j*hex_b))
+            for i in range(-4, 5) for j in range(-4, 5)
+            }
+        assert len(in_cell) == 12
+        for layer in range(n_layers):
+            shift = to_frac.dot((layer % 3) * (hex_a + hex_b) / 3)
+            frac_z = (1 + layer*layer_dist) / c_length
+            for point in sorted(in_cell):
+                frac_ab = (np.array(point) + shift) % 1.0
+                slab.atlist.append(Atom('Ir', np.array([*frac_ab, frac_z]),
+                                        len(slab.atlist) + 1, slab))
+        slab.update_element_count()
+        slab.update_cartesian_from_fractional()
+        rpars = Rparams()
+        rpars.SYMMETRY_EPS = SymmetryEps(eps)
+        rpars.LAYER_CUTS = LayerCuts.from_string('dz(0.5)')
+        rpars.N_BULK_LAYERS = 3
+        rpars.BULK_REPEAT = 3*layer_dist
+        slab.full_update(rpars)
+
+        def _check(draw):
+            noisy_slab, noisy_rpars = duplicate_all(slab, rpars)
+            self.add_position_noise(noisy_slab, noise, draw.rng)
+            noisy_slab.create_layers(noisy_rpars)
+            noisy_slab.make_bulk_slab(noisy_rpars)
+            noisy_slab.ensure_minimal_bulk_ab_cell(noisy_rpars)
+            superlattice = noisy_rpars.SUPERLATTICE
+            assert abs(np.linalg.det(superlattice)) == pytest.approx(12)
+
+        check_draws(draws, _check)
 
     _minimal = {'cases': poscar_slabs,
                 'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
