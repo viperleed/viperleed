@@ -47,6 +47,7 @@ from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import vibrocc
 from viperleed.calc.lib import time_utils
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
@@ -278,8 +279,8 @@ def copy_case_state(source, folder, slab, rpars):
     slab, rpars : tuple
         Deep copies of the arguments.
     """
-    shutil.copytree(source, folder, dirs_exist_ok=True,
-                    ignore=shutil.ignore_patterns('*.log'))
+    copytree_exists_ok(source, folder,
+                       ignore=shutil.ignore_patterns('*.log'))
     return copy.deepcopy((slab, rpars))
 
 
@@ -292,8 +293,11 @@ def _prepare_folder(folder, spec):
         if item.is_dir() and item.name not in spec.domains:
             continue
         if item.is_dir():
-            shutil.copytree(item, folder / item.name,
-                            ignore=shutil.ignore_patterns(*_NOT_COPIED))
+            copytree_exists_ok(
+                item,
+                folder / item.name,
+                ignore=shutil.ignore_patterns(*_NOT_COPIED),
+                )
         else:
             shutil.copy2(item, folder)
     for destination, extra_source in spec.extra.items():
