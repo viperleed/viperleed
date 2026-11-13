@@ -9,9 +9,9 @@ the delta files only exist as names (empty stubs) that the atoms
 register as their current deltas, and the execution is never started.
 
 Everything that depends on the machine or on random numbers is pinned:
-the number of cores, the system name and the timestamp. Most variants
+the number of cores, the system name and the timestamp. Most cases
 also pin the population and use a deterministic starting
-configuration. One variant (CRANDOM_VARIANT) instead keeps the
+configuration. One case (CRANDOM_CASE) instead keeps the
 default 'crandom' start and the default population (computed from the
 number of search parameters and cores), with the random numbers drawn
 by the 'crandom' start seeded. The seed of the random-number generator
@@ -28,11 +28,12 @@ __license__ = 'GPLv3+'
 
 import contextlib
 import functools
-from itertools import product
 
-import pytest
+from pytest_cases import case
 from pytest_cases import fixture
+from pytest_cases import get_current_cases
 from pytest_cases import parametrize
+from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams import rparams
@@ -40,14 +41,14 @@ from viperleed.calc.files import iosearch
 from viperleed.calc.lib.context import execute_in_dir
 
 from ...helpers import private_random
-from . import conftest
-from .conftest import GROUPS
+from . import cases_stored_inputs
+from .cases_stored_inputs import SEARCH
 from .conftest import reference_group
 
 SEARCH_FILES = 'PARAM', 'search.steu', 'restrict.f', 'searchpars.info'
 SEARCH_POPULATION = 4
 SEARCH_START = 'centered'
-CRANDOM_VARIANT = 'ag100_z_crandom'
+CRANDOM_CASE = 'ag100_z_crandom'
 CRANDOM_SEED = 1
 # The default population is rounded up to a multiple of the cores. A
 # number of cores that does not divide it makes the rounding visible.
@@ -58,15 +59,11 @@ MAX_GEN_WRITTEN = {'1.6.0-1.6.1': 999999, '1.7.3-': 9999999}
 EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
 EXP_BEAMS = ((1, 0), (1, 1), (2, 0))
 
-# The variants of the delta inputs, plus one with the default population
-# and starting configuration
-VARIANTS = {**conftest.VARIANTS,
-            CRANDOM_VARIANT: conftest.VARIANTS['ag100_z']}
 
-PARAMS = [
-    pytest.param(group, variant, name, id=f'{group}-{variant}-{name}')
-    for group, variant, name in product(GROUPS, VARIANTS, SEARCH_FILES)
-    ]
+@case(id=CRANDOM_CASE, tags=SEARCH)
+def case_ag100_z_crandom():
+    """Return the inputs of ag100_z, for the CRANDOM_CASE."""
+    return cases_stored_inputs.case_ag100_z()
 
 
 def _synthetic_exp_beams():
@@ -125,22 +122,26 @@ def _write_search_inputs(prepared, *, crandom=False):
 def factory_search_folders(prepared_deltas):
     """Return a function that writes the search inputs (cached)."""
     @functools.lru_cache(maxsize=None)
-    def _write(group, variant):
-        case, displacements = VARIANTS[variant]
-        prepared = prepared_deltas(case, group, displacements)
-        return _write_search_inputs(prepared,
-                                    crandom=variant == CRANDOM_VARIANT)
+    def _write(group, inputs, crandom):
+        prepared = prepared_deltas(inputs, group)
+        return _write_search_inputs(prepared, crandom=crandom)
     return _write
 
 
 @fixture(name='written_and_reference')
-@parametrize('group,variant,name', PARAMS)
-def fixture_written_and_reference(group, variant, name,
-                                  search_folders, data_path):
+@parametrize(name=SEARCH_FILES)
+@parametrize_with_cases('inputs',
+                        cases=(cases_stored_inputs, case_ag100_z_crandom),
+                        has_tag=SEARCH)
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def fixture_written_and_reference(group, inputs, name,
+                                  search_folders, data_path, request):
     """Return a written file and its reference."""
-    reference = (data_path / 'stored_inputs/search' / variant
+    case_id = get_current_cases(request)[request.fixturename]['inputs'].id
+    reference = (data_path / 'stored_inputs/search' / case_id
                  / reference_group(group) / name)
-    return search_folders(group, variant) / name, reference
+    folder = search_folders(group, inputs, case_id == CRANDOM_CASE)
+    return folder / name, reference
 
 
 def test_search_input(written_and_reference, check_reference):
@@ -151,8 +152,7 @@ def test_search_input(written_and_reference, check_reference):
 
 def test_max_generations_limited(group, prepared_deltas):
     """Check that too many generations are cut to what fits."""
-    case, displacements = VARIANTS['ag100_z']
-    prepared = prepared_deltas(case, group, displacements)
+    prepared = prepared_deltas(cases_stored_inputs.case_ag100_z(), group)
     prepared.rpars.SEARCH_MAX_GEN = HUGE_MAX_GEN
     folder = _write_search_inputs(prepared)
     lines = (folder / 'search.steu').read_text(encoding='utf-8').splitlines()

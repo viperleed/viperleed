@@ -22,23 +22,12 @@ from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
+from .cases_stored_inputs import REFCALC
+from .cases_stored_inputs import tagged_inputs
 from .conftest import GROUPS
-from .conftest import PRESET_CASES
-from .conftest import STORED_CASES
 from .conftest import copy_case_state
 from .conftest import reference_group
-from .conftest import reference_name
-
-# Case (as in conftest) -> domains. The case 'ag100_mixed' is not here:
-# its VIBROCC offsets and DISPLACEMENTS only matter after a search, so
-# its reference calculation inputs are identical to those of 'ag100'.
-CASES = {
-    'ag100': ('ag100',),
-    'ag100_el_rename': ('ag100_el_rename',),
-    'telluride_stacking': ('STA', 'FAU'),
-    'ptrh_100_1x3_o': ('ptrh_100_1x3_o',),
-    }
-assert set(CASES) <= set(STORED_CASES) | set(PRESET_CASES)
+from .conftest import reference_params
 
 PARAM_FILE = 'refcalc-PARAM'
 FIN_FILE = 'refcalc-FIN'
@@ -58,15 +47,12 @@ FILES_BY_GROUP = {
 assert set(FILES_BY_GROUP) == {reference_group(group) for group in GROUPS}
 
 
-PARAMS = [
-    pytest.param(group, case, domain, name,
-                 id=f'{group}-{reference_name(case, domains, domain)}-{name}')
-    for group in GROUPS
-    for names in (FILES_BY_GROUP[reference_group(group)],)
-    for case, domains in CASES.items()
-    for domain in domains
-    for name in names
-    ]
+def _file_names(group, _):
+    """Return the names of the reference files of a group."""
+    return FILES_BY_GROUP[reference_group(group)]
+
+
+PARAMS = reference_params(REFCALC, _file_names)
 
 
 @fixture(scope='session', name='refcalc_folder')
@@ -74,11 +60,12 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
     """Return a function that writes the refcalc inputs (cached)."""
     cache = {}
 
-    def _write(group, case, domain):
-        key = group, case, domain
+    def _write(group, inputs, domain):
+        key = group, inputs, domain
         if key in cache:
             return cache[key]
-        slab, rpars, source = initialized_case(case, group).domains[domain]
+        initialized = initialized_case(inputs, group)
+        slab, rpars, source = initialized.domains[domain]
         folder = tmp_path_factory.mktemp('refcalc')
         slab, rpars = copy_case_state(source, folder, slab, rpars)
         rpars.SUPPRESS_EXECUTION = True
@@ -96,19 +83,18 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
 
 
 @fixture(name='written_and_reference')
-@parametrize('group,case,domain,name', PARAMS)
+@parametrize('group,inputs,domain,ref_name,name', PARAMS)
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def fixture_written_and_reference(group, case, domain, name,
+def fixture_written_and_reference(group, inputs, domain, ref_name, name,
                                   refcalc_folder, data_path):
     """Return a written file and its reference.
 
     Preparing the inputs (once per case) happens in this fixture, so
     that the time of the test itself is that of the comparison.
     """
-    reference = (data_path / 'stored_inputs/refcalc'
-                 / reference_name(case, CASES[case], domain)
+    reference = (data_path / 'stored_inputs/refcalc' / ref_name
                  / reference_group(group) / name)
-    return refcalc_folder(group, case, domain) / name, reference
+    return refcalc_folder(group, inputs, domain) / name, reference
 
 
 def _with_phaseshifts_placeholder(fin_file, tmp_path):
@@ -135,23 +121,26 @@ def test_refcalc_input(written_and_reference, check_reference, tmp_path):
 # The PHASESHIFTS of the preset cases are written by the case set-up
 # itself, and have no stored input to compare with.
 _STORED_PHASESHIFTS = [
-    pytest.param(group, case, domain, id=f'{group}-{case}-{domain}')
+    pytest.param(group,
+                 inputs,
+                 domain,
+                 id=f'{group}-{case_id}-{domain or case_id}')
     for group in GROUPS
-    for case, domains in CASES.items()
-    if case in STORED_CASES
-    for domain in domains
+    for case_id, inputs in tagged_inputs(REFCALC)
+    if not inputs.preset
+    for domain in inputs.domain_names
     ]
 
 
 @fixture(name='phaseshifts_and_stored')
-@parametrize('group,case,domain', _STORED_PHASESHIFTS)
-def fixture_phaseshifts_and_stored(group, case, domain, refcalc_folder,
+@parametrize('group,inputs,domain', _STORED_PHASESHIFTS)
+def fixture_phaseshifts_and_stored(group, inputs, domain, refcalc_folder,
                                   data_path):
     """Return the work-dir PHASESHIFTS and the stored input."""
-    source = data_path / STORED_CASES[case].source
-    if STORED_CASES[case].domains:
+    source = data_path / inputs.source
+    if domain:
         source /= domain
-    written = refcalc_folder(group, case, domain) / PHASESHIFTS
+    written = refcalc_folder(group, inputs, domain) / PHASESHIFTS
     return written, source / PHASESHIFTS
 
 

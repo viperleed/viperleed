@@ -1,8 +1,9 @@
 """Test configuration for tests.calc.stored_inputs.
 
-Defines the cases of the stored-input tests, and a session-scoped
-factory fixture that brings each case to the state it has right after
-an INITIALIZATION, without a TensErLEED tree, a compiler, or any
+Defines the version groups of the stored-input tests, and a
+session-scoped factory fixture that brings each case (see
+cases_stored_inputs.py) to the state it has right after an
+INITIALIZATION, without a TensErLEED tree, a compiler, or any
 execution of TensErLEED code. The inputs written by later sections
 (reference calculation, deltas, search) can then be produced by calling
 the writers on the slabs and Rparams of the case.
@@ -16,7 +17,8 @@ group
     Run of the tests, i.e., a version group (or a version of it)
     (parametrized).
 initialized_case (factory)
-    Return the InitializedCase of a case in a version group.
+    Return the InitializedCase of the StoredInputs of a case in a
+    version group.
 prepared_deltas (factory)
     Prepare the delta-amplitude inputs of a case in a copy of its
     working folder.
@@ -36,7 +38,6 @@ from pathlib import Path
 import shutil
 from types import SimpleNamespace
 import time
-from typing import NamedTuple
 
 import pytest
 from pytest_cases import fixture
@@ -59,8 +60,10 @@ from viperleed.calc.sections import deltas
 from viperleed.calc.sections import initialization
 from viperleed.calc.sections import run_sections
 
-from ...helpers import TEST_DATA
 from ..poscar_slabs import CasePOSCARSlabs
+from .cases_stored_inputs import DISPLACEMENTS
+from .cases_stored_inputs import PRESET_FILES
+from .cases_stored_inputs import tagged_inputs
 
 SYSTEM_NAME = 'stored-input'
 # The clock is pinned to this time, so that the timestamps written to
@@ -69,9 +72,6 @@ PINNED_TIME = time.struct_time((2026, 1, 1, 0, 0, 0, 3, 1, -1))
 N_CORES = 1
 THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
 TENSOR_INDEX = 1  # As after a reference calculation
-DISPLACEMENTS = 'DISPLACEMENTS'
-AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
-PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 
 # Runs of the tests: name of the run and the TensErLEED version used.
 # The reference files are grouped by version group, i.e., by the range
@@ -94,91 +94,60 @@ def reference_group(group):
     return group.split('@')[0]
 
 
-def reference_name(name, domains, domain):
+def reference_name(name, domain):
     """Return the name of the reference folder of a domain of a case.
 
     Parameters
     ----------
     name : str
-        The name of the case or variant.
-    domains : Sequence
-        The names of all domains of the case. Single-surface cases
-        have one entry (see InitializedCase.domains).
-    domain : str
-        The domain to return the reference folder of.
+        The id of the case.
+    domain : str or None
+        The domain to return the reference folder of, None for
+        single-surface cases (see InitializedCase.domains).
 
     Returns
     -------
     str
         `name` for single-surface cases, `name`_`domain` otherwise.
     """
-    return name if len(domains) == 1 else f'{name}_{domain}'
+    return name if domain is None else f'{name}_{domain}'
 
 
-@dataclass
-class StoredCase:
-    """A case with stored inputs.
+def reference_params(tag, file_names):
+    """Return the parameters of a test per reference file.
 
-    Attributes
+    Parameters
     ----------
-    source : str
-        A folder in the test data. All files in it are copied to the
-        folders of the calculation.
-    extra : dict
-        {destination: source} pairs of files that are added on top.
-    domains : tuple
-        For domain cases, the sub-folders of `source` to copy.
+    tag : str
+        The tag of the cases to test (see cases_stored_inputs.py).
+    file_names : callable
+        Called with a group and StoredInputs, returns the names of the
+        reference files of each domain.
+
+    Returns
+    -------
+    list
+        One pytest.param of (group, inputs, domain, reference name,
+        file name) per group, case, domain and file name, with id
+        '<group>-<reference name>-<file name>'. The reference name is
+        that of reference_name.
     """
-
-    source: str
-    extra: dict = field(default_factory=dict)
-    domains: tuple = ()
-
-
-STORED_CASES = {
-    'ag100': StoredCase('Ag(100)/initialization'),
-    'ag100_mixed': StoredCase(
-        'Ag(100)/initialization',
-        extra={'VIBROCC': 'Ag(100)/mergeDisp/VIBROCC',
-               'DISPLACEMENTS': 'Ag(100)/mergeDisp/DISPLACEMENTS_mixed'},
-        ),
-    'ag100_el_rename': StoredCase('Ag(100)_el_rename/initialization'),
-    'telluride_stacking': StoredCase('domains/telluride_stacking/deltas',
-                                     domains=('STA', 'FAU')),
-    }
+    return [
+        pytest.param(group,
+                     inputs,
+                     domain,
+                     ref_name,
+                     name,
+                     id=f'{group}-{ref_name}-{name}')
+        for group in GROUPS
+        for case_id, inputs in tagged_inputs(tag)
+        for domain in inputs.domain_names
+        for ref_name in (reference_name(case_id, domain),)
+        for name in file_names(group, inputs)
+        ]
 
 
-class Variant(NamedTuple):
-    """The case and DISPLACEMENTS of a variant of the tests.
-
-    Attributes
-    ----------
-    case : str
-        The name of the case, as in STORED_CASES or PRESET_CASES.
-    displacements : Path or None
-        The DISPLACEMENTS file to use. None means that the file of the
-        case (in its main folder) is used.
-    """
-
-    case: str
-    displacements: object
-
-
-# Variant name -> Variant. Shared by the tests of the delta and of the
-# search inputs.
-VARIANTS = {
-    'ag100_z': Variant('ag100', AG100_DISPLACEMENTS / 'DISPLACEMENTS_z'),
-    'ag100_vib': Variant('ag100', AG100_DISPLACEMENTS / 'DISPLACEMENTS_vib'),
-    'ag100_z+vib': Variant('ag100',
-                           AG100_DISPLACEMENTS / 'DISPLACEMENTS_z+vib'),
-    'ag100_mixed': Variant('ag100_mixed', None),
-    'telluride_stacking': Variant('telluride_stacking', None),
-    'ptrh_100_1x3_o': Variant('ptrh_100_1x3_o', PTRH_INPUTS / DISPLACEMENTS),
-    }
 _NOT_COPIED = {'Tensors'}  # Tensors are never read: no stored data
-PRESET_CASES = {  # POSCAR_SLABS case methods, with synthetic PHASESHIFTS
-    'ptrh_100_1x3_o': 'case_poscar_ptrh_100_1x3_o',
-    }
 # Synthetic PHASESHIFTS of the preset cases: header (Rundgren
 # parameters of the muffin-tin potential, copied from a stored file),
 # energies (Hartree) that cover the theoretical energy range, number
@@ -226,8 +195,8 @@ class InitializedCase:
     ----------
     domains : dict
         Maps a name to a (slab, rpars, folder) tuple. Single-surface
-        cases have one entry, named after the case. Domain cases have
-        one entry per domain, named after the domain. `folder` is the
+        cases have one entry, with name None. Domain cases have one
+        entry per domain, named after the domain. `folder` is the
         directory in which the INITIALIZATION ran, i.e., where the
         input files for later sections can be written.
     main : tuple
@@ -271,20 +240,16 @@ def factory_initialized_case(tmp_path_factory, data_path):
     """Return a function that initializes a case (cached)."""
     cache = {}
 
-    def _initialize(case, group):
+    def _initialize(inputs, group):
         tl_version = GROUPS[group]
-        key = case, tl_version
+        key = inputs.initialization, tl_version
         if key not in cache:
             tree = tmp_path_factory.mktemp('tree')
             # An empty folder is enough to find a TensErLEED version
             (tree / f'TensErLEED-v{tl_version}').mkdir()
-            work = tmp_path_factory.mktemp(case)
-            if case in PRESET_CASES:
-                cache[key] = _init_preset_case(
-                    case, work, tree, tl_version, data_path)
-            else:
-                cache[key] = _init_stored_case(
-                    case, work, tree, tl_version, data_path)
+            work = tmp_path_factory.mktemp('case')
+            init = _init_preset_case if inputs.preset else _init_stored_case
+            cache[key] = init(inputs, work, tree, tl_version, data_path)
         return cache[key]
     return _initialize
 
@@ -313,13 +278,13 @@ def copy_case_state(source, folder, slab, rpars):
     return copy.deepcopy((slab, rpars))
 
 
-def _prepare_folder(folder, spec, data_path):
+def _prepare_folder(folder, inputs, data_path):
     """Copy the stored inputs of a case to `folder`."""
-    source = data_path / spec.source
+    source = data_path / inputs.source
     for item in source.iterdir():
         if item.name in _NOT_COPIED:
             continue
-        if item.is_dir() and item.name not in spec.domains:
+        if item.is_dir() and item.name not in inputs.domains:
             continue
         if item.is_dir():
             copytree_exists_ok(
@@ -329,17 +294,16 @@ def _prepare_folder(folder, spec, data_path):
                 )
         else:
             shutil.copy2(item, folder)
-    for destination, extra_source in spec.extra.items():
+    for destination, extra_source in inputs.extra:
         shutil.copy2(data_path / extra_source, folder / destination)
 
 
-def _init_stored_case(case, tmp, tree, tl_version, data_path):
-    """Run an INITIALIZATION on the stored inputs of `case`."""
-    spec = STORED_CASES[case]
+def _init_stored_case(inputs, tmp, tree, tl_version, data_path):
+    """Run an INITIALIZATION on StoredInputs from a folder."""
     work = tmp / DEFAULT_WORK
     work.mkdir()
-    _prepare_folder(tmp, spec, data_path)
-    _prepare_folder(work, spec, data_path)
+    _prepare_folder(tmp, inputs, data_path)
+    _prepare_folder(work, inputs, data_path)
     captured = {}
     with pytest.MonkeyPatch.context() as patcher:
         _record_and_keep_files(patcher, captured)
@@ -354,8 +318,8 @@ def _init_stored_case(case, tmp, tree, tl_version, data_path):
                 )
     assert not failed
     rpars, slab = captured['args']
-    domains = {case: (slab, rpars, work)}
-    if spec.domains:
+    domains = {None: (slab, rpars, work)}
+    if inputs.domains:
         domains = {dom.name: (dom.slab, dom.rpars, dom.workdir)
                  for dom in rpars.domainParams}
     for _, domain_rpars, _ in domains.values():
@@ -394,9 +358,9 @@ def _write_synthetic_phaseshifts(slab, rpars, filename):
     Path(filename).write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
-def _init_preset_case(case, tmp, tree, tl_version, data_path):
+def _init_preset_case(inputs, tmp, tree, tl_version, data_path):
     """Run an INITIALIZATION on a slab from the POSCAR presets."""
-    slab, rpars, *_ = getattr(CasePOSCARSlabs(), PRESET_CASES[case])()
+    slab, rpars, *_ = getattr(CasePOSCARSlabs(), inputs.preset)()
     work = tmp / DEFAULT_WORK
     work.mkdir()
     rpars.paths.tensorleed = tree
@@ -407,9 +371,8 @@ def _init_preset_case(case, tmp, tree, tl_version, data_path):
     rpars.THEO_ENERGIES = TheoEnergies(*THEO_ENERGIES)
     with execute_in_dir(work):
         _write_synthetic_phaseshifts(slab, rpars, 'PHASESHIFTS')
-        for name in ('IVBEAMS', 'VIBROCC'):
-            shutil.copy2(data_path / 'stored_inputs/inputs' / case / name,
-                         name)
+        for name in PRESET_FILES:
+            shutil.copy2(data_path / inputs.source / name, name)
         slab.full_update(rpars)  # chemical elements of ELEMENT_MIX
         vibrocc.readVIBROCC(rpars, slab)
         rpars.fileLoaded['VIBROCC'] = True
@@ -419,23 +382,22 @@ def _init_preset_case(case, tmp, tree, tl_version, data_path):
         rpars.fileLoaded['IVBEAMS'] = True
         rpars.updateDerivedParams()
         initialization.initialization(slab, rpars)
-    return InitializedCase({case: (slab, rpars, work)}, (rpars, work))
+    return InitializedCase({None: (slab, rpars, work)}, (rpars, work))
 
 
 @fixture(scope='session', name='prepared_deltas')
 def factory_prepared_deltas(initialized_case, tmp_path_factory):
     """Return a function that prepares the delta inputs (not cached).
 
-    The function takes the case, the version group, and the path to
-    a DISPLACEMENTS file to use (None to use the one of the case), and
-    returns a PreparedDeltas. Slabs and Rparams are copies, so that
-    the cached state of the case is not modified. The Tensors folder
-    only has to exist: its contents are never read, as the
+    The function takes the StoredInputs of a case and the version
+    group, and returns a PreparedDeltas. Slabs and Rparams are copies,
+    so that the cached state of the case is not modified. The Tensors
+    folder only has to exist: its contents are never read, as the
     original-state files are those of the initialization, and no delta
     files exist yet.
     """
-    def _prepare(case, group, displacements):
-        state = initialized_case(case, group)
+    def _prepare(inputs, group):
+        state = initialized_case(inputs, group)
         rpars, source = state.main
         folder = tmp_path_factory.mktemp('deltas')
         main_slab, *_ = next(iter(state.domains.values()))
@@ -444,8 +406,8 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
         for domain in rpars.domainParams:
             folders[domain.name] = folder / domain.workdir.relative_to(source)
             domain.workdir = folders[domain.name]
-        if displacements:
-            shutil.copy2(displacements, folder / DISPLACEMENTS)
+        if inputs.displacements:
+            shutil.copy2(inputs.displacements, folder / DISPLACEMENTS)
         for domain_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
             domain_rpars.TENSOR_INDEX = TENSOR_INDEX
             if 1 not in domain_rpars.runHistory:  # Original state: initial

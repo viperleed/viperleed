@@ -18,45 +18,17 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 import functools
-from typing import NamedTuple
 
-import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
+from pytest_cases import parametrize_with_cases
 
-from .conftest import GROUPS
-from .conftest import VARIANTS
+from . import cases_stored_inputs
+from .cases_stored_inputs import DELTAS
 from .conftest import reference_group
-from .conftest import reference_name
+from .conftest import reference_params
 
 DELTA_INPUT = 'delta-input'
-
-
-class Layout(NamedTuple):
-    """The files written for a variant.
-
-    Attributes
-    ----------
-    domains : tuple
-        The names of the domains of the case, as in InitializedCase.
-    n_param : int
-        The number of PARAM files, i.e., of different array dimensions,
-        of each domain.
-    """
-
-    domains: tuple
-    n_param: int
-
-
-LAYOUTS = {
-    'ag100_z': Layout(('ag100',), 1),
-    'ag100_vib': Layout(('ag100',), 1),
-    'ag100_z+vib': Layout(('ag100',), 1),
-    'ag100_mixed': Layout(('ag100_mixed',), 3),
-    'telluride_stacking': Layout(('STA', 'FAU'), 2),
-    'ptrh_100_1x3_o': Layout(('ptrh_100_1x3_o',), 3),
-    }
-assert LAYOUTS.keys() == VARIANTS.keys()
 
 
 def _param_name(index):
@@ -64,16 +36,13 @@ def _param_name(index):
     return f'Delta_Compile_{index}-PARAM'
 
 
-PARAMS = [
-    pytest.param(
-        group, variant, domain, name,
-        id=f'{group}-{reference_name(variant, domains, domain)}-{name}',
-        )
-    for group in GROUPS
-    for variant, (domains, n_param) in LAYOUTS.items()
-    for domain in domains
-    for name in (DELTA_INPUT, *(_param_name(i) for i in range(n_param)))
-    ]
+def _file_names(_, inputs):
+    """Return the names of the reference files of each domain."""
+    return (DELTA_INPUT,
+            *(_param_name(i) for i in range(inputs.n_param)))
+
+
+PARAMS = reference_params(DELTAS, _file_names)
 
 
 def _param_files(compile_tasks):
@@ -93,25 +62,22 @@ def factory_delta_folders(prepared_deltas):
     The function returns a (PreparedDeltas, {PARAM names}) tuple.
     """
     @functools.lru_cache(maxsize=None)
-    def _write(group, variant):
-        case, displacements = VARIANTS[variant]
-        prepared = prepared_deltas(case, group, displacements)
+    def _write(group, inputs):
+        prepared = prepared_deltas(inputs, group)
         written = _param_files(prepared.compile_tasks)
         return prepared, {p.name for p in written}
     return _write
 
 
 @fixture(name='written_and_reference')
-@parametrize('group,variant,domain,name', PARAMS)
+@parametrize('group,inputs,domain,ref_name,name', PARAMS)
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def fixture_written_and_reference(group, variant, domain, name,
+def fixture_written_and_reference(group, inputs, domain, ref_name, name,
                                   delta_folders, data_path):
     """Return a written file and its reference."""
-    domains = LAYOUTS[variant].domains
-    reference = (data_path / 'stored_inputs/deltas'
-                 / reference_name(variant, domains, domain)
+    reference = (data_path / 'stored_inputs/deltas' / ref_name
                  / reference_group(group) / name)
-    prepared, _ = delta_folders(group, variant)
+    prepared, _ = delta_folders(group, inputs)
     return prepared.folders[domain] / name, reference
 
 
@@ -121,20 +87,12 @@ def test_delta_input(written_and_reference, check_reference):
     check_reference(written, reference)
 
 
-@fixture(name='written_param_names')
-@parametrize(variant=tuple(VARIANTS))
-def fixture_written_param_names(group, variant, delta_folders):
-    """Return the names of the PARAM files written for a variant."""
-    _, written = delta_folders(group, variant)
-    return variant, written
-
-
-@fixture(name='run_tasks')
-@parametrize(variant=tuple(VARIANTS))
-def fixture_run_tasks(group, variant, delta_folders):
-    """Return the delta-run tasks of a variant."""
-    prepared, _ = delta_folders(group, variant)
-    return prepared.run_tasks
+@fixture(name='written_deltas')
+@parametrize_with_cases('inputs', cases=cases_stored_inputs, has_tag=DELTAS)
+def fixture_written_deltas(group, inputs, delta_folders):
+    """Return the StoredInputs of a case and its delta_folders."""
+    prepared, written = delta_folders(group, inputs)
+    return inputs, prepared, written
 
 
 def _read_with_newline(path):
@@ -143,15 +101,16 @@ def _read_with_newline(path):
     return contents if contents.endswith('\n') else contents + '\n'
 
 
-def test_piped_delta_input(run_tasks):
+def test_piped_delta_input(written_deltas):
     """Check the input piped to the delta executables.
 
     It is the abbreviated input that is written to delta-input, with
     the AUXBEAMS and PHASESHIFTS tags replaced by the files that are in
     the work folder of the task.
     """
-    assert run_tasks
-    for task in run_tasks:
+    _, prepared, _ = written_deltas
+    assert prepared.run_tasks
+    for task in prepared.run_tasks:
         auxbeams = _read_with_newline(task.io_dir / 'AUXBEAMS')
         phaseshifts = _read_with_newline(task.io_dir / 'PHASESHIFTS')
         expected = task.din_short.replace('[AUXBEAMS]\n', auxbeams)
@@ -159,8 +118,7 @@ def test_piped_delta_input(run_tasks):
         assert task.din == expected
 
 
-def test_no_other_param_files(written_param_names):
+def test_no_other_param_files(written_deltas):
     """Check that no PARAM file is written that has no reference."""
-    variant, written = written_param_names
-    n_param = LAYOUTS[variant].n_param
-    assert written == {_param_name(i) for i in range(n_param)}
+    inputs, _, written = written_deltas
+    assert written == {_param_name(i) for i in range(inputs.n_param)}
