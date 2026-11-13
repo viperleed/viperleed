@@ -22,6 +22,7 @@ from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
+from . import cases_stored_inputs
 from .cases_stored_inputs import REFCALC
 from .cases_stored_inputs import tagged_inputs
 from .conftest import GROUPS
@@ -148,3 +149,18 @@ def test_phaseshifts_is_stored_input(phaseshifts_and_stored):
     """Check that the PHASESHIFTS in refcalc-FIN is the stored input."""
     written, stored = phaseshifts_and_stored
     assert written.read_bytes() == stored.read_bytes()
+
+
+def test_mixed_inputs_as_ag100(group, refcalc_folder):
+    """Check that ag100_mixed writes the refcalc inputs of ag100.
+
+    Its VIBROCC offsets and DISPLACEMENTS only matter after a search,
+    so ag100_mixed has no refcalc references of its own.
+    """
+    ag100 = refcalc_folder(group, cases_stored_inputs.case_ag100(), None)
+    mixed = refcalc_folder(group,
+                           cases_stored_inputs.case_ag100_mixed(),
+                           None)
+    for name in FILES_BY_GROUP[reference_group(group)]:
+        written = (mixed / name).read_text(encoding='utf-8')
+        assert written == (ag100 / name).read_text(encoding='utf-8'), name

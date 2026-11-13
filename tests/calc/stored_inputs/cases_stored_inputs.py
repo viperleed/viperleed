@@ -152,7 +152,8 @@ def case_ag100_mixed():
     """Return Ag(100) with VIBROCC offsets and mixed displacements.
 
     The VIBROCC offsets and DISPLACEMENTS only matter after a search:
-    the inputs of the reference calculation are those of case_ag100.
+    the inputs of the reference calculation are those of case_ag100
+    (see test_refcalc_inputs.py).
     """
     return StoredInputs(
         AG100,
