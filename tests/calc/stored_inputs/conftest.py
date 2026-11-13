@@ -45,6 +45,7 @@ from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import vibrocc
+from viperleed.calc.lib import checksums
 from viperleed.calc.lib import time_utils
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
@@ -75,9 +76,12 @@ PTRH_INPUTS = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o'
 # version it contains, and, if it contains more than one TensErLEED
 # version with different code paths, also at the lowest one. The latter
 # are named '<group>@<version>' and use the references of <group>.
+# The newest group runs at the newest version known to the checksums:
+# a newer version that changes the inputs fails these tests, to flag
+# that the version groups need review.
 GROUPS = {
     '1.6.0-1.6.1': '1.6.1',
-    '1.7.3-': '2.1.0',
+    '1.7.3-': max(checksums.KNOWN_TL_VERSIONS, key=Version),
     '1.7.3-@1.7.4': '1.7.4',
     }
 
