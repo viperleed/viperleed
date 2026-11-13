@@ -39,6 +39,7 @@ PRESET_FILES = 'IVBEAMS', 'VIBROCC'
 AG100 = 'Ag(100)/initialization'
 AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
 PTRH_INPUTS = 'stored_inputs/inputs/ptrh_100_1x3_o'
+FE2O3_INPUTS = 'stored_inputs/inputs/fe2o3_012_1x1'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -181,4 +182,16 @@ def case_ptrh_100_1x3_o():
         preset='case_poscar_ptrh_100_1x3_o',
         displacements=TEST_DATA / PTRH_INPUTS / DISPLACEMENTS,
         n_param=3,
+        )
+
+
+@case(tags=(REFCALC, DELTAS, SEARCH))
+def case_fe2o3_012_1x1():
+    """Return the Fe2O3(012)-(1x1) example, with c not along z."""
+    return StoredInputs(
+        FE2O3_INPUTS,
+        extra=(
+            ('POSCAR', 'POSCARs/POSCAR_Fe2O3_012_1x1_not_optimized'),
+            ),
+        n_param=2,
         )

@@ -1,0 +1,15 @@
+! Parameters of the Fe2O3(012)-(1x1) example of the documentation
+RUN = 0
+THEO_ENERGIES = 50 350 3
+
+BEAM_INCIDENCE = THETA 0.0, PHI 90.0
+
+SITE_DEF O = surf top(2)
+SITE_DEF Fe = surf top(2)
+
+BULK_LIKE_BELOW = 0.35
+
+LMAX = 8-12
+
+T_DEBYE = 480
+T_EXPERIMENT = 300

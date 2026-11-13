@@ -1,0 +1,263 @@
+   12           number of independent parameters
+ 0.1000         gaussian width control parameter RMUT
+    0           initialisation for random number generator - 0: use system time, 1,...: use init
+    1           1: use RPe -- 2: use R2
+    0           Optimization of which beam group do you want? (0=Aver,1=Int,2=Half)
+    0           Store configurations and write data.chem files for parabola fit (0=false)
+    100         output interval
+ 100000         desired number of generations to be performed
+  100           area fraction step width (%)
+SD.TL           name of search document file (max. 10 characters)
+    1           Number of domains under consideration
+======= Information about Domain 1: ============================================
+   20           Number of atomic sites in variation: Domain 1
+------- Information about site 1: ----------------------------------------------
+    0           Surface (0/1)
+    1           Atom number
+    1           No. of different files for Atom no. 1
+****Information about file 1:
+DEL_2_Fe_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 1
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 2: ----------------------------------------------
+    0           Surface (0/1)
+    1           Atom number
+    1           No. of different files for Atom no. 2
+****Information about file 1:
+DEL_12_Fe_1     Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 2
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 3: ----------------------------------------------
+    1           Surface (0/1)
+    2           Atom number
+    1           No. of different files for Atom no. 3
+****Information about file 1:
+DEL_4_Fe_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    2           Types of parameters in file 1
+    9           vibrational steps
+   11           geometrical steps
+****concentration steps for site no. 3
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 4: ----------------------------------------------
+    1           Surface (0/1)
+    2           Atom number
+    1           No. of different files for Atom no. 4
+****Information about file 1:
+DEL_10_Fe_1     Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    2           Types of parameters in file 1
+    9           vibrational steps
+   11           geometrical steps
+****concentration steps for site no. 4
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 5: ----------------------------------------------
+    1           Surface (0/1)
+    3           Atom number
+    1           No. of different files for Atom no. 5
+****Information about file 1:
+DEL_6_Fe_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 5
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 6: ----------------------------------------------
+    1           Surface (0/1)
+    3           Atom number
+    1           No. of different files for Atom no. 6
+****Information about file 1:
+DEL_16_Fe_1     Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 6
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 7: ----------------------------------------------
+    0           Surface (0/1)
+    4           Atom number
+    1           No. of different files for Atom no. 7
+****Information about file 1:
+DEL_8_Fe_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 7
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 8: ----------------------------------------------
+    0           Surface (0/1)
+    4           Atom number
+    1           No. of different files for Atom no. 8
+****Information about file 1:
+DEL_14_Fe_1     Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 8
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 9: ----------------------------------------------
+    1           Surface (0/1)
+    5           Atom number
+    1           No. of different files for Atom no. 9
+****Information about file 1:
+DEL_18_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    2           Types of parameters in file 1
+    9           vibrational steps
+   11           geometrical steps
+****concentration steps for site no. 9
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 10: ----------------------------------------------
+    1           Surface (0/1)
+    5           Atom number
+    1           No. of different files for Atom no. 10
+****Information about file 1:
+DEL_38_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    2           Types of parameters in file 1
+    9           vibrational steps
+   11           geometrical steps
+****concentration steps for site no. 10
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 11: ----------------------------------------------
+    0           Surface (0/1)
+    6           Atom number
+    1           No. of different files for Atom no. 11
+****Information about file 1:
+DEL_20_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 11
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 12: ----------------------------------------------
+    0           Surface (0/1)
+    6           Atom number
+    1           No. of different files for Atom no. 12
+****Information about file 1:
+DEL_40_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 12
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 13: ----------------------------------------------
+    1           Surface (0/1)
+    7           Atom number
+    1           No. of different files for Atom no. 13
+****Information about file 1:
+DEL_22_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 13
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 14: ----------------------------------------------
+    1           Surface (0/1)
+    7           Atom number
+    1           No. of different files for Atom no. 14
+****Information about file 1:
+DEL_34_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 14
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 15: ----------------------------------------------
+    0           Surface (0/1)
+    8           Atom number
+    1           No. of different files for Atom no. 15
+****Information about file 1:
+DEL_24_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 15
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 16: ----------------------------------------------
+    0           Surface (0/1)
+    8           Atom number
+    1           No. of different files for Atom no. 16
+****Information about file 1:
+DEL_36_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 16
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 17: ----------------------------------------------
+    0           Surface (0/1)
+    9           Atom number
+    1           No. of different files for Atom no. 17
+****Information about file 1:
+DEL_26_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 17
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 18: ----------------------------------------------
+    0           Surface (0/1)
+    9           Atom number
+    1           No. of different files for Atom no. 18
+****Information about file 1:
+DEL_30_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 18
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 19: ----------------------------------------------
+    0           Surface (0/1)
+   10           Atom number
+    1           No. of different files for Atom no. 19
+****Information about file 1:
+DEL_28_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 19
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+------- Information about site 20: ----------------------------------------------
+    0           Surface (0/1)
+   10           Atom number
+    1           No. of different files for Atom no. 20
+****Information about file 1:
+DEL_32_O_1      Name of file 1 (max. 15 characters)
+    1           Formatted(0/1)
+    1           Types of parameters in file 1
+   11           geometrical steps
+****concentration steps for site no. 20
+    1           no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+Information about start configuration: (Parameters for each place, conc for each place)
+    1           Certain start position (1) or random configuration (0)
+   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   1
+   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   1
+   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   1
+   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   5   6   1   5   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   6   1   1
