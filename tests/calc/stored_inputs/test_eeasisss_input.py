@@ -32,7 +32,10 @@ from .conftest import SYSTEM_NAME
 INPUT_NAME = 'eeasisss-input'
 WINDOWS = 'nt'  # Value of os.name on Windows, as psgen checks it
 
-# Cases of POSCARSlabs that carry parameters (presets or mixed sites)
+# Cases of POSCARSlabs that carry parameters (presets or mixed sites).
+# Unlike the other stored-input tests, these need only a slab and its
+# Rparams, not the StoredInputs of cases_stored_inputs.py: the cases
+# are taken directly from the POSCAR presets.
 CASES = (
     POSCARSlabs.case_poscar_ag100,
     POSCARSlabs.case_poscar_diamond,
