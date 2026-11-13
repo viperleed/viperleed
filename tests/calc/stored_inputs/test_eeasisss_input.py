@@ -30,6 +30,7 @@ from ..poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 from .conftest import SYSTEM_NAME
 
 INPUT_NAME = 'eeasisss-input'
+WINDOWS = 'nt'  # Value of os.name on Windows, as psgen checks it
 
 # Cases of POSCARSlabs that carry parameters (presets or mixed sites)
 CASES = (
@@ -47,7 +48,7 @@ def fixture_stub_tree(tmp_path):
     """Return a fake TensErLEED directory with stub eeasisss/data."""
     tree = tmp_path / 'TensErLEED'
     tree.mkdir()
-    executable = 'eeasisss.exe' if os.name == 'nt' else 'eeasisss'
+    executable = 'eeasisss.exe' if os.name == WINDOWS else 'eeasisss'
     (tree / executable).touch()
     (tree / 'seSernelius').touch()
     for element in PERIODIC_TABLE:

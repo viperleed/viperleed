@@ -210,7 +210,7 @@ class InitializedCase:
 
 @fixture(autouse=True, name='pinned_clock')
 def fixture_pinned_clock(mocker):
-    """Make viperleed.calc.lib.time_utils see a fixed time (PINNED_TIME).
+    """Make viperleed.calc.lib.time_utils see the time PINNED_TIME.
 
     The session-scoped factories run inside tests, hence they, too,
     see the pinned clock.
