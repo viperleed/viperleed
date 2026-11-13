@@ -1832,6 +1832,21 @@ class TestSuperAndSubCell:
         'not a subcell': (np.diag((2, 2)), ValueError),
         }
 
+    # Transforms whose determinant numpy does not compute exactly
+    inexact_det = {
+        '3x3': np.diag((3, 3)),
+        '9x2': np.diag((9, 2)),
+        'oblique': np.array([[-3, 3], [0, -3]]),
+        }
+
+    @parametrize(transform=inexact_det.values(), ids=inexact_det)
+    def test_subcell_inexact_det(self, transform, ag100):
+        """Check make_subcell for transforms with an inexact numpy det."""
+        slab, rpars, *_ = ag100
+        supercell = slab.make_supercell(transform)
+        subcell = supercell.make_subcell(rpars, transform)
+        assert subcell.n_atoms == slab.n_atoms
+
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
     def test_subcell_invalid(self, matrix, exc, ag100):
         """Check complaints for invalid input to make_subcell."""

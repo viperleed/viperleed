@@ -1170,8 +1170,11 @@ class SurfaceSlab(BaseSlab):
         subcell_slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
                                             rpars.SYMMETRY_EPS.z,
                                             other_slab=self)
-        # Now make sure that transform actually gave a subcell
-        supercell_atoms = subcell_slab.n_atoms * abs(np.linalg.det(transform))
+        # Now make sure that transform actually gave a subcell. The
+        # determinant of an integer matrix is an integer, but that of
+        # numpy is not always exact (e.g., 9.000000000000002 for 3x3)
+        n_cells = round(abs(np.linalg.det(transform)))
+        supercell_atoms = subcell_slab.n_atoms * n_cells
         if self.n_atoms != supercell_atoms:
             raise ValueError(
                 f'Slab is not a supercell with transform={transform} '
