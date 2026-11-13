@@ -43,6 +43,10 @@ _QT_API_VALUES = {binding.lower(): binding for binding in SUPPORTED_BINDINGS}
 _SELECTED_BINDING = None
 
 
+class QtBindingNotFoundError(ImportError):
+    """No usable Qt binding could be found."""
+
+
 def get_binding():
     """Return the name of the Qt binding in use.
 
@@ -113,10 +117,6 @@ def set_binding(binding):
         raise ValueError(f'Cannot select {binding}: {_SELECTED_BINDING} '
                          'is already in use')
     _SELECTED_BINDING = binding
-
-
-class QtBindingNotFoundError(ImportError):
-    """No usable Qt binding could be found."""
 
 
 def _get_requested_binding():
