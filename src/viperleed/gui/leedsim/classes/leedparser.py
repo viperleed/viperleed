@@ -13,7 +13,7 @@ as defined in this module in the <defaults> dictionary.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-04-11'
 __license__ = 'GPLv3+'
 

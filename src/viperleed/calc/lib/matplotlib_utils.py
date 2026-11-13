@@ -7,7 +7,7 @@ makes new matplotlib features available in older python versions.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-07-10'
 __license__ = 'GPLv+3'
 
