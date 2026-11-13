@@ -38,11 +38,12 @@ PHASESHIFTS = 'PHASESHIFTS'
 PHASESHIFTS_PLACEHOLDER = (
     f'<{PHASESHIFTS}: verbatim copy of the work-dir {PHASESHIFTS}>\n'
     )
-# TensErLEED v1.7.3 and later do not use an AUXBEAMS file
+# TensErLEED v1.7.0 and later have no muftin.f to compile, v1.7.3
+# and later do not use an AUXBEAMS file
 _FILES = ('AUXLATGEO', 'AUXNONSTRUCT', 'AUXGEO', 'BEAMLIST', FIN_FILE,
           PARAM_FILE)
 FILES_BY_GROUP = {
-    '1.6.0-1.6.1': (*_FILES, 'AUXBEAMS'),
+    '1.6.0-1.6.1': (*_FILES, 'AUXBEAMS', 'muftin.f'),
     '1.7.3-': _FILES,
     }
 assert set(FILES_BY_GROUP) == {reference_group(group) for group in GROUPS}
