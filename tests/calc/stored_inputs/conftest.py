@@ -243,7 +243,7 @@ def fixture_group(run):
 
 
 @fixture(scope='session', name='initialized_case')
-def factory_initialized_case(tmp_path_factory):
+def factory_initialized_case(tmp_path_factory, data_path):
     """Return a function that initializes a case (cached)."""
     cache = {}
 
@@ -256,9 +256,11 @@ def factory_initialized_case(tmp_path_factory):
             (tree / f'TensErLEED-v{tl_version}').mkdir()
             work = tmp_path_factory.mktemp(case)
             if case in PRESET_CASES:
-                cache[key] = _init_preset_case(case, work, tree, tl_version)
+                cache[key] = _init_preset_case(
+                    case, work, tree, tl_version, data_path)
             else:
-                cache[key] = _init_stored_case(case, work, tree, tl_version)
+                cache[key] = _init_stored_case(
+                    case, work, tree, tl_version, data_path)
         return cache[key]
     return _initialize
 
@@ -287,9 +289,9 @@ def copy_case_state(source, folder, slab, rpars):
     return copy.deepcopy((slab, rpars))
 
 
-def _prepare_folder(folder, spec):
+def _prepare_folder(folder, spec, data_path):
     """Copy the stored inputs of a case to `folder`."""
-    source = TEST_DATA / spec.source
+    source = data_path / spec.source
     for item in source.iterdir():
         if item.name in _NOT_COPIED:
             continue
@@ -304,7 +306,7 @@ def _prepare_folder(folder, spec):
         else:
             shutil.copy2(item, folder)
     for destination, extra_source in spec.extra.items():
-        shutil.copy2(TEST_DATA / extra_source, folder / destination)
+        shutil.copy2(data_path / extra_source, folder / destination)
 
 
 def pin_clock(patcher):
@@ -318,13 +320,13 @@ def pin_clock(patcher):
         )
 
 
-def _init_stored_case(case, tmp, tree, tl_version):
+def _init_stored_case(case, tmp, tree, tl_version, data_path):
     """Run an INITIALIZATION on the stored inputs of `case`."""
     spec = STORED_CASES[case]
     work = tmp / DEFAULT_WORK
     work.mkdir()
-    _prepare_folder(tmp, spec)
-    _prepare_folder(work, spec)
+    _prepare_folder(tmp, spec, data_path)
+    _prepare_folder(work, spec, data_path)
     captured = {}
     with pytest.MonkeyPatch.context() as patcher:
         pin_clock(patcher)
@@ -380,7 +382,7 @@ def _write_synthetic_phaseshifts(slab, rpars, filename):
     Path(filename).write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
-def _init_preset_case(case, tmp, tree, tl_version):
+def _init_preset_case(case, tmp, tree, tl_version, data_path):
     """Run an INITIALIZATION on a slab from the POSCAR presets."""
     slab, rpars, *_ = getattr(CasePOSCARSlabs(), PRESET_CASES[case])()
     work = tmp / DEFAULT_WORK
@@ -396,7 +398,7 @@ def _init_preset_case(case, tmp, tree, tl_version):
     with execute_in_dir(work):
         _write_synthetic_phaseshifts(slab, rpars, 'PHASESHIFTS')
         for name in ('IVBEAMS', 'VIBROCC'):
-            shutil.copy2(TEST_DATA / 'stored_inputs/inputs' / case / name,
+            shutil.copy2(data_path / 'stored_inputs/inputs' / case / name,
                          name)
         slab.full_update(rpars)  # chemical elements of ELEMENT_MIX
         vibrocc.readVIBROCC(rpars, slab)

@@ -22,7 +22,6 @@ from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
-from ...helpers import TEST_DATA
 from .conftest import GROUPS
 from .conftest import PRESET_CASES
 from .conftest import STORED_CASES
@@ -146,9 +145,10 @@ _STORED_PHASESHIFTS = [
 
 @fixture(name='phaseshifts_and_stored')
 @parametrize('group,case,part', _STORED_PHASESHIFTS)
-def fixture_phaseshifts_and_stored(group, case, part, refcalc_folder):
+def fixture_phaseshifts_and_stored(group, case, part, refcalc_folder,
+                                  data_path):
     """Return the work-dir PHASESHIFTS and the stored input."""
-    source = TEST_DATA / STORED_CASES[case].source
+    source = data_path / STORED_CASES[case].source
     if STORED_CASES[case].domains:
         source /= part
     written = refcalc_folder(group, case, part) / PHASESHIFTS
