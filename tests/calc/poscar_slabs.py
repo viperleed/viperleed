@@ -90,6 +90,12 @@ def _get_poscar_info(*args):
     return test_info
 
 
+def _with_n_cells(info, n_cells):
+    """Return info for a POSCAR that contains n_cells 2D cells."""
+    info.poscar.n_cells = n_cells
+    return info
+
+
 def make_poscar_ids(suffix=None):
     """Return a callable that generates case IDs with a suffix."""
 
@@ -133,7 +139,12 @@ _PRESETS = {
 # IMPORTANT: when adding a POSCAR file to this tuple, also add:
 # - corresponding BEAMLIST files in the 'BEAMLISTs' directory
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
+    # A 9x2 supercell of rutile(110) whose atom
+    # positions deviate from ideal ones by ~1e-5 A
+    _with_n_cells(
+        _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
+        18,
+        ),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
@@ -414,9 +425,9 @@ class CasePOSCARSlabs:
     def case_poscar_sb_si_111(self):
         """Return a non-minimal, rectangular slab of Sb/Si(111)."""
         info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 72+12, 'pm')
-        # While it looks like there are 4 cells (rt3 of Si), some
-        # of the Sb atoms are not quite in the right position
-        info.poscar.n_cells = 2
+        # 4 cells (rt3 of Si), though some of the Sb atoms
+        # are not quite in the right position (~0.04 A off)
+        info.poscar.n_cells = 4
         return self.case_poscar(info)
 
     @case(tags=Tag.VACUUM_GAP_MIDDLE)
