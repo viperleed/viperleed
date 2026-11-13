@@ -386,7 +386,7 @@ def _init_preset_case(inputs, tmp, tree, tl_version, data_path):
 
 
 @fixture(scope='session', name='prepared_deltas')
-def factory_prepared_deltas(initialized_case, tmp_path_factory):
+def factory_prepared_deltas(initialized_case, tmp_path_factory, data_path):
     """Return a function that prepares the delta inputs (not cached).
 
     The function takes the StoredInputs of a case and the version
@@ -407,7 +407,8 @@ def factory_prepared_deltas(initialized_case, tmp_path_factory):
             folders[domain.name] = folder / domain.workdir.relative_to(source)
             domain.workdir = folders[domain.name]
         if inputs.displacements:
-            shutil.copy2(inputs.displacements, folder / DISPLACEMENTS)
+            shutil.copy2(data_path / inputs.displacements,
+                         folder / DISPLACEMENTS)
         for domain_rpars in (rpars, *(d.rpars for d in rpars.domainParams)):
             domain_rpars.TENSOR_INDEX = TENSOR_INDEX
             if 1 not in domain_rpars.runHistory:  # Original state: initial

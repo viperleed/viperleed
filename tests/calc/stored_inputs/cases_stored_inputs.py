@@ -29,15 +29,13 @@ from pytest_cases import case
 from pytest_cases import get_all_cases
 from pytest_cases import get_case_id
 
-from ...helpers import TEST_DATA
-
 REFCALC = 'refcalc'
 DELTAS = 'deltas'
 SEARCH = 'search'
 DISPLACEMENTS = 'DISPLACEMENTS'
 PRESET_FILES = 'IVBEAMS', 'VIBROCC'
 AG100 = 'Ag(100)/initialization'
-AG100_DISPLACEMENTS = TEST_DATA / 'Ag(100)/displacements'
+AG100_DISPLACEMENTS = 'Ag(100)/displacements'
 PTRH_INPUTS = 'stored_inputs/inputs/ptrh_100_1x3_o'
 FE2O3_INPUTS = 'stored_inputs/inputs/fe2o3_012_1x1'
 
@@ -62,9 +60,10 @@ class StoredInputs:
         For domain cases, the names of the domains, i.e., of the
         sub-folders of `source` to copy. Default is a single-surface
         case.
-    displacements : Path or None, optional
-        The DISPLACEMENTS file to use for the deltas and the search.
-        Default is None, i.e., use the one in `source`.
+    displacements : str, optional
+        A file of the test data to use as DISPLACEMENTS for the deltas
+        and the search. Default is no file, i.e., use the one in
+        `source`.
     n_param : int, optional
         The number of delta PARAM files, i.e., of different array
         dimensions, of each domain. Default is 1.
@@ -74,7 +73,7 @@ class StoredInputs:
     preset: str = ''
     extra: tuple = ()
     domains: tuple = ()
-    displacements: object = None
+    displacements: str = ''
     n_param: int = 1
 
     @property
@@ -85,7 +84,7 @@ class StoredInputs:
     @property
     def initialization(self):
         """Return the inputs that the initialization depends on."""
-        return dataclasses.replace(self, displacements=None, n_param=1)
+        return dataclasses.replace(self, displacements='', n_param=1)
 
 
 def tagged_inputs(tag):
@@ -126,7 +125,7 @@ def case_ag100_z():
     """Return Ag(100) with displacements along z."""
     return StoredInputs(
         AG100,
-        displacements=AG100_DISPLACEMENTS / 'DISPLACEMENTS_z',
+        displacements=f'{AG100_DISPLACEMENTS}/DISPLACEMENTS_z',
         )
 
 
@@ -135,7 +134,7 @@ def case_ag100_vib():
     """Return Ag(100) with vibration displacements."""
     return StoredInputs(
         AG100,
-        displacements=AG100_DISPLACEMENTS / 'DISPLACEMENTS_vib',
+        displacements=f'{AG100_DISPLACEMENTS}/DISPLACEMENTS_vib',
         )
 
 
@@ -144,7 +143,7 @@ def case_ag100_z_vib():
     """Return Ag(100) with displacements along z and vibrations."""
     return StoredInputs(
         AG100,
-        displacements=AG100_DISPLACEMENTS / 'DISPLACEMENTS_z+vib',
+        displacements=f'{AG100_DISPLACEMENTS}/DISPLACEMENTS_z+vib',
         )
 
 
@@ -180,7 +179,7 @@ def case_ptrh_100_1x3_o():
     return StoredInputs(
         PTRH_INPUTS,
         preset='case_poscar_ptrh_100_1x3_o',
-        displacements=TEST_DATA / PTRH_INPUTS / DISPLACEMENTS,
+        displacements=f'{PTRH_INPUTS}/{DISPLACEMENTS}',
         n_param=3,
         )
 
