@@ -32,8 +32,8 @@ from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
 
-_MODULE = 'viperleed.gui.detect_graphics'
 BOTH = (PYQT6, PYQT5)  # In the default order of preference
+_MODULE = 'viperleed.gui.detect_graphics'
 
 
 # TODO: would be better to find a way to mock at least

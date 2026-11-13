@@ -166,15 +166,6 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             self.parser.error(err_msg.format(details))
 
 
-def _describe_candidates():
-    """Return the names of the Qt bindings looked for, for messages."""
-    try:
-        candidates = get_candidates()
-    except QtBindingNotFoundError:  # Invalid QT_API
-        candidates = SUPPORTED_BINDINGS
-    return ' or '.join(candidates)
-
-
 def commandline_main():
     """Body of the command-line version of the GUI."""
     print('Running in command line version...', flush=True, end='')
@@ -232,3 +223,12 @@ def import_graphics_modules():
         import_module(f'{_QT_COMPAT}.QtWidgets'),
         gui_select.ViPErLEEDSelectPlugin,
         )
+
+
+def _describe_candidates():
+    """Return the names of the Qt bindings looked for, for messages."""
+    try:
+        candidates = get_candidates()
+    except QtBindingNotFoundError:  # Invalid QT_API
+        candidates = SUPPORTED_BINDINGS
+    return ' or '.join(candidates)

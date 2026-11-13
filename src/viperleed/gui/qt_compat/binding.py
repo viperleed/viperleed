@@ -36,15 +36,11 @@ import sys
 
 PYQT5 = 'PyQt5'
 PYQT6 = 'PyQt6'
-SUPPORTED_BINDINGS = (PYQT6, PYQT5)  # In order of preference
 QT_API_ENV = 'QT_API'
+SUPPORTED_BINDINGS = (PYQT6, PYQT5)  # In order of preference
 _QT_API_VALUES = {binding.lower(): binding for binding in SUPPORTED_BINDINGS}
 
 _SELECTED_BINDING = None
-
-
-class QtBindingNotFoundError(ImportError):
-    """No usable Qt binding could be found."""
 
 
 def get_binding():
@@ -117,6 +113,10 @@ def set_binding(binding):
         raise ValueError(f'Cannot select {binding}: {_SELECTED_BINDING} '
                          'is already in use')
     _SELECTED_BINDING = binding
+
+
+class QtBindingNotFoundError(ImportError):
+    """No usable Qt binding could be found."""
 
 
 def _get_requested_binding():

@@ -13,6 +13,23 @@ from viperleed.gui.qt_compat import events
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
 
+_TOUCHPAD = 'touchpad'
+
+
+@parametrize(binding=(PYQT5, PYQT6))
+def test_copy_timestamp(binding, mocker):
+    """Check that timestamps are copied only with PyQt5."""
+    mocker.patch.object(events, 'get_binding', return_value=binding)
+    source, target = mocker.MagicMock(), mocker.MagicMock()
+    copied = events.copy_timestamp(source, target)
+    assert copied == (binding == PYQT5)
+    if copied:
+        target.setTimestamp.assert_called_once_with(
+            source.timestamp.return_value
+            )
+    else:
+        target.setTimestamp.assert_not_called()
+
 
 @parametrize(binding=(PYQT5, PYQT6))
 def test_get_global_position_calls(binding, mocker):
@@ -53,9 +70,6 @@ def test_get_global_position_real_event(qtbot):
     local = qtc.QPoint(30, 40)
     qtbot.mouseClick(widget, qtc.Qt.MouseButton.LeftButton, pos=local)
     assert widget.position == widget.mapToGlobal(local)
-
-
-_TOUCHPAD = 'touchpad'
 
 
 class TestIsWheelFromTouchpad:
@@ -106,21 +120,6 @@ class TestIsWheelFromTouchpad:
 class TestMakeMouseEvent:
     """Tests for the make_mouse_event function."""
 
-    @parametrize(binding=(PYQT5, PYQT6))
-    def test_source_only_pyqt5(self, binding, mocker):
-        """Check that the source is passed only with PyQt5."""
-        mocker.patch.object(events, 'get_binding', return_value=binding)
-        mock_qt = mocker.patch.object(events, '_import_qt').return_value
-        source = mocker.MagicMock(name='source')
-        events.make_mouse_event('type', 'local', 'window', 'screen',
-                                'button', 'buttons', 'modifiers', source)
-        point = mock_qt.QPointF.return_value
-        expect_args = ['type', point, point, point,
-                       'button', 'buttons', 'modifiers']
-        if binding == PYQT5:
-            expect_args.append(source)
-        mock_qt.QMouseEvent.assert_called_once_with(*expect_args)
-
     def test_real_event(self, qapp):
         """Check the attributes of a real event, with QPoint positions."""
         _ = qapp  # Skips without Qt
@@ -137,17 +136,17 @@ class TestMakeMouseEvent:
         assert event.button() == left
         assert events.get_global_position(event) == qtc.QPoint(5, 6)
 
-
-@parametrize(binding=(PYQT5, PYQT6))
-def test_copy_timestamp(binding, mocker):
-    """Check that timestamps are copied only with PyQt5."""
-    mocker.patch.object(events, 'get_binding', return_value=binding)
-    source, target = mocker.MagicMock(), mocker.MagicMock()
-    copied = events.copy_timestamp(source, target)
-    assert copied == (binding == PYQT5)
-    if copied:
-        target.setTimestamp.assert_called_once_with(
-            source.timestamp.return_value
-            )
-    else:
-        target.setTimestamp.assert_not_called()
+    @parametrize(binding=(PYQT5, PYQT6))
+    def test_source_only_pyqt5(self, binding, mocker):
+        """Check that the source is passed only with PyQt5."""
+        mocker.patch.object(events, 'get_binding', return_value=binding)
+        mock_qt = mocker.patch.object(events, '_import_qt').return_value
+        source = mocker.MagicMock(name='source')
+        events.make_mouse_event('type', 'local', 'window', 'screen',
+                                'button', 'buttons', 'modifiers', source)
+        point = mock_qt.QPointF.return_value
+        expect_args = ['type', point, point, point,
+                       'button', 'buttons', 'modifiers']
+        if binding == PYQT5:
+            expect_args.append(source)
+        mock_qt.QMouseEvent.assert_called_once_with(*expect_args)

@@ -41,6 +41,16 @@ PYTEST_QT_API_ENV = 'PYTEST_QT_API'
 QT_COMPAT_BINDING = 'viperleed.gui.qt_compat.binding'
 
 
+def pytest_addoption(parser, pluginmanager):
+    """Register pytest-qt if it can be used, block it otherwise."""
+    _ = parser  # Unused, but needed to get pluginmanager
+    if _MISSING is not None:
+        pluginmanager.set_blocked(PYTEST_QT)  # Also unregisters it
+    elif pluginmanager.get_plugin(PYTEST_QT) is None:
+        pluginmanager.register(importlib.import_module('pytestqt.plugin'),
+                               PYTEST_QT)
+
+
 def _find_missing():
     """Return (name, detail) of what pytest-qt misses, or None."""
     try:
@@ -67,16 +77,6 @@ def _find_missing():
 
 
 _MISSING = _find_missing()
-
-
-def pytest_addoption(parser, pluginmanager):
-    """Register pytest-qt if it can be used, block it otherwise."""
-    _ = parser  # Unused, but needed to get pluginmanager
-    if _MISSING is not None:
-        pluginmanager.set_blocked(PYTEST_QT)  # Also unregisters it
-    elif pluginmanager.get_plugin(PYTEST_QT) is None:
-        pluginmanager.register(importlib.import_module('pytestqt.plugin'),
-                               PYTEST_QT)
 
 
 if _MISSING is not None:

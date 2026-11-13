@@ -21,7 +21,6 @@ from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 
-_PACKAGE = 'viperleed.gui.qt_compat'
 _MOVED_TO_QTGUI = (
     'QAction',
     'QActionGroup',
@@ -31,6 +30,14 @@ _MOVED_TO_QTGUI = (
     'QUndoGroup',
     'QUndoStack',
     )
+_PACKAGE = 'viperleed.gui.qt_compat'
+_REPRESENTATIVE = {
+    'QtCore': 'QObject',
+    'QtGui': 'QColor',
+    'QtNetwork': 'QNetworkRequest',
+    'QtSerialPort': 'QSerialPort',
+    'QtWidgets': 'QWidget',
+    }
 
 
 @fixture(name='qt_binding')
@@ -41,21 +48,6 @@ def fixture_qt_binding(missing_dependency):
     except QtBindingNotFoundError as exc:
         missing_dependency('PyQt5/PyQt6', str(exc))
     raise AssertionError('Unreachable')
-
-
-def _import_both(module, binding):
-    """Return the `module` from qt_compat and from `binding`."""
-    return (importlib.import_module(f'{_PACKAGE}.{module}'),
-            importlib.import_module(f'{binding}.{module}'))
-
-
-_REPRESENTATIVE = {
-    'QtCore': 'QObject',
-    'QtGui': 'QColor',
-    'QtNetwork': 'QNetworkRequest',
-    'QtSerialPort': 'QSerialPort',
-    'QtWidgets': 'QWidget',
-    }
 
 
 @parametrize('module,name', _REPRESENTATIVE.items(), ids=_REPRESENTATIVE)
@@ -80,3 +72,9 @@ def test_scoped_enums():
     qtc = importlib.import_module(f'{_PACKAGE}.QtCore')
     flags = qtc.Qt.AlignmentFlag.AlignLeft | qtc.Qt.AlignmentFlag.AlignTop
     assert flags & qtc.Qt.AlignmentFlag.AlignTop
+
+
+def _import_both(module, binding):
+    """Return the `module` from qt_compat and from `binding`."""
+    return (importlib.import_module(f'{_PACKAGE}.{module}'),
+            importlib.import_module(f'{binding}.{module}'))

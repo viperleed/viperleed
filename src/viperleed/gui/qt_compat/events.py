@@ -19,13 +19,28 @@ from viperleed.gui.qt_compat.binding import get_binding
 _QT_COMPAT = 'viperleed.gui.qt_compat'
 
 
-def _import_qt(module_name):
-    """Return Qt module `module_name` (e.g., 'QtGui') of qt_compat.
+def copy_timestamp(source, target):
+    """Give event `target` the timestamp of event `source`, if possible.
 
-    Qt modules are imported only when needed, so that this module
-    can be imported without any Qt binding.
+    PyQt6 has no QInputEvent.setTimestamp: then, `target` is left
+    unchanged. Code should not rely on timestamps of events it creates.
+
+    Parameters
+    ----------
+    source : QInputEvent
+        The event whose timestamp is copied.
+    target : QInputEvent
+        The event that gets the timestamp of `source`.
+
+    Returns
+    -------
+    copied : bool
+        Whether the timestamp was copied.
     """
-    return importlib.import_module(f'{_QT_COMPAT}.{module_name}')
+    if get_binding() != PYQT5:
+        return False
+    target.setTimestamp(source.timestamp())
+    return True
 
 
 def get_global_position(event):
@@ -119,25 +134,10 @@ def make_mouse_event(event_type, local_pos, window_pos, screen_pos,
     return qtg.QMouseEvent(*args)
 
 
-def copy_timestamp(source, target):
-    """Give event `target` the timestamp of event `source`, if possible.
+def _import_qt(module_name):
+    """Return Qt module `module_name` (e.g., 'QtGui') of qt_compat.
 
-    PyQt6 has no QInputEvent.setTimestamp: then, `target` is left
-    unchanged. Code should not rely on timestamps of events it creates.
-
-    Parameters
-    ----------
-    source : QInputEvent
-        The event whose timestamp is copied.
-    target : QInputEvent
-        The event that gets the timestamp of `source`.
-
-    Returns
-    -------
-    copied : bool
-        Whether the timestamp was copied.
+    Qt modules are imported only when needed, so that this module
+    can be imported without any Qt binding.
     """
-    if get_binding() != PYQT5:
-        return False
-    target.setTimestamp(source.timestamp())
-    return True
+    return importlib.import_module(f'{_QT_COMPAT}.{module_name}')

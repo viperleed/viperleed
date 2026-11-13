@@ -18,8 +18,8 @@ from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 
-_MODULE = 'viperleed.gui.qt_compat.binding'
 BOTH = (PYQT5, PYQT6)
+_MODULE = 'viperleed.gui.qt_compat.binding'
 
 
 @fixture(autouse=True)
@@ -54,6 +54,12 @@ class TestDefaultSelection:
         'only PyQt6': ((PYQT6,), PYQT6),
         }
 
+    @parametrize(imported=BOTH)
+    def test_already_imported(self, imported, fake_bindings):
+        """Check that an already-imported binding is preferred."""
+        fake_bindings(BOTH, imported=(imported,))
+        assert get_binding() == imported
+
     @parametrize('available,expect', _available.values(), ids=_available)
     def test_available(self, available, expect, fake_bindings):
         """Check that the preferred available binding is selected."""
@@ -66,12 +72,6 @@ class TestDefaultSelection:
         get_binding()
         assert mock_import.mock_calls == [mocker.call('PyQt6.QtCore'),
                                           mocker.call('PyQt5.QtCore')]
-
-    @parametrize(imported=BOTH)
-    def test_already_imported(self, imported, fake_bindings):
-        """Check that an already-imported binding is preferred."""
-        fake_bindings(BOTH, imported=(imported,))
-        assert get_binding() == imported
 
     def test_none_available(self, fake_bindings):
         """Check complaints when no binding can be imported."""
@@ -103,6 +103,13 @@ class TestQtApi:
         'PyQt6': PYQT6,
         }
 
+    @parametrize(qt_api=('', '   '))
+    def test_empty_ignored(self, qt_api, fake_bindings, monkeypatch):
+        """Check that an empty QT_API is treated as if it were unset."""
+        monkeypatch.setenv(QT_API_ENV, qt_api)
+        fake_bindings(BOTH)
+        assert get_binding() == PYQT6
+
     @parametrize('qt_api,expect', _requested.items(), ids=_requested)
     def test_requested(self, qt_api, expect, fake_bindings, monkeypatch):
         """Check that the binding in QT_API is used."""
@@ -110,20 +117,20 @@ class TestQtApi:
         fake_bindings(BOTH)
         assert get_binding() == expect
 
-    def test_requested_overrides_preference(self, fake_bindings,
-                                            monkeypatch):
-        """Check that QT_API wins over the preferred binding."""
-        monkeypatch.setenv(QT_API_ENV, 'pyqt5')
-        mock_import = fake_bindings(BOTH)
-        assert get_binding() == PYQT5
-        mock_import.assert_called_once_with('PyQt5.QtCore')
-
     def test_requested_missing(self, fake_bindings, monkeypatch):
         """Check complaints when the requested binding is missing."""
         monkeypatch.setenv(QT_API_ENV, 'pyqt5')
         mock_import = fake_bindings((PYQT6,))
         with pytest.raises(QtBindingNotFoundError, match=QT_API_ENV):
             get_binding()
+        mock_import.assert_called_once_with('PyQt5.QtCore')
+
+    def test_requested_overrides_preference(self, fake_bindings,
+                                            monkeypatch):
+        """Check that QT_API wins over the preferred binding."""
+        monkeypatch.setenv(QT_API_ENV, 'pyqt5')
+        mock_import = fake_bindings(BOTH)
+        assert get_binding() == PYQT5
         mock_import.assert_called_once_with('PyQt5.QtCore')
 
     @parametrize(qt_api=('pyside6', 'pyqt4', 'qt5'))
@@ -135,28 +142,21 @@ class TestQtApi:
             get_binding()
         mock_import.assert_not_called()
 
-    @parametrize(qt_api=('', '   '))
-    def test_empty_ignored(self, qt_api, fake_bindings, monkeypatch):
-        """Check that an empty QT_API is treated as if it were unset."""
-        monkeypatch.setenv(QT_API_ENV, qt_api)
-        fake_bindings(BOTH)
-        assert get_binding() == PYQT6
-
 
 class TestGetCandidates:
     """Tests for the get_candidates function."""
-
-    def test_default(self, fake_bindings):
-        """Check that both bindings are candidates, in order."""
-        mock_import = fake_bindings(())
-        assert binding.get_candidates() == (PYQT6, PYQT5)
-        mock_import.assert_not_called()
 
     @parametrize(imported=BOTH)
     def test_already_imported(self, imported, fake_bindings):
         """Check that an already imported binding is the only one."""
         mock_import = fake_bindings((), imported=(imported,))
         assert binding.get_candidates() == (imported,)
+        mock_import.assert_not_called()
+
+    def test_default(self, fake_bindings):
+        """Check that both bindings are candidates, in order."""
+        mock_import = fake_bindings(())
+        assert binding.get_candidates() == (PYQT6, PYQT5)
         mock_import.assert_not_called()
 
     def test_requested(self, fake_bindings, monkeypatch):
@@ -175,13 +175,11 @@ class TestGetCandidates:
 class TestSetBinding:
     """Tests for the set_binding function."""
 
-    @parametrize(selected=BOTH)
-    def test_selects(self, selected, fake_bindings):
-        """Check that the binding is selected without importing it."""
-        mock_import = fake_bindings(())
-        binding.set_binding(selected)
-        assert get_binding() == selected
-        mock_import.assert_not_called()
+    def test_different(self):
+        """Check complaints when another binding was selected."""
+        binding.set_binding(PYQT5)
+        with pytest.raises(ValueError, match='already in use'):
+            binding.set_binding(PYQT6)
 
     def test_same_again(self):
         """Check that selecting the same binding again is fine."""
@@ -189,11 +187,13 @@ class TestSetBinding:
         binding.set_binding(PYQT5)
         assert get_binding() == PYQT5
 
-    def test_different(self):
-        """Check complaints when another binding was selected."""
-        binding.set_binding(PYQT5)
-        with pytest.raises(ValueError, match='already in use'):
-            binding.set_binding(PYQT6)
+    @parametrize(selected=BOTH)
+    def test_selects(self, selected, fake_bindings):
+        """Check that the binding is selected without importing it."""
+        mock_import = fake_bindings(())
+        binding.set_binding(selected)
+        assert get_binding() == selected
+        mock_import.assert_not_called()
 
     @parametrize(unsupported=('PySide6', 'pyqt5', None))
     def test_unsupported(self, unsupported):

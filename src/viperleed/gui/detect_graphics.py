@@ -70,6 +70,15 @@ class PyQtSanityChecker:
     _status = None
     _binding = None
 
+    @property
+    def binding(self):
+        """Return the name of the binding that could be imported, or None.
+
+        This is None also before checking, or if the check was skipped
+        via assume_ok.
+        """
+        return type(self)._binding
+
     def __call__(self):
         """Check whether a Qt binding is usable.
 
@@ -89,15 +98,6 @@ class PyQtSanityChecker:
             if cls._binding:
                 set_binding(cls._binding)
         return cls._status
-
-    @property
-    def binding(self):
-        """Return the name of the binding that could be imported, or None.
-
-        This is None also before checking, or if the check was skipped
-        via assume_ok.
-        """
-        return type(self)._binding
 
     @classmethod
     def assume_ok(cls):
@@ -194,17 +194,6 @@ def find_missing_qt_dependencies():
         return QtDependencyFinder(binding).find_missing_dependencies()
     except NotImplementedError:
         return {}
-
-
-def _find_installed_binding():
-    """Return the first candidate binding that is installed, or None.
-
-    The binding is not imported. If the check failed, this is the
-    binding whose (missing) dependencies are most likely relevant.
-    """
-    return next((binding for binding in get_candidates()
-                 if importlib.util.find_spec(binding) is not None),
-                None)
 
 
 def suppress_file_permission_warnings(binding=None):
@@ -363,44 +352,15 @@ class QtDependencyFinder:
         return install_libs
 
 
-def _sanity_from_exit_code(exit_code):
-    """Return the PyQtSanity of the checker subprocess from `exit_code`."""
-    try:
-        return PyQtSanity(exit_code - _EXIT_CODE_OFFSET)
-    except ValueError:
-        # Assume there was a crash. One could in principle
-        # check whether the exit code is negative, or one
-        # of the signals, but this keeps this checker as
-        # OS-independent as possible.
-        return PyQtSanity.RUNTIME_CRASH
+def _find_installed_binding():
+    """Return the first candidate binding that is installed, or None.
 
-
-def _wait_for_imports(imports_done, sentinel):
-    """Wait until a binding was imported, or the subprocess exited.
-
-    Parameters
-    ----------
-    imports_done : multiprocessing.connection.Connection
-        The receiving end of the pipe, to which the checker subprocess
-        sends the name of the binding once it was imported.
-    sentinel : int
-        The sentinel of the checker subprocess.
-
-    Returns
-    -------
-    ready : list
-        Those among `imports_done` and `sentinel` that are ready
-        within _STARTUP_TIMEOUT seconds.
-    binding : str or None
-        The name of the binding that was imported, if it was sent.
+    The binding is not imported. If the check failed, this is the
+    binding whose (missing) dependencies are most likely relevant.
     """
-    ready = wait((imports_done, sentinel), _STARTUP_TIMEOUT)
-    if imports_done not in ready:
-        return ready, None
-    try:
-        return ready, imports_done.recv()
-    except (EOFError, OSError):  # The subprocess ended without sending
-        return ready, None
+    return next((binding for binding in get_candidates()
+                 if importlib.util.find_spec(binding) is not None),
+                None)
 
 
 def _import_dummy_pyqt_and_run_app(imports_done, candidates):
@@ -449,34 +409,6 @@ def _import_dummy_pyqt_and_run_app(imports_done, candidates):
     _init_dummy_qapp(binding)
 
 
-def _try_importing(binding):
-    """Return the PyQtSanity of importing the modules of `binding`."""
-    try:
-        importlib.import_module(binding)
-    except ModuleNotFoundError:
-        return PyQtSanity.NOT_FOUND
-    except ImportError:
-        return PyQtSanity.IMPORT_ERROR
-    sub_modules = (
-        f'{binding}.QtCore',
-        f'{binding}.QtWidgets',  # Also loads QtGui
-        )
-    for module in sub_modules:
-        try:
-            importlib.import_module(module)
-        except ModuleNotFoundError as exc:
-            # The binding may be a namespace package without its
-            # modules, e.g., if only PyQt5-sip and PyQt5-Qt5 are left
-            # after uninstalling PyQt5. Any other missing module (e.g.,
-            # PyQt5.sip) means that the installation is broken.
-            not_found = exc.name == module
-            return (PyQtSanity.NOT_FOUND if not_found
-                    else PyQtSanity.IMPORT_ERROR)
-        except ImportError:
-            return PyQtSanity.IMPORT_ERROR
-    return PyQtSanity.OK
-
-
 def _exit_with(sanity):
     """Exit the checker subprocess with an exit code for `sanity`."""
     sys.exit(_EXIT_CODE_OFFSET + sanity.value)
@@ -506,6 +438,74 @@ def _init_dummy_qapp(binding):
     has_screen = app.primaryScreen() is not None
     sanity = PyQtSanity.OK if has_screen else PyQtSanity.NO_DISPLAY
     _exit_with(sanity)
+
+
+def _sanity_from_exit_code(exit_code):
+    """Return the PyQtSanity of the checker subprocess from `exit_code`."""
+    try:
+        return PyQtSanity(exit_code - _EXIT_CODE_OFFSET)
+    except ValueError:
+        # Assume there was a crash. One could in principle
+        # check whether the exit code is negative, or one
+        # of the signals, but this keeps this checker as
+        # OS-independent as possible.
+        return PyQtSanity.RUNTIME_CRASH
+
+
+def _try_importing(binding):
+    """Return the PyQtSanity of importing the modules of `binding`."""
+    try:
+        importlib.import_module(binding)
+    except ModuleNotFoundError:
+        return PyQtSanity.NOT_FOUND
+    except ImportError:
+        return PyQtSanity.IMPORT_ERROR
+    sub_modules = (
+        f'{binding}.QtCore',
+        f'{binding}.QtWidgets',  # Also loads QtGui
+        )
+    for module in sub_modules:
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            # The binding may be a namespace package without its
+            # modules, e.g., if only PyQt5-sip and PyQt5-Qt5 are left
+            # after uninstalling PyQt5. Any other missing module (e.g.,
+            # PyQt5.sip) means that the installation is broken.
+            not_found = exc.name == module
+            return (PyQtSanity.NOT_FOUND if not_found
+                    else PyQtSanity.IMPORT_ERROR)
+        except ImportError:
+            return PyQtSanity.IMPORT_ERROR
+    return PyQtSanity.OK
+
+
+def _wait_for_imports(imports_done, sentinel):
+    """Wait until a binding was imported, or the subprocess exited.
+
+    Parameters
+    ----------
+    imports_done : multiprocessing.connection.Connection
+        The receiving end of the pipe, to which the checker subprocess
+        sends the name of the binding once it was imported.
+    sentinel : int
+        The sentinel of the checker subprocess.
+
+    Returns
+    -------
+    ready : list
+        Those among `imports_done` and `sentinel` that are ready
+        within _STARTUP_TIMEOUT seconds.
+    binding : str or None
+        The name of the binding that was imported, if it was sent.
+    """
+    ready = wait((imports_done, sentinel), _STARTUP_TIMEOUT)
+    if imports_done not in ready:
+        return ready, None
+    try:
+        return ready, imports_done.recv()
+    except (EOFError, OSError):  # The subprocess ended without sending
+        return ready, None
 
 
 # This class is really just a container
