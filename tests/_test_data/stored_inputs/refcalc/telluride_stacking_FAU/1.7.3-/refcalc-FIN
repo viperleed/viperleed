@@ -1,0 +1,125 @@
+ 260101-000000
+    49.00   100.01     3.00   EI,EF,DE
+   3.8341   0.0000            ARA1
+  -1.9171   3.3205            ARA2
+   3.8341   0.0000            ARB1
+  -1.9171   3.3205            ARB2
+     4.50     1.00     2.65   V0i,ASE,WORKFN
+   43
+   0.00000   0.00000  1  1          E =      0.0000  NR.    1
+   1.00000   0.00000  1  1          E =     13.6423  NR.    2
+  -1.00000   1.00000  1  1          E =     13.6423  NR.    3
+   0.00000  -1.00000  1  1          E =     13.6423  NR.    4
+   0.00000   1.00000  1  1          E =     13.6423  NR.    5
+   1.00000  -1.00000  1  1          E =     13.6423  NR.    6
+  -1.00000   0.00000  1  1          E =     13.6423  NR.    7
+   1.00000   1.00000  1  1          E =     40.9269  NR.    8
+   2.00000  -1.00000  1  1          E =     40.9269  NR.    9
+  -1.00000   2.00000  1  1          E =     40.9269  NR.   10
+   1.00000  -2.00000  1  1          E =     40.9269  NR.   11
+  -2.00000   1.00000  1  1          E =     40.9269  NR.   12
+  -1.00000  -1.00000  1  1          E =     40.9269  NR.   13
+   2.00000   0.00000  1  1          E =     54.5692  NR.   14
+  -2.00000   2.00000  1  1          E =     54.5692  NR.   15
+   0.00000  -2.00000  1  1          E =     54.5692  NR.   16
+   0.00000   2.00000  1  1          E =     54.5692  NR.   17
+   2.00000  -2.00000  1  1          E =     54.5692  NR.   18
+  -2.00000   0.00000  1  1          E =     54.5692  NR.   19
+   2.00000   1.00000  1  1          E =     95.4962  NR.   20
+   3.00000  -1.00000  1  1          E =     95.4962  NR.   21
+  -2.00000   3.00000  1  1          E =     95.4962  NR.   22
+  -3.00000   2.00000  1  1          E =     95.4962  NR.   23
+   1.00000  -3.00000  1  1          E =     95.4962  NR.   24
+  -1.00000  -2.00000  1  1          E =     95.4962  NR.   25
+   1.00000   2.00000  1  1          E =     95.4962  NR.   26
+  -1.00000   3.00000  1  1          E =     95.4962  NR.   27
+   3.00000  -2.00000  1  1          E =     95.4962  NR.   28
+   2.00000  -3.00000  1  1          E =     95.4962  NR.   29
+  -3.00000   1.00000  1  1          E =     95.4962  NR.   30
+  -2.00000  -1.00000  1  1          E =     95.4962  NR.   31
+   3.00000   0.00000  1  1          E =    122.7808  NR.   32
+  -3.00000   3.00000  1  1          E =    122.7808  NR.   33
+   0.00000  -3.00000  1  1          E =    122.7808  NR.   34
+   0.00000   3.00000  1  1          E =    122.7808  NR.   35
+   3.00000  -3.00000  1  1          E =    122.7808  NR.   36
+  -3.00000   0.00000  1  1          E =    122.7808  NR.   37
+   2.00000   2.00000  1  1          E =    163.7077  NR.   38
+   4.00000  -2.00000  1  1          E =    163.7077  NR.   39
+  -2.00000   4.00000  1  1          E =    163.7077  NR.   40
+   2.00000  -4.00000  1  1          E =    163.7077  NR.   41
+  -4.00000   2.00000  1  1          E =    163.7077  NR.   42
+  -2.00000  -2.00000  1  1          E =    163.7077  NR.   43
+ 0.00100000       >>>>> ! <<<<<              TST
+    2    5    8   14
+   0.0000   0.0000                           THETA FI
+ 0.0010                                      EPS
+ 10                                          LITER
+ 12                                          LMAX
+  1                                          PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7
+  1                                          IFORM - formatted input and output
+<PHASESHIFTS: verbatim copy of the work-dir PHASESHIFTS>
+-------------------------------------------------------------------
+--- define chem. and vib. properties for different atomic sites ---
+-------------------------------------------------------------------
+  4                             NSITE: number of different site types
+-   site type 1 ---
+   1.0000   0.1330              Occ & VibAmp for Te in Te_top site
+   0.0000   0.0000              
+   0.0000   0.0000              
+   0.0000   0.0000              
+-   site type 2 ---
+   0.0000   0.0000              
+   1.0000   0.0775              Occ & VibAmp for Te in Te_bot site
+   0.0000   0.0000              
+   0.0000   0.0000              
+-   site type 3 ---
+   0.0000   0.0000              
+   0.0000   0.0000              
+   1.0000   0.0755              Occ & VibAmp for Co in Co_def site
+   0.0000   0.0000              
+-   site type 4 ---
+   0.0000   0.0000              
+   0.0000   0.0000              
+   0.0000   0.0000              
+   0.0010   0.0940              Occ & VibAmp for Au in Au_def site
+-------------------------------------------------------------------
+--- define different layer types                                ---
+-------------------------------------------------------------------
+  3                             NLTYPE: number of different layer types
+-   layer type 1 ---
+  1                             LAY = 1: layer type no. 1 has overlayer lateral periodicity
+  3                             number of Bravais sublayers in layer 1
+  1   0.0000   1.9171   1.1068  Atom N=1 (Te)
+  3   1.4486   0.0000   0.0000  Atom N=3 (Co)
+  2   2.7209   0.0000   2.2136  Atom N=2 (Te)
+-   layer type 2 ---
+  1                             LAY = 1: layer type no. 2 has overlayer lateral periodicity
+  1                             number of Bravais sublayers in layer 2
+  4   0.0000   0.0000   0.0000  Atom N=4 (Au)
+-   layer type 3 ---
+  2                             LAY = 2: layer type no. 3 has bulk lateral periodicity
+  1                             number of Bravais sublayers in layer 3
+  4   0.0000   0.0000   0.0000  Atom N=5 (Au)
+-------------------------------------------------------------------
+--- define bulk stacking sequence                               ---
+-------------------------------------------------------------------
+  0                             TSLAB = 0: compute bulk using layer doubling
+   2.3479   1.9171   1.1068     ASA interlayer vector between different bulk units
+  3                             top layer of bulk unit: layer type 3
+  3                             bottom layer of bulk unit: layer type 3
+   2.3479   1.9171   1.1068     ASBULK between the two bulk unit layers (may differ from ASA)
+-------------------------------------------------------------------
+--- define layer stacking sequence and Tensor LEED output       ---
+-------------------------------------------------------------------
+  2                             NSTACK: number of layers stacked onto bulk
+  2   2.3479   1.9171   1.1068  layer 2: layer type 2, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_4                             Tensor file name, current layer, sublayer 1
+  1   2.7204   0.0000   0.0000  layer 1: layer type 1, interlayer vector below
+  1                             0/1: Tensor output is required for this layer (TENSOR_OUTPUT)
+T_1                             Tensor file name, current layer, sublayer 1
+T_3                             Tensor file name, current layer, sublayer 2
+T_2                             Tensor file name, current layer, sublayer 3
+-------------------------------------------------------------------
+--- end geometrical input                                       ---
+-------------------------------------------------------------------

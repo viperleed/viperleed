@@ -1,0 +1,221 @@
+# ABOUT THIS FILE:
+# Input for the delta-calculations is collected here. The blocks of data are
+# new 'PARAM' files, which are used to recompile the fortran code, and input
+# for generation of specific DELTA files. Lines starting with '#' are comments
+# on the function of the next block of data.
+# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
+# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
+
+#### NEW 'PARAM' FILE: ####
+
+C  Parameter statements for delta amplitude calculation, v1.2
+C  parameters must be consistent with preceding reference calculation!
+
+C  MLMAX: maximum angular momentum to be considered in calculation
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
+C         set according to current LMAX
+C         MLMAX:  1  2   3    4    5    6    7     8     9     10    11     12     13     14     15     16     17     18
+C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 69322 106470 158067 227969 320664 441320 595833 790876 1033942
+
+C  MNPSI: number of phase shift values tabulated in phase shift file
+C  MNEL : number of elements for which phase shifts are tabulated
+C  MNT0 : number of beams for which delta amplitude calculation is required
+C  MNATOMS: currently must be set to 1. In principle number of different atomic
+C      positions in a superlattice wrt the reference periodicity when computing
+C      TLEED beams for a superlattice not present in the reference structure
+C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
+C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
+
+      PARAMETER( MLMAX = 12 )
+      PARAMETER( MNLMB = 158067 )
+      PARAMETER( MNPSI = 270, MNEL = 4 )
+      PARAMETER( MNT0 = 4 )
+      PARAMETER( MNATOMS = 1 )
+      PARAMETER( MNDEB = 1 )
+      PARAMETER( MNCSTEP = 21 )
+
+
+#### INPUT for new DELTA file DEL_1_Te_1: ####
+
+ 260101-000000
+    49.00   100.01            EI,EF
+   3.8341   0.0000            ARA1
+  -1.9171   3.3205            ARA2
+   3.8341   0.0000            ARB1
+  -1.9171   3.3205            ARB2
+   0.0000   0.0000            THETA PHI
+   1                          PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   1                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+  21                         NCSTEP - number of displaced positions
+ 0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0900 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0800 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0700 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0600 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0500 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0400 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0300 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0200 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0100 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0100 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0200 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0300 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0400 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0500 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0600 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0700 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0800 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0900 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.1330                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_3_Co_1: ####
+
+ 260101-000000
+    49.00   100.01            EI,EF
+   3.8341   0.0000            ARA1
+  -1.9171   3.3205            ARA2
+   3.8341   0.0000            ARB1
+  -1.9171   3.3205            ARB2
+   0.0000   0.0000            THETA PHI
+   1                          PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+  21                         NCSTEP - number of displaced positions
+ 0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0900 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0800 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0700 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0600 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0500 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0400 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0300 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0200 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0100 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0100 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0200 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0300 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0400 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0500 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0600 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0700 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0800 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.0900 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0755                      DRPER_A
+
+
+#### NEW 'PARAM' FILE: ####
+
+C  Parameter statements for delta amplitude calculation, v1.2
+C  parameters must be consistent with preceding reference calculation!
+
+C  MLMAX: maximum angular momentum to be considered in calculation
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
+C         set according to current LMAX
+C         MLMAX:  1  2   3    4    5    6    7     8     9     10    11     12     13     14     15     16     17     18
+C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 69322 106470 158067 227969 320664 441320 595833 790876 1033942
+
+C  MNPSI: number of phase shift values tabulated in phase shift file
+C  MNEL : number of elements for which phase shifts are tabulated
+C  MNT0 : number of beams for which delta amplitude calculation is required
+C  MNATOMS: currently must be set to 1. In principle number of different atomic
+C      positions in a superlattice wrt the reference periodicity when computing
+C      TLEED beams for a superlattice not present in the reference structure
+C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
+C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
+
+      PARAMETER( MLMAX = 12 )
+      PARAMETER( MNLMB = 158067 )
+      PARAMETER( MNPSI = 270, MNEL = 4 )
+      PARAMETER( MNT0 = 4 )
+      PARAMETER( MNATOMS = 1 )
+      PARAMETER( MNDEB = 1 )
+      PARAMETER( MNCSTEP = 1 )
+
+
+#### INPUT for new DELTA file DEL_4_Au_1: ####
+
+ 260101-000000
+    49.00   100.01            EI,EF
+   3.8341   0.0000            ARA1
+  -1.9171   3.3205            ARA2
+   3.8341   0.0000            ARB1
+  -1.9171   3.3205            ARB2
+   0.0000   0.0000            THETA PHI
+   1                          PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   4                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0940                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_4_vac_1: ####
+
+ 260101-000000
+    49.00   100.01            EI,EF
+   3.8341   0.0000            ARA1
+  -1.9171   3.3205            ARA2
+   3.8341   0.0000            ARB1
+  -1.9171   3.3205            ARB2
+   0.0000   0.0000            THETA PHI
+   1                          PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+

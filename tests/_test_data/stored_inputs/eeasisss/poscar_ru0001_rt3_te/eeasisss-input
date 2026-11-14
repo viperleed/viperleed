@@ -1,0 +1,90 @@
+STRUCTURE:
+stored-input 260101-000000
+'s'  1.00 16      BulkOrSlab('b' or 's'), LatticeConstant(Angstroms), nshell
+4.6841  0.0     0.0           CoordinatesOfUnitCell(LCunits)
+-2.342  4.0565  0.0     
+0.0     0.0     38.5024 
+31  31                  #AtomTypes,#OccupiedAtomTypes
+1 52.  0.  0.  'atom_density_files/Te/chgdenTe'
+0.0 0.0 0.0      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+0.7657 1.3262 2.115      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+3.1527 0.0 2.115      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-1.5764 2.7303 2.115      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5664 0.0 4.214      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5589 2.7 4.214      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-0.7832 1.3565 4.214      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+0.7882 1.3652 6.3431      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+3.1077 0.0 6.3431      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-1.5539 2.6914 6.3431      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 0.0 8.5121      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 2.7044 8.5121      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-0.7807 1.3522 8.5121      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+0.7807 1.3522 10.6411      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+3.1227 0.0 10.6411      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-1.5614 2.7044 10.6411      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 0.0 12.8101      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 2.7044 12.8101      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-0.7807 1.3522 12.8101      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+0.7807 1.3522 14.9692      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+3.1227 0.0 14.9692      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-1.5614 2.7044 14.9692      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 0.0 17.1082      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 2.7044 17.1082      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-0.7807 1.3522 17.1082      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+0.7807 1.3522 19.2472      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+3.1227 0.0 19.2472      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-1.5614 2.7044 19.2472      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 0.0 21.3862      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+1.5614 2.7044 21.3862      Coordinates(LCunits)
+1 44.  0.  0.  'atom_density_files/Ru/chgdenRu'
+-0.7807 1.3522 21.3862      Coordinates(LCunits)
+SCATTERING: 
+'../TensErLEED/seSernelius' |exchange-correlation file
+18  |lmax
+'r' |SelectCalculation: 'relativistic'/'nonrelativistic'
+'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'
+'n' |phaseshift: print_SpinPhaseShift? 'yes'/no'
+'n' |phaseshift,sigma: print_log10(DsigmaDomega)? 'yes'/'no'
+'n' |phaseshift,sigma: print_DsigmaDtheta? 'yes'/'no'
+'n' |phaseshift,sigma: print_Sherman? 'yes'/'no'
+'n' |phaseshift,sigma: print_TotalCrossSection? 'yes'/'no'
+'n' |dataflow: print_RhoPot? 'yes'/'no'
+'n' |dataflow: print_PSvsE? 'yes'/'no'
+'n' |dataflow: print_WaveFunction? 'yes'/'no'
+0.0,820,3 |'phaseshift'/'dataflow' run: E1->E2,PS_Estep
+100.,100.,1  |'sigma' run: E1->E2,NumVals
+MT OPTIMIZATION (Nelder-Mead):
+'*'           | NMselect: '*' or '+'
+0.05d0   | NMlambda, simplex point shift.
+3            | NMiter, no. of simplex calls.
+1.d-04    ! NMeps,  simplex epsilon.
+0.125d0 | NMepsit, epsilon iteration, eps=eps*epsit.

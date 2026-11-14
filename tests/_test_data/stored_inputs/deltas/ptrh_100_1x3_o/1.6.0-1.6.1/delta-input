@@ -1,0 +1,1618 @@
+# ABOUT THIS FILE:
+# Input for the delta-calculations is collected here. The blocks of data are
+# new 'PARAM' files, which are used to recompile the fortran code, and input
+# for generation of specific DELTA files. Lines starting with '#' are comments
+# on the function of the next block of data.
+# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
+# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
+
+#### NEW 'PARAM' FILE: ####
+
+C  Parameter statements for delta amplitude calculation, v1.2
+C  parameters must be consistent with preceding reference calculation!
+
+C  MLMAX: maximum angular momentum to be considered in calculation
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
+C         set according to current LMAX
+C         MLMAX:  1  2   3    4    5    6    7     8     9     10    11     12     13     14     15     16     17     18
+C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 69322 106470 158067 227969 320664 441320 595833 790876 1033942
+
+C  MNPSI: number of phase shift values tabulated in phase shift file
+C  MNEL : number of elements for which phase shifts are tabulated
+C  MNT0 : number of beams for which delta amplitude calculation is required
+C  MNATOMS: currently must be set to 1. In principle number of different atomic
+C      positions in a superlattice wrt the reference periodicity when computing
+C      TLEED beams for a superlattice not present in the reference structure
+C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
+C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
+
+      PARAMETER( MLMAX = 18 )
+      PARAMETER( MNLMB = 1033942 )
+      PARAMETER( MNPSI = 5, MNEL = 3 )
+      PARAMETER( MNT0 = 8 )
+      PARAMETER( MNATOMS = 1 )
+      PARAMETER( MNDEB = 1 )
+      PARAMETER( MNCSTEP = 3 )
+
+
+#### INPUT for new DELTA file DEL_1_O_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   1                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   3                         NCSTEP - number of displaced positions
+ 0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.1200                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_2_O_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   1                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   3                         NCSTEP - number of displaced positions
+ 0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.1200                      DRPER_A
+
+
+#### NEW 'PARAM' FILE: ####
+
+C  Parameter statements for delta amplitude calculation, v1.2
+C  parameters must be consistent with preceding reference calculation!
+
+C  MLMAX: maximum angular momentum to be considered in calculation
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
+C         set according to current LMAX
+C         MLMAX:  1  2   3    4    5    6    7     8     9     10    11     12     13     14     15     16     17     18
+C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 69322 106470 158067 227969 320664 441320 595833 790876 1033942
+
+C  MNPSI: number of phase shift values tabulated in phase shift file
+C  MNEL : number of elements for which phase shifts are tabulated
+C  MNT0 : number of beams for which delta amplitude calculation is required
+C  MNATOMS: currently must be set to 1. In principle number of different atomic
+C      positions in a superlattice wrt the reference periodicity when computing
+C      TLEED beams for a superlattice not present in the reference structure
+C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
+C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
+
+      PARAMETER( MLMAX = 18 )
+      PARAMETER( MNLMB = 1033942 )
+      PARAMETER( MNPSI = 5, MNEL = 3 )
+      PARAMETER( MNT0 = 8 )
+      PARAMETER( MNATOMS = 1 )
+      PARAMETER( MNDEB = 3 )
+      PARAMETER( MNCSTEP = 3 )
+
+
+#### INPUT for new DELTA file DEL_3_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   3                         NCSTEP - number of displaced positions
+ 0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   3                         NDEB - number of vib. amplitudes to be considered
+ 0.0610                      DRPER_A
+ 0.0710                      DRPER_A
+ 0.0810                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_3_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   3                         NCSTEP - number of displaced positions
+ 0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.1000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   3                         NDEB - number of vib. amplitudes to be considered
+ 0.0550                      DRPER_A
+ 0.0650                      DRPER_A
+ 0.0750                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_4_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   3                         NCSTEP - number of displaced positions
+ 0.2000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.2000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   3                         NDEB - number of vib. amplitudes to be considered
+ 0.0450                      DRPER_A
+ 0.0650                      DRPER_A
+ 0.0850                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_5_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   3                         NCSTEP - number of displaced positions
+ 0.2000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-0.2000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   3                         NDEB - number of vib. amplitudes to be considered
+ 0.0450                      DRPER_A
+ 0.0650                      DRPER_A
+ 0.0850                      DRPER_A
+
+
+#### NEW 'PARAM' FILE: ####
+
+C  Parameter statements for delta amplitude calculation, v1.2
+C  parameters must be consistent with preceding reference calculation!
+
+C  MLMAX: maximum angular momentum to be considered in calculation
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
+C         set according to current LMAX
+C         MLMAX:  1  2   3    4    5    6    7     8     9     10    11     12     13     14     15     16     17     18
+C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 69322 106470 158067 227969 320664 441320 595833 790876 1033942
+
+C  MNPSI: number of phase shift values tabulated in phase shift file
+C  MNEL : number of elements for which phase shifts are tabulated
+C  MNT0 : number of beams for which delta amplitude calculation is required
+C  MNATOMS: currently must be set to 1. In principle number of different atomic
+C      positions in a superlattice wrt the reference periodicity when computing
+C      TLEED beams for a superlattice not present in the reference structure
+C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
+C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
+
+      PARAMETER( MLMAX = 18 )
+      PARAMETER( MNLMB = 1033942 )
+      PARAMETER( MNPSI = 5, MNEL = 3 )
+      PARAMETER( MNT0 = 8 )
+      PARAMETER( MNATOMS = 1 )
+      PARAMETER( MNDEB = 1 )
+      PARAMETER( MNCSTEP = 1 )
+
+
+#### INPUT for new DELTA file DEL_3_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_4_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_4_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_5_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_5_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_6_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_6_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_6_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_7_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_7_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_7_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_8_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_8_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_8_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_9_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_9_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_9_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_10_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_10_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_10_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_11_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_11_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_11_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_12_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_12_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_12_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_13_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_13_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_13_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_14_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_14_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_14_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_15_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_15_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_15_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_16_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_16_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_16_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_17_Pt_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   2                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0710                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_17_Rh_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   3                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0650                      DRPER_A
+
+
+#### INPUT for new DELTA file DEL_17_vac_1: ####
+
+stored-input 260101-000000
+  50.00 350.01          EI,EF
+ 2.7080 0.0000          ARA1
+ 0.0000 2.7080          ARA2
+ 8.1240 0.0000          ARB1
+ 0.0000 2.7080          ARB2
+ 0.0000 0.0000          THETA PHI
+[AUXBEAMS]
+[PHASESHIFTS]
+   1                         FORMOUT - 1: formatted output
+-------------------------------------------------------------------
+--- chemical nature of displaced atom                           ---
+-------------------------------------------------------------------
+   0                         IEL  - element in PHASESHIFT list
+-------------------------------------------------------------------
+--- undisplaced position of atomic site in question             ---
+-------------------------------------------------------------------
+ 0.0000 0.0000 0.0000        CUNDISP - displacement offset
+-------------------------------------------------------------------
+--- displaced positions of atomic site in question              ---
+-------------------------------------------------------------------
+   1                         NCSTEP - number of displaced positions
+ 0.0000 0.0000 0.0000        CDISP(z,x,y) - z pointing towards bulk
+-------------------------------------------------------------------
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+   1                         NDEB - number of vib. amplitudes to be considered
+ 0.0000                      DRPER_A
+

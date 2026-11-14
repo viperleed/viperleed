@@ -1,0 +1,5 @@
+   #  label   atom   elem   mode  steps constr
+   1    P11      1     Ag    vib     11      -
+   2    P11      1     Ag    geo     11      -
+   3    C11      1      -    occ      1      -
+   4      -      -      -    dom      1      -

@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-03-11'
 __license__ = 'GPLv3+'
 
@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.fs_utils import move
@@ -28,7 +29,9 @@ class TestCopytreeExistsOk:
         sh_copy = mocker.patch('shutil.copytree')
         args = mocker.MagicMock(), mocker.MagicMock()
         copytree_exists_ok(*args)
-        sh_copy.assert_called_once_with(*args, dirs_exist_ok=True)
+        sh_copy.assert_called_once_with(*args,
+                                        dirs_exist_ok=True,
+                                        ignore=None)
 
     def test_before_py38(self, mocker, tmp_path):
         """Check usage of the backward-compatible version for python<=3.8."""
@@ -68,6 +71,32 @@ class TestCopytreeExistsOk:
         copytree_exists_ok(src, dst)
         after = filesystem_to_dict(tmp_path)
         assert after == expect
+
+    @parametrize(py_version=((3, 7), (3, 8)))
+    def test_ignore(self, py_version, mocker, tmp_path):
+        """Check that files and directories are skipped if ignored."""
+        mocker.patch('sys.version_info', py_version)
+        before = {'source': {'keep.txt': '1',
+                             'skip.log': '2',
+                             'skipdir': {'file': '3'},
+                             'keepdir': {'keep': '4', 'skip.log': '5',
+                                         'skipdir': {'file': '6'},
+                                         'sub': {'keep': '7'}}}}
+        filesystem_from_dict(before, tmp_path)
+        src, dst = tmp_path/'source', tmp_path/'destination'
+        seen = []
+
+        def _ignore(directory, names):
+            seen.append((directory, sorted(names)))
+            return [n for n in names if n.startswith('skip')]
+
+        copytree_exists_ok(src, dst, ignore=_ignore)
+        expect = {'keep.txt': '1',
+                  'keepdir': {'keep': '4', 'sub': {'keep': '7'}}}
+        assert filesystem_to_dict(tmp_path)['destination'] == expect
+        assert all(isinstance(d, str) for d, _ in seen)
+        assert (str(src), ['keep.txt', 'keepdir', 'skip.log', 'skipdir']
+                ) in seen
 
 
 class TestMove:
