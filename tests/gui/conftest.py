@@ -40,6 +40,21 @@ def fixture_import_with_qt(missing_dependency):
     return _import
 
 
+@fixture(name='no_blocking_dialogs')
+def fixture_no_blocking_dialogs(qtw, mocker):
+    """Make modal pop-ups return immediately, without showing.
+
+    QMessageBox.question answers Yes (the return value can be changed
+    via the returned mock). File dialogs are cancelled.
+    """
+    for method in ('getOpenFileName', 'getOpenFileNames', 'getSaveFileName'):
+        mocker.patch.object(qtw.QFileDialog, method, return_value=('', ''))
+    return mocker.patch.object(
+        qtw.QMessageBox, 'question',
+        return_value=qtw.QMessageBox.StandardButton.Yes,
+        )
+
+
 @fixture(name='qtc')
 def fixture_qtc(import_with_qt):
     """Return the QtCore module of qt_compat."""
@@ -56,3 +71,21 @@ def fixture_qtg(import_with_qt):
 def fixture_qtw(import_with_qt):
     """Return the QtWidgets module of qt_compat."""
     return import_with_qt(f'{_QT_COMPAT}.QtWidgets')
+
+
+@fixture(name='show')
+def fixture_show(qtbot, qtc):
+    """Return a function that shows a widget, and waits until visible.
+
+    Widgets deleted when closed (e.g., ViPErLEED plug-ins) are not
+    registered to qtbot, which would close them again at teardown.
+    Close them in the tests.
+    """
+    delete_on_close = qtc.Qt.WidgetAttribute.WA_DeleteOnClose
+
+    def _show(widget):
+        if not widget.testAttribute(delete_on_close):
+            qtbot.addWidget(widget)
+        with qtbot.waitExposed(widget):
+            widget.show()
+    return _show
