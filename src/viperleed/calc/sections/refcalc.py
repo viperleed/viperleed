@@ -582,18 +582,42 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         except Exception:
             logger.error("Exception during writeMuftin: ")
             raise
+    energies = np.arange(rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01,         # TODO: use better arange
+                         rp.THEO_ENERGIES.step)
+    rp.updateCores()
+    single_threaded = (rp.N_CORES <= 1)
+
+    # first, figure out for which LMAX to compile:
+    lmax = _select_lmax(rp, energies)
+    which_lmax = set(lmax.values())
+
+    # collect PARAM files
+    params = {}
+    collect_param = ""
+    for lm in which_lmax:
+        try:
+            params[lm] = iorefcalc.writePARAM(sl, rp, lmax=lm)
+        except Exception:
+            logger.error("Exception during writePARAM: ",
+                         exc_info=rp.is_debug_mode)
+            raise
+        collect_param += (f"### PARAM file for LMAX = {lm} ###\n\n"
+                          f"{params[lm]}\n\n")
+    try:
+        with open("refcalc-PARAM", "w") as wf:
+            wf.write(collect_param)
+    except Exception:
+        # just for information, can continue
+        logger.warning("Error writing refcalc-PARAM file: ", exc_info=True)
+
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Reference "
                        "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
         return
 
-    energies = np.arange(rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01,         # TODO: use better arange
-                         rp.THEO_ENERGIES.step)
     tl_source = rp.get_tenserleed_directory()
     tl_path = tl_source.path
-    rp.updateCores()
-    single_threaded = (rp.N_CORES <= 1)
     if rp.FORTRAN_COMP[0] == "":
         try:
             rp.getFortranComp()
@@ -601,30 +625,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("Fortran compile error")
 
-    # first, figure out for which LMAX to compile:
-    lmax = _select_lmax(rp, energies)
-    which_lmax = set(lmax.values())
-
     # collect compile tasks
-    comp_tasks = []
-    collect_param = ""
-    for lm in which_lmax:
-        try:
-            param = iorefcalc.writePARAM(sl, rp, lmax=lm)
-        except Exception:
-            logger.error("Exception during writePARAM: ",
-                         exc_info=rp.is_debug_mode)
-            raise
-        comp_tasks.append(
-            RefcalcCompileTask(param, lm, rp.FORTRAN_COMP, tl_path)
-            )
-        collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"
-    try:
-        with open("refcalc-PARAM", "w") as wf:
-            wf.write(collect_param)
-    except Exception:
-        # just for information, can continue
-        logger.warning("Error writing refcalc-PARAM file: ", exc_info=True)
+    comp_tasks = [RefcalcCompileTask(param, lm, rp.FORTRAN_COMP, tl_path)
+                  for lm, param in params.items()]
 
     # set up log
     logname = "refcalc-"+rp.timestamp+".log"

@@ -9,6 +9,11 @@ If SUPPRESS_EXECUTION is on, input files for TensErLEED will be written, but
 |calc| will not attempt to compile the TensErLEED code or execute any part of
 TensErLEED.
 
+.. versionchanged:: 0.15.0
+   The input files of the reference calculation include
+   :ref:`refcalc-PARAM<refcalc-param>`, which was previously written
+   only when TensErLEED was executed.
+
 **Default**: SUPPRESS_EXECUTION = False (Compile and execute TensErLEED
 automatically)
 
