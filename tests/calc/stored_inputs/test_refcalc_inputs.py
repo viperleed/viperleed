@@ -4,7 +4,7 @@ The files written by viperleed.calc.sections.refcalc and
 viperleed.calc.files.iorefcalc are compared to stored references, for
 each version group of TensErLEED (see conftest.py). Neither a
 TensErLEED tree nor a compiler is needed: the execution is suppressed
-after the input files are written, and PARAM is created directly.
+after the input files are written.
 """
 
 __authors__ = (
@@ -18,7 +18,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
@@ -73,12 +72,6 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
         rpars.SUPPRESS_EXECUTION = True
         with execute_in_dir(folder):
             refcalc.refcalc(slab, rpars)
-            lmax = rpars.LMAX.max
-            param = iorefcalc.writePARAM(slab, rpars, lmax=lmax)
-            (folder / PARAM_FILE).write_text(
-                f'### PARAM file for LMAX = {lmax} ###\n\n{param}\n\n',
-                encoding='utf-8',
-                )
         cache[key] = folder
         return folder
     return _write
