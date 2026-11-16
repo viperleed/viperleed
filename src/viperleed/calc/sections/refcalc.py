@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -456,6 +456,76 @@ def edit_fin_energy_lmax(runtask):
     return fin
 
 
+def _select_lmax(rp, energies):
+    """Return the LMAX to use at each energy of a reference calculation.
+
+    A single LMAX value, the largest of `rp.LMAX`, is used if the
+    calculation runs on one core, if `rp.LMAX` is a single value, or
+    for TensErLEED versions up to 1.6. Otherwise, LMAX is chosen per
+    energy from the phase shifts larger than `rp.PHASESHIFT_EPS`, and
+    clipped to the range of `rp.LMAX` and to the largest supported
+    value.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. N_CORES must be defined.
+    energies : Sequence
+        The energies (eV) of the reference calculation.
+
+    Returns
+    -------
+    lmax : dict
+        The LMAX value (int) for each of `energies`.
+    """
+    uses_one_lmax = (
+        rp.N_CORES <= 1
+        or rp.LMAX.has_single_value
+        or rp.TL_VERSION <= Version('1.6')
+        )
+    if uses_one_lmax:
+        return dict.fromkeys(energies, rp.LMAX.max)
+    # find appropriate LMAX per energy
+    ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV)
+             for (i, ps) in enumerate(rp.phaseshifts)]
+    lmax = {}  # lmax as a function of energy
+    warn_small = True
+    warn_large = True
+    _, _max = rp.get_limits("LMAX")
+    for en in energies:
+        try:
+            ps_ind = [pe[0] for pe in ps_en if pe[1] >= en][0]
+        except IndexError:
+            if ps_en[-1][1] > en and ps_en[-1][1] - en > 1.:
+                logger.warning(
+                    "No approriate phaseshifts found for {:.2f} eV. Will "
+                    "try highest available phaseshift energy {:.2f} eV "
+                    "instead.".format(en, ps_en[-1][1]))
+            ps_ind = len(rp.phaseshifts) - 1
+        lmax_cands = [1]
+        for site_ps in rp.phaseshifts[ps_ind][1]:
+            try:
+                lmax_cands.append(max(
+                    [site_ps.index(v) for v in site_ps
+                     if abs(v) > rp.PHASESHIFT_EPS]) + 1)
+            except (IndexError, ValueError):
+                pass
+        lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
+        if lmax[en] < 6 and warn_small:
+            warn_small = False
+            logger.debug("Found small LMAX value based on PHASESHIFT_EPS "
+                         f"parameter (LMAX = {lmax[en]}, E = {en:.2f} eV)")
+        if lmax[en] > _max:
+            lmax[en] = _max
+            if warn_large:
+                warn_large = False
+                logger.info("The LMAX found based on the PHASESHIFT_EPS "
+                            f"parameter is greater than {_max}, which is "
+                            "currently not supported. LMAX was set to "
+                            f"{_max}.")
+    return lmax
+
+
 def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     """Main function to execute the reference calculation segment."""
     if rp.domainParams:
@@ -532,52 +602,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise RuntimeError("Fortran compile error")
 
     # first, figure out for which LMAX to compile:
-    uses_one_lmax = (
-        single_threaded
-        or rp.LMAX.has_single_value
-        or rp.TL_VERSION <= Version('1.6')
-        )
-    if uses_one_lmax:
-        which_lmax = {rp.LMAX.max,}
-    else:    # find appropriate LMAX per energy
-        ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV)
-                 for (i, ps) in enumerate(rp.phaseshifts)]
-        lmax = {}  # lmax as a function of energy
-        warn_small = True
-        warn_large = True
-        _, _max = rp.get_limits("LMAX")
-        for en in energies:
-            try:
-                ps_ind = [pe[0] for pe in ps_en if pe[1] >= en][0]
-            except IndexError:
-                if ps_en[-1][1] > en and ps_en[-1][1] - en > 1.:
-                    logger.warning(
-                        "No approriate phaseshifts found for {:.2f} eV. Will "
-                        "try highest available phaseshift energy {:.2f} eV "
-                        "instead.".format(en, ps_en[-1][1]))
-                ps_ind = len(rp.phaseshifts) - 1
-            lmax_cands = [1]
-            for site_ps in rp.phaseshifts[ps_ind][1]:
-                try:
-                    lmax_cands.append(max(
-                        [site_ps.index(v) for v in site_ps
-                         if abs(v) > rp.PHASESHIFT_EPS]) + 1)
-                except (IndexError, ValueError):
-                    pass
-            lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
-            if lmax[en] < 6 and warn_small:
-                warn_small = False
-                logger.debug("Found small LMAX value based on PHASESHIFT_EPS "
-                             f"parameter (LMAX = {lmax[en]}, E = {en:.2f} eV)")
-            if lmax[en] > _max:
-                lmax[en] = _max
-                if warn_large:
-                    warn_large = False
-                    logger.info("The LMAX found based on the PHASESHIFT_EPS "
-                                f"parameter is greater than {_max}, which is "
-                                "currently not supported. LMAX was set to "
-                                f"{_max}.")
-        which_lmax = set(lmax.values())
+    lmax = _select_lmax(rp, energies)
+    which_lmax = set(lmax.values())
 
     # collect compile tasks
     comp_tasks = []
