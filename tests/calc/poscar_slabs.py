@@ -360,7 +360,7 @@ class CasePOSCARSlabs:
         """Return a non-minimal (2sqrt3 x 2sqrt3)R30 slab of fcc(111)."""
         info = _get_poscar_info('POSCAR_Ir(111)_2rt3', {'Ir': 72}, 'p31m')
         info.poscar.n_cells = 12
-        layer_dist = 2.7 * np.sqrt(2/3)  # Lattice constant 2.7 A
+        layer_dist = 2.7 * np.sqrt(2/3)  # In-plane NN distance 2.7 A
         info.param_presets = {
             'LAYER_CUTS': LayerCuts.from_string('dz(0.5)'),
             'N_BULK_LAYERS': 3,
