@@ -16,7 +16,7 @@ from random import shuffle
 
 import numpy as np
 import pytest
-from pytest_cases import case, fixture, fixture_ref
+from pytest_cases import fixture, fixture_ref
 from pytest_cases import parametrize, parametrize_with_cases
 from scipy.spatial.distance import cdist as euclid_distance
 
@@ -1984,42 +1984,10 @@ class TestUnitCellTransforms:
         assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
 
-def _poscar_infos(minimal):
-    """Return the infos of POSCAR slabs with(out) a minimal ab cell."""
-    infos = poscar_slabs.POSCARS_WITH_LITTLE_SYMMETRY_INFO
-    return tuple(info for info in infos
-                 if (info.poscar.n_cells == 1) == minimal)
-
-
-# The next two cases split CasePOSCARSlabs.case_poscar by
-# the number of ab cells in the POSCAR, keeping its case IDs
-@parametrize(info=_poscar_infos(minimal=True),
-             idgen=poscar_slabs.make_poscar_ids())
-@case(id='poscar')
-def case_poscar_minimal_cell(info):
-    """Return a slab with a minimal ab cell, an Rparams and info."""
-    return CasePOSCARSlabs().case_poscar(info)
-
-
-@parametrize(info=_poscar_infos(minimal=False),
-             idgen=poscar_slabs.make_poscar_ids())
-@case(id='poscar', tags=Tag.NON_MINIMAL_CELL)
-def case_poscar_non_minimal_cell(info):
-    """Return a slab with a non-minimal ab cell, an Rparams and info."""
-    return CasePOSCARSlabs().case_poscar(info)
-
-
-def _is_minimal_cell_case(case_func):
-    """Return whether case_func gives only slabs with a minimal ab cell."""
-    return (exclude_tags(Tag.NON_MINIMAL_CELL, Tag.NO_INFO)(case_func)
-            and case_func.__name__ != 'case_poscar')
-
-
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
-    _non_minimal = {'cases': (poscar_slabs, case_poscar_non_minimal_cell),
-                    'has_tag': Tag.NON_MINIMAL_CELL}
+    _non_minimal = {'cases': poscar_slabs, 'has_tag': Tag.NON_MINIMAL_CELL}
 
     @parametrize_with_cases('args', **_non_minimal)
     def test_ab_cell_minimization(self, args):
@@ -2176,8 +2144,9 @@ class TestUnitCellReduction:
         reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms, candidates, eps)
         assert not reduced
 
-    _minimal = {'cases': (poscar_slabs, case_poscar_minimal_cell),
-                'filter': _is_minimal_cell_case}
+    _minimal = {'cases': poscar_slabs,
+                'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
+                                       Tag.NO_INFO)}
 
     @parametrize_with_cases('args', **_minimal)
     def test_ab_cell_already_minimal(self, args):

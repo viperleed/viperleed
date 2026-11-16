@@ -90,12 +90,6 @@ def _get_poscar_info(*args):
     return test_info
 
 
-def _with_n_cells(info, n_cells):
-    """Return info for a POSCAR that contains n_cells 2D cells."""
-    info.poscar.n_cells = n_cells
-    return info
-
-
 def make_poscar_ids(suffix=None):
     """Return a callable that generates case IDs with a suffix."""
 
@@ -139,12 +133,6 @@ _PRESETS = {
 # IMPORTANT: when adding a POSCAR file to this tuple, also add:
 # - corresponding BEAMLIST files in the 'BEAMLISTs' directory
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    # A 9x2 supercell of rutile(110) whose atom
-    # positions deviate from ideal ones by ~1e-5 A
-    _with_n_cells(
-        _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
-        18,
-        ),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
@@ -457,6 +445,15 @@ class CasePOSCARSlabs:
         rpars.N_BULK_LAYERS = 2
         slab.full_update(rpars)
         return slab, rpars, info
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_tio2_supercell(self):
+        """Return a non-minimal, 9x2 supercell of rutile TiO2(110)."""
+        info = _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm',
+                                (540, False))
+        # Atom positions deviate from ideal ones by ~1e-5 A
+        info.poscar.n_cells = 18
+        return self.case_poscar(info)
 
 
 class CaseBulkSlabs:
