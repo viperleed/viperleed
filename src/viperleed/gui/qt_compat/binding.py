@@ -64,9 +64,8 @@ def get_binding():
         If no usable binding is found, or if the QT_API environment
         variable has an unsupported value.
     """
-    global _SELECTED_BINDING  # pylint: disable=global-statement
     if _SELECTED_BINDING is None:
-        _SELECTED_BINDING = _select_binding()
+        set_binding(_select_binding())
     return _SELECTED_BINDING
 
 
