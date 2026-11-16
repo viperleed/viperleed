@@ -50,16 +50,8 @@ def _selected(pytester, *args, run=None):
     """Return the names of the tests that run with `args`."""
     pytester.makeini(_INI)
     pytester.makepyfile(_TEST_FILE)
-    common = ('-v', '-p', 'no:cacheprovider')
-    result = (
-        run(*args, *common, '-p', conftest.__name__)
-        if run else
-        pytester.runpytest_inprocess(
-            *args,
-            *common,
-            plugins=[conftest],
-            )
-        )
+    run = run or pytester.runpytest_inprocess
+    result = run(*args, '-v', *conftest.PYTESTER_OPTIONS)
     passed = (_PASSED.search(line) for line in result.outlines)
     return {match.group(1) or match.group(2) for match in passed if match}
 

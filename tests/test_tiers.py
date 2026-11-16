@@ -95,12 +95,10 @@ def fixture_run(pytester, monkeypatch, slow_cases, release_cases):
         if '-m' not in args:
             options.extend(('-m', ''))
         if not cache:
-            options.extend(('-p', 'no:cacheprovider'))
+            options.extend(conftest.PYTESTER_NO_CACHE)
         if _XDIST_ARGS[0] not in args and not own_process:
-            return pytester.runpytest_inprocess(
-                *options,
-                plugins=[conftest],
-                )
+            return pytester.runpytest_inprocess(*options,
+                                                *conftest.PYTESTER_PLUGINS)
         pytester.makepyfile(**{
             _SLOW_PLUGIN: f'from tests import tiers\n'
                           f'tiers.SLOW_CASES.update({slow_cases!r})\n'
@@ -113,7 +111,7 @@ def fixture_run(pytester, monkeypatch, slow_cases, release_cases):
         return pytester.runpytest_subprocess(
             *options,
             '-p', _SLOW_PLUGIN,
-            '-p', conftest.__name__,
+            *conftest.PYTESTER_PLUGINS,
             )
     return _run
 

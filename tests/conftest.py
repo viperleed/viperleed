@@ -66,6 +66,15 @@ pytest_plugins = (
     'tests.slow_marks',
     )
 
+# Options for nested pytest runs (via pytester) that test the plugins
+# of this suite. Always load this conftest, which loads all plugins.
+# This includes qt_plugin, without which pytest-qt is loaded anyway,
+# and aborts the run if no Qt binding is available. Do not use the
+# cache, unless a test needs it (e.g., for --last-failed).
+PYTESTER_NO_CACHE = ('-p', 'no:cacheprovider')
+PYTESTER_PLUGINS = ('-p', __name__)
+PYTESTER_OPTIONS = PYTESTER_NO_CACHE + PYTESTER_PLUGINS
+
 # Fixture of optional_dependencies that needs no wrapping
 fixture_missing_dependency = optional_dependencies.fixture_missing_dependency
 

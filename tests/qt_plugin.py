@@ -15,8 +15,9 @@ qt_compat (selected via the QT_API environment variable, see
 viperleed.gui.qt_compat.binding): two bindings must never be imported
 in the same process.
 
-Nested pytest runs (via pytester) that do not load this plugin should
-pass -p no:pytest-qt, as pytest-qt is otherwise loaded automatically.
+Nested pytest runs (via pytester) should load this plugin, as
+pytest-qt is otherwise loaded automatically. Use the PYTESTER_OPTIONS
+of tests/conftest.py, which load it.
 
 When pytest-qt is not loaded (no Qt binding, or pytest-qt is not
 installed), its qapp and qtbot fixtures are replaced by fixtures that

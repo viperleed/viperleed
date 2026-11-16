@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-21'
 __license__ = 'GPLv3+'
 
+from . import conftest
 from . import optional_dependencies
 
 _TEST_FILE = """
@@ -23,13 +24,7 @@ def test_unaffected():
 def _run(pytester, *args):
     """Run pytest on the test file with the plugin."""
     pytester.makepyfile(_TEST_FILE)
-    return pytester.runpytest_inprocess(
-        *args,
-        '-p', 'no:cacheprovider',
-        # Without tests/qt_plugin.py, pytest-qt aborts if Qt is missing
-        '-p', 'no:pytest-qt',
-        plugins=[optional_dependencies],
-        )
+    return pytester.runpytest_inprocess(*args, *conftest.PYTESTER_OPTIONS)
 
 
 def test_option_in_help(pytester):
