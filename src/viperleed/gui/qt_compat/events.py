@@ -11,12 +11,10 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
-import importlib
-
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import get_binding
-
-_QT_COMPAT = 'viperleed.gui.qt_compat'
 
 
 def copy_timestamp(source, target):
@@ -47,7 +45,8 @@ def get_global_position(event):
     """Return the position of a mouse `event` in screen coordinates.
 
     PyQt5 only has QMouseEvent.globalPos (a QPoint), PyQt6 only has
-    QMouseEvent.globalPosition (a QPointF).
+    QMouseEvent.globalPosition (a QPointF). Qt 6 still has globalPos,
+    deprecated, but PyQt6 does not expose it.
 
     Parameters
     ----------
@@ -69,7 +68,8 @@ def is_wheel_from_touchpad(event):
 
     PyQt5 only has QWheelEvent.source, which is
     MouseEventSynthesizedBySystem for touchpads. PyQt6 only has
-    QWheelEvent.pointingDevice, whose type is TouchPad for touchpads.
+    QInputEvent.deviceType, a QInputDevice.DeviceType flag that
+    includes TouchPad for touchpads.
 
     Parameters
     ----------
@@ -83,13 +83,10 @@ def is_wheel_from_touchpad(event):
         a mouse wheel.
     """
     if get_binding() == PYQT5:
-        qtc = _import_qt('QtCore')
         by_system = qtc.Qt.MouseEventSource.MouseEventSynthesizedBySystem
         return event.source() == by_system
-    qtg = _import_qt('QtGui')
-    device = event.pointingDevice()
     touchpad = qtg.QInputDevice.DeviceType.TouchPad
-    return device is not None and device.type() == touchpad
+    return bool(event.deviceType() & touchpad)
 
 
 # This mirrors the signature of the QMouseEvent constructor
@@ -124,20 +121,9 @@ def make_mouse_event(event_type, local_pos, window_pos, screen_pos,
     event : QMouseEvent
         The new event.
     """
-    qtc = _import_qt('QtCore')
-    qtg = _import_qt('QtGui')
     positions = (qtc.QPointF(pos) for pos in (local_pos, window_pos,
                                               screen_pos))
     args = (event_type, *positions, button, buttons, modifiers)
     if get_binding() == PYQT5:
         return qtg.QMouseEvent(*args, source)
     return qtg.QMouseEvent(*args)
-
-
-def _import_qt(module_name):
-    """Return Qt module `module_name` (e.g., 'QtGui') of qt_compat.
-
-    Qt modules are imported only when needed, so that this module
-    can be imported without any Qt binding.
-    """
-    return importlib.import_module(f'{_QT_COMPAT}.{module_name}')
