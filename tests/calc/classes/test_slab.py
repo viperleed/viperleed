@@ -2050,47 +2050,12 @@ class TestUnitCellReduction:
         (0.1, 5e-3),   # The 5e-2 tolerance on SUPERLATTICE limits this
         (0.01, 2e-3),  # eps/5, below the eps/4 limit of the symmetry check
         ))
-    def test_minimal_bulk_ab_cell_noisy(self, eps, noise, draws):
-        """Check reduction of a noisy fcc(111) bulk to the 1x1 cell.
-
-        The in-plane cell is the (2*sqrt(3) x 2*sqrt(3))R30 cell,
-        i.e., 12 times the (1 x 1) one. Six ABC-stacked layers.
-        """
-        lattice_const, n_layers, vacuum = 2.7, 6, 10.0
-        hex_a = np.array([lattice_const, 0])
-        hex_b = np.array([lattice_const/2, lattice_const*np.sqrt(3)/2])
-        ab_cell = np.array([4*hex_a - 2*hex_b, -2*hex_a + 4*hex_b])
-        layer_dist = lattice_const*np.sqrt(2/3)
-        c_length = n_layers*layer_dist + vacuum
-        slab = Slab()
-        slab.ucell = np.zeros((3, 3))
-        slab.ucell[:2, :2] = ab_cell.T
-        slab.ucell[2, 2] = c_length
-        # The 12 points of the (1 x 1) lattice inside ab_cell. Their
-        # fractional coordinates are multiples of 1/12 (det = 12).
-        # Sorted, so that atoms are always created in the same order.
-        to_frac = np.linalg.inv(ab_cell.T)
-        in_cell = {
-            tuple(round(12*frac) % 12 / 12
-                  for frac in to_frac.dot(i*hex_a + j*hex_b))
-            for i in range(-4, 5) for j in range(-4, 5)
-            }
-        assert len(in_cell) == 12
-        for layer in range(n_layers):
-            shift = to_frac.dot((layer % 3) * (hex_a + hex_b) / 3)
-            frac_z = (1 + layer*layer_dist) / c_length
-            for point in sorted(in_cell):
-                frac_ab = (np.array(point) + shift) % 1.0
-                slab.atlist.append(Atom('Ir', np.array([*frac_ab, frac_z]),
-                                        len(slab.atlist) + 1, slab))
-        slab.update_element_count()
-        slab.update_cartesian_from_fractional()
-        rpars = Rparams()
+    @parametrize_with_cases('args',
+                            cases=CasePOSCARSlabs.case_poscar_ir111_2rt3)
+    def test_minimal_bulk_ab_cell_noisy(self, args, eps, noise, draws):
+        """Check reduction of a noisy fcc(111) bulk to the 1x1 cell."""
+        slab, rpars, info = args
         rpars.SYMMETRY_EPS = SymmetryEps(eps)
-        rpars.LAYER_CUTS = LayerCuts.from_string('dz(0.5)')
-        rpars.N_BULK_LAYERS = 3
-        rpars.BULK_REPEAT = 3*layer_dist
-        slab.full_update(rpars)
 
         def _check(draw):
             noisy_slab, noisy_rpars = duplicate_all(slab, rpars)
@@ -2099,7 +2064,8 @@ class TestUnitCellReduction:
             noisy_slab.make_bulk_slab(noisy_rpars)
             noisy_slab.ensure_minimal_bulk_ab_cell(noisy_rpars)
             superlattice = noisy_rpars.SUPERLATTICE
-            assert abs(np.linalg.det(superlattice)) == pytest.approx(12)
+            assert (abs(np.linalg.det(superlattice))
+                    == pytest.approx(info.poscar.n_cells))
 
         check_draws(draws, _check)
 

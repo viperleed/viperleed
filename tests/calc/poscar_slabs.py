@@ -355,6 +355,19 @@ class CasePOSCARSlabs:
             )
         return self.case_poscar(info)
 
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_ir111_2rt3(self):
+        """Return a non-minimal (2sqrt3 x 2sqrt3)R30 slab of fcc(111)."""
+        info = _get_poscar_info('POSCAR_Ir(111)_2rt3', {'Ir': 72}, 'p31m')
+        info.poscar.n_cells = 12
+        layer_dist = 2.7 * np.sqrt(2/3)  # Lattice constant 2.7 A
+        info.param_presets = {
+            'LAYER_CUTS': LayerCuts.from_string('dz(0.5)'),
+            'N_BULK_LAYERS': 3,
+            'BULK_REPEAT': 3 * layer_dist,
+            }
+        return self.case_poscar(info)
+
     @case(tags=(Tag.NON_MINIMAL_CELL, Tag.SURFACE_ATOMS))
     def case_poscar_lsmo_001_rt2(self):
         """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
