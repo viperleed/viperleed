@@ -9,6 +9,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
+import contextlib
 import copy
 import logging
 import os
@@ -31,6 +32,7 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+_SMALL_LMAX = 6  # Below this, LMAX from PHASESHIFT_EPS is 'small'
 _TENSOR_INPUT_FILES = (
     # These are input/output files of the calculation that are stored
     # inside Tensors_XXX.zip files for purposes of reverting to the
@@ -491,38 +493,37 @@ def _select_lmax(rp, energies):
     lmax = {}  # lmax as a function of energy
     warn_small = True
     warn_large = True
-    _, _max = rp.get_limits("LMAX")
+    _, max_supported = rp.get_limits('LMAX')
     for en in energies:
         try:
-            ps_ind = [pe[0] for pe in ps_en if pe[1] >= en][0]
-        except IndexError:
+            ps_ind = next(i for i, ps_en_i in ps_en if ps_en_i >= en)
+        except StopIteration:
             if ps_en[-1][1] > en and ps_en[-1][1] - en > 1.:
                 logger.warning(
-                    "No approriate phaseshifts found for {:.2f} eV. Will "
-                    "try highest available phaseshift energy {:.2f} eV "
-                    "instead.".format(en, ps_en[-1][1]))
+                    'No appropriate phaseshifts found for %.2f eV. Will '
+                    'try highest available phaseshift energy %.2f eV '
+                    'instead.', en, ps_en[-1][1]
+                    )
             ps_ind = len(rp.phaseshifts) - 1
         lmax_cands = [1]
         for site_ps in rp.phaseshifts[ps_ind][1]:
-            try:
+            with contextlib.suppress(IndexError, ValueError):
                 lmax_cands.append(max(
                     [site_ps.index(v) for v in site_ps
                      if abs(v) > rp.PHASESHIFT_EPS]) + 1)
-            except (IndexError, ValueError):
-                pass
         lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
-        if lmax[en] < 6 and warn_small:
+        if lmax[en] < _SMALL_LMAX and warn_small:
             warn_small = False
-            logger.debug("Found small LMAX value based on PHASESHIFT_EPS "
-                         f"parameter (LMAX = {lmax[en]}, E = {en:.2f} eV)")
-        if lmax[en] > _max:
-            lmax[en] = _max
+            logger.debug('Found small LMAX value based on PHASESHIFT_EPS '
+                         'parameter (LMAX = %d, E = %.2f eV)', lmax[en], en)
+        if lmax[en] > max_supported:
+            lmax[en] = max_supported
             if warn_large:
                 warn_large = False
-                logger.info("The LMAX found based on the PHASESHIFT_EPS "
-                            f"parameter is greater than {_max}, which is "
-                            "currently not supported. LMAX was set to "
-                            f"{_max}.")
+                logger.info('The LMAX found based on the PHASESHIFT_EPS '
+                            'parameter is greater than %d, which is '
+                            'currently not supported. LMAX was set to %d.',
+                            max_supported, max_supported)
     return lmax
 
 
@@ -591,7 +592,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     lmax = _select_lmax(rp, energies)
     which_lmax = set(lmax.values())
 
-    # collect PARAM files
     params = {}
     collect_param = ""
     for lm in which_lmax:
@@ -601,8 +601,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             logger.error("Exception during writePARAM: ",
                          exc_info=rp.is_debug_mode)
             raise
-        collect_param += (f"### PARAM file for LMAX = {lm} ###\n\n"
-                          f"{params[lm]}\n\n")
+        collect_param += (f'### PARAM file for LMAX = {lm} ###\n\n'
+                          f'{params[lm]}\n\n')
     try:
         with open("refcalc-PARAM", "w") as wf:
             wf.write(collect_param)
