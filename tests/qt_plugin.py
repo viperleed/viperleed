@@ -36,9 +36,12 @@ import os
 
 import pytest
 
+# Imported here, so that an installed viperleed without qt_compat
+# (e.g., of an older version) fails at the start of the session
+from viperleed.gui.qt_compat import binding as qt_binding
+
 PYTEST_QT = 'pytest-qt'  # Name of the pytest11 entry point
 PYTEST_QT_API_ENV = 'PYTEST_QT_API'
-QT_COMPAT_BINDING = 'viperleed.gui.qt_compat.binding'
 
 
 def pytest_addoption(parser, pluginmanager):
@@ -54,15 +57,8 @@ def pytest_addoption(parser, pluginmanager):
 def _find_missing():
     """Return (name, detail) of what pytest-qt misses, or None."""
     try:
-        # Not imported at the top, as the installed viperleed may not
-        # have qt_compat (e.g., an editable install of another branch).
-        # Then, the tests that need Qt are skipped, but all others run.
-        binding_module = importlib.import_module(QT_COMPAT_BINDING)
-    except ImportError as exc:
-        return QT_COMPAT_BINDING, str(exc)
-    try:
-        binding = binding_module.get_binding()
-    except binding_module.QtBindingNotFoundError as exc:
+        binding = qt_binding.get_binding()
+    except qt_binding.QtBindingNotFoundError as exc:
         return 'PyQt5/PyQt6', str(exc)
     if importlib.util.find_spec('pytestqt') is None:
         return PYTEST_QT, ''
