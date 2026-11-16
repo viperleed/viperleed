@@ -1987,6 +1987,17 @@ class TestUnitCellTransforms:
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
+    _minimal = {'cases': poscar_slabs,
+                'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
+                                       Tag.NO_INFO)}
+
+    @parametrize_with_cases('args', **_minimal)
+    def test_ab_cell_already_minimal(self, args):
+        """Check correct identification of slabs with already minimal ab."""
+        slab, rpars, *_ = args
+        with pytest.raises(err.AlreadyMinimalError):
+            slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
+
     _non_minimal = {'cases': poscar_slabs, 'has_tag': Tag.NON_MINIMAL_CELL}
 
     @parametrize_with_cases('args', **_non_minimal)
@@ -1998,20 +2009,6 @@ class TestUnitCellReduction:
                                             rpars.SYMMETRY_EPS.z)
         area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
         assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
-
-    @parametrize_with_cases('args', **_non_minimal)
-    def test_ab_cell_minimization_subcell(self, args):
-        """Check that the minimal ab cell gives a valid subcell.
-
-        This is what INITIALIZATION does when the POSCAR
-        cell is not minimal (to write POSCAR_mincell).
-        """
-        slab, rpars, info = args
-        mincell = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
-                                           rpars.SYMMETRY_EPS.z)
-        transform = slab.ab_cell.T.dot(np.linalg.inv(mincell)).round()
-        subcell = slab.make_subcell(rpars, transform)
-        assert subcell.n_atoms * info.poscar.n_cells == slab.n_atoms
 
     # Position noise much smaller than SYMMETRY_EPS, as for
     # structures coming from DFT or other programs (Angstrom)
@@ -2035,7 +2032,7 @@ class TestUnitCellReduction:
         ab_slab = slab.ab_cell.T.copy()
 
         def _check(draw):
-            noisy_slab, = duplicate_all(slab)
+            (noisy_slab,) = duplicate_all(slab)
             self.add_position_noise(noisy_slab, self.position_noise, draw.rng)
             ab_small = noisy_slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
                                                       rpars.SYMMETRY_EPS.z)
@@ -2043,6 +2040,20 @@ class TestUnitCellReduction:
             assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
 
         check_draws(draws, _check)
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization_subcell(self, args):
+        """Check that the minimal ab cell gives a valid subcell.
+
+        This is what INITIALIZATION does when the POSCAR
+        cell is not minimal (to write POSCAR_mincell).
+        """
+        slab, rpars, info = args
+        mincell = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                           rpars.SYMMETRY_EPS.z)
+        transform = slab.ab_cell.T.dot(np.linalg.inv(mincell)).round()
+        subcell = slab.make_subcell(rpars, transform)
+        assert subcell.n_atoms * info.poscar.n_cells == slab.n_atoms
 
     @parametrize('eps,noise', (
         (0.1, 1e-5),
@@ -2109,17 +2120,6 @@ class TestUnitCellReduction:
         # pylint: disable-next=protected-access
         reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms, candidates, eps)
         assert not reduced
-
-    _minimal = {'cases': poscar_slabs,
-                'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
-                                       Tag.NO_INFO)}
-
-    @parametrize_with_cases('args', **_minimal)
-    def test_ab_cell_already_minimal(self, args):
-        """Check correct identification of slabs with already minimal ab."""
-        slab, rpars, *_ = args
-        with pytest.raises(err.AlreadyMinimalError):
-            slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
 class TestVacuumGap:
