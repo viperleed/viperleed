@@ -47,21 +47,6 @@ def fixture_press_recorder(events, qtbot, qtw):
     return widget
 
 
-@parametrize(binding=BOTH)
-def test_copy_timestamp(binding, events, mocker):
-    """Check that timestamps are copied only with PyQt5."""
-    mocker.patch.object(events, 'get_binding', return_value=binding)
-    source, target = mocker.MagicMock(), mocker.MagicMock()
-    copied = events.copy_timestamp(source, target)
-    assert copied == (binding == PYQT5)
-    if copied:
-        target.setTimestamp.assert_called_once_with(
-            source.timestamp.return_value
-            )
-    else:
-        target.setTimestamp.assert_not_called()
-
-
 class TestGetGlobalPosition:
     """Tests for the get_global_position function."""
 
@@ -133,7 +118,7 @@ class TestMakeMouseEvent:
 
     @pytest.mark.usefixtures('qapp')
     def test_real_event(self, events, qtc):
-        """Check the attributes of a real event, with QPoint positions."""
+        """Check the attributes of a real event made from QPoints."""
         left = qtc.Qt.MouseButton.LeftButton
         event = events.make_mouse_event(
             qtc.QEvent.Type.MouseButtonPress,

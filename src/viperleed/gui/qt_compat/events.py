@@ -17,30 +17,6 @@ from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import get_binding
 
 
-def copy_timestamp(source, target):
-    """Give event `target` the timestamp of event `source`, if possible.
-
-    PyQt6 has no QInputEvent.setTimestamp: then, `target` is left
-    unchanged. Code should not rely on timestamps of events it creates.
-
-    Parameters
-    ----------
-    source : QInputEvent
-        The event whose timestamp is copied.
-    target : QInputEvent
-        The event that gets the timestamp of `source`.
-
-    Returns
-    -------
-    copied : bool
-        Whether the timestamp was copied.
-    """
-    if get_binding() != PYQT5:
-        return False
-    target.setTimestamp(source.timestamp())
-    return True
-
-
 def get_global_position(event):
     """Return the position of a mouse `event` in screen coordinates.
 

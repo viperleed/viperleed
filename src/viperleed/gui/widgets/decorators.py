@@ -15,7 +15,6 @@ import wrapt
 from viperleed.gui.qt_compat import QtCore as qtc
 from viperleed.gui.qt_compat import QtGui as qtg
 from viperleed.gui.qt_compat import QtWidgets as qtw
-from viperleed.gui.qt_compat.events import copy_timestamp
 from viperleed.gui.qt_compat.events import make_mouse_event
 
 from viperleed.gui.decorators import ensure_decorates_class
@@ -110,9 +109,8 @@ def broadcast_mouse(cls, _, args, kwargs):
                     child.removeEventFilter(self)
         # Create also a dictionary of "child: time-stamp of last event sent out"
         # that allows to not send multiple times the same event to the same
-        # child, and prevents infinite recursion in case more than one child
-        # wants to @receive_mouse_broadcast. Notice that the use of the sets
-        # give a unique list of children here
+        # child (see eventFilter). Notice that the use of the sets give a
+        # unique list of children here
         self.__last_broadcasted = {child: 0
                                    for child
                                    in self.__broadcast_mouse_to}
@@ -147,9 +145,15 @@ def broadcast_mouse(cls, _, args, kwargs):
                             qtc.QEvent.Type.ChildRemoved):
             self.childEvent(event)
 
-        # The events broadcast below pass again through this filter.
-        # Do not broadcast them again: the timestamps of the original
-        # events cannot be copied to the broadcast ones with PyQt6.
+        # Each mouse event is broadcast only once to each child:
+        # - The events broadcast below pass again through this filter,
+        #   which is installed on all children. Do not broadcast them
+        #   again. They are sent right away (sendEvent), never posted,
+        #   so they cannot come back once the broadcast is over.
+        # - Qt passes a mouse event that its target does not accept on
+        #   to the parent of the target, i.e., through this filter
+        #   once more, with the same timestamp. __broadcast skips the
+        #   children that got an event with that timestamp already.
         if (event.type() in mouse_event_types
                 and not self.__is_broadcasting):
             self.__is_broadcasting = True
@@ -166,7 +170,10 @@ def broadcast_mouse(cls, _, args, kwargs):
                 # Notice the filtering is on the basis of event.timestamp()
                 # that has a 1 ms resolution: This should be good enough
                 # even for mouseMoveEvent, as the maximum polling
-                # rate of mice is 1kHz to date (Jan. 2020)
+                # rate of mice is 1kHz to date (Jan. 2020). Only the
+                # timestamps of the events this filter gets from outside
+                # a broadcast are compared, never those of the edited
+                # copies (see eventFilter).
 
                 if not child.underMouse():
                     edited_event = self.__edit_mouse_event(child, event)
@@ -202,7 +209,6 @@ def broadcast_mouse(cls, _, args, kwargs):
                                          window_pos, screen_pos,
                                          event.button(), event.buttons(),
                                          event.modifiers(), new_source)
-        copy_timestamp(event, new_event)
         new_event.setAccepted(event.isAccepted())
         return new_event
 
