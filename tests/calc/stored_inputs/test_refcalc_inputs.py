@@ -113,9 +113,10 @@ def test_refcalc_input(written_and_reference, check_reference, tmp_path):
     check_reference(written, reference)
 
 
-
-def test_suppressed_refcalc_writes_param(group, initialized_case,
-                                         tmp_path, mocker):
+def test_suppressed_refcalc_writes_param(group,
+                                         initialized_case,
+                                         tmp_path,
+                                         mocker):
     """Check that refcalc writes PARAM, but needs no TensErLEED tree."""
     initialized = initialized_case(cases_stored_inputs.case_ag100(), group)
     slab, rpars, source = initialized.domains[None]
@@ -128,6 +129,7 @@ def test_suppressed_refcalc_writes_param(group, initialized_case,
     get_tensorleed.assert_not_called()
     get_compiler.assert_not_called()
     assert (tmp_path / PARAM_FILE).is_file()
+
 
 # The PHASESHIFTS of the preset cases are written by the case set-up
 # itself, and have no stored input to compare with.
