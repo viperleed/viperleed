@@ -1,0 +1,8 @@
+= Vibrational Amplitudes
+O_def = 0.12
+Me_def = Pt 0.071, Rh 0.065
+
+= Occupations
+Me_def = Pt 0.25, Rh 0.65
+
+= Search offsets

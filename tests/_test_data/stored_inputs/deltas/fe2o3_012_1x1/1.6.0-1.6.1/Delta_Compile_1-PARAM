@@ -1,0 +1,25 @@
+C  Parameter statements for delta amplitude calculation, v1.2
+C  parameters must be consistent with preceding reference calculation!
+
+C  MLMAX: maximum angular momentum to be considered in calculation
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
+C         set according to current LMAX
+C         MLMAX:  1  2   3    4    5    6    7     8     9     10    11     12     13     14     15     16     17     18
+C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 69322 106470 158067 227969 320664 441320 595833 790876 1033942
+
+C  MNPSI: number of phase shift values tabulated in phase shift file
+C  MNEL : number of elements for which phase shifts are tabulated
+C  MNT0 : number of beams for which delta amplitude calculation is required
+C  MNATOMS: currently must be set to 1. In principle number of different atomic
+C      positions in a superlattice wrt the reference periodicity when computing
+C      TLEED beams for a superlattice not present in the reference structure
+C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
+C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
+
+      PARAMETER( MLMAX = 12 )
+      PARAMETER( MNLMB = 158067 )
+      PARAMETER( MNPSI = 5, MNEL = 4 )
+      PARAMETER( MNT0 = 5 )
+      PARAMETER( MNATOMS = 1 )
+      PARAMETER( MNDEB = 9 )
+      PARAMETER( MNCSTEP = 11 )

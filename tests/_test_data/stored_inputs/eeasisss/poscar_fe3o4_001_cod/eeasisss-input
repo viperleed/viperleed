@@ -1,0 +1,308 @@
+STRUCTURE:
+stored-input 260101-000000
+'s'  1.00 16      BulkOrSlab('b' or 's'), LatticeConstant(Angstroms), nshell
+8.384   0.0     0.0           CoordinatesOfUnitCell(LCunits)
+0.0     8.384   0.0     
+0.0     0.0     20.96   
+140  140                  #AtomTypes,#OccupiedAtomTypes
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 3.144 0.0      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 1.048 0.0      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 5.24 0.0      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 7.336 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 1.048 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 7.336 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 5.24 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 7.336 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 1.048 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 5.24 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 3.144 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 3.144 0.0      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+6.288 2.096 1.048      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+2.096 6.288 1.048      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 5.24 2.096      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 3.144 2.096      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 7.336 2.096      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 1.048 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 7.336 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 1.048 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 3.144 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 1.048 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 7.336 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 3.144 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 5.24 2.096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 5.24 2.096      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+0.0 4.192 3.144      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+4.192 0.0 3.144      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 1.048 4.192      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 7.336 4.192      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 5.24 4.192      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 3.144 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 3.144 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 5.24 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 1.048 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 5.24 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 3.144 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 1.048 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 7.336 4.192      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 7.336 4.192      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+2.096 2.096 5.24      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+6.288 6.288 5.24      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 7.336 6.288      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 3.144 6.288      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 1.048 6.288      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 5.24 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 5.24 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 3.144 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 5.24 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 7.336 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 3.144 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 7.336 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 1.048 6.288      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 1.048 6.288      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+0.0 0.0 7.336      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+4.192 4.192 7.336      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 3.144 8.384      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 1.048 8.384      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 5.24 8.384      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 7.336 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 1.048 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 7.336 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 5.24 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 7.336 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 1.048 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 5.24 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 3.144 8.384      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 3.144 8.384      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+6.288 2.096 9.432      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+2.096 6.288 9.432      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 5.24 10.48      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 3.144 10.48      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 7.336 10.48      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 1.048 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 7.336 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 1.048 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 3.144 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 1.048 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 7.336 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 3.144 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 5.24 10.48      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 5.24 10.48      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+0.0 4.192 11.528      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+4.192 0.0 11.528      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 1.048 12.576      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 7.336 12.576      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 5.24 12.576      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 3.144 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 3.144 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 5.24 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 1.048 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 5.24 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 3.144 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 1.048 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 7.336 12.576      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 7.336 12.576      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+2.096 2.096 13.624      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+6.288 6.288 13.624      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 7.336 14.672      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 3.144 14.672      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 1.048 14.672      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 5.24 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 5.24 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 3.144 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 5.24 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 7.336 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 3.144 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 7.336 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 1.048 14.672      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 1.048 14.672      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+0.0 0.0 15.72      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+4.192 4.192 15.72      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 5.24 16.768      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 3.144 16.768      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 1.048 16.768      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 7.336 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 7.336 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 1.048 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 5.24 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 1.048 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 7.336 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 5.24 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 3.144 16.768      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 3.144 16.768      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+2.096 6.288 17.816      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+6.288 2.096 17.816      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+3.144 3.144 18.864      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+7.336 7.336 18.864      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+5.24 5.24 18.864      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+1.048 1.048 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 1.048 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 7.336 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 1.048 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.24 3.144 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 7.336 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.048 3.144 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.336 5.24 18.864      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.144 5.24 18.864      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+0.0 4.192 19.912      Coordinates(LCunits)
+1 26.  0.  0.  'atom_density_files/Fe/chgdenFe'
+4.192 -0.0 19.912      Coordinates(LCunits)
+SCATTERING: 
+'../TensErLEED/seSernelius' |exchange-correlation file
+18  |lmax
+'r' |SelectCalculation: 'relativistic'/'nonrelativistic'
+'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'
+'n' |phaseshift: print_SpinPhaseShift? 'yes'/no'
+'n' |phaseshift,sigma: print_log10(DsigmaDomega)? 'yes'/'no'
+'n' |phaseshift,sigma: print_DsigmaDtheta? 'yes'/'no'
+'n' |phaseshift,sigma: print_Sherman? 'yes'/'no'
+'n' |phaseshift,sigma: print_TotalCrossSection? 'yes'/'no'
+'n' |dataflow: print_RhoPot? 'yes'/'no'
+'n' |dataflow: print_PSvsE? 'yes'/'no'
+'n' |dataflow: print_WaveFunction? 'yes'/'no'
+0.0,820,3 |'phaseshift'/'dataflow' run: E1->E2,PS_Estep
+100.,100.,1  |'sigma' run: E1->E2,NumVals
+MT OPTIMIZATION (Nelder-Mead):
+'*'           | NMselect: '*' or '+'
+0.05d0   | NMlambda, simplex point shift.
+3            | NMiter, no. of simplex calls.
+1.d-04    ! NMeps,  simplex epsilon.
+0.125d0 | NMepsit, epsilon iteration, eps=eps*epsit.
