@@ -9,8 +9,10 @@ __license__ = 'GPLv3+'
 
 import os
 from pathlib import Path
+import pickle
 from subprocess import SubprocessError
 from types import SimpleNamespace
+from unittest.mock import ANY
 
 import pytest
 from pytest_cases import fixture
@@ -18,26 +20,27 @@ from pytest_cases import parametrize
 
 from viperleed.gui.detect_graphics import _DISPLAY_TIMEOUT
 from viperleed.gui.detect_graphics import _EXIT_CODE_OFFSET
+from viperleed.gui.detect_graphics import _QtProbe
 from viperleed.gui.detect_graphics import _QtUnixPlatformsGetter
 from viperleed.gui.detect_graphics import _STARTUP_TIMEOUT
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import PyQtSanityChecker
 from viperleed.gui.detect_graphics import QtDependencyFinder
-from viperleed.gui.detect_graphics import _import_dummy_pyqt_and_run_app
-from viperleed.gui.detect_graphics import _init_dummy_qapp
 from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
+from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import get_binding
 
 BOTH = (PYQT6, PYQT5)  # In the default order of preference
 _MODULE = 'viperleed.gui.detect_graphics'
 
 
 # TODO: would be better to find a way to mock at least
-# _import_dummy_pyqt_and_run_app instead of mocking
+# _QtProbe instead of mocking
 # multiprocessing.Process. My tests seem to reveal
 # that, while _check_pyqt_sanity gets the correct
 # target, that target is never actually called.
@@ -99,50 +102,11 @@ def fixture_mock_multiprocessing(mocker):
     return _mock
 
 
-class TestInitDummyQapp:
-    """Tests for the _init_dummy_qapp subprocess worker."""
-
-    @fixture(name='binding')
-    @parametrize(binding=BOTH)
-    def fixture_binding(self, binding):
-        """Return the name of a Qt binding."""
-        return binding
-
-    @fixture(name='mock_qapp')
-    def fixture_mock_qapp(self, binding, mocker, mock_import_module):
-        """Replace QApplication of `binding` with a mock."""
-        mocker.patch(f'{_MODULE}.suppress_file_permission_warnings')
-        # Fake only QtWidgets: newer Pythons (e.g., 3.13) find the
-        # targets of mock.patch via importlib.import_module, and later
-        # patches (e.g., in test_calls) must reach the real modules.
-        mock_qtwidgets = mocker.MagicMock()
-        mock_import_module(**{f'{binding}.QtWidgets': mock_qtwidgets})
-        return mock_qtwidgets.QApplication
-
-    def test_calls(self, binding, mock_qapp, mocker):
-        """Check calls in _init_dummy_qapp."""
-        mock_suppress = mocker.patch(
-            f'{_MODULE}.suppress_file_permission_warnings'
-            )
-        with pytest.raises(SystemExit):
-            _init_dummy_qapp(binding)
-        mock_suppress.assert_called_once_with(binding)
-        # QApplication is created only if the QtWidgets of binding
-        # is imported, as the QtWidgets of others are not mocked
-        mock_qapp.assert_called_once_with([])
-
-    _screen = {
-        'with screen': (object(), PyQtSanity.OK),
-        'no screen': (None, PyQtSanity.NO_DISPLAY),
-        }
-
-    @parametrize('screen,expect', _screen.values(), ids=_screen)
-    def test_exit_code(self, binding, screen, expect, mock_qapp):
-        """Check the exit code with and without a primary screen."""
-        mock_qapp.return_value.primaryScreen.return_value = screen
-        with pytest.raises(SystemExit) as excinfo:
-            _init_dummy_qapp(binding)
-        assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
+@parametrize(sanity=PyQtSanity)
+def test_sanity_importable(sanity):
+    """Check which statuses allow importing Qt."""
+    expect = sanity in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
+    assert sanity.importable == expect
 
 
 @parametrize(pyqt_present=(True, False))
@@ -172,136 +136,6 @@ def test_has_pyqt(pyqt_sanity, mocker):
     assert has_pyqt() == pyqt_present
 
 
-class TestImportDummyPyqtAndRunApp:
-    """Tests for the _import_dummy_pyqt_and_run_app subprocess worker."""
-
-    # The modules that we attempt to import, besides the package
-    _modules = (
-        'QtCore',
-        'QtWidgets',
-        )
-
-    @fixture(name='mock_dummy_qapp', autouse=True)
-    def fixture_mock_dummy_qapp(self, mocker):
-        """Replace _init_dummy_qapp with a mock."""
-        # This is to ensure tests don't hang forever on a system
-        # without graphics.
-        return mocker.patch(f'{_MODULE}._init_dummy_qapp')
-
-    @fixture(name='imports_done')
-    def fixture_imports_done(self, mocker):
-        """Return a fake sending end of a pipe."""
-        return mocker.MagicMock(name='imports_done')
-
-    @staticmethod
-    def check_exit_code(excinfo, expect):
-        """Check that the exit code of `excinfo` is for `expect`."""
-        assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
-
-    def test_cant_import_pyqt(self, imports_done, mocker):
-        """Check the expected exit code when importing any binding fails."""
-        mock_import = mocker.patch('importlib.import_module',
-                                   side_effect=ImportError)
-        with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app(imports_done, BOTH)
-        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
-        imports_done.send.assert_not_called()
-        assert mock_import.mock_calls == [mocker.call(b) for b in BOTH]
-
-    # Exceptions raised when importing a submodule of a binding, as a
-    # function of the submodule's name, and the expected exit status.
-    _submodule_errors = {
-        'import error': (lambda _: ImportError(),
-                         PyQtSanity.IMPORT_ERROR),
-        # E.g., only PyQt5-sip and PyQt5-Qt5 are left after
-        # uninstalling PyQt5: 'PyQt5' is a namespace package
-        'submodule missing': (lambda mod: ModuleNotFoundError(name=mod),
-                              PyQtSanity.NOT_FOUND),
-        # A dependency of the submodule is missing: broken PyQt5
-        'dependency missing': (
-            lambda mod: ModuleNotFoundError(name=f'{mod.split(".")[0]}.sip'),
-            PyQtSanity.IMPORT_ERROR,
-            ),
-        }
-
-    @parametrize(binding=BOTH)
-    @parametrize(module=_modules)
-    @parametrize('make_exc,expect', _submodule_errors.values(),
-                 ids=_submodule_errors)
-    # pylint: disable-next=too-many-arguments  # 2/7 fixtures
-    def test_cant_import_pyqt_submodule(self, binding, module, make_exc,
-                                        expect, imports_done, mocker):
-        """Check the expected exit code when importing a submodule fails."""
-        failing = f'{binding}.{module}'
-        def _fail_module_import(mod_name):
-            if mod_name == failing:
-                raise make_exc(mod_name)
-        mocker.patch('importlib.import_module',
-                     side_effect=_fail_module_import)
-        with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app(imports_done, (binding,))
-        self.check_exit_code(excinfo, expect)
-        imports_done.send.assert_not_called()
-
-    def test_pyqt_not_found(self, imports_done, mocker):
-        """Check the expected exit code when no binding is found."""
-        mocker.patch('importlib.import_module',
-                     side_effect=ModuleNotFoundError)
-        with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app(imports_done, BOTH)
-        self.check_exit_code(excinfo, PyQtSanity.NOT_FOUND)
-        imports_done.send.assert_not_called()
-
-    def test_import_error_wins(self, imports_done, mocker):
-        """Check that one broken binding gives IMPORT_ERROR."""
-        def _import(name):
-            if name.startswith(PYQT6):
-                raise ImportError
-            raise ModuleNotFoundError
-        mocker.patch('importlib.import_module', side_effect=_import)
-        with pytest.raises(SystemExit) as excinfo:
-            _import_dummy_pyqt_and_run_app(imports_done, BOTH)
-        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
-
-    @parametrize(binding=BOTH)
-    def test_success(self, binding, imports_done, mocker, mock_dummy_qapp):
-        """Test an execution that does not cause the interpreter to exit."""
-        # NB: normally, the interpreter always exits when
-        # _import_dummy_pyqt_and_run_app is called. The only
-        # reason why we don't exit here is the patching of
-        # _init_dummy_qapp via mock_dummy_qapp.
-        mock_import = mocker.patch('importlib.import_module')
-        calls = mocker.MagicMock()
-        calls.attach_mock(imports_done, 'imports_done')
-        calls.attach_mock(mock_dummy_qapp, 'init_dummy_qapp')
-        _import_dummy_pyqt_and_run_app(imports_done, (binding,))
-
-        expect_calls = [
-            mocker.call(binding),
-            *(mocker.call(f'{binding}.{m}') for m in self._modules)
-            ]
-        assert mock_import.mock_calls == expect_calls
-        # The parent must be told before creating the QApplication.
-        # Build the expected calls outside the assert: code-quality
-        # checkers take mocker.call.<...>.send() for a real call.
-        expect_order = [
-            mocker.call.imports_done.send(binding),
-            mocker.call.imports_done.close(),
-            mocker.call.init_dummy_qapp(binding),
-            ]
-        assert calls.mock_calls == expect_order
-
-    def test_falls_back(self, imports_done, mocker, mock_dummy_qapp):
-        """Check that the next candidate is used if the first fails."""
-        def _import(name):
-            if name.startswith(PYQT6):
-                raise ModuleNotFoundError
-        mocker.patch('importlib.import_module', side_effect=_import)
-        _import_dummy_pyqt_and_run_app(imports_done, BOTH)
-        imports_done.send.assert_called_once_with(PYQT5)
-        mock_dummy_qapp.assert_called_once_with(PYQT5)
-
-
 class TestFindMissingDependencies:
     """Tests for the find_missing_qt_dependencies function."""
 
@@ -315,10 +149,10 @@ class TestFindMissingDependencies:
                      return_value=PyQtSanity.OK,
                      binding=PYQT5)
 
-    def test_raises(self, mocker):
+    @parametrize(sanity=(PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API))
+    def test_raises(self, sanity, mocker):
         """Check complaints when calling the function without Qt."""
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
-                     return_value=PyQtSanity.NOT_FOUND)
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
         with pytest.raises(NotImplementedError):
             find_missing_qt_dependencies()
 
@@ -348,19 +182,15 @@ class TestFindMissingDependencies:
         assert missing is mock_finder.find_missing_dependencies.return_value
         mock_finder_cls.assert_called_once_with(PYQT5)
 
-    @parametrize(installed=BOTH)
-    def test_binding_not_imported(self, installed, mocker):
-        """Check that the first installed binding is used if none worked."""
+    def test_binding_not_imported(self, mocker):
+        """Check that the finder looks for a binding if none worked."""
         mocker.patch('sys.platform', 'some-supported-platform')
         mocker.patch(f'{_MODULE}.check_pyqt_sanity',
                      return_value=PyQtSanity.IMPORT_ERROR,
                      binding=None)
-        mocker.patch(f'{_MODULE}.get_candidates', return_value=BOTH)
-        mocker.patch('importlib.util.find_spec',
-                     side_effect=lambda name: name == installed or None)
         mock_finder_cls = mocker.patch(f'{_MODULE}.QtDependencyFinder')
         find_missing_qt_dependencies()
-        mock_finder_cls.assert_called_once_with(installed)
+        mock_finder_cls.assert_called_once_with(None)
 
     def test_no_binding_installed(self, mocker):
         """Check the result when no binding is installed at all."""
@@ -368,10 +198,9 @@ class TestFindMissingDependencies:
         mocker.patch(f'{_MODULE}.check_pyqt_sanity',
                      return_value=PyQtSanity.IMPORT_ERROR,
                      binding=None)
-        mocker.patch('importlib.util.find_spec', return_value=None)
-        mock_finder_cls = mocker.patch(f'{_MODULE}.QtDependencyFinder')
+        mocker.patch(f'{_MODULE}.QtDependencyFinder',
+                     side_effect=QtBindingNotFoundError)
         assert not find_missing_qt_dependencies()
-        mock_finder_cls.assert_not_called()
 
 
 class TestSuppressFilePermissionWarnings:
@@ -444,9 +273,13 @@ class TestPyQtSanityChecker:
 
     @fixture(autouse=True)
     def fresh_checker(self, mocker):
-        """Forget previous checks, and do not select bindings globally."""
+        """Forget previous checks."""
         mocker.patch.object(PyQtSanityChecker, '_status', None)
         mocker.patch.object(PyQtSanityChecker, '_binding', None)
+
+    @fixture(name='set_binding', autouse=True)
+    def fixture_set_binding(self, mocker):
+        """Do not select bindings globally."""
         return mocker.patch(f'{_MODULE}.set_binding')
 
     def test_checks_only_once(self, mocker):
@@ -467,23 +300,23 @@ class TestPyQtSanityChecker:
         mock_do_check.assert_called_once_with()
 
     @parametrize(binding=BOTH)
-    def test_selects_binding(self, binding, fresh_checker, mocker):
+    def test_selects_binding(self, binding, set_binding, mocker):
         """Check that the binding found is selected for qt_compat."""
         mocker.patch.object(PyQtSanityChecker, '_check_pyqt_sanity',
                             return_value=(PyQtSanity.OK, binding))
         checker = PyQtSanityChecker()
         assert checker() is PyQtSanity.OK
         assert checker.binding == binding
-        fresh_checker.assert_called_once_with(binding)
+        set_binding.assert_called_once_with(binding)
 
-    def test_no_binding(self, fresh_checker, mocker):
+    def test_no_binding(self, set_binding, mocker):
         """Check that no binding is selected if none was found."""
         mocker.patch.object(PyQtSanityChecker, '_check_pyqt_sanity',
                             return_value=(PyQtSanity.NOT_FOUND, None))
         checker = PyQtSanityChecker()
         assert checker() is PyQtSanity.NOT_FOUND
         assert checker.binding is None
-        fresh_checker.assert_not_called()
+        set_binding.assert_not_called()
 
     def test_forget_status(self, mocker):
         """Ensure resetting re-checks."""
@@ -535,10 +368,11 @@ class TestPyQtSanityChecker:
     def check_common_calls(mocks):
         """Check the calls made whatever the outcome of the check."""
         mocks.pipe.assert_called_once_with(duplex=False)
-        mocks.process_cls.assert_called_once_with(
-            target=_import_dummy_pyqt_and_run_app,
-            args=(mocks.child_end, BOTH),
-            )
+        mocks.process_cls.assert_called_once_with(target=ANY,
+                                                  args=(mocks.child_end,))
+        probe = mocks.process_cls.call_args[1]['target']
+        assert isinstance(probe, _QtProbe)
+        assert probe._candidates == BOTH  # pylint: disable=W0212
         mocks.process.start.assert_called_once_with()
         mocks.child_end.close.assert_called_once_with()
         mocks.wait.assert_called_once_with(
@@ -561,12 +395,22 @@ class TestPyQtSanityChecker:
         assert sanity is expect
         # The binding is known only if it was sent before exiting,
         # and it is reported only if it can be used
-        usable = expect in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
-        expect_binding = PYQT5 if ready == 'imports' and usable else None
+        usable = ready == 'imports' and expect.importable
+        expect_binding = PYQT5 if usable else None
         assert binding == expect_binding
         self.check_common_calls(mocks)
         mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
         mocks.process.terminate.assert_not_called()
+
+    def test_check_sanity_invalid_qt_api(self, mock_multiprocessing):
+        """Check the result when QT_API has an invalid value."""
+        mocks = mock_multiprocessing()
+        mocks.candidates.side_effect = QtBindingNotFoundError
+        # pylint: disable-next=protected-access
+        result = PyQtSanityChecker._check_pyqt_sanity()
+        assert result == (PyQtSanity.INVALID_QT_API, None)
+        mocks.pipe.assert_not_called()
+        mocks.process_cls.assert_not_called()
 
     def test_check_sanity_no_display(self, mock_multiprocessing):
         """Check the result when creating a QApplication hangs."""
@@ -598,27 +442,69 @@ class TestPyQtSanityChecker:
         mocks.process.terminate.assert_called_once_with()
 
 
-@fixture(name='mock_pyqt_root')
-def fixture_mock_pyqt_root(mocker, mock_import_module):
-    """Fake the existence of the root path of PyQt5 and PyQt6."""
-    mock_root = '/path/to/pyqt'
-    mock_pyqt = mocker.MagicMock()
-    mock_pyqt.__file__ = f'{mock_root}/__init__.py'
-    mock_import_module(PyQt5=mock_pyqt, PyQt6=mock_pyqt)
-    mocker.patch('pathlib.Path.exists', return_value=True)
-    return Path(mock_root).resolve()
-
-
 class TestQtDependencyFinder:
     """Tests for the QtDependencyFinder helper class."""
 
-    @parametrize('binding,qt_dir', ((PYQT5, 'Qt5'), (PYQT6, 'Qt6')))
-    def test_init(self, binding, qt_dir, mock_pyqt_root):
-        """Check initialization of a finder."""
-        expect_root = mock_pyqt_root / f'{qt_dir}/plugins/platforms'
+    @parametrize(binding=BOTH)
+    def test_init(self, binding, mocker):
+        """Check initialization of a finder for a given binding."""
+        find = mocker.patch.object(QtDependencyFinder,
+                                   '_find_installed_binding')
         finder = QtDependencyFinder(binding)
+        assert finder._binding == binding  # pylint: disable=W0212
+        find.assert_not_called()
+
+    def test_init_no_binding(self, mocker):
+        """Check that the installed binding is used if none is given."""
+        find = mocker.patch.object(QtDependencyFinder,
+                                   '_find_installed_binding')
+        finder = QtDependencyFinder()
+        assert finder._binding is find.return_value  # pylint: disable=W0212
+
+    @parametrize(installed=BOTH)
+    def test_find_installed_binding(self, installed, mocker):
+        """Check that the first installed candidate is found."""
+        mocker.patch(f'{_MODULE}.get_candidates', return_value=BOTH)
+        mocker.patch('importlib.util.find_spec',
+                     side_effect=lambda name: name == installed or None)
         # pylint: disable-next=protected-access
-        assert finder._root == expect_root
+        assert QtDependencyFinder._find_installed_binding() == installed
+
+    def test_find_installed_binding_none(self, mocker):
+        """Check complaints when no candidate is installed."""
+        mocker.patch(f'{_MODULE}.get_candidates', return_value=BOTH)
+        mocker.patch('importlib.util.find_spec', return_value=None)
+        with pytest.raises(QtBindingNotFoundError):
+            # pylint: disable-next=protected-access
+            QtDependencyFinder._find_installed_binding()
+
+    @parametrize(binding=BOTH)
+    def test_get_platforms_path_calls(self, binding, mocker,
+                                      mock_import_module):
+        """Check that the plugins path is taken from QLibraryInfo."""
+        qtc = mocker.MagicMock()
+        mock_import_module(**{f'{binding}.QtCore': qtc})
+        info = qtc.QLibraryInfo
+        info.location.return_value = info.path.return_value = '/qt/plugins'
+        # pylint: disable-next=protected-access
+        path = QtDependencyFinder(binding)._get_platforms_path()
+        assert path == Path('/qt/plugins/platforms')
+        if binding == PYQT5:
+            info.location.assert_called_once_with(
+                info.LibraryLocation.PluginsPath
+                )
+            info.path.assert_not_called()
+        else:
+            info.path.assert_called_once_with(info.LibraryPath.PluginsPath)
+            info.location.assert_not_called()
+
+    def test_get_platforms_path_real(self, import_with_qt):
+        """Check the plugins path of the installed binding."""
+        import_with_qt('viperleed.gui.qt_compat.QtCore')  # Skips without Qt
+        # pylint: disable-next=protected-access
+        path = QtDependencyFinder(get_binding())._get_platforms_path()
+        assert path.name == 'platforms'
+        assert path.is_dir()
 
     _install_linux = {
         'found': (('lib_one', 'lib_two'), 'sudo apt install lib_one lib_two'),
@@ -663,7 +549,6 @@ class TestQtDependencyFinder:
         'validplatform',
         )
 
-    @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(platform=_supported)
     def test_find_install_for_libs_supported(self, platform, mocker):
         """Check result of find_install_for_libs on supported platforms."""
@@ -700,7 +585,6 @@ class TestQtDependencyFinder:
         assert not QtDependencyFinder.find_install_for_libs(none_missing)
         mock_delegate.assert_not_called()
 
-    @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(platform=_supported)
     def test_find_missing_dependencies_supported(self, platform, mocker):
         """Check result of find_missing_dependencies on supported platforms."""
@@ -715,7 +599,6 @@ class TestQtDependencyFinder:
         assert result is mock_impl.return_value
         mock_impl.assert_called_once_with()
 
-    @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(platform=_unsupported)
     def test_find_missing_dependencies_unsupported(self, platform, mocker):
         """Check find_missing_dependencies raises on unsupported platforms."""
@@ -724,7 +607,6 @@ class TestQtDependencyFinder:
         with pytest.raises(NotImplementedError):
             finder.find_missing_dependencies()
 
-    @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(exc=(FileNotFoundError, SubprocessError))
     def test_find_missing_dependencies_implementation_fails(self, exc, mocker):
         """Check find_missing_dependencies when implementation raises."""
@@ -739,14 +621,14 @@ class TestQtDependencyFinder:
 class TestQtDependencyFinderLinux:
     """Tests for finding missing dependencies on Linux."""
 
-    @pytest.mark.usefixtures('mock_pyqt_root')
     def test_find_missing_deps_linux(self, mocker):
         """Check the result of _find_missing_deps_linux."""
         finder = QtDependencyFinder(PYQT5)
         mock_get = mocker.patch(f'{_MODULE}._QtUnixPlatformsGetter.get',
                                 return_value=('missing_deps',
                                               'no_missing_deps'))
-        root = finder._root  # pylint: disable=protected-access
+        root = Path('/path/to/platforms')
+        mocker.patch.object(finder, '_get_platforms_path', return_value=root)
         so_files = (
             root/'libmissing_deps.so',
             root/'anothermissing_deps.so.999',
@@ -793,6 +675,16 @@ dep_six.so => this one is also already installed''',
         assert missing == expect
         mock_get.assert_called_once_with(PYQT5)
 
+    def test_find_missing_deps_linux_no_platforms(self, mocker):
+        """Check that nothing is looked for without platform names."""
+        finder = QtDependencyFinder(PYQT5)
+        mocker.patch(f'{_MODULE}._QtUnixPlatformsGetter.get',
+                     return_value=set())
+        get_path = mocker.patch.object(finder, '_get_platforms_path')
+        # pylint: disable-next=protected-access
+        assert not finder._find_missing_deps_linux()
+        get_path.assert_not_called()
+
     def test_list_install_libs_success(self, mocker):
         """Check the successful listing of apt modules."""
         missing = ['multiple', 'devonly', 'another']
@@ -838,6 +730,190 @@ another-lib - this has no number'''.encode()
         mocker.patch('subprocess.run', side_effect=exc)
         # pylint: disable-next=protected-access
         assert not QtDependencyFinder._list_install_for_libs_linux(missing)
+
+
+class TestQtProbe:
+    """Tests for calling a _QtProbe, as in the checker subprocess."""
+
+    # The modules that we attempt to import, besides the package
+    _modules = (
+        'QtCore',
+        'QtWidgets',
+        )
+
+    @fixture(name='mock_dummy_qapp', autouse=True)
+    def fixture_mock_dummy_qapp(self, mocker):
+        """Replace _QtProbe._init_dummy_qapp with a mock."""
+        # This is to ensure tests don't hang forever on a system
+        # without graphics.
+        return mocker.patch(f'{_MODULE}._QtProbe._init_dummy_qapp')
+
+    @fixture(name='imports_done')
+    def fixture_imports_done(self, mocker):
+        """Return a fake sending end of a pipe."""
+        return mocker.MagicMock(name='imports_done')
+
+    @staticmethod
+    def check_exit_code(excinfo, expect):
+        """Check that the exit code of `excinfo` is for `expect`."""
+        assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
+
+    def test_candidates_pickled(self):
+        """Check that a probe survives pickling, as when spawned."""
+        probe = pickle.loads(pickle.dumps(_QtProbe(list(BOTH))))
+        # pylint: disable-next=protected-access
+        assert probe._candidates == BOTH
+
+    def test_cant_import_pyqt(self, imports_done, mocker):
+        """Check the expected exit code when importing any binding fails."""
+        mock_import = mocker.patch('importlib.import_module',
+                                   side_effect=ImportError)
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe(BOTH)(imports_done)
+        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
+        imports_done.send.assert_not_called()
+        assert mock_import.mock_calls == [mocker.call(b) for b in BOTH]
+
+    # Exceptions raised when importing a submodule of a binding, as a
+    # function of the submodule's name, and the expected exit status.
+    _submodule_errors = {
+        'import error': (lambda _: ImportError(),
+                         PyQtSanity.IMPORT_ERROR),
+        # E.g., only PyQt5-sip and PyQt5-Qt5 are left after
+        # uninstalling PyQt5: 'PyQt5' is a namespace package
+        'submodule missing': (lambda mod: ModuleNotFoundError(name=mod),
+                              PyQtSanity.NOT_FOUND),
+        # A dependency of the submodule is missing: broken PyQt5
+        'dependency missing': (
+            lambda mod: ModuleNotFoundError(name=f'{mod.split(".")[0]}.sip'),
+            PyQtSanity.IMPORT_ERROR,
+            ),
+        }
+
+    @parametrize(binding=BOTH)
+    @parametrize(module=_modules)
+    @parametrize('make_exc,expect', _submodule_errors.values(),
+                 ids=_submodule_errors)
+    # pylint: disable-next=too-many-arguments  # 2/7 fixtures
+    def test_cant_import_pyqt_submodule(self, binding, module, make_exc,
+                                        expect, imports_done, mocker):
+        """Check the expected exit code when importing a submodule fails."""
+        failing = f'{binding}.{module}'
+        def _fail_module_import(mod_name):
+            if mod_name == failing:
+                raise make_exc(mod_name)
+        mocker.patch('importlib.import_module',
+                     side_effect=_fail_module_import)
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe((binding,))(imports_done)
+        self.check_exit_code(excinfo, expect)
+        imports_done.send.assert_not_called()
+
+    def test_pyqt_not_found(self, imports_done, mocker):
+        """Check the expected exit code when no binding is found."""
+        mocker.patch('importlib.import_module',
+                     side_effect=ModuleNotFoundError)
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe(BOTH)(imports_done)
+        self.check_exit_code(excinfo, PyQtSanity.NOT_FOUND)
+        imports_done.send.assert_not_called()
+
+    def test_import_error_wins(self, imports_done, mocker):
+        """Check that one broken binding gives IMPORT_ERROR."""
+        def _import(name):
+            if name.startswith(PYQT6):
+                raise ImportError
+            raise ModuleNotFoundError
+        mocker.patch('importlib.import_module', side_effect=_import)
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe(BOTH)(imports_done)
+        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
+
+    @parametrize(binding=BOTH)
+    def test_success(self, binding, imports_done, mocker, mock_dummy_qapp):
+        """Test an execution that does not cause the interpreter to exit."""
+        # NB: normally, the interpreter always exits when
+        # a _QtProbe is called. The only
+        # reason why we don't exit here is the patching of
+        # _init_dummy_qapp via mock_dummy_qapp.
+        mock_import = mocker.patch('importlib.import_module')
+        calls = mocker.MagicMock()
+        calls.attach_mock(imports_done, 'imports_done')
+        calls.attach_mock(mock_dummy_qapp, 'init_dummy_qapp')
+        _QtProbe((binding,))(imports_done)
+
+        expect_calls = [
+            mocker.call(binding),
+            *(mocker.call(f'{binding}.{m}') for m in self._modules)
+            ]
+        assert mock_import.mock_calls == expect_calls
+        # The parent must be told before creating the QApplication.
+        # Build the expected calls outside the assert: code-quality
+        # checkers take mocker.call.<...>.send() for a real call.
+        expect_order = [
+            mocker.call.imports_done.send(binding),
+            mocker.call.imports_done.close(),
+            mocker.call.init_dummy_qapp(binding),
+            ]
+        assert calls.mock_calls == expect_order
+
+    def test_falls_back(self, imports_done, mocker, mock_dummy_qapp):
+        """Check that the next candidate is used if the first fails."""
+        def _import(name):
+            if name.startswith(PYQT6):
+                raise ModuleNotFoundError
+        mocker.patch('importlib.import_module', side_effect=_import)
+        _QtProbe(BOTH)(imports_done)
+        imports_done.send.assert_called_once_with(PYQT5)
+        mock_dummy_qapp.assert_called_once_with(PYQT5)
+
+
+class TestQtProbeDummyQapp:
+    """Tests for the _init_dummy_qapp method of _QtProbe."""
+
+    @fixture(name='binding')
+    @parametrize(binding=BOTH)
+    def fixture_binding(self, binding):
+        """Return the name of a Qt binding."""
+        return binding
+
+    @fixture(name='mock_qapp')
+    def fixture_mock_qapp(self, binding, mocker, mock_import_module):
+        """Replace QApplication of `binding` with a mock."""
+        mocker.patch(f'{_MODULE}.suppress_file_permission_warnings')
+        # Fake only QtWidgets: newer Pythons (e.g., 3.13) find the
+        # targets of mock.patch via importlib.import_module, and later
+        # patches (e.g., in test_calls) must reach the real modules.
+        mock_qtwidgets = mocker.MagicMock()
+        mock_import_module(**{f'{binding}.QtWidgets': mock_qtwidgets})
+        return mock_qtwidgets.QApplication
+
+    def test_calls(self, binding, mock_qapp, mocker):
+        """Check calls in _init_dummy_qapp."""
+        mock_suppress = mocker.patch(
+            f'{_MODULE}.suppress_file_permission_warnings'
+            )
+        with pytest.raises(SystemExit):
+            # pylint: disable-next=protected-access
+            _QtProbe._init_dummy_qapp(binding)
+        mock_suppress.assert_called_once_with(binding)
+        # QApplication is created only if the QtWidgets of binding
+        # is imported, as the QtWidgets of others are not mocked
+        mock_qapp.assert_called_once_with([])
+
+    _screen = {
+        'with screen': (object(), PyQtSanity.OK),
+        'no screen': (None, PyQtSanity.NO_DISPLAY),
+        }
+
+    @parametrize('screen,expect', _screen.values(), ids=_screen)
+    def test_exit_code(self, binding, screen, expect, mock_qapp):
+        """Check the exit code with and without a primary screen."""
+        mock_qapp.return_value.primaryScreen.return_value = screen
+        with pytest.raises(SystemExit) as excinfo:
+            # pylint: disable-next=protected-access
+            _QtProbe._init_dummy_qapp(binding)
+        assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
 
 
 class TestQtUnixPlatformGetter:

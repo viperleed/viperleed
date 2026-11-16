@@ -24,7 +24,7 @@ from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
-from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import QT_API_ENV
 
 _MODULE = 'viperleed.gui.cli'
 _QT_COMPAT = 'viperleed.gui.qt_compat'
@@ -47,6 +47,8 @@ class TestCheckCanRunGui:
         'not found': '',
         'found': 'sudo apt install lib_one lib_two',
         }
+    # Missing dependencies are not looked for with these
+    _no_deps_check = {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}
 
     @parametrize(install=_install.values(), ids=_install)
     @parametrize(sanity=PyQtSanity)
@@ -68,7 +70,7 @@ class TestCheckCanRunGui:
         with pytest.raises(SystemExit):
             cli.check_can_run_gui()
         missing = ('dep_one', 'dep_two', 'dep_three', 'dep_four')
-        if sanity is PyQtSanity.NOT_FOUND:
+        if sanity in self._no_deps_check:
             mock_find_deps.assert_not_called()
             return
         mock_find_deps.assert_called_once()
@@ -145,7 +147,7 @@ If your system has a display, you can start the GUI anyway with
         else:
             expect = self._err_msg + err_msg
             assert stderr.endswith(expect)
-        if sanity is PyQtSanity.NOT_FOUND:
+        if sanity in self._no_deps_check:
             find_deps.assert_not_called()
         else:
             find_deps.assert_called_once()
@@ -161,17 +163,20 @@ If your system has a display, you can start the GUI anyway with
         assert stderr.endswith('no Qt binding is installed (looked for '
                                'PyQt5).')
 
-    def test_invalid_qt_api(self, mocker, capsys):
+    def test_invalid_qt_api(self, mocker, monkeypatch, capsys):
         """Check complaints when QT_API has an invalid value."""
-        msg = 'Unsupported value for QT_API'
+        monkeypatch.setenv(QT_API_ENV, 'pyqt4')
         mocker.patch(f'{_MODULE}.check_pyqt_sanity',
-                     side_effect=QtBindingNotFoundError(msg))
+                     return_value=PyQtSanity.INVALID_QT_API)
         find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
         with pytest.raises(SystemExit):
             ViPErLEEDGUICLI().check_can_run_gui()
         captured = capsys.readouterr()
         assert captured.out == self._checking + self._done
-        assert captured.err.strip().endswith(self._err_msg + msg)
+        expect = (f"the {QT_API_ENV} environment variable has an "
+                  "unsupported value ('pyqt4'). Use one of: 'pyqt6', "
+                  "'pyqt5'.")
+        assert captured.err.strip().endswith(self._err_msg + expect)
         find_deps.assert_not_called()
 
     def test_message_before_check(self, mocker, capsys):

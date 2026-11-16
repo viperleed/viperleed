@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 from importlib import import_module
 from itertools import chain
+import os
 from pathlib import Path
 import sys
 
@@ -27,6 +28,7 @@ from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import SUPPORTED_BINDINGS
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
@@ -55,9 +57,15 @@ If your system has a display, you can start the GUI anyway with
     viperleed gui --skip-graphics-check'''
 
 # Error messages emitted if the sanity check fails. {qt} is replaced
-# by the Qt bindings that were looked for (e.g., 'PyQt6 or PyQt5').
+# by the Qt bindings that were looked for (e.g., 'PyQt6 or PyQt5'),
+# {qt_api} by the value of the QT_API environment variable.
 _SANITY_TO_ERR_MSG = {
     PyQtSanity.NOT_FOUND: 'no Qt binding is installed (looked for {qt}).',
+    PyQtSanity.INVALID_QT_API: (
+        f'the {QT_API_ENV} environment variable has an unsupported '
+        'value ({qt_api!r}). Use one of: '
+        + ', '.join(repr(b.lower()) for b in SUPPORTED_BINDINGS) + '.'
+        ),
     # All of the following may still be caused by missing dependencies
     PyQtSanity.OK: '',
     PyQtSanity.IMPORT_ERROR: (
@@ -134,16 +142,13 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         # The check may take a few seconds, e.g., on systems without
         # a display. Tell users, and end the line before any errors.
         print('Checking graphics capabilities...', flush=True, end='')
-        try:
-            sanity = check_pyqt_sanity()
-        except QtBindingNotFoundError as exc:  # Invalid QT_API
-            print('Done', flush=True)
-            self.parser.error(err_msg.format(exc))
+        sanity = check_pyqt_sanity()
         print('Done', flush=True)
         details = _SANITY_TO_ERR_MSG[sanity]  # Let KeyError propagate
-        details = details.format(qt=self._describe_candidates())
-        if sanity is PyQtSanity.NOT_FOUND:
-            # This is the only case in which it makes no sense to
+        details = details.format(qt=self._describe_candidates(),
+                                 qt_api=os.environ.get(QT_API_ENV, ''))
+        if sanity in {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}:
+            # These are the only cases in which it makes no sense to
             # check for missing dependencies. All other non-sane
             # configurations may be because of missing dependencies.
             self.parser.error(err_msg.format(details))
