@@ -28,8 +28,9 @@ class MatplotLibBackend(Enum):
     """Supported back-ends for matplotlib."""
 
     # module-to-import, string-for-matplotlib.use. 'qtagg' (needs
-    # matplotlib >= 3.5) works with both PyQt5 and PyQt6: matplotlib
-    # uses the binding that viperleed.gui.qt_compat imported.
+    # matplotlib >= 3.5, the minimum version pinned in pyproject.toml)
+    # works with both PyQt5 and PyQt6: matplotlib uses the binding
+    # that viperleed.gui.qt_compat imported.
     AGG = (None, 'qtagg')
     CAIRO = ('mplcairo', 'module://mplcairo.qt')
     DEFAULT = CAIRO

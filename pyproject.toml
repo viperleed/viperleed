@@ -22,7 +22,7 @@ readme = 'README.md'
 dependencies = [
     'fortranformat',
     'importlib_resources; python_version<"3.10"',  # Patch matplotlib
-    'matplotlib>=3.5',  # Maybe even lower, but had problems installing
+    'matplotlib>=3.5',  # For the 'qtagg' back-end (PyQt5 and PyQt6)
     'numpy',
     'psutil',
     'quicktions',
