@@ -32,6 +32,7 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+_LAST_TL_VERSION_ONE_LMAX = Version('1.6')  # Same LMAX at all energies
 _SMALL_LMAX = 6  # Below this, LMAX from PHASESHIFT_EPS is 'small'
 _TENSOR_INPUT_FILES = (
     # These are input/output files of the calculation that are stored
@@ -911,19 +912,19 @@ def refcalc_domains(rp):
                      "calculation.", exc_info=rp.is_debug_mode)
 
 
-def _select_lmax(rp, energies):
+def _select_lmax(rpars, energies):
     """Return the LMAX to use at each energy of a reference calculation.
 
-    A single LMAX value, the largest of `rp.LMAX`, is used if the
-    calculation runs on one core, if `rp.LMAX` is a single value, or
-    for TensErLEED versions up to 1.6. Otherwise, LMAX is chosen per
-    energy from the phase shifts larger than `rp.PHASESHIFT_EPS`, and
-    clipped to the range of `rp.LMAX` and to the largest supported
-    value.
+    A single LMAX value, the largest of `rpars.LMAX`, is used if the
+    calculation runs on one core, if `rpars.LMAX` is a single value,
+    or for TensErLEED versions up to 1.6. Otherwise, LMAX is chosen
+    per energy from the phase shifts larger than
+    `rpars.PHASESHIFT_EPS`, and clipped to the range of `rpars.LMAX`
+    and to the largest supported value.
 
     Parameters
     ----------
-    rp : Rparams
+    rpars : Rparams
         The run parameters. N_CORES must be defined.
     energies : Sequence
         The energies (eV) of the reference calculation.
@@ -934,43 +935,44 @@ def _select_lmax(rp, energies):
         The LMAX value (int) for each of `energies`.
     """
     uses_one_lmax = (
-        rp.N_CORES <= 1
-        or rp.LMAX.has_single_value
-        or rp.TL_VERSION <= Version('1.6')
+        rpars.N_CORES <= 1
+        or rpars.LMAX.has_single_value
+        or rpars.TL_VERSION <= _LAST_TL_VERSION_ONE_LMAX
         )
     if uses_one_lmax:
-        return dict.fromkeys(energies, rp.LMAX.max)
+        return dict.fromkeys(energies, rpars.LMAX.max)
     # find appropriate LMAX per energy
     ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV)
-             for (i, ps) in enumerate(rp.phaseshifts)]
+             for (i, ps) in enumerate(rpars.phaseshifts)]
     lmax = {}  # lmax as a function of energy
     warn_small = True
     warn_large = True
-    _, max_supported = rp.get_limits('LMAX')
-    for en in energies:
+    _, max_supported = rpars.get_limits('LMAX')
+    for energy in energies:
         try:
-            ps_ind = next(i for i, ps_en_i in ps_en if ps_en_i >= en)
+            ps_ind = next(i for i, ps_en_i in ps_en if ps_en_i >= energy)
         except StopIteration:
-            if ps_en[-1][1] > en and ps_en[-1][1] - en > 1.:
+            if ps_en[-1][1] > energy and ps_en[-1][1] - energy > 1.:
                 logger.warning(
                     'No appropriate phaseshifts found for %.2f eV. Will '
                     'try highest available phaseshift energy %.2f eV '
-                    'instead.', en, ps_en[-1][1]
+                    'instead.', energy, ps_en[-1][1]
                     )
-            ps_ind = len(rp.phaseshifts) - 1
+            ps_ind = len(rpars.phaseshifts) - 1
         lmax_cands = [1]
-        for site_ps in rp.phaseshifts[ps_ind][1]:
+        for site_ps in rpars.phaseshifts[ps_ind][1]:
             with contextlib.suppress(IndexError, ValueError):
                 lmax_cands.append(max(
                     [site_ps.index(v) for v in site_ps
-                     if abs(v) > rp.PHASESHIFT_EPS]) + 1)
-        lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
-        if lmax[en] < _SMALL_LMAX and warn_small:
+                     if abs(v) > rpars.PHASESHIFT_EPS]) + 1)
+        lmax[energy] = min(max((rpars.LMAX.min, *lmax_cands)), rpars.LMAX.max)
+        if lmax[energy] < _SMALL_LMAX and warn_small:
             warn_small = False
             logger.debug('Found small LMAX value based on PHASESHIFT_EPS '
-                         'parameter (LMAX = %d, E = %.2f eV)', lmax[en], en)
-        if lmax[en] > max_supported:
-            lmax[en] = max_supported
+                         'parameter (LMAX = %d, E = %.2f eV)',
+                         lmax[energy], energy)
+        if lmax[energy] > max_supported:
+            lmax[energy] = max_supported
             if warn_large:
                 warn_large = False
                 logger.info('The LMAX found based on the PHASESHIFT_EPS '
