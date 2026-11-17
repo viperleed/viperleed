@@ -941,21 +941,21 @@ def _select_lmax(rpars, energies):
     if uses_one_lmax:
         return dict.fromkeys(energies, rpars.LMAX.max)
     # find appropriate LMAX per energy
-    ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV)
-             for (i, ps) in enumerate(rpars.phaseshifts)]
+    ps_energies = [ps[0]*leedbase.HARTREE_TO_EV for ps in rpars.phaseshifts]
     lmax = {}  # lmax as a function of energy
     warn_small = True
     warn_large = True
     _, max_supported = rpars.get_limits('LMAX')
     for energy in energies:
         try:
-            ps_ind = next(i for i, ps_en_i in ps_en if ps_en_i >= energy)
+            ps_ind = next(i for i, ps_energy in enumerate(ps_energies)
+                          if ps_energy >= energy)
         except StopIteration:
-            if ps_en[-1][1] > energy and ps_en[-1][1] - energy > 1.:
+            if ps_energies[-1] > energy and ps_energies[-1] - energy > 1.:
                 logger.warning(
                     'No appropriate phaseshifts found for %.2f eV. Will '
                     'try highest available phaseshift energy %.2f eV '
-                    'instead.', energy, ps_en[-1][1]
+                    'instead.', energy, ps_energies[-1]
                     )
             ps_ind = len(rpars.phaseshifts) - 1
         lmax_cands = [1]
