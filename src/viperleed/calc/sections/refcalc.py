@@ -951,7 +951,7 @@ def _select_lmax(rpars, energies):
             ps_ind = next(i for i, ps_energy in enumerate(ps_energies)
                           if ps_energy >= energy)
         except StopIteration:
-            if ps_energies[-1] > energy and ps_energies[-1] - energy > 1.:
+            if energy - ps_energies[-1] > 1.:
                 logger.warning(
                     'No appropriate phaseshifts found for %.2f eV. Will '
                     'try highest available phaseshift energy %.2f eV '
