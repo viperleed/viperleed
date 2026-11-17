@@ -157,9 +157,15 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             qt_api_error=qt_api_error,
             select_hint=_SELECT_BINDING_MSG if len(candidates) > 1 else '',
             )
+        if sanity is PyQtSanity.OK:
+            # Qt could start a QApplication, hence it found a working
+            # platform plugin. Libraries missing for others (e.g., for
+            # wayland, if Qt 6 uses xcb) do not prevent the GUI from
+            # running: do not look for them.
+            return
         if sanity in {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}:
-            # These are the only cases in which it makes no sense to
-            # check for missing dependencies. All other non-sane
+            # These are the only failures for which it makes no sense
+            # to check for missing dependencies. All other non-sane
             # configurations may be because of missing dependencies.
             self._exit(details)
         missing = tuple(chain.from_iterable(
@@ -177,8 +183,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
                 'the following Qt dependencies are missing on your system:'
                 f'{fmt_missing}\n{install_msg}'
                 )
-        if sanity is not PyQtSanity.OK:
-            self._exit(details)
+        self._exit(details)
 
     def _check_qt_api(self):
         """Exit if no binding can be selected because of QT_API."""

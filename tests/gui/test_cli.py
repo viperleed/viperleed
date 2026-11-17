@@ -43,7 +43,9 @@ class TestCheckCanRunGui:
         'found': 'sudo apt install lib_one lib_two',
         }
     # Missing dependencies are not looked for with these
-    _no_deps_check = {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}
+    _no_deps_check = {PyQtSanity.OK,
+                      PyQtSanity.NOT_FOUND,
+                      PyQtSanity.INVALID_QT_API}
 
     _mock_abi_msg = '''
 If you are executing viperleed in a conda environment, try one of the
@@ -139,7 +141,9 @@ If your system has a display, you can start the GUI anyway with
             )
 
         cli = ViPErLEEDGUICLI()
-        with pytest.raises(SystemExit):
+        # Qt works, so missing dependencies do not matter
+        can_run = sanity is PyQtSanity.OK
+        with nullcontext() if can_run else pytest.raises(SystemExit):
             cli.check_can_run_gui()
         missing = ('dep_one', 'dep_two', 'dep_three', 'dep_four')
         if sanity in self._no_deps_check:
