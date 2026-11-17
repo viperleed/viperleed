@@ -17,11 +17,29 @@ Running tests
 ViPErLEED comes with a suite of tests and uses
 `pytest <https://docs.pytest.org/en/>`__ for testing.
 Tests that run :term:`TensErLEED` (marked ``tensorleed``) are not part of
-a default run. To run them, the :term:`TensErLEED` source code (repository
-``viperleed-tensorleed``) should be available on the testing machine and the
-``VIPERLEED_TENSORLEED`` :term:`environment variable` should be set. See also
-:ref:`install_tensorleed`, which also describes where the compiled
-:ref:`eeasisss_compile` source code is expected.
+a default run. To run them, a :term:`TensErLEED` tree should be available on
+the testing machine and the ``VIPERLEED_TENSORLEED``
+:term:`environment variable` should point to it. The tests need several
+versions of :term:`TensErLEED` and a compiled :program:`eeasisss` (see also
+:ref:`install_tensorleed` and :ref:`eeasisss_compile`). Assemble the tree
+with the script :file:`build/scripts/assemble_tensorleed_tree.py`, from the
+root of your local copy of the |repo|:
+
+.. code-block:: bash
+
+    python build/scripts/assemble_tensorleed_tree.py <path/to/tree>
+
+The script downloads release tags of the ``viperleed-tensorleed`` repository,
+copies the :term:`TensErLEED` versions used by the tests into the given
+directory, compiles :file:`random_.o` for :term:`TensErLEED` v1.6.1, and
+compiles :program:`eeasisss`. It needs Internet access, :program:`gcc`,
+:program:`gfortran`, and :program:`make` (on Windows, the
+:file:`make.bat` file shipped with :program:`eeasisss` is used instead;
+the script has been tested on Linux only). The directory must not exist or
+be empty: the script does not overwrite an existing tree. If a step fails,
+the script removes what it wrote, so that it can be run again with the same
+directory. To update the tree after a change of the script, assemble it
+into a new directory.
 
 Tests are *not* distributed with the ``viperleed`` package on
 `pypi <https://pypi.org/project/viperleed/>`__. To run the tests, clone the
@@ -172,6 +190,46 @@ less than 0.8 times the threshold. The band around the threshold (the
 test depends on the cases that ran before it; tests in the band keep their
 marking. It only reports: it changes neither the selection nor the exit
 status. It also works with ``-n`` (:program:`pytest-xdist`).
+
+
+Continuous integration
+''''''''''''''''''''''
+
+The tests also run on GitHub Actions:
+
+- The workflow ``Tests`` (:file:`.github/workflows/unit_tests.yml`) runs the
+  default tier with ``-n auto`` and ``--require-all`` on every pull request
+  and on every push to the ``master`` branch, on two Python versions (see the
+  workflow file). Its result is the check ``Tests``. The coverage of the run
+  with the newer Python is uploaded to
+  `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
+  to ``master``, the job ``Tests (serial)`` also runs the default tier
+  without :program:`pytest-xdist`, to catch tests that fail only when run
+  serially. It is not part of the check ``Tests``: a pull request that
+  breaks the serial run is noticed only after it is merged.
+- The *TensErLEED tests* (:file:`.github/workflows/tensorleed_tests.yml`)
+  run the TensErLEED tier on every pull request into ``master``, against a
+  tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.
+  Their result is the check ``TensErLEED tests``. The workflow does not run
+  on pull requests into other branches. It starts when a pull request into
+  ``master`` is opened or receives new commits: if the base of a pull
+  request is changed to ``master`` later, push a commit or start the
+  workflow by hand (see below). The tree is cached, but a cache made for a
+  pull request is visible only to that pull request: the tree is assembled
+  on the first run of each pull request, and later runs reuse it.
+
+Whether a pull request can be merged with a failing check depends on the
+rulesets of the |repo|, which the administrators of the repository set up.
+
+To run the TensErLEED tests for another branch, e.g., a version branch
+before opening the pull request into ``master``, start the workflow by hand:
+on the *Actions* page of the |repo|, select ``TensErLEED tests``, click
+:guilabel:`Run workflow`, and choose the branch. With the
+`GitHub CLI <https://cli.github.com>`__, run
+
+.. code-block:: bash
+
+    gh workflow run tensorleed_tests.yml --ref <branch>
 
 
 .. _editable_install:
