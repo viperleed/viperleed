@@ -80,7 +80,7 @@ class PyQtSanityChecker:
 
     @property
     def binding(self):
-        """Return the name of the binding that could be imported, or None.
+        """Return the name of the binding that was imported, or None.
 
         This is None also before checking, or if the check was skipped
         via assume_ok.
@@ -295,7 +295,7 @@ def suppress_file_permission_warnings(binding=None):
 
 
 class QtDependencyFinder:
-    """Helper for finding missing dependencies of Qt platform plugins."""
+    """Helper for finding missing dependencies of Qt platforms."""
 
     def __init__(self, binding=None):
         """Initialize an instance.
@@ -340,6 +340,14 @@ class QtDependencyFinder:
         except (FileNotFoundError, subprocess.SubprocessError):
             return {}
 
+    @classmethod
+    def _find_install_for_libs_linux(cls, missing):
+        """Return a suggestion on how to install missing libraries on Linux."""
+        install_libs = cls._list_install_for_libs_linux(missing)
+        if not install_libs:
+            return ''
+        return 'sudo apt install ' + ' '.join(install_libs)
+
     @staticmethod
     def _find_installed_binding():
         """Return the first candidate binding that is installed.
@@ -361,14 +369,6 @@ class QtDependencyFinder:
             raise QtBindingNotFoundError(
                 f'None of the Qt bindings {candidates} is installed'
                 ) from None
-
-    @classmethod
-    def _find_install_for_libs_linux(cls, missing):
-        """Return a suggestion on how to install missing libraries on Linux."""
-        install_libs = cls._list_install_for_libs_linux(missing)
-        if not install_libs:
-            return ''
-        return 'sudo apt install ' + ' '.join(install_libs)
 
     def _find_missing_deps_linux(self):
         """Return missing dependencies of `lib_names` on a Linux machine."""
@@ -417,10 +417,9 @@ class QtDependencyFinder:
         """
         qtc = importlib.import_module(f'{self._binding}.QtCore')
         info = qtc.QLibraryInfo
-        if self._binding == PYQT5:
-            plugins = info.location(info.LibraryLocation.PluginsPath)
-        else:
-            plugins = info.path(info.LibraryPath.PluginsPath)
+        plugins = (info.location(info.LibraryLocation.PluginsPath)
+                   if self._binding == PYQT5
+                   else info.path(info.LibraryPath.PluginsPath))
         return Path(plugins) / 'platforms'
 
     @staticmethod
@@ -456,6 +455,8 @@ class QtDependencyFinder:
         return install_libs
 
 
+# The only public method is __call__, as this is a subprocess target
+# pylint: disable-next=too-few-public-methods
 class _QtProbe:
     """The checker of Qt bindings that runs in a subprocess.
 
@@ -601,7 +602,7 @@ class _QtUnixPlatformsGetter:
 
     @classmethod
     def get(cls, binding):
-        """Return a set of platform names for the Qt version of `binding`."""
+        """Return the platform names for the Qt version of `binding`."""
         try:
             qtc = importlib.import_module(f'{binding}.QtCore')
         except ImportError:

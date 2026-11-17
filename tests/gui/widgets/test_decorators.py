@@ -112,7 +112,7 @@ class TestBroadcastMouse:
 
     def test_first_event_zero_timestamp(self, window, count_events,
                                         send_wheel):
-        """Check that a first event with a zero timestamp is broadcast."""
+        """Check that a first event with zero timestamp is broadcast."""
         send_wheel(window)
         expect = {_WHEEL: 1}
         assert [c.counts for c in count_events] == [expect, expect]

@@ -395,6 +395,7 @@ class TestPyQtSanityChecker:
         assert sanity is expect
         # The binding is known only if it was sent before exiting,
         # and it is reported only if it can be used
+        # pylint: disable-next=magic-value-comparison
         usable = ready == 'imports' and expect.importable
         expect_binding = PYQT5 if usable else None
         assert binding == expect_binding
@@ -503,6 +504,7 @@ class TestQtDependencyFinder:
         import_with_qt('viperleed.gui.qt_compat.QtCore')  # Skips without Qt
         # pylint: disable-next=protected-access
         path = QtDependencyFinder(get_binding())._get_platforms_path()
+        # pylint: disable-next=magic-value-comparison
         assert path.name == 'platforms'
         assert path.is_dir()
 
@@ -759,7 +761,7 @@ class TestQtProbe:
         assert probe._candidates == BOTH
 
     def test_cant_import_pyqt(self, imports_done, mocker):
-        """Check the expected exit code when importing any binding fails."""
+        """Check the exit code when importing any binding fails."""
         mock_import = mocker.patch('importlib.import_module',
                                    side_effect=ImportError)
         with pytest.raises(SystemExit) as excinfo:
@@ -779,7 +781,7 @@ class TestQtProbe:
                               PyQtSanity.NOT_FOUND),
         # A dependency of the submodule is missing: broken PyQt5
         'dependency missing': (
-            lambda mod: ModuleNotFoundError(name=f'{mod.split(".")[0]}.sip'),
+            lambda mod: ModuleNotFoundError(name=mod.split('.')[0] + '.sip'),
             PyQtSanity.IMPORT_ERROR,
             ),
         }
@@ -788,10 +790,10 @@ class TestQtProbe:
     @parametrize(module=_modules)
     @parametrize('make_exc,expect', _submodule_errors.values(),
                  ids=_submodule_errors)
-    # pylint: disable-next=too-many-arguments  # 2/7 fixtures
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def test_cant_import_pyqt_submodule(self, binding, module, make_exc,
                                         expect, imports_done, mocker):
-        """Check the expected exit code when importing a submodule fails."""
+        """Check the exit code when importing a submodule fails."""
         failing = f'{binding}.{module}'
         def _fail_module_import(mod_name):
             if mod_name == failing:
@@ -825,7 +827,7 @@ class TestQtProbe:
 
     @parametrize(binding=BOTH)
     def test_success(self, binding, imports_done, mocker, mock_dummy_qapp):
-        """Test an execution that does not cause the interpreter to exit."""
+        """Test an execution that does not make the interpreter exit."""
         # NB: normally, the interpreter always exits when
         # a _QtProbe is called. The only
         # reason why we don't exit here is the patching of

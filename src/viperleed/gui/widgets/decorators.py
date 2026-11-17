@@ -109,10 +109,10 @@ def broadcast_mouse(cls, _, args, kwargs):
                     child.removeEventFilter(self)
         # Create also a dictionary of "child: time-stamp of last event sent out"
         # that allows to not send multiple times the same event to the same
-        # child (see eventFilter). Notice that the use of the sets give a
-        # unique list of children here. Start from None rather than from
-        # zero: events created by the application have a zero timestamp,
-        # unless one is set explicitly.
+        # child (see eventFilter). Notice that the use of the sets
+        # gives a unique list of children here. Start from None
+        # rather than from zero: events created by the application
+        # have a zero timestamp, unless one is set explicitly.
         self.__last_broadcasted = {child: None
                                    for child
                                    in self.__broadcast_mouse_to}
@@ -166,11 +166,12 @@ def broadcast_mouse(cls, _, args, kwargs):
         return __orig_eventFilter(self, target, event)
 
     def __broadcast(self, target, event):
-        """Send a mouse `event` on `target` to the children that want it."""
+        """Send mouse `event` on `target` to the receiving children."""
         for child, timestamp in self.__last_broadcasted.items():
             if child != target and timestamp != event.timestamp():
-                # Notice the filtering is on the basis of event.timestamp()
-                # that has a 1 ms resolution: This should be good enough
+                # Notice the filtering is on the basis of
+                # event.timestamp(), which has a 1 ms resolution:
+                # This should be good enough
                 # even for mouseMoveEvent, as the maximum polling
                 # rate of mice is 1kHz to date (Jan. 2020). Only the
                 # timestamps of the events this filter gets from outside

@@ -36,8 +36,11 @@ class TestLEEDPatternSimulator:
         assert simulator.close()
 
     # Not in alphabetical order: with PyQt5 on Python 3.13, running
-    # test_new_file_dialog_done first makes test_new_pattern fail
-    # (TypeError in a weakref callback). See TODO.md.
+    # test_new_file_dialog_done first makes the setup of
+    # test_new_pattern fail ("TypeError: 'QWidget' object is not
+    # callable" in a weakref callback), if the two run in the same
+    # process as some CLI tests. Probably a Python wrapper outliving
+    # its C++ object. Not understood yet.
     def test_new_pattern(self, simulator, default_parameters, qtbot):
         """Check that a LEED pattern can be created from parameters."""
         # pylint: disable=protected-access
