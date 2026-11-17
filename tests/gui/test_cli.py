@@ -24,7 +24,7 @@ from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
-from viperleed.gui.qt_compat.binding import QT_API_ENV
+from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 
 _MODULE = 'viperleed.gui.cli'
 _QT_COMPAT = 'viperleed.gui.qt_compat'
@@ -32,12 +32,6 @@ _QT_COMPAT = 'viperleed.gui.qt_compat'
 
 class TestCheckCanRunGui:
     """Tests for the check_can_run_gui method of ViPErLEEDGUICLI."""
-
-    @fixture(autouse=True)
-    def fake_candidates(self, mocker):
-        """Look for both bindings, independently of the environment."""
-        mocker.patch(f'{_MODULE}.get_candidates',
-                     return_value=(PYQT6, PYQT5))
 
     _err_msg = ('Cannot execute the ViPErLEED graphical user '
                 'interface because ')
@@ -49,44 +43,6 @@ class TestCheckCanRunGui:
         }
     # Missing dependencies are not looked for with these
     _no_deps_check = {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}
-
-    @parametrize(install=_install.values(), ids=_install)
-    @parametrize(sanity=PyQtSanity)
-    def test_missing_dependencies(self, install, sanity, mocker, capsys):
-        """Check complaints when dependencies are missing."""
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
-        missing_dict = {'base_one': ('dep_one', 'dep_two'),
-                        'base_two': ('dep_three', 'dep_four')}
-        mock_find_deps = mocker.patch(
-            f'{_MODULE}.find_missing_qt_dependencies',
-            return_value=missing_dict,
-            )
-        mock_find_install = mocker.patch(
-            f'{_MODULE}.QtDependencyFinder.find_install_for_libs',
-            return_value=install,
-            )
-
-        cli = ViPErLEEDGUICLI()
-        with pytest.raises(SystemExit):
-            cli.check_can_run_gui()
-        missing = ('dep_one', 'dep_two', 'dep_three', 'dep_four')
-        if sanity in self._no_deps_check:
-            mock_find_deps.assert_not_called()
-            return
-        mock_find_deps.assert_called_once()
-        mock_find_install.assert_called_once_with(missing)
-
-        expect_err = self._err_msg + '''\
-the following Qt dependencies are missing on your system:
-    dep_one
-    dep_two
-    dep_three
-    dep_four
-Try again after installing them'''
-        expect_err += ('.' if not install else ''' via
-    sudo apt install lib_one lib_two''')
-        stderr = capsys.readouterr().err.strip()
-        assert stderr.endswith(expect_err)
 
     _mock_abi_msg = '''
 If you are executing viperleed in a conda environment, try one of the
@@ -129,6 +85,88 @@ If your system has a display, you can start the GUI anyway with
             ),
         }
 
+    @fixture(autouse=True)
+    def fake_candidates(self, mocker):
+        """Look for both bindings, independently of the environment."""
+        mocker.patch(f'{_MODULE}.get_candidates',
+                     return_value=(PYQT6, PYQT5))
+
+    def test_invalid_qt_api(self, mocker, capsys):
+        """Check complaints when QT_API prevents selecting a binding."""
+        mocker.patch(f'{_MODULE}.get_candidates',
+                     side_effect=QtBindingNotFoundError('Some reason.'))
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     return_value=PyQtSanity.INVALID_QT_API)
+        find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        captured = capsys.readouterr()
+        assert captured.out == self._checking + self._done
+        expect = 'no Qt binding can be selected. Some reason.'
+        assert captured.err.strip().endswith(self._err_msg + expect)
+        find_deps.assert_not_called()
+
+    def test_message_before_check(self, mocker, capsys):
+        """Ensure users are told about the check before it starts."""
+        def _check_sanity():
+            # Only the start of the line is out when checking
+            assert capsys.readouterr().out == self._checking
+            return PyQtSanity.OK
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', side_effect=_check_sanity)
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value={})
+        ViPErLEEDGUICLI().check_can_run_gui()
+        assert capsys.readouterr().out == self._done
+
+    @parametrize(install=_install.values(), ids=_install)
+    @parametrize(sanity=PyQtSanity)
+    def test_missing_dependencies(self, install, sanity, mocker, capsys):
+        """Check complaints when dependencies are missing."""
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
+        missing_dict = {'base_one': ('dep_one', 'dep_two'),
+                        'base_two': ('dep_three', 'dep_four')}
+        mock_find_deps = mocker.patch(
+            f'{_MODULE}.find_missing_qt_dependencies',
+            return_value=missing_dict,
+            )
+        mock_find_install = mocker.patch(
+            f'{_MODULE}.QtDependencyFinder.find_install_for_libs',
+            return_value=install,
+            )
+
+        cli = ViPErLEEDGUICLI()
+        with pytest.raises(SystemExit):
+            cli.check_can_run_gui()
+        missing = ('dep_one', 'dep_two', 'dep_three', 'dep_four')
+        if sanity in self._no_deps_check:
+            mock_find_deps.assert_not_called()
+            return
+        mock_find_deps.assert_called_once()
+        mock_find_install.assert_called_once_with(missing)
+
+        expect_err = self._err_msg + '''\
+the following Qt dependencies are missing on your system:
+    dep_one
+    dep_two
+    dep_three
+    dep_four
+Try again after installing them'''
+        expect_err += ('.' if not install else ''' via
+    sudo apt install lib_one lib_two''')
+        stderr = capsys.readouterr().err.strip()
+        assert stderr.endswith(expect_err)
+
+    def test_requested_binding(self, mocker, capsys):
+        """Check that only a binding requested via QT_API is named."""
+        mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT5,))
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     return_value=PyQtSanity.NOT_FOUND)
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        assert stderr.endswith('no Qt binding is installed (looked for '
+                               'PyQt5).')
+
     @parametrize('sanity,err_msg', _can_run.values(), ids=_can_run)
     def test_result(self, sanity, err_msg, mocker, capsys):
         """Check the expected outcome."""
@@ -151,45 +189,6 @@ If your system has a display, you can start the GUI anyway with
             find_deps.assert_not_called()
         else:
             find_deps.assert_called_once()
-
-    def test_requested_binding(self, mocker, capsys):
-        """Check that only a binding requested via QT_API is named."""
-        mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT5,))
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
-                     return_value=PyQtSanity.NOT_FOUND)
-        with pytest.raises(SystemExit):
-            ViPErLEEDGUICLI().check_can_run_gui()
-        stderr = capsys.readouterr().err.strip()
-        assert stderr.endswith('no Qt binding is installed (looked for '
-                               'PyQt5).')
-
-    def test_invalid_qt_api(self, mocker, monkeypatch, capsys):
-        """Check complaints when QT_API has an invalid value."""
-        monkeypatch.setenv(QT_API_ENV, 'pyqt4')
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
-                     return_value=PyQtSanity.INVALID_QT_API)
-        find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
-        with pytest.raises(SystemExit):
-            ViPErLEEDGUICLI().check_can_run_gui()
-        captured = capsys.readouterr()
-        assert captured.out == self._checking + self._done
-        expect = (f"the {QT_API_ENV} environment variable has an "
-                  "unsupported value ('pyqt4'). Use one of: 'pyqt6', "
-                  "'pyqt5'.")
-        assert captured.err.strip().endswith(self._err_msg + expect)
-        find_deps.assert_not_called()
-
-    def test_message_before_check(self, mocker, capsys):
-        """Ensure users are told about the check before it starts."""
-        def _check_sanity():
-            # Only the start of the line is out when checking
-            assert capsys.readouterr().out == self._checking
-            return PyQtSanity.OK
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity', side_effect=_check_sanity)
-        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
-                     return_value={})
-        ViPErLEEDGUICLI().check_can_run_gui()
-        assert capsys.readouterr().out == self._done
 
     def test_sanity_invalid(self, mocker):
         """Check that an invalid sanity fails with a KeyError."""
@@ -286,7 +285,7 @@ class TestGuiMain:
 
     @parametrize(binding=(PYQT5, PYQT6))
     def test_high_dpi_set(self, binding, mocks, mocker):
-        """Ensure that the application is set to support high-DPI screens.
+        """Ensure that the application supports high-DPI screens.
 
         Only with PyQt5. Qt 6 always supports them, and does not have
         the corresponding application attributes any longer.
@@ -409,6 +408,17 @@ class TestViPErLEEDGUICLI:
             mocker.call.gui_main(),
             ]
         mock_process.assert_not_called()
+
+    def test_call_skip_graphics_check_qt_api(self, mocks, mocker, capsys):
+        """Check complaints about QT_API also when skipping checks."""
+        cli, mocks = mocks
+        mocker.patch(f'{_MODULE}.get_candidates',
+                     side_effect=QtBindingNotFoundError('Some reason.'))
+        with pytest.raises(SystemExit):
+            cli(['--skip-graphics-check'])
+        assert not mocks.mock_calls
+        stderr = capsys.readouterr().err.strip()
+        assert stderr.endswith('no Qt binding can be selected. Some reason.')
 
     def test_skip_check_prevents_later_checks(self, mocker):
         """Ensure that has_pyqt does not check after skipping the check."""
