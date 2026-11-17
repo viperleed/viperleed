@@ -57,8 +57,13 @@ PARAMS = reference_params(REFCALC, _file_names)
 
 
 @fixture(scope='session', name='refcalc_folder')
-def factory_refcalc_folder(initialized_case, tmp_path_factory):
-    """Return a function that writes the refcalc inputs (cached)."""
+def factory_refcalc_folder(initialized_case,
+                           tmp_path_factory,
+                           session_mocker):
+    """Return a function that writes the refcalc inputs (cached).
+
+    Check that refcalc needs neither a TensErLEED tree nor a compiler.
+    """
     cache = {}
 
     def _write(group, inputs, domain):
@@ -70,8 +75,15 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
         folder = tmp_path_factory.mktemp('refcalc')
         slab, rpars = copy_case_state(source, folder, slab, rpars)
         rpars.SUPPRESS_EXECUTION = True
+        get_tensorleed = session_mocker.patch.object(
+            rpars,
+            'get_tenserleed_directory',
+            )
+        get_compiler = session_mocker.patch.object(rpars, 'getFortranComp')
         with execute_in_dir(folder):
             refcalc.refcalc(slab, rpars)
+        get_tensorleed.assert_not_called()
+        get_compiler.assert_not_called()
         cache[key] = folder
         return folder
     return _write
@@ -111,24 +123,6 @@ def test_refcalc_input(written_and_reference, check_reference, tmp_path):
     if written.name == FIN_FILE:
         written = _with_phaseshifts_placeholder(written, tmp_path)
     check_reference(written, reference)
-
-
-def test_suppressed_refcalc_writes_param(group,
-                                         initialized_case,
-                                         tmp_path,
-                                         mocker):
-    """Check that refcalc writes PARAM, but needs no TensErLEED tree."""
-    initialized = initialized_case(cases_stored_inputs.case_ag100(), group)
-    slab, rpars, source = initialized.domains[None]
-    slab, rpars = copy_case_state(source, tmp_path, slab, rpars)
-    rpars.SUPPRESS_EXECUTION = True
-    get_tensorleed = mocker.patch.object(rpars, 'get_tenserleed_directory')
-    get_compiler = mocker.patch.object(rpars, 'getFortranComp')
-    with execute_in_dir(tmp_path):
-        refcalc.refcalc(slab, rpars)
-    get_tensorleed.assert_not_called()
-    get_compiler.assert_not_called()
-    assert (tmp_path / PARAM_FILE).is_file()
 
 
 # The PHASESHIFTS of the preset cases are written by the case set-up
