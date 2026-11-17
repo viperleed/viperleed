@@ -25,6 +25,7 @@ For a documentation of the `viperleed` Python API see
 <https://www.viperleed.org/stable/content/api.html>
 
 [![Documentation Status](https://readthedocs.org/projects/viperleed/badge/?version=stable)](https://viperleed.readthedocs.io/stable/?badge=stable)
+[![codecov](https://codecov.io/gh/viperleed/viperleed/graph/badge.svg)](https://codecov.io/gh/viperleed/viperleed)
 
 
 #### Reporting bugs
