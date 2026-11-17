@@ -9,7 +9,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
-import contextlib
 import copy
 import logging
 import os
@@ -961,10 +960,8 @@ def _select_lmax(rpars, energies):
             ps_ind = len(rpars.phaseshifts) - 1
         lmax_cands = [1]
         for site_ps in rpars.phaseshifts[ps_ind][1]:
-            with contextlib.suppress(IndexError, ValueError):
-                lmax_cands.append(max(
-                    [site_ps.index(v) for v in site_ps
-                     if abs(v) > rpars.PHASESHIFT_EPS]) + 1)
+            lmax_cands.extend(i + 1 for i, v in enumerate(site_ps)
+                              if abs(v) > rpars.PHASESHIFT_EPS)
         lmax[energy] = min(max((rpars.LMAX.min, *lmax_cands)), rpars.LMAX.max)
         if lmax[energy] < _SMALL_LMAX and warn_small:
             warn_small = False

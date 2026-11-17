@@ -85,3 +85,21 @@ def test_lmax_per_energy_supported_max(rpars, mocker, caplog):
     assert lmax == dict(zip(ENERGIES, (6, 9, 10)))
     expect_log = 'LMAX was set to 10'
     assert expect_log in caplog.text
+
+
+def test_lmax_per_energy_all_small(rpars):
+    """Check that LMAX.min is used if no phase shift is large."""
+    rpars.phaseshifts = _phaseshifts(0, 0, 0)
+    lmax = _select_lmax(rpars, ENERGIES)
+    assert lmax == dict.fromkeys(ENERGIES, rpars.LMAX.min)
+
+
+def test_lmax_per_energy_repeated_value(rpars):
+    """Check that LMAX comes from the largest L of repeated values."""
+    n_values = len(rpars.phaseshifts[0][1][0])
+    n_large = 8
+    site_ps = [0.5] * n_large + [0.0] * (n_values - n_large)
+    rpars.phaseshifts = [(energy, [site_ps])
+                         for energy, _ in rpars.phaseshifts]
+    lmax = _select_lmax(rpars, ENERGIES)
+    assert lmax == dict.fromkeys(ENERGIES, n_large)
