@@ -90,10 +90,37 @@ class TestBroadcastMouse:
             receiver.installEventFilter(counter)
         return counters
 
+    @fixture(name='send_wheel')
+    def fixture_send_wheel(self, qtc, qtg, qtw):
+        """Return a function that sends a wheel event to a widget.
+
+        The event is created here, so its timestamp is zero.
+        """
+        def _send(widget):
+            pos = qtc.QPoint(1, 1)
+            wheel = qtg.QWheelEvent(qtc.QPointF(pos),
+                                    qtc.QPointF(widget.mapToGlobal(pos)),
+                                    qtc.QPoint(0, 0),
+                                    qtc.QPoint(0, 120),
+                                    qtc.Qt.MouseButton.NoButton,
+                                    qtc.Qt.KeyboardModifier.NoModifier,
+                                    qtc.Qt.ScrollPhase.NoScrollPhase,
+                                    False)
+            assert not wheel.timestamp()
+            qtw.QApplication.sendEvent(widget, wheel)
+        return _send
+
+    def test_first_event_zero_timestamp(self, window, count_events,
+                                        send_wheel):
+        """Check that a first event with a zero timestamp is broadcast."""
+        send_wheel(window)
+        expect = {_WHEEL: 1}
+        assert [c.counts for c in count_events] == [expect, expect]
+
     @parametrize(target=('window', 'label'))
     # pylint: disable-next=too-many-arguments  # All fixtures
     def test_once_per_receiver(self, target, window, count_events,
-                               qtbot, qtc, qtg, qtw):
+                               send_wheel, qtbot, qtc):
         """Check that each receiver gets each mouse event once.
 
         Mouse events on the label also reach the container and the
@@ -104,14 +131,6 @@ class TestBroadcastMouse:
         widget = window if target == 'window' else window.label
         pos = qtc.QPoint(1, 1)
         qtbot.mouseClick(widget, qtc.Qt.MouseButton.LeftButton, pos=pos)
-        wheel = qtg.QWheelEvent(qtc.QPointF(pos),
-                                qtc.QPointF(widget.mapToGlobal(pos)),
-                                qtc.QPoint(0, 0),
-                                qtc.QPoint(0, 120),
-                                qtc.Qt.MouseButton.NoButton,
-                                qtc.Qt.KeyboardModifier.NoModifier,
-                                qtc.Qt.ScrollPhase.NoScrollPhase,
-                                False)
-        qtw.QApplication.sendEvent(widget, wheel)
+        send_wheel(widget)
         expect = {_PRESS: 1, _RELEASE: 1, _WHEEL: 1}
         assert [c.counts for c in count_events] == [expect, expect]

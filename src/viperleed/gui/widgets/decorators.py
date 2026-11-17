@@ -110,8 +110,10 @@ def broadcast_mouse(cls, _, args, kwargs):
         # Create also a dictionary of "child: time-stamp of last event sent out"
         # that allows to not send multiple times the same event to the same
         # child (see eventFilter). Notice that the use of the sets give a
-        # unique list of children here
-        self.__last_broadcasted = {child: 0
+        # unique list of children here. Start from None rather than from
+        # zero: events created by the application have a zero timestamp,
+        # unless one is set explicitly.
+        self.__last_broadcasted = {child: None
                                    for child
                                    in self.__broadcast_mouse_to}
         # then call whatever implementation was there on the undecorated class
@@ -173,7 +175,10 @@ def broadcast_mouse(cls, _, args, kwargs):
                 # rate of mice is 1kHz to date (Jan. 2020). Only the
                 # timestamps of the events this filter gets from outside
                 # a broadcast are compared, never those of the edited
-                # copies (see eventFilter).
+                # copies (see eventFilter). Hence, of two consecutive
+                # events created by the application with the same
+                # timestamp (e.g., zero, if not set), the second one
+                # is not broadcast.
 
                 if not child.underMouse():
                     edited_event = self.__edit_mouse_event(child, event)
