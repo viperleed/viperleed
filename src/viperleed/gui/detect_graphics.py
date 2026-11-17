@@ -46,6 +46,10 @@ _DISPLAY_TIMEOUT = 5
 # itself (e.g., 1 for an unhandled exception, also while the
 # subprocess is being started), which then count as crashes.
 _EXIT_CODE_OFFSET = 100
+# The modules of a Qt binding that the GUI needs. The checker imports
+# them, and their compiled extensions (e.g., QtGui.abi3.so) are looked
+# at for missing system libraries.
+_QT_MODULES = ('QtCore', 'QtGui', 'QtWidgets')
 _UNIX_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR', '')
 
 
@@ -295,7 +299,7 @@ def suppress_file_permission_warnings(binding=None):
 
 
 class QtDependencyFinder:
-    """Helper for finding missing dependencies of Qt platforms."""
+    """Helper for finding missing system libraries needed by Qt."""
 
     def __init__(self, binding=None):
         """Initialize an instance.
@@ -371,7 +375,45 @@ class QtDependencyFinder:
                 ) from None
 
     def _find_missing_deps_linux(self):
-        """Return missing dependencies of `lib_names` on a Linux machine."""
+        """Return missing dependencies of Qt on a Linux machine.
+
+        Returns
+        -------
+        missing : dict
+            Keys are the paths of the files that miss libraries:
+            the compiled Qt modules of the binding, relative to its
+            package folder, and the platform plugins, relative to
+            their folder. Values are the sorted names of the missing
+            libraries.
+        """
+        missing = self._find_missing_deps_of_modules_linux()
+        missing.update(self._find_missing_deps_of_platforms_linux())
+        return missing
+
+    def _find_missing_deps_of_modules_linux(self):
+        """Return missing dependencies of the binding's Qt modules.
+
+        The modules are not imported: libraries missing for them
+        make importing the binding fail (IMPORT_ERROR).
+        """
+        spec = importlib.util.find_spec(self._binding)
+        roots = (spec.submodule_search_locations or ()) if spec else ()
+        missing = {}
+        for root in (Path(r) for r in roots):
+            for module in _QT_MODULES:
+                for so_file in root.glob(f'{module}.*so'):
+                    missing_libs = self._find_missing_libs_linux(so_file)
+                    if missing_libs:
+                        missing[so_file.name] = missing_libs
+        return missing
+
+    def _find_missing_deps_of_platforms_linux(self):
+        """Return missing dependencies of the Qt platform plugins.
+
+        Libraries missing for the platform plugins make Qt abort
+        when starting (RUNTIME_CRASH). Finding the plugins imports
+        QtCore of the binding: nothing is looked for if this fails.
+        """
         lib_names = _QtUnixPlatformsGetter.get(self._binding)
         if not lib_names:  # Also if QtCore cannot be imported
             return {}
@@ -379,22 +421,30 @@ class QtDependencyFinder:
         missing = {}
         for lib_name in lib_names:
             for so_file in self._find_plugin_files_linux(root, lib_name):
-                cmd = ['ldd', str(so_file)]
-                res = subprocess.run(cmd, capture_output=True, check=True)
-                missing_this = [
-                    line.split('=>')[0].strip()
-                    for line in res.stdout.decode().splitlines()
-                    # ldd always writes "not found" for missing stuff
-                    # pylint: disable-next=magic-value-comparison
-                    if 'not found' in line
-                    ]
-                if not missing_this:
-                    continue
-                this_so = str(so_file.relative_to(root).as_posix())
-                missing_this = {Path(m.split()[0]).stem.replace('.so', '')
-                                for m in missing_this}
-                missing[this_so] = sorted(missing_this)
+                missing_libs = self._find_missing_libs_linux(so_file)
+                if missing_libs:
+                    this_so = so_file.relative_to(root).as_posix()
+                    missing[this_so] = missing_libs
         return missing
+
+    @staticmethod
+    def _find_missing_libs_linux(so_file):
+        """Return the sorted names of the libraries `so_file` misses.
+
+        The libraries are found via ldd, which also lists those
+        needed by the libraries that `so_file` needs.
+        """
+        cmd = ['ldd', str(so_file)]
+        res = subprocess.run(cmd, capture_output=True, check=True)
+        missing = {
+            # E.g., 'libGL.so.1 => not found' gives 'libGL'
+            Path(line.split('=>')[0].split()[0]).stem.replace('.so', '')
+            for line in res.stdout.decode().splitlines()
+            # ldd always writes "not found" for missing stuff
+            # pylint: disable-next=magic-value-comparison
+            if 'not found' in line
+            }
+        return sorted(missing)
 
     @staticmethod
     def _find_plugin_files_linux(root, platform):
@@ -561,11 +611,7 @@ class _QtProbe:
             return PyQtSanity.NOT_FOUND
         except ImportError:
             return PyQtSanity.IMPORT_ERROR
-        sub_modules = (
-            f'{binding}.QtCore',
-            f'{binding}.QtWidgets',  # Also loads QtGui
-            )
-        for module in sub_modules:
+        for module in (f'{binding}.{m}' for m in _QT_MODULES):
             try:
                 importlib.import_module(module)
             except ModuleNotFoundError as exc:

@@ -14,6 +14,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.detect_graphics import _EXIT_CODE_OFFSET
+from viperleed.gui.detect_graphics import _QT_MODULES
 from viperleed.gui.detect_graphics import _QtProbe
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.qt_compat.binding import PYQT5
@@ -27,10 +28,7 @@ class TestQtProbe:
     """Tests for calling a _QtProbe, as in the checker subprocess."""
 
     # The modules that we attempt to import, besides the package
-    _modules = (
-        'QtCore',
-        'QtWidgets',
-        )
+    _modules = _QT_MODULES
 
     @fixture(name='mock_dummy_qapp', autouse=True)
     def fixture_mock_dummy_qapp(self, mocker):

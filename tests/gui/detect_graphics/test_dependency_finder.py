@@ -9,8 +9,10 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 from subprocess import SubprocessError
+from types import SimpleNamespace
 
 import pytest
+from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.detect_graphics import QtDependencyFinder
@@ -202,7 +204,26 @@ class TestQtDependencyFinder:
 class TestQtDependencyFinderLinux:
     """Tests for finding missing dependencies on Linux."""
 
-    _ldd_output = {  # {plugin file: output of ldd}
+    _modules_ldd = {  # {module file: output of ldd}
+        'QtCore.abi3.so': 'libQt6Core.so.6 => /some/path (0x00007f)\n',
+        'QtGui.abi3.so': (
+            'libGL.so.1 => not found\n'
+            'libEGL.so.1 => not found\n'
+            ),
+        'QtWidgets.cpython-37m-x86_64-linux-gnu.so': (  # Not abi3
+            'libxkbcommon.so.0 => not found\n'
+            'libGL.so.1 => not found\n'
+            ),
+        # Not needed by the GUI, or not compiled modules
+        'QtNetwork.abi3.so': 'libgssapi_krb5.so.2 => not found\n',
+        'sip.cpython-313-x86_64-linux-gnu.so': 'libfoo.so => not found\n',
+        'QtGui.pyi': 'not a library, not found\n',
+        }
+    _no_package = {
+        'not installed': None,
+        'not a package': SimpleNamespace(submodule_search_locations=None),
+        }
+    _platforms_ldd = {  # {plugin file: output of ldd}
         'libqxcb.so': (
             'dep_one.so => not found\n'
             'dep_one.so => not found, again (a duplicate)\n'
@@ -222,27 +243,80 @@ class TestQtDependencyFinderLinux:
         'libqxcbsomething.so': 'dep_nine => not found\n',
         }
 
-    def test_find_missing_deps_linux(self, tmp_path, mocker):
-        """Check the result of _find_missing_deps_linux."""
-        finder = QtDependencyFinder(PYQT5)
-        mock_get = mocker.patch(f'{MODULE}._QtUnixPlatformsGetter.get',
-                                return_value={'xcb', 'wayland'})
-        mocker.patch.object(finder, '_get_platforms_path',
-                            return_value=tmp_path)
-        for name in self._ldd_output:
-            plugin = tmp_path / name
-            plugin.parent.mkdir(parents=True, exist_ok=True)
-            plugin.touch()
+    @fixture(name='fake_libs')
+    def fixture_fake_libs(self, tmp_path, mocker):
+        """Return a function that makes fake libraries for ldd.
 
-        def mock_ldd(cmd, **_):
+        The function takes a dict {relative path: output of ldd},
+        makes the files in a temporary folder, and returns it. ldd
+        gives the output for each file.
+        """
+        outputs = {}
+
+        def _ldd(cmd, **_):
             """Fake the result of subprocess.run(['ldd' ...])."""
             _, so_name = cmd
             name = Path(so_name).relative_to(tmp_path).as_posix()
-            return mocker.MagicMock(stdout=self._ldd_output[name].encode())
+            return mocker.MagicMock(stdout=outputs[name].encode())
 
-        mocker.patch('subprocess.run', mock_ldd)
+        mocker.patch('subprocess.run', _ldd)
+
+        def _make(ldd_output):
+            outputs.update(ldd_output)
+            for name in ldd_output:
+                lib = tmp_path / name
+                lib.parent.mkdir(parents=True, exist_ok=True)
+                lib.touch()
+            return tmp_path
+        return _make
+
+    def test_find_missing_deps_linux(self, mocker):
+        """Check that modules and platform plugins are both checked."""
+        finder = QtDependencyFinder(PYQT5)
+        mocker.patch.object(finder, '_find_missing_deps_of_modules_linux',
+                            return_value={'QtGui.abi3.so': ['libGL']})
+        mocker.patch.object(finder, '_find_missing_deps_of_platforms_linux',
+                            return_value={'libqxcb.so': ['libxcb']})
         # pylint: disable-next=protected-access
         missing = finder._find_missing_deps_linux()
+        assert missing == {'QtGui.abi3.so': ['libGL'],
+                           'libqxcb.so': ['libxcb']}
+
+    def test_find_missing_deps_of_modules_linux(self, fake_libs, mocker):
+        """Check the missing dependencies of the Qt modules."""
+        root = fake_libs(self._modules_ldd)
+        spec = SimpleNamespace(submodule_search_locations=[str(root)])
+        find_spec = mocker.patch('importlib.util.find_spec',
+                                 return_value=spec)
+        finder = QtDependencyFinder(PYQT5)
+        # pylint: disable-next=protected-access
+        missing = finder._find_missing_deps_of_modules_linux()
+        assert missing == {
+            'QtGui.abi3.so': ['libEGL', 'libGL'],
+            'QtWidgets.cpython-37m-x86_64-linux-gnu.so': ['libGL',
+                                                          'libxkbcommon'],
+            }
+        find_spec.assert_called_once_with(PYQT5)
+
+    @parametrize(spec=_no_package.values(), ids=_no_package)
+    def test_find_missing_deps_of_modules_linux_none(self, spec, mocker):
+        """Check that nothing is missing without a binding package."""
+        mocker.patch('importlib.util.find_spec', return_value=spec)
+        run = mocker.patch('subprocess.run')
+        finder = QtDependencyFinder(PYQT5)
+        # pylint: disable-next=protected-access
+        assert not finder._find_missing_deps_of_modules_linux()
+        run.assert_not_called()
+
+    def test_find_missing_deps_of_platforms_linux(self, fake_libs, mocker):
+        """Check the missing dependencies of the platform plugins."""
+        root = fake_libs(self._platforms_ldd)
+        finder = QtDependencyFinder(PYQT5)
+        mock_get = mocker.patch(f'{MODULE}._QtUnixPlatformsGetter.get',
+                                return_value={'xcb', 'wayland'})
+        mocker.patch.object(finder, '_get_platforms_path', return_value=root)
+        # pylint: disable-next=protected-access
+        missing = finder._find_missing_deps_of_platforms_linux()
         assert missing == {
             'libqxcb.so': ['dep_one'],
             'libqwayland-generic.so.5': ['dep_three'],
@@ -250,14 +324,14 @@ class TestQtDependencyFinderLinux:
             }
         mock_get.assert_called_once_with(PYQT5)
 
-    def test_find_missing_deps_linux_no_platforms(self, mocker):
+    def test_find_missing_deps_of_platforms_linux_none(self, mocker):
         """Check that nothing is looked for without platform names."""
         finder = QtDependencyFinder(PYQT5)
         mocker.patch(f'{MODULE}._QtUnixPlatformsGetter.get',
                      return_value=set())
         get_path = mocker.patch.object(finder, '_get_platforms_path')
         # pylint: disable-next=protected-access
-        assert not finder._find_missing_deps_linux()
+        assert not finder._find_missing_deps_of_platforms_linux()
         get_path.assert_not_called()
 
     def test_list_install_libs_success(self, mocker):
