@@ -4,7 +4,7 @@ The files written by viperleed.calc.sections.refcalc and
 viperleed.calc.files.iorefcalc are compared to stored references, for
 each version group of TensErLEED (see conftest.py). Neither a
 TensErLEED tree nor a compiler is needed: the execution is suppressed
-after the input files are written, and PARAM is created directly.
+after the input files are written.
 """
 
 __authors__ = (
@@ -14,11 +14,12 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
+from unittest import mock
+
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.files import iorefcalc
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections import refcalc
 
@@ -58,8 +59,12 @@ PARAMS = reference_params(REFCALC, _file_names)
 
 
 @fixture(scope='session', name='refcalc_folder')
-def factory_refcalc_folder(initialized_case, tmp_path_factory):
-    """Return a function that writes the refcalc inputs (cached)."""
+def factory_refcalc_folder(initialized_case,
+                           tmp_path_factory):
+    """Return a function that writes the refcalc inputs (cached).
+
+    Check that refcalc needs neither a TensErLEED tree nor a compiler.
+    """
     cache = {}
 
     def _write(group, inputs, domain):
@@ -71,14 +76,15 @@ def factory_refcalc_folder(initialized_case, tmp_path_factory):
         folder = tmp_path_factory.mktemp('refcalc')
         slab, rpars = copy_case_state(source, folder, slab, rpars)
         rpars.SUPPRESS_EXECUTION = True
-        with execute_in_dir(folder):
+        patch_tensorleed = mock.patch.object(rpars,
+                                             'get_tenserleed_directory')
+        patch_compiler = mock.patch.object(rpars, 'getFortranComp')
+        with patch_tensorleed as get_tensorleed, \
+                patch_compiler as get_compiler, \
+                execute_in_dir(folder):
             refcalc.refcalc(slab, rpars)
-            lmax = rpars.LMAX.max
-            param = iorefcalc.writePARAM(slab, rpars, lmax=lmax)
-            (folder / PARAM_FILE).write_text(
-                f'### PARAM file for LMAX = {lmax} ###\n\n{param}\n\n',
-                encoding='utf-8',
-                )
+        get_tensorleed.assert_not_called()
+        get_compiler.assert_not_called()
         cache[key] = folder
         return folder
     return _write
