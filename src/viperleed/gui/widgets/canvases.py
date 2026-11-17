@@ -11,7 +11,6 @@ __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 from matplotlib.figure import Figure
-import numpy as np
 from viperleed.gui.qt_compat import QtCore as qtc
 from viperleed.gui.qt_compat import QtGui as qtg
 from viperleed.gui.qt_compat import QtWidgets as qtw
@@ -272,10 +271,10 @@ class MPLFigureCanvas(FigureCanvas):
 
         x_mpl, y_mpl = args
 
-        dpi_ratio = self._dpi_ratio
+        dpi_ratio = self.device_pixel_ratio
         x_qt = x_mpl/dpi_ratio
         y_qt = (self.figure.bbox.height - y_mpl)/dpi_ratio
-        return qtc.QPoint(np.round(x_qt), np.round(y_qt))
+        return qtc.QPoint(round(x_qt), round(y_qt))
 
 
 class MeasurementFigureCanvas(FigureCanvas):
