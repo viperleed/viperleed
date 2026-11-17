@@ -78,9 +78,9 @@ class TestQtDependencyFinder:
             info.path.assert_called_once_with(info.LibraryPath.PluginsPath)
             info.location.assert_not_called()
 
-    def test_get_platforms_path_real(self, import_with_qt):
+    @pytest.mark.usefixtures('qtc')  # Skips without Qt
+    def test_get_platforms_path_real(self):
         """Check the plugins path of the installed binding."""
-        import_with_qt('viperleed.gui.qt_compat.QtCore')  # Skips without Qt
         # pylint: disable-next=protected-access
         path = QtDependencyFinder(get_binding())._get_platforms_path()
         # pylint: disable-next=magic-value-comparison

@@ -26,23 +26,17 @@ from .conftest import BOTH
 from .conftest import MODULE
 
 
-# TODO: would be better to find a way to mock at least
-# _QtProbe instead of mocking
-# multiprocessing.Process. My tests seem to reveal
-# that, while _check_pyqt_sanity gets the correct
-# target, that target is never actually called.
-
-
 @fixture(name='mock_multiprocessing')
 def fixture_mock_multiprocessing(mocker):
     """Replace the multiprocessing tools of the checker with mocks.
 
-    Notice that it is necessary to do so in order to correctly
-    test the behavior of has_display. In fact, we can't mock
-    detect_graphics.QApplication as the module is re-imported
-    by multiprocessing. We could, in principle, mock the target
-    of multiprocessing.Process, i.e., _init_dummy_qapp. However,
-    I tried without success to do so.
+    The checker runs a _QtProbe in a subprocess. Mocks made here do
+    not reach it (e.g., with the spawn start method, the subprocess
+    imports detect_graphics anew), and the probe may hang or crash.
+    Hence, Pipe, Process and wait are replaced, and their outcome is
+    faked. The tests check that the subprocess gets a _QtProbe as its
+    target. _QtProbe itself is tested by calling it in this process
+    (see test_qt_probe.py).
 
     The returned factory takes the following arguments:
     ready : {'imports', 'exited', 'none'}
