@@ -621,58 +621,52 @@ class TestQtDependencyFinder:
 class TestQtDependencyFinderLinux:
     """Tests for finding missing dependencies on Linux."""
 
-    def test_find_missing_deps_linux(self, mocker):
+    _ldd_output = {  # {plugin file: output of ldd}
+        'libqxcb.so': (
+            'dep_one.so => not found\n'
+            'dep_one.so => not found, again (a duplicate)\n'
+            'dep_two.so.3 => dep was found, here the info\n'
+            ),
+        'libqwayland-generic.so.5': (  # Qt < 6.10
+            'dep_three.so.9 (0x00007ffd6f7d7000) => not found, hex code\n'
+            ),
+        'libqwayland.so': (  # Qt >= 6.10
+            'dep_five => was found\n'
+            'dep_six.so => this one is also already installed\n'
+            ),
+        'nested/libqxcb.so.12': 'nested/deeper/dep_four => not found\n',
+        # Not plugins of the platforms looked for
+        'libqwayland-egl.so': 'dep_seven => not found\n',
+        'libqoffscreen.so': 'dep_eight => not found\n',
+        'libqxcbsomething.so': 'dep_nine => not found\n',
+        }
+
+    def test_find_missing_deps_linux(self, tmp_path, mocker):
         """Check the result of _find_missing_deps_linux."""
         finder = QtDependencyFinder(PYQT5)
         mock_get = mocker.patch(f'{_MODULE}._QtUnixPlatformsGetter.get',
-                                return_value=('missing_deps',
-                                              'no_missing_deps'))
-        root = Path('/path/to/platforms')
-        mocker.patch.object(finder, '_get_platforms_path', return_value=root)
-        so_files = (
-            root/'libmissing_deps.so',
-            root/'anothermissing_deps.so.999',
-            root/'nested/missing_deps.so.12',
-            root/'no_missing_deps.so.9',
-            )
-        dependencies = {
-            str(root/'libmissing_deps.so'): '''\
-dep_one.so => not found
-dep_one.so => not found, it's a duplicate
-dep_two.so.3 => dep was found, here the info\n''',
-            str(root/'anothermissing_deps.so.999'): '''\
-dep_three.so.9 (0x00007ffd6f7d7000) => not found, hex code at left\n''',
-            str(root/'nested/missing_deps.so.12'): '''\
-nested/deeper/dep_four => not found\n''',
-            str(root/'no_missing_deps.so.9'): '''\
-dep_five => was found
-dep_six.so => this one is also already installed''',
-            }
-        expect = {
-            'libmissing_deps.so': ['dep_one'],
-            'anothermissing_deps.so.999': ['dep_three'],
-            'nested/missing_deps.so.12': ['dep_four'],
-            }
-
-        def mock_glob(_, pattern):
-            pattern = pattern.replace('*', '')
-            for file in so_files:
-                if pattern in file.name:
-                    yield file
+                                return_value={'xcb', 'wayland'})
+        mocker.patch.object(finder, '_get_platforms_path',
+                            return_value=tmp_path)
+        for name in self._ldd_output:
+            plugin = tmp_path / name
+            plugin.parent.mkdir(parents=True, exist_ok=True)
+            plugin.touch()
 
         def mock_ldd(cmd, **_):
             """Fake the result of subprocess.run(['ldd' ...])."""
             _, so_name = cmd
-            mock_process = mocker.MagicMock()
-            mock_process.stdout = dependencies[so_name].encode()
-            return mock_process
+            name = Path(so_name).relative_to(tmp_path).as_posix()
+            return mocker.MagicMock(stdout=self._ldd_output[name].encode())
 
-        mocker.patch('pathlib.Path.rglob', mock_glob)
         mocker.patch('subprocess.run', mock_ldd)
-
         # pylint: disable-next=protected-access
         missing = finder._find_missing_deps_linux()
-        assert missing == expect
+        assert missing == {
+            'libqxcb.so': ['dep_one'],
+            'libqwayland-generic.so.5': ['dep_three'],
+            'nested/libqxcb.so.12': ['dep_four'],
+            }
         mock_get.assert_called_once_with(PYQT5)
 
     def test_find_missing_deps_linux_no_platforms(self, mocker):
@@ -927,8 +921,23 @@ class TestQtUnixPlatformGetter:
         '4.12.99',
         '5.15.18',
         '5.16',
-        '6.0.0',
+        '7.0.0',
         )
+    _qt6_env = {  # {environment: platforms}
+        'no session': ({}, {'xcb'}),
+        'x11': ({'XDG_SESSION_TYPE': 'x11', 'DISPLAY': ':0'}, {'xcb'}),
+        'wayland session': ({'XDG_SESSION_TYPE': 'wayland'},
+                            {'xcb', 'wayland'}),
+        'wayland display': ({'WAYLAND_DISPLAY': ''}, {'xcb', 'wayland'}),
+        'wayland gnome': ({'XDG_SESSION_TYPE': 'wayland',
+                           'XDG_CURRENT_DESKTOP': 'GNOME'},
+                          {'xcb', 'wayland'}),
+        'requested': ({'QT_QPA_PLATFORM': 'offscreen',
+                       'XDG_SESSION_TYPE': 'wayland'},
+                      {'offscreen'}),
+        'requested list': ({'QT_QPA_PLATFORM': 'wayland;xcb:arg=1'},
+                           {'wayland', 'xcb'}),
+        }
 
     @fixture(name='mock_qtc')
     def fixture_mock_qtc(self, mocker, mock_import_module):
@@ -956,12 +965,21 @@ class TestQtUnixPlatformGetter:
         with pytest.raises(NotImplementedError):
             _QtUnixPlatformsGetter.get(PYQT5)
 
-    def test_qt6(self, mocker, mock_import_module):
-        """Check that Qt 6 is not supported yet, via PyQt6.QtCore."""
-        mock_qtc = mocker.MagicMock(QT_VERSION_STR='6.8.0')
+    @parametrize('env,expect', _qt6_env.values(), ids=_qt6_env)
+    @parametrize(version=('6.0.0', '6.2.4', '6.5.3', '6.10.0', '6.11.0'))
+    def test_qt6(self, env, expect, version, mocker, mock_import_module):
+        """Check the platforms of Qt 6, via PyQt6.QtCore."""
+        mock_qtc = mocker.MagicMock(QT_VERSION_STR=version)
         mock_import_module(**{'PyQt6.QtCore': mock_qtc})
+        mocker.patch.dict('os.environ', clear=True, **env)
+        assert _QtUnixPlatformsGetter.get(PYQT6) == expect
+
+    def test_qt7(self, mocker, mock_import_module):
+        """Check that Qt 7 is not supported yet, via PyQt7.QtCore."""
+        mock_qtc = mocker.MagicMock(QT_VERSION_STR='7.0.0')
+        mock_import_module(**{'PyQt7.QtCore': mock_qtc})
         with pytest.raises(NotImplementedError):
-            _QtUnixPlatformsGetter.get(PYQT6)
+            _QtUnixPlatformsGetter.get('PyQt7')
 
     @pytest.mark.usefixtures('mock_supported_version')
     def test_qt_qpa_platform(self, mocker):
@@ -972,6 +990,14 @@ class TestQtUnixPlatformGetter:
                           clear=True)
         result = _QtUnixPlatformsGetter.get(PYQT5)
         assert result == {mock_qpa}
+
+    @pytest.mark.usefixtures('mock_supported_version')
+    def test_qt_qpa_platform_list(self, mocker):
+        """Check result when QT_QPA_PLATFORM lists several platforms."""
+        mocker.patch.dict('os.environ', clear=True,
+                          QT_QPA_PLATFORM='wayland:arg=1;xcb')
+        result = _QtUnixPlatformsGetter.get(PYQT5)
+        assert result == {'wayland', 'xcb'}
 
     @pytest.mark.usefixtures('mock_supported_version')
     @parametrize(default=(None, 'some-default'))

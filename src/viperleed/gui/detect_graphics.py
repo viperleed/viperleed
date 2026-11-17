@@ -378,7 +378,7 @@ class QtDependencyFinder:
         root = self._get_platforms_path()
         missing = {}
         for lib_name in lib_names:
-            for so_file in root.rglob(f'*{lib_name}.so*'):
+            for so_file in self._find_plugin_files_linux(root, lib_name):
                 cmd = ['ldd', str(so_file)]
                 res = subprocess.run(cmd, capture_output=True, check=True)
                 missing_this = [
@@ -395,6 +395,18 @@ class QtDependencyFinder:
                                 for m in missing_this}
                 missing[this_so] = sorted(missing_this)
         return missing
+
+    @staticmethod
+    def _find_plugin_files_linux(root, platform):
+        """Yield the plugin files for `platform` found in `root`."""
+        # The plugin of a platform is libq<platform>.so (e.g.,
+        # libqxcb.so), except for wayland before Qt 6.10, whose
+        # plugin is libqwayland-generic.so. Any suffix may follow
+        # '.so' (e.g., a version number).
+        stems = {f'libq{platform}', f'libq{platform}-generic'}
+        for so_file in root.rglob(f'libq{platform}*.so*'):
+            if so_file.name.split('.so')[0] in stems:
+                yield so_file
 
     def _get_platforms_path(self):
         """Return the folder of the Qt platform plugins of the binding.
@@ -578,9 +590,13 @@ class _QtUnixPlatformsGetter:
     interpreter if check_pyqt_sanity() is PyQtSanity.RUNTIME_CRASH.
     """
 
-    # Mapping {version-str: platform-getter-name} for known versions
+    # Mapping {version-str: platform-getter-name} for known versions.
+    # A version is looked up as a whole first, then by its major
+    # version only.
     _version_to_getter_name = {
         **{f'5.15.{minor}': '_get_5_15' for minor in range(18)},
+        # Qt 6 picks platforms alike from 6.0 to (at least) 6.11
+        '6': '_get_6',
         }
 
     @classmethod
@@ -590,11 +606,14 @@ class _QtUnixPlatformsGetter:
             qtc = importlib.import_module(f'{binding}.QtCore')
         except ImportError:
             return set()
-        try:
-            getter_name = cls._version_to_getter_name[qtc.QT_VERSION_STR]
-        except KeyError:
-            version = qtc.QT_VERSION_STR.replace('.', '_')
-            getter_name = f'_get_{version}'
+        version = qtc.QT_VERSION_STR
+        major = version.split('.')[0]
+        underscored = version.replace('.', '_')
+        getter_name = (
+            cls._version_to_getter_name.get(version)
+            or cls._version_to_getter_name.get(major)
+            or f'_get_{underscored}'
+            )
         try:
             getter = getattr(cls, getter_name)
         except AttributeError:
@@ -613,10 +632,10 @@ class _QtUnixPlatformsGetter:
         env_session = os.environ.get('XDG_SESSION_TYPE')
         env_desktop = (os.environ.get('XDG_CURRENT_DESKTOP')
                        or os.environ.get('XDG_SESSION_DESKTOP'))
-        env_platform = os.environ.get('QT_QPA_PLATFORM')
+        env_platforms = _QtUnixPlatformsGetter._get_requested_platforms()
 
-        if env_platform:     # QT_QPA_PLATFORM always takes precedence
-            return {env_platform}
+        if env_platforms:    # QT_QPA_PLATFORM always takes precedence
+            return env_platforms
         if not env_session:  # No XDG_SESSION_TYPE defined. Use default
             return {env_default}
         # Since Qt does direct string comparisons, it doesn't make
@@ -629,3 +648,34 @@ class _QtUnixPlatformsGetter:
             is_gnome = env_desktop and 'gnome' in env_desktop
             return {env_default} if is_gnome else {env_session, env_default}
         return {env_session, env_default}
+
+    @classmethod
+    def _get_6(cls):
+        """Return the platforms that Qt 6 may use by default."""
+        # Qt 6 makes a list of platforms, and uses the first one that
+        # loads (see QGuiApplicationPrivate::createPlatformIntegration
+        # in qtbase/src/gui/kernel/qguiapplication.cpp). For Linux
+        # builds, the list always contains the default platform, xcb.
+        # It also contains wayland in a Wayland session: first, except
+        # on GNOME before Qt 6.3. The order is irrelevant here.
+        env_platforms = cls._get_requested_platforms()
+        if env_platforms:  # QT_QPA_PLATFORM always takes precedence
+            return env_platforms
+        platforms = {'xcb'}
+        session = os.environ.get('XDG_SESSION_TYPE')
+        # pylint: disable-next=magic-value-comparison  # As in Qt
+        if 'WAYLAND_DISPLAY' in os.environ or session == 'wayland':
+            platforms.add('wayland')
+        return platforms
+
+    @staticmethod
+    def _get_requested_platforms():
+        """Return the platforms in QT_QPA_PLATFORM, without arguments.
+
+        QT_QPA_PLATFORM may contain several platforms, separated by
+        semicolons, each followed by its arguments after a colon
+        (e.g., 'wayland;xcb:some-argument').
+        """
+        env_platform = os.environ.get('QT_QPA_PLATFORM', '')
+        platforms = (p.split(':')[0] for p in env_platform.split(';'))
+        return {p for p in platforms if p}
