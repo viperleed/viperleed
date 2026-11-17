@@ -958,11 +958,11 @@ def _select_lmax(rpars, energies):
                     'instead.', energy, ps_energies[-1]
                     )
             ps_ind = len(rpars.phaseshifts) - 1
-        lmax_cands = [1]
+        lmax_cands = [rpars.LMAX.min]
         for site_ps in rpars.phaseshifts[ps_ind][1]:
             lmax_cands.extend(i + 1 for i, v in enumerate(site_ps)
                               if abs(v) > rpars.PHASESHIFT_EPS)
-        lmax[energy] = min(max((rpars.LMAX.min, *lmax_cands)), rpars.LMAX.max)
+        lmax[energy] = min(max(lmax_cands), rpars.LMAX.max)
         if lmax[energy] < _SMALL_LMAX and warn_small:
             warn_small = False
             logger.debug('Found small LMAX value based on PHASESHIFT_EPS '
