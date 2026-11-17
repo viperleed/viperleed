@@ -41,7 +41,7 @@ def _run(pytester, written, reference, *args):
         if _XDIST_OPTION in args else
         pytester.runpytest_inprocess
         )
-    return run(*args, '-p', 'no:cacheprovider', '-p', conftest.__name__)
+    return run(*args, *conftest.PYTESTER_OPTIONS)
 
 
 @pytest.fixture(name='subprocess_path')
