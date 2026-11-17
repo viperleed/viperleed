@@ -684,7 +684,7 @@ class NewFileDialog(qtw.QDialog):
         font_metrics = self._ctrls['e_max'].fontMetrics()
         # Energies up to 4 digits (999.9 eV) fit into width = 57,
         # but it looks nicer if there is a little space to the right
-        width = max(font_metrics.width(energy) + 13, 70)
+        width = max(font_metrics.horizontalAdvance(energy) + 13, 70)
 
         # Set the new text, and resize the widget
         self._ctrls['e_max'].setText(energy)
