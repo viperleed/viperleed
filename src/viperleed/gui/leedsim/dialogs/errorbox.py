@@ -69,12 +69,12 @@ class ErrorBox(qtw.QMessageBox):
             Text to be appended to the one given at instantiation.
         """
         if self.silent:
-            return self.StandardButton.Ok
+            return qtw.QMessageBox.StandardButton.Ok
 
         trace = traceback.format_exc()
         if trace.startswith('NoneType'):
             # Do not execute if there is no exception
-            return self.StandardButton.Ok
+            return qtw.QMessageBox.StandardButton.Ok
 
         self.setText(self.base_text + extra_text)
         self.setDetailedText(f"Error details:\n{trace}")

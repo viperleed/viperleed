@@ -244,8 +244,11 @@ classifiers = [
         # Fully scoped members of Qt enumerations, e.g.,
         # Qt.AlignmentFlag.AlignLeft: pylint does not find them
         # with PyQt5, where enumerations are not Enum subclasses.
-        # build/scripts/qt_codemod.py --verify checks them.
-        '.*\.[A-PR-Z]\w*\.[A-Z]\w*$',
+        # build/scripts/qt_codemod.py --verify checks them. Only
+        # enumerations of Qt and of Qt classes, accessed via the
+        # aliases of the Qt modules of qt_compat (e.g., qtc), not
+        # to hide errors elsewhere (e.g., in our own Q-classes).
+        '(qtc|qtg|qtw|qtn|qts)\.(Qt|Q[A-Z]\w*)\.[A-Z]\w*\.[A-Z]\w*$',
         '.*\.GlobalColor\.\w+$',  # Members are lowercase
         ]
 
