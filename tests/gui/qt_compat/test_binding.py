@@ -147,6 +147,14 @@ class TestQtApi:
         fake_bindings(BOTH)
         assert get_binding() == PYQT6
 
+    def test_other_imported(self, fake_bindings, monkeypatch):
+        """Check complaints if QT_API requests another binding."""
+        monkeypatch.setenv(QT_API_ENV, 'pyqt5')
+        mock_import = fake_bindings(BOTH, imported=(PYQT6,))
+        with pytest.raises(QtBindingNotFoundError, match='already imported'):
+            get_binding()
+        mock_import.assert_not_called()
+
     @parametrize('qt_api,expect', _requested.items(), ids=_requested)
     def test_requested(self, qt_api, expect, fake_bindings, monkeypatch):
         """Check that the binding in QT_API is used."""
@@ -196,11 +204,19 @@ class TestGetCandidates:
         assert binding.get_candidates() == (PYQT6, PYQT5)
         mock_import.assert_not_called()
 
-    def test_requested(self, fake_bindings, monkeypatch):
+    @parametrize(imported=((), (PYQT5,)))
+    def test_requested(self, imported, fake_bindings, monkeypatch):
         """Check that a binding requested via QT_API is the only one."""
         monkeypatch.setenv(QT_API_ENV, 'pyqt5')
-        fake_bindings((), imported=(PYQT6,))
+        fake_bindings((), imported=imported)
         assert binding.get_candidates() == (PYQT5,)
+
+    def test_requested_other_imported(self, fake_bindings, monkeypatch):
+        """Check complaints if QT_API requests another binding."""
+        monkeypatch.setenv(QT_API_ENV, 'pyqt5')
+        fake_bindings((), imported=(PYQT6,))
+        with pytest.raises(QtBindingNotFoundError, match='already imported'):
+            binding.get_candidates()
 
     def test_unsupported(self, monkeypatch):
         """Check complaints for an unsupported QT_API value."""

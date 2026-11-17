@@ -9,7 +9,8 @@ according to these rules:
   Accepted values are 'pyqt5' and 'pyqt6' (case insensitive). This
   is the same variable that matplotlib uses, which ensures that both
   use the same binding. An error is raised if the requested binding
-  cannot be imported, or if QT_API has any other value.
+  cannot be imported, if QT_API has any other value, or if another
+  binding was already imported.
 - Otherwise, if one of the bindings was already imported (e.g., by
   user code or by another package), that one is used. Two different
   Qt bindings cannot coexist in the same process.
@@ -66,7 +67,8 @@ def get_binding():
     ------
     QtBindingNotFoundError
         If no binding is installed, or if the QT_API environment
-        variable has an unsupported value.
+        variable has an unsupported value or conflicts with an
+        already imported binding.
     ImportError
         If no binding can be imported, and any of them is installed
         but broken.
@@ -89,13 +91,20 @@ def get_candidates():
     Raises
     ------
     QtBindingNotFoundError
-        If the QT_API environment variable has an unsupported value.
+        If the QT_API environment variable has an unsupported value,
+        or if it requests a binding other than one already imported.
     """
     requested = _get_requested_binding()
-    if requested:
-        return (requested,)
     already_imported = tuple(binding for binding in SUPPORTED_BINDINGS
                              if f'{binding}.QtCore' in sys.modules)
+    if requested and already_imported and requested not in already_imported:
+        raise QtBindingNotFoundError(
+            f'{QT_API_ENV}={os.environ[QT_API_ENV]!r} requests {requested}, '
+            f'but {already_imported[0]} was already imported. Two Qt '
+            'bindings cannot be used in the same process.'
+            )
+    if requested:
+        return (requested,)
     return already_imported[:1] or SUPPORTED_BINDINGS
 
 
