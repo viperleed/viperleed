@@ -14,7 +14,11 @@ according to these rules:
   user code or by another package), that one is used. Two different
   Qt bindings cannot coexist in the same process.
 - Otherwise, the first binding that can be imported among PyQt6 and
-  PyQt5 (in this order) is used.
+  PyQt5 (in this order) is used. A binding that is installed but
+  broken (e.g., it misses some of its own modules) is skipped too.
+  If no binding can be imported and any of them is broken, a plain
+  ImportError is raised rather than a QtBindingNotFoundError, as
+  the installation needs fixing rather than completing.
 
 Which bindings would be tried, in which order, is returned by
 get_candidates, which imports none of them. This allows checking the
@@ -61,8 +65,11 @@ def get_binding():
     Raises
     ------
     QtBindingNotFoundError
-        If no usable binding is found, or if the QT_API environment
+        If no binding is installed, or if the QT_API environment
         variable has an unsupported value.
+    ImportError
+        If no binding can be imported, and any of them is installed
+        but broken.
     """
     if _SELECTED_BINDING is None:
         set_binding(_select_binding())
@@ -138,14 +145,27 @@ def _select_binding():
     requested = _get_requested_binding()
     candidates = get_candidates()
     errors = []
+    broken = False
     for binding in candidates:
+        qt_core = f'{binding}.QtCore'
         try:
-            importlib.import_module(f'{binding}.QtCore')
+            importlib.import_module(qt_core)
         except ImportError as exc:
             errors.append(f'{binding}: {exc}')
+            # The package, or its QtCore, may be missing altogether,
+            # e.g., if only PyQt5-sip and PyQt5-Qt5 are left after
+            # uninstalling PyQt5. Anything else (e.g., a missing
+            # PyQt6.sip, or a DLL that fails to load) means that the
+            # binding is installed, but broken.
+            not_found = (isinstance(exc, ModuleNotFoundError)
+                         and exc.name in (binding, qt_core))
+            broken = broken or not not_found
             continue
         return binding
     msg = (f'Could not import {requested}, requested via '
            f'{QT_API_ENV}={os.environ[QT_API_ENV]!r}. ' if requested
            else f'Could not import any Qt binding among {candidates}. ')
-    raise QtBindingNotFoundError(msg + 'Errors: ' + '; '.join(errors))
+    msg += 'Errors: ' + '; '.join(errors)
+    if broken:
+        raise ImportError(msg)
+    raise QtBindingNotFoundError(msg)

@@ -22,6 +22,8 @@ of tests/conftest.py, which load it.
 When pytest-qt is not loaded (no Qt binding, or pytest-qt is not
 installed), its qapp and qtbot fixtures are replaced by fixtures that
 skip the test via missing_dependency (or fail with --require-all).
+If a binding is installed but broken (see qt_compat.binding), they
+make the test fail instead.
 """
 
 __authors__ = (
@@ -56,13 +58,15 @@ def pytest_addoption(parser, pluginmanager):
 
 
 def _find_missing():
-    """Return (name, detail) of what pytest-qt misses, or None."""
+    """Return (name, detail, broken) of what is missing, or None."""
     try:
         binding = qt_binding.get_binding()
     except qt_binding.QtBindingNotFoundError as exc:
-        return 'PyQt5/PyQt6', str(exc)
+        return 'PyQt5/PyQt6', str(exc), False
+    except ImportError as exc:  # Installed, but broken
+        return 'PyQt5/PyQt6', str(exc), True
     if importlib.util.find_spec('pytestqt') is None:
-        return PYTEST_QT, ''
+        return PYTEST_QT, '', False
     requested = os.environ.get(PYTEST_QT_API_ENV, '').strip().lower()
     if requested and requested != binding.lower():
         msg = (f'{PYTEST_QT_API_ENV}={requested!r} differs from the Qt '
@@ -80,9 +84,17 @@ if _MISSING is not None:
     @pytest.fixture(name='qapp')
     def fixture_qapp(missing_dependency):
         """Skip (or fail) the test, as pytest-qt cannot be used."""
-        missing_dependency(*_MISSING)
+        _report_missing(missing_dependency)
 
     @pytest.fixture(name='qtbot')
     def fixture_qtbot(missing_dependency):
         """Skip (or fail) the test, as pytest-qt cannot be used."""
-        missing_dependency(*_MISSING)
+        _report_missing(missing_dependency)
+
+
+def _report_missing(missing_dependency):
+    """Skip the current test, or fail it if Qt is broken."""
+    name, detail, broken = _MISSING
+    if broken:
+        pytest.fail(f'{name} is installed, but broken: {detail}')
+    missing_dependency(name, detail)

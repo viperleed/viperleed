@@ -20,6 +20,11 @@ from viperleed.gui.qt_compat.binding import get_binding
 
 BOTH = (PYQT5, PYQT6)
 _MODULE = 'viperleed.gui.qt_compat.binding'
+_BROKEN = {
+    'missing sip': ModuleNotFoundError("No module named 'PyQt6.sip'",
+                                       name='PyQt6.sip'),
+    'DLL load failed': ImportError('DLL load failed'),
+    }
 
 
 @fixture(autouse=True)
@@ -31,12 +36,22 @@ def fixture_fresh_selection(monkeypatch):
 
 @fixture(name='fake_bindings')
 def fixture_fake_bindings(mocker):
-    """Fake which Qt bindings can be imported/were already imported."""
-    def _fake(available, imported=()):
+    """Fake which Qt bindings can be imported/were already imported.
+
+    The returned function takes the bindings that can be imported,
+    those that were already imported, and a dict {binding: exception}
+    of bindings that are installed but raise exception on import.
+    """
+    def _fake(available, imported=(), broken=None):
+        broken = broken or {}
         def _import(name):
-            if name.split('.')[0] in available:
+            package = name.split('.')[0]
+            if package in available:
                 return mocker.MagicMock()
-            raise ImportError(f'No module named {name!r}')
+            if package in broken:
+                raise broken[package]
+            raise ModuleNotFoundError(f'No module named {package!r}',
+                                      name=package)
         mocker.patch(f'{_MODULE}.sys',
                      modules={f'{b}.QtCore': None for b in imported})
         mock_importlib = mocker.patch(f'{_MODULE}.importlib')
@@ -66,12 +81,34 @@ class TestDefaultSelection:
         fake_bindings(available)
         assert get_binding() == expect
 
+    @parametrize(error=_BROKEN.values(), ids=_BROKEN)
+    def test_broken_none_available(self, error, fake_bindings):
+        """Check that a broken binding is not reported as missing."""
+        fake_bindings((), broken={PYQT6: error})
+        with pytest.raises(ImportError, match=str(error)) as exc_info:
+            get_binding()
+        assert not isinstance(exc_info.value, QtBindingNotFoundError)
+
+    @parametrize(error=_BROKEN.values(), ids=_BROKEN)
+    def test_broken_skipped(self, error, fake_bindings):
+        """Check that another binding is used if one is broken."""
+        fake_bindings((PYQT5,), broken={PYQT6: error})
+        assert get_binding() == PYQT5
+
     def test_fall_back_to_pyqt5(self, fake_bindings, mocker):
         """Check that PyQt5 is tried if PyQt6 cannot be imported."""
         mock_import = fake_bindings((PYQT5,))
         get_binding()
         assert mock_import.mock_calls == [mocker.call('PyQt6.QtCore'),
                                           mocker.call('PyQt5.QtCore')]
+
+    def test_namespace_package_left(self, fake_bindings):
+        """Check that a binding without QtCore counts as missing."""
+        missing = ModuleNotFoundError("No module named 'PyQt6.QtCore'",
+                                      name='PyQt6.QtCore')
+        fake_bindings((), broken={PYQT6: missing})
+        with pytest.raises(QtBindingNotFoundError):
+            get_binding()
 
     def test_none_available(self, fake_bindings):
         """Check complaints when no binding can be imported."""
