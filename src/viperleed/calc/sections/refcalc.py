@@ -940,9 +940,8 @@ def _select_lmax(rpars, energies):
         )
     if uses_one_lmax:
         return dict.fromkeys(energies, rpars.LMAX.max)
-    # find appropriate LMAX per energy
     ps_energies = [ps[0]*leedbase.HARTREE_TO_EV for ps in rpars.phaseshifts]
-    lmax = {}  # lmax as a function of energy
+    lmax = {}
     warn_small = True
     warn_large = True
     _, max_supported = rpars.get_limits('LMAX')
