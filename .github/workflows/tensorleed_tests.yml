@@ -1,0 +1,74 @@
+# TensErLEED tests: the tests marked tensorleed (pytest -m tensorleed),
+# which run viperleed.calc against a TensErLEED tree. They run on every
+# pull request into master, and by hand ("Run workflow", any branch).
+#
+# - The workflow is selected by its trigger, not by a condition on the
+#   job: a required check must never pass by being skipped. Require
+#   the check "TensErLEED tests" in the ruleset of master only. On
+#   pull requests into other branches the workflow does not start.
+# - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
+#   and cached. The cache key holds the hash of the script and the
+#   versions of the compilers it uses, as the tree contains objects
+#   compiled on the runner.
+
+name: TensErLEED tests
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One group per pull request, where a new push cancels the running
+  # run; one group per commit otherwise, so no run of a push to master
+  # is cancelled or replaced while it waits
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pytest-tensorleed:
+    name: TensErLEED tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set the location of the TensErLEED tree
+        # Outside the checkout. Not github.workspace/..: actions/cache
+        # refuses paths that contain '..'
+        run: echo "VIPERLEED_TENSORLEED=$RUNNER_TEMP/tensorleed" >> "$GITHUB_ENV"
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/tests.txt
+      - name: Install compilers, MPI, BLAS, and LAPACK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin \
+            libopenblas-dev
+      - name: Get the compiler versions
+        id: compilers
+        run: |
+          echo "versions=gcc$(gcc -dumpfullversion)-gfortran$(gfortran -dumpfullversion)" >> "$GITHUB_OUTPUT"
+      - name: Restore the TensErLEED tree
+        id: tree-cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.VIPERLEED_TENSORLEED }}
+          key: tensorleed-tree-${{ runner.os }}-${{ steps.compilers.outputs.versions }}-${{ hashFiles('build/scripts/assemble_tensorleed_tree.py') }}
+      - name: Assemble the TensErLEED tree
+        if: ${{ steps.tree-cache.outputs.cache-hit != 'true' }}
+        run: python build/scripts/assemble_tensorleed_tree.py "$VIPERLEED_TENSORLEED"
+      - name: Install viperleed and the test requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/tests.txt -e .
+      - name: Run the TensErLEED tests
+        run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs
