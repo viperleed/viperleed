@@ -14,6 +14,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
+from unittest import mock
+
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -58,8 +60,7 @@ PARAMS = reference_params(REFCALC, _file_names)
 
 @fixture(scope='session', name='refcalc_folder')
 def factory_refcalc_folder(initialized_case,
-                           tmp_path_factory,
-                           session_mocker):
+                           tmp_path_factory):
     """Return a function that writes the refcalc inputs (cached).
 
     Check that refcalc needs neither a TensErLEED tree nor a compiler.
@@ -75,12 +76,12 @@ def factory_refcalc_folder(initialized_case,
         folder = tmp_path_factory.mktemp('refcalc')
         slab, rpars = copy_case_state(source, folder, slab, rpars)
         rpars.SUPPRESS_EXECUTION = True
-        get_tensorleed = session_mocker.patch.object(
-            rpars,
-            'get_tenserleed_directory',
-            )
-        get_compiler = session_mocker.patch.object(rpars, 'getFortranComp')
-        with execute_in_dir(folder):
+        patch_tensorleed = mock.patch.object(rpars,
+                                             'get_tenserleed_directory')
+        patch_compiler = mock.patch.object(rpars, 'getFortranComp')
+        with patch_tensorleed as get_tensorleed, \
+                patch_compiler as get_compiler, \
+                execute_in_dir(folder):
             refcalc.refcalc(slab, rpars)
         get_tensorleed.assert_not_called()
         get_compiler.assert_not_called()
