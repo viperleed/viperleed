@@ -105,16 +105,12 @@ def test_lmax_per_energy_repeated_value(rpars):
     assert lmax == dict.fromkeys(ENERGIES, n_large)
 
 
-_ABOVE_PHASESHIFTS = {  # Highest phase-shift energy is ENERGIES[-1] + 1
-    'within 1 eV': (ENERGIES[-1] + 1.5, False),
-    'more than 1 eV': (ENERGIES[-1] + 3.0, True),
-    }
-
-
-@parametrize('energy,warns', _ABOVE_PHASESHIFTS.values(),
-             ids=_ABOVE_PHASESHIFTS)
+# The highest phase-shift energy is ENERGIES[-1] + 1
+@parametrize('energy,warns',
+             ((ENERGIES[-1] + 1.5, False), (ENERGIES[-1] + 3.0, True)),
+             ids=('within 1 eV', 'more than 1 eV'))
 def test_lmax_above_phaseshifts(rpars, energy, warns, caplog):
-    """Check the warning for energies above those of the phase shifts."""
+    """Check the warning for energies above all phase shifts."""
     lmax = _select_lmax(rpars, (energy,))
     assert lmax == {energy: rpars.LMAX.max}  # From the last phase shifts
     expect_log = 'No appropriate phaseshifts found'
