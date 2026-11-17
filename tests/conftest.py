@@ -3,6 +3,7 @@
 Defines fixtures and fixture factories used in multiple tests, and
 loads the plugins with the options and hooks of the test suite:
 check_slow.py (--check-slow), quick_option.py (--quick),
+reference_files.py (--rewrite-references, check_reference),
 release_option.py (--release), rng_seed.py (--rng-seed),
 slow_marks.py (slow, release and tensorleed marks, stale-entry guard)
 and qt_plugin.py (pytest-qt, if Qt is available).
@@ -61,6 +62,7 @@ pytest_plugins = (
     'tests.check_slow',
     'tests.qt_plugin',
     'tests.quick_option',
+    'tests.reference_files',
     'tests.release_option',
     'tests.rng_seed',
     'tests.slow_marks',

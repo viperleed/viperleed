@@ -1,0 +1,31 @@
+  2             number of independent parameters
+ 0.1000         gaussian width control parameter RMUT
+  0             initialisation for random number generator - 0: use system time, 1,...: use init
+  1             1: use RPe -- 2: use R2
+  0             Optimization of which beam group do you want? (0=Aver,1=Int,2=Half)
+   100          output interval
+100000          desired number of generations to be performed
+100             area fraction step width (%)
+SD.TL           name of search document file (max. 10 characters)
+  1             Number of domains under consideration
+======= Information about Domain 1: ============================================
+  1             Number of atomic sites in variation: Domain 1
+------- Information about site 1: ----------------------------------------------
+  1             Surface (0/1)
+  1             Atom number
+  1             No. of different files for Atom no. 1
+****Information about file 1:
+DEL_1_Ag_1      Name of file 1 (max. 15 characters)
+  1             Formatted(0/1)
+  2             Types of parameters in file 1
+ 11             vibrational steps
+ 11             geometrical steps
+****concentration steps for site no. 1
+  1             no. of concentration steps - sum must equal 1 !
+ 1.0000            concentration step no. 1
+Information about start configuration: (Parameters for each place, conc for each place)
+  1             Certain start position (1) or random configuration (0)
+  6  6  1  1
+  6  6  1  1
+  6  6  1  1
+  6  6  1  1

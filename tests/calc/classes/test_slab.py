@@ -24,6 +24,7 @@ from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import errors as err
@@ -1832,6 +1833,21 @@ class TestSuperAndSubCell:
         'not a subcell': (np.diag((2, 2)), ValueError),
         }
 
+    # Transforms whose determinant numpy does not compute exactly
+    inexact_det = {
+        '3x3': np.diag((3, 3)),
+        '9x2': np.diag((9, 2)),
+        'oblique': np.array([[-3, 3], [0, -3]]),
+        }
+
+    @parametrize(transform=inexact_det.values(), ids=inexact_det)
+    def test_subcell_inexact_det(self, transform, ag100):
+        """Check make_subcell for transforms with an inexact numpy det."""
+        slab, rpars, *_ = ag100
+        supercell = slab.make_supercell(transform)
+        subcell = supercell.make_subcell(rpars, transform)
+        assert subcell.n_atoms == slab.n_atoms
+
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
     def test_subcell_invalid(self, matrix, exc, ag100):
         """Check complaints for invalid input to make_subcell."""
@@ -1971,17 +1987,6 @@ class TestUnitCellTransforms:
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
-    @parametrize_with_cases('args', cases=poscar_slabs,
-                            has_tag=Tag.NON_MINIMAL_CELL)
-    def test_ab_cell_minimization(self, args):
-        """Check correct identification of minimal ab cell (by area)."""
-        slab, rpars, info = args
-        ab_slab = slab.ab_cell.T.copy()
-        ab_small = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
-                                            rpars.SYMMETRY_EPS.z)
-        area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
-        assert area_ratio == pytest.approx(info.poscar.n_cells)
-
     _minimal = {'cases': poscar_slabs,
                 'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
                                        Tag.NO_INFO)}
@@ -1992,6 +1997,129 @@ class TestUnitCellReduction:
         slab, rpars, *_ = args
         with pytest.raises(err.AlreadyMinimalError):
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
+
+    _non_minimal = {'cases': poscar_slabs, 'has_tag': Tag.NON_MINIMAL_CELL}
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization(self, args):
+        """Check correct identification of minimal ab cell (by area)."""
+        slab, rpars, info = args
+        ab_slab = slab.ab_cell.T.copy()
+        ab_small = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                            rpars.SYMMETRY_EPS.z)
+        area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
+        assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
+
+    # Position noise much smaller than SYMMETRY_EPS, as for
+    # structures coming from DFT or other programs (Angstrom)
+    position_noise = 1e-5
+
+    @staticmethod
+    def add_position_noise(slab, noise, rng):
+        """Move each atom in-plane by noise, in a random direction."""
+        # rng is a seeded generator (see the draws fixture in
+        # tests/conftest.py), so that the outcome is reproducible
+        for atom in slab:
+            direction = rng.standard_normal(2)
+            direction /= np.linalg.norm(direction)
+            atom.cartpos[:2] += noise * direction
+        slab.update_fractional_from_cartesian()
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization_noisy(self, args, draws):
+        """Check that small position noise does not hinder reduction."""
+        slab, rpars, info = args
+        ab_slab = slab.ab_cell.T.copy()
+
+        def _check(draw):
+            (noisy_slab,) = duplicate_all(slab)
+            self.add_position_noise(noisy_slab, self.position_noise, draw.rng)
+            ab_small = noisy_slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                                      rpars.SYMMETRY_EPS.z)
+            area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
+            assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
+
+        check_draws(draws, _check)
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization_subcell(self, args):
+        """Check that the minimal ab cell gives a valid subcell.
+
+        This is what INITIALIZATION does when the POSCAR
+        cell is not minimal (to write POSCAR_mincell).
+        """
+        slab, rpars, info = args
+        mincell = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                           rpars.SYMMETRY_EPS.z)
+        transform = slab.ab_cell.T.dot(np.linalg.inv(mincell)).round()
+        subcell = slab.make_subcell(rpars, transform)
+        assert subcell.n_atoms * info.poscar.n_cells == slab.n_atoms
+
+    @parametrize('eps,noise', (
+        (0.1, 1e-5),
+        (0.1, 3e-4),
+        (0.1, 5e-3),   # The 5e-2 tolerance on SUPERLATTICE limits this
+        (0.01, 2e-3),  # eps/5, below the eps/4 limit of the symmetry check
+        ))
+    @parametrize_with_cases('args',
+                            cases=CasePOSCARSlabs.case_poscar_ir111_2rt3)
+    def test_minimal_bulk_ab_cell_noisy(self, args, eps, noise, draws):
+        """Check reduction of a noisy fcc(111) bulk to the 1x1 cell."""
+        slab, rpars, info = args
+        rpars.SYMMETRY_EPS = SymmetryEps(eps)
+
+        def _check(draw):
+            noisy_slab, noisy_rpars = duplicate_all(slab, rpars)
+            self.add_position_noise(noisy_slab, noise, draw.rng)
+            noisy_slab.create_layers(noisy_rpars)
+            noisy_slab.make_bulk_slab(noisy_rpars)
+            noisy_slab.ensure_minimal_bulk_ab_cell(noisy_rpars)
+            superlattice = noisy_rpars.SUPERLATTICE
+            assert (abs(np.linalg.det(superlattice))
+                    == pytest.approx(info.poscar.n_cells))
+
+        check_draws(draws, _check)
+
+    @parametrize('candidate,n_atoms,eps,smaller', (
+        ((2.0, 0.0), 10, 0.1, False),  # Area ratio 2.5
+        ((2.3, 0.0), 10, 0.1, False),  # Ratio 2.17, > r/(2*n_atoms) off
+        ((2.5, 0.0), 10, 0.1, True),   # Area ratio 2
+        # Ratio 3.8: within r/(2*n_atoms), not within 1/(2*n_atoms)
+        ((5/3.8, 0.0), 4, 0.1, True),
+        # Ratio 2 is accepted for errors up to ~1.5*eps along a'
+        ((2.51, 0.0), 4, 0.01, True),
+        ((2.52, 0.0), 4, 0.01, False),
+        ((2.501, 0.0), 4, 0.001, True),
+        ((2.502, 0.0), 4, 0.001, False),
+        # Ratio 4.003 > n_atoms, area below A/n_atoms by over eps**2
+        ((1.249, 0.0), 4, 0.001, True),
+        # Ratios 4.9 and 6.3 round to more than n_atoms
+        ((5/4.9, 0.0), 4, 0.1, False),
+        ((5/6.3, 0.0), 4, 0.1, False),
+        ((5/1.02, 0.0), 4, 0.1, False),  # Ratio 1.02, not a reduction
+        ))
+    def test_minimize_ab_area_integer_ratio(self, candidate, n_atoms, eps,
+                                            smaller):
+        """Check that only cells with integer area ratios are kept."""
+        ab_cell = np.array([[5.0, 0.0], [0.0, 5.0]])
+        # pylint: disable-next=protected-access
+        reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms,
+                                            [np.array(candidate)], eps)
+        assert reduced is smaller
+
+    def test_minimize_ab_area_long_vectors(self):
+        """Check that long candidates do not pass a non-integer ratio.
+
+        For long candidate vectors and a large eps, the area tolerance
+        alone would accept area ratios far from an integer.
+        """
+        ab_cell = np.array([[10.0, 0.0], [0.0, 10.0]])
+        candidates = [np.array([100.0, 1.04])]
+        n_atoms, eps = 20, 5.0
+        # Area ratio 9.62, more than r/(2*n_atoms) off
+        # pylint: disable-next=protected-access
+        reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms, candidates, eps)
+        assert not reduced
 
 
 class TestVacuumGap:

@@ -133,7 +133,6 @@ _PRESETS = {
 # IMPORTANT: when adding a POSCAR file to this tuple, also add:
 # - corresponding BEAMLIST files in the 'BEAMLISTs' directory
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
@@ -356,6 +355,19 @@ class CasePOSCARSlabs:
             )
         return self.case_poscar(info)
 
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_ir111_2rt3(self):
+        """Return a non-minimal (2sqrt3 x 2sqrt3)R30 slab of fcc(111)."""
+        info = _get_poscar_info('POSCAR_Ir(111)_2rt3', {'Ir': 72}, 'p31m')
+        info.poscar.n_cells = 12
+        layer_dist = 2.7 * np.sqrt(2/3)  # In-plane NN distance 2.7 A
+        info.param_presets = {
+            'LAYER_CUTS': LayerCuts.from_string('dz(0.5)'),
+            'N_BULK_LAYERS': 3,
+            'BULK_REPEAT': 3 * layer_dist,
+            }
+        return self.case_poscar(info)
+
     @case(tags=(Tag.NON_MINIMAL_CELL, Tag.SURFACE_ATOMS))
     def case_poscar_lsmo_001_rt2(self):
         """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
@@ -414,9 +426,9 @@ class CasePOSCARSlabs:
     def case_poscar_sb_si_111(self):
         """Return a non-minimal, rectangular slab of Sb/Si(111)."""
         info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 72+12, 'pm')
-        # While it looks like there are 4 cells (rt3 of Si), some
-        # of the Sb atoms are not quite in the right position
-        info.poscar.n_cells = 2
+        # 4 cells (rt3 of Si), though some of the Sb atoms
+        # are not quite in the right position (~0.04 A off)
+        info.poscar.n_cells = 4
         return self.case_poscar(info)
 
     @case(tags=Tag.VACUUM_GAP_MIDDLE)
@@ -446,6 +458,15 @@ class CasePOSCARSlabs:
         rpars.N_BULK_LAYERS = 2
         slab.full_update(rpars)
         return slab, rpars, info
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_tio2_supercell(self):
+        """Return a non-minimal, 9x2 supercell of rutile TiO2(110)."""
+        info = _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm',
+                                (540, False))
+        # Atom positions deviate from ideal ones by ~1e-5 A
+        info.poscar.n_cells = 18
+        return self.case_poscar(info)
 
 
 class CaseBulkSlabs:
