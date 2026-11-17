@@ -24,6 +24,7 @@ from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
+from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 
 _MODULE = 'viperleed.gui.cli'
@@ -55,6 +56,9 @@ following:
        installed viperleed globally.
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
+    _mock_select_msg = f'''
+If both PyQt6 and PyQt5 are installed, you can try PyQt5 instead by
+setting the {QT_API_ENV} environment variable to 'pyqt5'.'''
     _mock_skip_msg = '''
 If your system has a display, you can start the GUI anyway with
     viperleed gui --skip-graphics-check'''
@@ -81,7 +85,7 @@ If your system has a display, you can start the GUI anyway with
         'runtime crash': (
             PyQtSanity.RUNTIME_CRASH,
             ('a Qt binding (PyQt6 or PyQt5) was found, but the GUI '
-             'crashed at startup.' + _mock_abi_msg),
+             'crashed at startup.' + _mock_select_msg + _mock_abi_msg),
             ),
         }
 
@@ -166,6 +170,19 @@ Try again after installing them'''
         stderr = capsys.readouterr().err.strip()
         assert stderr.endswith('no Qt binding is installed (looked for '
                                'PyQt5).')
+
+    def test_requested_binding_crash(self, mocker, capsys):
+        """Check that no other binding is suggested if one was tried."""
+        mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT5,))
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     return_value=PyQtSanity.RUNTIME_CRASH)
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value={})
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        assert QT_API_ENV not in stderr
+        assert 'crashed at startup.' + self._mock_abi_msg in stderr
 
     @parametrize('sanity,err_msg', _can_run.values(), ids=_can_run)
     def test_result(self, sanity, err_msg, mocker, capsys):

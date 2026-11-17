@@ -27,6 +27,7 @@ from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import SUPPORTED_BINDINGS
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
@@ -48,6 +49,12 @@ following:
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
 
+# Part of error message emitted if the binding that was tried may not
+# be the only one installed
+_SELECT_BINDING_MSG = f'''
+If both PyQt6 and PyQt5 are installed, you can try PyQt5 instead by
+setting the {QT_API_ENV} environment variable to 'pyqt5'.'''
+
 # Part of error message emitted if the result of the sanity check
 # may be wrong (e.g., on a slow machine with a display)
 _SKIP_CHECK_MSG = '''
@@ -60,7 +67,9 @@ _CANNOT_RUN_MSG = (
 
 # Error messages emitted if the sanity check fails. {qt} is replaced
 # by the Qt bindings that were looked for (e.g., 'PyQt6 or PyQt5'),
-# and {qt_api_error} by why no binding can be selected via QT_API.
+# {qt_api_error} by why no binding can be selected via QT_API, and
+# {select_hint} by _SELECT_BINDING_MSG if several bindings were
+# looked for.
 _SANITY_TO_ERR_MSG = {
     PyQtSanity.NOT_FOUND: 'no Qt binding is installed (looked for {qt}).',
     PyQtSanity.INVALID_QT_API: 'no Qt binding can be selected. {qt_api_error}',
@@ -72,7 +81,7 @@ _SANITY_TO_ERR_MSG = {
         ),
     PyQtSanity.RUNTIME_CRASH: (
         'a Qt binding ({qt}) was found, but the GUI crashed at startup.'
-        + _ABI_MISMATCH_MSG
+        '{select_hint}' + _ABI_MISMATCH_MSG
         ),
     PyQtSanity.NO_DISPLAY: (
         'the system appears to have no graphics capability (i.e., no '
@@ -143,8 +152,11 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         print('Done', flush=True)
         details = _SANITY_TO_ERR_MSG[sanity]  # Let KeyError propagate
         candidates, qt_api_error = self._get_candidates()
-        details = details.format(qt=' or '.join(candidates),
-                                 qt_api_error=qt_api_error)
+        details = details.format(
+            qt=' or '.join(candidates),
+            qt_api_error=qt_api_error,
+            select_hint=_SELECT_BINDING_MSG if len(candidates) > 1 else '',
+            )
         if sanity in {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}:
             # These are the only cases in which it makes no sense to
             # check for missing dependencies. All other non-sane
