@@ -87,6 +87,11 @@ def pytest_addoption(parser):
     optional_dependencies.pytest_addoption(parser)
 
 
+def pytest_configure(config):
+    """Check the options of the test suite."""
+    optional_dependencies.pytest_configure(config)
+
+
 @fixture
 def check_log_records(caplog):
     """Raise unless log records are exactly as expected."""

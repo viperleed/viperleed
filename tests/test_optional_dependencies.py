@@ -21,7 +21,7 @@ _TEST_FILE = """
 import pytest
 
 def test_fixture(missing_dependency):
-    missing_dependency('fake-fixture-dep', 'some detail')
+    missing_dependency('gfortran', 'some detail')
 
 def test_unaffected():
     pass
@@ -63,7 +63,7 @@ def test_skip_without_option(pytester):
     result = _run(pytester, '-rs')
     result.assert_outcomes(passed=1, skipped=1)
     result.stdout.fnmatch_lines([
-        '*optional dependency fake-fixture-dep not available: some*',
+        '*optional dependency gfortran not available: some*',
         ])
 
 
@@ -72,15 +72,15 @@ def test_fail_with_option(pytester):
     result = _run(pytester, optional_dependencies.REQUIRE_ALL_OPTION)
     result.assert_outcomes(passed=1, failed=1)
     result.stdout.fnmatch_lines([
-        '*optional dependency fake-fixture-dep not available: some*',
+        '*optional dependency gfortran not available: some*',
         ])
 
 
 _ALLOWED_DEP = (
-    f'{_ALLOW}=fake-fixture-dep',
-    f'{_ALLOW}=other-dep,fake-fixture-dep',
-    f'{_ALLOW}= other-dep , fake-fixture-dep ',
-    (f'{_ALLOW}=other-dep', f'{_ALLOW}=fake-fixture-dep'),
+    f'{_ALLOW}=gfortran',
+    f'{_ALLOW}=mpifort,gfortran',
+    f'{_ALLOW}= mpifort , gfortran ',
+    (f'{_ALLOW}=mpifort', f'{_ALLOW}=gfortran'),
     )
 
 
@@ -91,11 +91,11 @@ def test_allow_missing(pytester, allow):
     result = _run(pytester, _REQUIRE, *allow, '-rs')
     result.assert_outcomes(passed=1, skipped=1)
     result.stdout.fnmatch_lines([
-        f'*fake-fixture-dep not available: some*(allowed by {_ALLOW})*',
+        f'*gfortran not available: some*(allowed by {_ALLOW})*',
         ])
 
 
-@parametrize(allow=(f'{_ALLOW}=other-dep', f'{_ALLOW}=fake-fixture'))
+@parametrize(allow=(f'{_ALLOW}=mpifort', f'{_ALLOW}=mpifort,'))
 def test_allow_missing_other(pytester, allow):
     """Check that other missing dependencies still fail."""
     result = _run(pytester, _REQUIRE, allow)
@@ -105,13 +105,13 @@ def test_allow_missing_other(pytester, allow):
 
 def test_allow_missing_alone(pytester):
     """Check that --allow-missing alone does not change the skips."""
-    result = _run(pytester, f'{_ALLOW}=fake-fixture-dep', '-rs')
+    result = _run(pytester, f'{_ALLOW}=gfortran', '-rs')
     result.assert_outcomes(passed=1, skipped=1)
     result.stdout.no_fnmatch_line('*allowed by*')
 
 
 @pytest.mark.slow  # About 1 s (pytester, subprocess)
-@parametrize(allow=((), (f'{_ALLOW}=fake-fixture-dep',)))
+@parametrize(allow=((), (f'{_ALLOW}=gfortran',)))
 def test_allow_missing_xdist(pytester, monkeypatch, allow):
     """Check --require-all and --allow-missing with pytest-xdist."""
     result = _run_xdist(pytester, monkeypatch, _REQUIRE, *allow)
@@ -119,3 +119,30 @@ def test_allow_missing_xdist(pytester, monkeypatch, allow):
         result.assert_outcomes(passed=1, skipped=1)
     else:
         result.assert_outcomes(passed=1, failed=1)
+
+
+_UNKNOWN = (
+    f'{_ALLOW}=gfortan',
+    f'{_ALLOW}=gfortran,fake-dep',
+    (f'{_ALLOW}=mpifort', f'{_ALLOW}=gfortan'),
+    )
+
+
+@parametrize(allow=_UNKNOWN)
+def test_allow_missing_unknown(pytester, allow):
+    """Check that unknown names for --allow-missing are an error."""
+    allow = (allow,) if isinstance(allow, str) else allow
+    result = _run(pytester, _REQUIRE, *allow)
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines([
+        (f'*{_ALLOW}: unknown optional dependencies *. '
+         'Valid names are gfortran, mpifort.'),
+        ])
+
+
+@pytest.mark.slow  # About 1 s (pytester, subprocess)
+def test_allow_missing_unknown_xdist(pytester, monkeypatch):
+    """Check that unknown names are an error with pytest-xdist."""
+    result = _run_xdist(pytester, monkeypatch, _REQUIRE, f'{_ALLOW}=gfortan')
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines(['*unknown optional dependencies gfortan.*'])

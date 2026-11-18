@@ -7,7 +7,8 @@ that a run on a complete environment cannot silently skip tests.
 The option --allow-missing exempts the dependencies it names (comma
 separated, may be repeated) from --require-all: their tests skip as
 without it, e.g., on a machine with no compilers, with
---require-all --allow-missing=mpifort,gfortran.
+--require-all --allow-missing=mpifort,gfortran. A name that is not
+one of KNOWN_DEPENDENCIES is a usage error.
 
 Call the `missing_dependency` fixture where a test finds that a
 dependency is missing:
@@ -16,7 +17,8 @@ dependency is missing:
         if not shutil.which('gfortran'):
             missing_dependency('gfortran')
 
-The option and the fixture below are used by tests/conftest.py.
+The options, their check and the fixture below are used by
+tests/conftest.py.
 """
 
 __authors__ = (
@@ -29,6 +31,7 @@ __license__ = 'GPLv3+'
 import pytest
 
 ALLOW_MISSING_OPTION = '--allow-missing'
+KNOWN_DEPENDENCIES = ('gfortran', 'mpifort')
 REQUIRE_ALL_OPTION = '--require-all'
 
 
@@ -74,6 +77,18 @@ def pytest_addoption(parser):
               'may be repeated). Example: '
               '--allow-missing=mpifort,gfortran.'),
         )
+
+
+def pytest_configure(config):
+    """Reject unknown dependency names given to --allow-missing."""
+    unknown = _allowed(config).difference(KNOWN_DEPENDENCIES)
+    if not unknown:
+        return
+    unknown = ', '.join(sorted(unknown))
+    valid = ', '.join(KNOWN_DEPENDENCIES)
+    msg = (f'{ALLOW_MISSING_OPTION}: unknown optional dependencies '
+           f'{unknown}. Valid names are {valid}.')
+    raise pytest.UsageError(msg)
 
 
 @pytest.fixture(name='missing_dependency')
