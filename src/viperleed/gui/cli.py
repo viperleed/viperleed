@@ -28,7 +28,7 @@ from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import SUPPORTED_BINDINGS
-from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import get_binding
 from viperleed.gui.qt_compat.binding import get_candidates
 
@@ -229,7 +229,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         """
         try:
             return get_candidates(), ''
-        except QtBindingNotFoundError as exc:
+        except QtApiError as exc:
             return SUPPORTED_BINDINGS, str(exc)
 
 

@@ -15,6 +15,7 @@ from viperleed.gui.qt_compat import binding
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QT_API_ENV
+from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 
@@ -151,7 +152,7 @@ class TestQtApi:
         """Check complaints if QT_API requests another binding."""
         monkeypatch.setenv(QT_API_ENV, 'pyqt5')
         mock_import = fake_bindings(BOTH, imported=(PYQT6,))
-        with pytest.raises(QtBindingNotFoundError, match='already imported'):
+        with pytest.raises(QtApiError, match='already imported'):
             get_binding()
         mock_import.assert_not_called()
 
@@ -166,7 +167,7 @@ class TestQtApi:
         """Check complaints when the requested binding is missing."""
         monkeypatch.setenv(QT_API_ENV, 'pyqt5')
         mock_import = fake_bindings((PYQT6,))
-        with pytest.raises(QtBindingNotFoundError, match=QT_API_ENV):
+        with pytest.raises(QtApiError, match=QT_API_ENV):
             get_binding()
         mock_import.assert_called_once_with('PyQt5.QtCore')
 
@@ -183,7 +184,7 @@ class TestQtApi:
         """Check complaints for an unsupported QT_API value."""
         monkeypatch.setenv(QT_API_ENV, qt_api)
         mock_import = fake_bindings(BOTH)
-        with pytest.raises(QtBindingNotFoundError, match=qt_api):
+        with pytest.raises(QtApiError, match=qt_api):
             get_binding()
         mock_import.assert_not_called()
 
@@ -215,13 +216,13 @@ class TestGetCandidates:
         """Check complaints if QT_API requests another binding."""
         monkeypatch.setenv(QT_API_ENV, 'pyqt5')
         fake_bindings((), imported=(PYQT6,))
-        with pytest.raises(QtBindingNotFoundError, match='already imported'):
+        with pytest.raises(QtApiError, match='already imported'):
             binding.get_candidates()
 
     def test_unsupported(self, monkeypatch):
         """Check complaints for an unsupported QT_API value."""
         monkeypatch.setenv(QT_API_ENV, 'pyside6')
-        with pytest.raises(QtBindingNotFoundError):
+        with pytest.raises(QtApiError):
             binding.get_candidates()
 
 

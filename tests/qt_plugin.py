@@ -22,8 +22,9 @@ of tests/conftest.py, which load it.
 When pytest-qt is not loaded (no Qt binding, or pytest-qt is not
 installed), its qapp and qtbot fixtures are replaced by fixtures that
 skip the test via missing_dependency (or fail with --require-all).
-If a binding is installed but broken (see qt_compat.binding), they
-make the test fail instead.
+They make the test fail instead if a binding is installed but broken
+(see qt_compat.binding), or if the QT_API environment variable
+prevents selecting one (e.g., it has an unsupported value).
 """
 
 __authors__ = (
@@ -58,13 +59,20 @@ def pytest_addoption(parser, pluginmanager):
 
 
 def _find_missing():
-    """Return (name, detail, broken) of what is missing, or None."""
+    """Return (name, detail, fail) of what is missing, or None.
+
+    fail is whether tests that need what is missing should fail,
+    rather than be skipped: if it is a problem to be fixed, rather
+    than an optional dependency that is not installed.
+    """
     try:
         binding = qt_binding.get_binding()
+    except qt_binding.QtApiError as exc:  # E.g., an unsupported value
+        return qt_binding.QT_API_ENV, str(exc), True
     except qt_binding.QtBindingNotFoundError as exc:
         return 'PyQt5/PyQt6', str(exc), False
     except ImportError as exc:  # Installed, but broken
-        return 'PyQt5/PyQt6', str(exc), True
+        return 'PyQt5/PyQt6', f'installed, but broken. {exc}', True
     if importlib.util.find_spec('pytestqt') is None:
         return PYTEST_QT, '', False
     requested = os.environ.get(PYTEST_QT_API_ENV, '').strip().lower()
@@ -93,8 +101,8 @@ if _MISSING is not None:
 
 
 def _report_missing(missing_dependency):
-    """Skip the current test, or fail it if Qt is broken."""
-    name, detail, broken = _MISSING
-    if broken:
-        pytest.fail(f'{name} is installed, but broken: {detail}')
+    """Skip the current test, or fail it if Qt cannot be used."""
+    name, detail, fail = _MISSING
+    if fail:
+        pytest.fail(f'Cannot use {name}: {detail}')
     missing_dependency(name, detail)

@@ -29,6 +29,7 @@ import sys
 
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
+from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 from viperleed.gui.qt_compat.binding import get_candidates
@@ -214,7 +215,7 @@ class PyQtSanityChecker:
         """
         try:
             candidates = get_candidates()
-        except QtBindingNotFoundError:
+        except QtApiError:
             return ((None, PyQtSanity.INVALID_QT_API),)
         results = []
         for binding in candidates:

@@ -8,9 +8,9 @@ according to these rules:
 - If the QT_API environment variable is set, its value decides.
   Accepted values are 'pyqt5' and 'pyqt6' (case insensitive). This
   is the same variable that matplotlib uses, which ensures that both
-  use the same binding. An error is raised if the requested binding
-  cannot be imported, if QT_API has any other value, or if another
-  binding was already imported.
+  use the same binding. A QtApiError is raised if the requested
+  binding is not installed, if QT_API has any other value, or if
+  another binding was already imported.
 - Otherwise, if one of the bindings was already imported (e.g., by
   user code or by another package), that one is used. Two different
   Qt bindings cannot coexist in the same process.
@@ -52,6 +52,10 @@ class QtBindingNotFoundError(ImportError):
     """No usable Qt binding could be found."""
 
 
+class QtApiError(QtBindingNotFoundError):
+    """The QT_API environment variable prevents selecting a binding."""
+
+
 def get_binding():
     """Return the name of the Qt binding in use.
 
@@ -65,10 +69,12 @@ def get_binding():
 
     Raises
     ------
+    QtApiError
+        If the QT_API environment variable has an unsupported value,
+        conflicts with an already imported binding, or requests a
+        binding that is not installed.
     QtBindingNotFoundError
-        If no binding is installed, or if the QT_API environment
-        variable has an unsupported value or conflicts with an
-        already imported binding.
+        If no binding is installed.
     ImportError
         If no binding can be imported, and any of them is installed
         but broken.
@@ -90,7 +96,7 @@ def get_candidates():
 
     Raises
     ------
-    QtBindingNotFoundError
+    QtApiError
         If the QT_API environment variable has an unsupported value,
         or if it requests a binding other than one already imported.
     """
@@ -98,7 +104,7 @@ def get_candidates():
     already_imported = tuple(binding for binding in SUPPORTED_BINDINGS
                              if f'{binding}.QtCore' in sys.modules)
     if requested and already_imported and requested not in already_imported:
-        raise QtBindingNotFoundError(
+        raise QtApiError(
             f'{QT_API_ENV}={os.environ[QT_API_ENV]!r} requests {requested}, '
             f'but {already_imported[0]} was already imported. Two Qt '
             'bindings cannot be used in the same process.'
@@ -143,7 +149,7 @@ def _get_requested_binding():
         return _QT_API_VALUES[requested.lower()]
     except KeyError:
         supported = ', '.join(repr(v) for v in _QT_API_VALUES)
-        raise QtBindingNotFoundError(
+        raise QtApiError(
             f'Unsupported value {requested!r} for the {QT_API_ENV} '
             f'environment variable. ViPErLEED supports: {supported}.'
             ) from None
@@ -177,4 +183,6 @@ def _select_binding():
     msg += 'Errors: ' + '; '.join(errors)
     if broken:
         raise ImportError(msg)
+    if requested:
+        raise QtApiError(msg)
     raise QtBindingNotFoundError(msg)

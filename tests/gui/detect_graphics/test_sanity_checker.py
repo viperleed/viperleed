@@ -21,7 +21,7 @@ from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import PyQtSanityChecker
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
-from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import QtApiError
 
 from .conftest import BOTH
 from .conftest import MODULE
@@ -288,7 +288,7 @@ class TestCheckBindings:
 
     def test_invalid_qt_api(self, mocks):
         """Check the results if QT_API prevents selecting a binding."""
-        mocks.candidates.side_effect = QtBindingNotFoundError
+        mocks.candidates.side_effect = QtApiError
         # pylint: disable-next=protected-access
         results = PyQtSanityChecker._check_bindings()
         assert results == ((None, PyQtSanity.INVALID_QT_API),)

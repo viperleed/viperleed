@@ -4,6 +4,7 @@ Modules that import Qt are imported via the fixtures defined here,
 rather than at the top of test modules, so that test modules can be
 collected without a Qt binding. Tests that use these fixtures are
 skipped (or fail with --require-all) if no Qt binding is available.
+They fail if the QT_API environment variable prevents selecting one.
 """
 
 __authors__ = (
@@ -17,6 +18,7 @@ import importlib
 
 from pytest_cases import fixture
 
+from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 
 _QT_COMPAT = 'viperleed.gui.qt_compat'
@@ -29,11 +31,13 @@ def fixture_import_with_qt(missing_dependency):
     The returned function takes the name of a module (e.g.,
     'viperleed.gui.qt_compat.QtCore') and returns the module. It
     skips the test (or fails with --require-all) if no Qt binding
-    is available.
+    is available. It fails if QT_API prevents selecting one.
     """
     def _import(module_name):
         try:
             return importlib.import_module(module_name)
+        except QtApiError:  # QT_API is wrong: fail, rather than skip
+            raise
         except QtBindingNotFoundError as exc:
             missing_dependency('PyQt5/PyQt6', str(exc))
             raise  # Unreachable, as missing_dependency raises

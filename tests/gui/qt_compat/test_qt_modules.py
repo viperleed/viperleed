@@ -18,6 +18,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 
@@ -45,6 +46,8 @@ def fixture_qt_binding(missing_dependency):
     """Return the name of the installed Qt binding, or skip."""
     try:
         return get_binding()
+    except QtApiError:  # QT_API is wrong: fail, rather than skip
+        raise
     except QtBindingNotFoundError as exc:
         missing_dependency('PyQt5/PyQt6', str(exc))
     raise AssertionError('Unreachable')

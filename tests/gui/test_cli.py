@@ -24,7 +24,7 @@ from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
-from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import QtApiError
 
 _MODULE = 'viperleed.gui.cli'
 _QT_COMPAT = 'viperleed.gui.qt_compat'
@@ -160,7 +160,7 @@ If your system has a display, you can start the GUI anyway with
     def test_invalid_qt_api(self, mocker, capsys):
         """Check complaints when QT_API prevents selecting a binding."""
         mocker.patch(f'{_MODULE}.get_candidates',
-                     side_effect=QtBindingNotFoundError('Some reason.'))
+                     side_effect=QtApiError('Some reason.'))
         mocker.patch(f'{_MODULE}.check_pyqt_sanity',
                      return_value=PyQtSanity.INVALID_QT_API)
         find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
@@ -482,7 +482,7 @@ class TestViPErLEEDGUICLI:
         """Check complaints about QT_API also when skipping checks."""
         cli, mocks = mocks
         mocker.patch(f'{_MODULE}.get_candidates',
-                     side_effect=QtBindingNotFoundError('Some reason.'))
+                     side_effect=QtApiError('Some reason.'))
         with pytest.raises(SystemExit):
             cli(['--skip-graphics-check'])
         assert not mocks.mock_calls
