@@ -251,7 +251,9 @@ def _make_command(compilers, fortran_compiler):
                    'make.bat of eeasisss always uses its own for target '
                    f'{compilers}')
             raise TreeAssemblyError(msg)
-        return ['cmd', '/c', 'make.bat', compilers]
+        # Explicit folder: cmd does not search the current one if
+        # NoDefaultCurrentDirectoryInExePath is set
+        return ['cmd', '/c', r'.\make.bat', compilers]
     command = ['make', compilers]
     if fortran_compiler:  # Variables gcc_fcomp, intel_fcomp
         command.append(f'{compilers}_fcomp={fortran_compiler}')

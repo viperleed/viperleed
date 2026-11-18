@@ -32,7 +32,7 @@ def _load_script():
 script = _load_script()
 
 _MAKE = {  # Command calling make, by whether on Windows
-    True: ['cmd', '/c', 'make.bat'],
+    True: ['cmd', '/c', r'.\make.bat'],
     False: ['make'],
     }
 _RANDOM_POSIX = ['-O3', '-c', 'random_.c', '-o', 'random_.o']
