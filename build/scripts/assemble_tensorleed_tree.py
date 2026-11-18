@@ -67,8 +67,8 @@ TREE_CONTENTS = (
     ('v1.7.5', 'TensErLEED-v1.75', 'TensErLEED-v1.75'),
     ('v2.0.0', 'TensErLEED', 'TensErLEED-v2.0.0'),
     ('v2.1.0', 'TensErLEED', 'TensErLEED-v2.1.0'),
-    ('v2.0.0', 'atom_density_files', 'atom_density_files'),
-    ('v2.0.0', 'seSernelius', 'seSernelius'),
+    (EEASISSS_TAG, 'atom_density_files', 'atom_density_files'),
+    (EEASISSS_TAG, 'seSernelius', 'seSernelius'),
     )
 
 EEASISSS_MAKE = (
