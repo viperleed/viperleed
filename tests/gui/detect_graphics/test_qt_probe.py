@@ -17,18 +17,26 @@ from viperleed.gui.detect_graphics import _EXIT_CODE_OFFSET
 from viperleed.gui.detect_graphics import _QT_MODULES
 from viperleed.gui.detect_graphics import _QtProbe
 from viperleed.gui.detect_graphics import PyQtSanity
-from viperleed.gui.qt_compat.binding import PYQT5
-from viperleed.gui.qt_compat.binding import PYQT6
 
 from .conftest import BOTH
 from .conftest import MODULE
 
 
+@parametrize(binding=BOTH)
 class TestQtProbe:
     """Tests for calling a _QtProbe, as in the checker subprocess."""
 
     # The modules that we attempt to import, besides the package
     _modules = _QT_MODULES
+    # Exceptions raised when importing a submodule of a binding, as a
+    # function of the submodule's name. All mean a broken binding.
+    _submodule_errors = {
+        'import error': lambda _: ImportError(),
+        # A dependency of the submodule is missing: broken PyQt5
+        'dependency missing': (
+            lambda mod: ModuleNotFoundError(name=mod.split('.')[0] + '.sip')
+            ),
+        }
 
     @fixture(name='mock_dummy_qapp', autouse=True)
     def fixture_mock_dummy_qapp(self, mocker):
@@ -43,37 +51,37 @@ class TestQtProbe:
         return mocker.MagicMock(name='imports_done')
 
     @staticmethod
-    def check_exit_code(excinfo, expect):
-        """Check that the exit code of `excinfo` is for `expect`."""
+    def check_failed(binding, imports_done, expect):
+        """Check that probing `binding` exits with `expect`, unreported.
+
+        Parameters
+        ----------
+        binding : str
+            The binding to probe.
+        imports_done : MagicMock
+            The fake sending end of the pipe.
+        expect : PyQtSanity
+            The expected exit status.
+        """
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe(binding)(imports_done)
         assert excinfo.value.code == _EXIT_CODE_OFFSET + expect.value
+        # The parent is told that imports are done only on success
+        imports_done.send.assert_not_called()
 
-    def test_candidates_pickled(self):
+    def test_binding_pickled(self, binding):
         """Check that a probe survives pickling, as when spawned."""
-        probe = pickle.loads(pickle.dumps(_QtProbe(list(BOTH))))
+        probe = pickle.loads(pickle.dumps(_QtProbe(binding)))
         # pylint: disable-next=protected-access
-        assert probe._candidates == BOTH
+        assert probe._binding == binding
 
-    def test_cant_import_pyqt(self, imports_done, mocker):
-        """Check the exit code when importing any binding fails."""
+    def test_cant_import_pyqt(self, binding, imports_done, mocker):
+        """Check the exit code when importing the binding fails."""
         mock_import = mocker.patch('importlib.import_module',
                                    side_effect=ImportError)
-        with pytest.raises(SystemExit) as excinfo:
-            _QtProbe(BOTH)(imports_done)
-        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
-        imports_done.send.assert_not_called()
-        assert mock_import.mock_calls == [mocker.call(b) for b in BOTH]
+        self.check_failed(binding, imports_done, PyQtSanity.IMPORT_ERROR)
+        mock_import.assert_called_once_with(binding)
 
-    # Exceptions raised when importing a submodule of a binding, as a
-    # function of the submodule's name. All mean a broken binding.
-    _submodule_errors = {
-        'import error': lambda _: ImportError(),
-        # A dependency of the submodule is missing: broken PyQt5
-        'dependency missing': (
-            lambda mod: ModuleNotFoundError(name=mod.split('.')[0] + '.sip')
-            ),
-        }
-
-    @parametrize(binding=BOTH)
     @parametrize(module=_modules)
     @parametrize(make_exc=_submodule_errors.values(), ids=_submodule_errors)
     def test_cant_import_pyqt_submodule(self, binding, module, make_exc,
@@ -85,12 +93,8 @@ class TestQtProbe:
                 raise make_exc(mod_name)
         mocker.patch('importlib.import_module',
                      side_effect=_fail_module_import)
-        with pytest.raises(SystemExit) as excinfo:
-            _QtProbe((binding,))(imports_done)
-        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
-        imports_done.send.assert_not_called()
+        self.check_failed(binding, imports_done, PyQtSanity.IMPORT_ERROR)
 
-    @parametrize(binding=BOTH)
     @parametrize(module=_modules)
     def test_missing_pyqt_submodule(self, binding, module,
                                     imports_done, mocker):
@@ -103,14 +107,11 @@ class TestQtProbe:
                 raise ModuleNotFoundError(name=mod_name)
         mocker.patch('importlib.import_module',
                      side_effect=_fail_module_import)
-        with pytest.raises(SystemExit) as excinfo:
-            _QtProbe((binding,))(imports_done)
         # pylint: disable-next=magic-value-comparison
         expect = (PyQtSanity.NOT_FOUND if module == 'QtCore'
                   else PyQtSanity.IMPORT_ERROR)
-        self.check_exit_code(excinfo, expect)
+        self.check_failed(binding, imports_done, expect)
 
-    @parametrize(binding=BOTH)
     def test_pyqt_dependency_missing(self, binding, imports_done, mocker):
         """Check that a package missing a dependency is broken."""
         def _fail_package_import(mod_name):
@@ -118,33 +119,17 @@ class TestQtProbe:
                 raise ModuleNotFoundError(name=f'{binding}.sip')
         mocker.patch('importlib.import_module',
                      side_effect=_fail_package_import)
-        with pytest.raises(SystemExit) as excinfo:
-            _QtProbe((binding,))(imports_done)
-        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
+        self.check_failed(binding, imports_done, PyQtSanity.IMPORT_ERROR)
 
-    def test_pyqt_not_found(self, imports_done, mocker):
-        """Check the expected exit code when no binding is found."""
+    def test_pyqt_not_found(self, binding, imports_done, mocker):
+        """Check the expected exit code when the binding is missing."""
         def _not_installed(mod_name):
             raise ModuleNotFoundError(name=mod_name.split('.')[0])
         mocker.patch('importlib.import_module', side_effect=_not_installed)
-        with pytest.raises(SystemExit) as excinfo:
-            _QtProbe(BOTH)(imports_done)
-        self.check_exit_code(excinfo, PyQtSanity.NOT_FOUND)
-        imports_done.send.assert_not_called()
+        self.check_failed(binding, imports_done, PyQtSanity.NOT_FOUND)
 
-    def test_import_error_wins(self, imports_done, mocker):
-        """Check that one broken binding gives IMPORT_ERROR."""
-        def _import(name):
-            if name.startswith(PYQT6):
-                raise ImportError
-            raise ModuleNotFoundError(name=name)
-        mocker.patch('importlib.import_module', side_effect=_import)
-        with pytest.raises(SystemExit) as excinfo:
-            _QtProbe(BOTH)(imports_done)
-        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
-
-    @parametrize(binding=BOTH)
-    def test_success(self, binding, imports_done, mocker, mock_dummy_qapp):
+    def test_success(self, binding, imports_done, mocker,
+                     mock_dummy_qapp):
         """Test an execution that does not make the interpreter exit."""
         # NB: normally, the interpreter always exits when
         # a _QtProbe is called. The only
@@ -154,7 +139,7 @@ class TestQtProbe:
         calls = mocker.MagicMock()
         calls.attach_mock(imports_done, 'imports_done')
         calls.attach_mock(mock_dummy_qapp, 'init_dummy_qapp')
-        _QtProbe((binding,))(imports_done)
+        _QtProbe(binding)(imports_done)
 
         expect_calls = [
             mocker.call(binding),
@@ -165,21 +150,11 @@ class TestQtProbe:
         # Build the expected calls outside the assert: code-quality
         # checkers take mocker.call.<...>.send() for a real call.
         expect_order = [
-            mocker.call.imports_done.send(binding),
+            mocker.call.imports_done.send(True),
             mocker.call.imports_done.close(),
             mocker.call.init_dummy_qapp(binding),
             ]
         assert calls.mock_calls == expect_order
-
-    def test_falls_back(self, imports_done, mocker, mock_dummy_qapp):
-        """Check that the next candidate is used if the first fails."""
-        def _import(name):
-            if name.startswith(PYQT6):
-                raise ModuleNotFoundError(name=name)
-        mocker.patch('importlib.import_module', side_effect=_import)
-        _QtProbe(BOTH)(imports_done)
-        imports_done.send.assert_called_once_with(PYQT5)
-        mock_dummy_qapp.assert_called_once_with(PYQT5)
 
 
 class TestQtProbeDummyQapp:

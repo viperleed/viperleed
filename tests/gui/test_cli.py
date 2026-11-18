@@ -24,7 +24,6 @@ from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
-from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 
 _MODULE = 'viperleed.gui.cli'
@@ -58,9 +57,6 @@ following:
        installed viperleed globally.
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
-    _mock_select_msg = f'''
-If both PyQt6 and PyQt5 are installed, you can try PyQt5 instead by
-setting the {QT_API_ENV} environment variable to 'pyqt5'.'''
     _mock_skip_msg = '''
 If your system has a display, you can start the GUI anyway with
     viperleed gui --skip-graphics-check'''
@@ -75,27 +71,91 @@ If your system has a display, you can start the GUI anyway with
             ),
         'unresponsive': (
             PyQtSanity.UNRESPONSIVE,
-            ('loading Qt (PyQt6 or PyQt5) did not complete in time. '
-             'Try once more, or check whether your system is very busy.'
-             + _mock_skip_msg),
+            ('loading PyQt6 did not complete in time. Try once more, or '
+             'check whether your system is very busy.' + _mock_skip_msg),
             ),
         'import fail': (
             PyQtSanity.IMPORT_ERROR,
-            ('a Qt binding (PyQt6 or PyQt5) was found, but it could not '
-             'be loaded.' + _mock_abi_msg),
+            'PyQt6 was found, but it could not be loaded.' + _mock_abi_msg,
             ),
         'runtime crash': (
             PyQtSanity.RUNTIME_CRASH,
-            ('a Qt binding (PyQt6 or PyQt5) was found, but the GUI '
-             'crashed at startup.' + _mock_select_msg + _mock_abi_msg),
+            ('PyQt6 was found, but the GUI crashed at startup.'
+             + _mock_abi_msg),
             ),
         }
+    # Results of the checks of two bindings that both failed
+    _both_failed = ((PYQT6, PyQtSanity.RUNTIME_CRASH),
+                    (PYQT5, PyQtSanity.IMPORT_ERROR))
+    _also_tried = '\nPyQt5 was also tried, but it could not be loaded.'
 
     @fixture(autouse=True)
     def fake_candidates(self, mocker):
         """Look for both bindings, independently of the environment."""
         mocker.patch(f'{_MODULE}.get_candidates',
                      return_value=(PYQT6, PYQT5))
+
+    @fixture(name='mock_sanity')
+    def fixture_mock_sanity(self, mocker):
+        """Return a function that fakes the outcome of the Qt check.
+
+        The function takes the status, the binding it is about, and
+        the results of all bindings checked (by default, only that of
+        the binding).
+        """
+        def _mock(sanity, binding=PYQT6, results=None):
+            if results is None:
+                results = ((binding, sanity),)
+            return mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                                return_value=sanity,
+                                binding=binding,
+                                results=results)
+        return _mock
+
+    def test_also_tried(self, mock_sanity, mocker, capsys):
+        """Check that other bindings that failed are mentioned."""
+        mock_sanity(PyQtSanity.RUNTIME_CRASH, results=self._both_failed)
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value={})
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        expect = ('PyQt6 was found, but the GUI crashed at startup.'
+                  + self._also_tried + self._mock_abi_msg)
+        assert stderr.endswith(expect)
+
+    def test_also_tried_dependencies(self, mock_sanity, mocker, capsys):
+        """Check that other bindings follow missing libraries."""
+        mock_sanity(PyQtSanity.RUNTIME_CRASH, results=self._both_failed)
+        mock_find_deps = mocker.patch(
+            f'{_MODULE}.find_missing_qt_dependencies',
+            return_value={'libqxcb.so': ('libxcb-cursor',)},
+            )
+        mocker.patch(f'{_MODULE}.QtDependencyFinder.find_install_for_libs',
+                     return_value='')
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        expect = ('the following Qt dependencies of PyQt6 are missing on '
+                  'your system:\n    libxcb-cursor\n'
+                  'Try again after installing them.' + self._also_tried)
+        assert stderr.endswith(expect)
+        mock_find_deps.assert_called_once_with()  # Only for PyQt6
+
+    def test_also_tried_not_installed(self, mock_sanity, mocker, capsys):
+        """Check that bindings not installed are not mentioned."""
+        mock_sanity(PyQtSanity.IMPORT_ERROR,
+                    binding=PYQT5,
+                    results=((PYQT6, PyQtSanity.NOT_FOUND),
+                             (PYQT5, PyQtSanity.IMPORT_ERROR)))
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value={})
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        assert PYQT6 not in stderr  # Not installed
+        assert stderr.endswith('PyQt5 was found, but it could not be loaded.'
+                               + self._mock_abi_msg)
 
     def test_invalid_qt_api(self, mocker, capsys):
         """Check complaints when QT_API prevents selecting a binding."""
@@ -126,9 +186,10 @@ If your system has a display, you can start the GUI anyway with
 
     @parametrize(install=_install.values(), ids=_install)
     @parametrize(sanity=PyQtSanity)
-    def test_missing_dependencies(self, install, sanity, mocker, capsys):
+    def test_missing_dependencies(self, install, sanity, mock_sanity,
+                                  mocker, capsys):
         """Check complaints when dependencies are missing."""
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
+        mock_sanity(sanity)
         missing_dict = {'base_one': ('dep_one', 'dep_two'),
                         'base_two': ('dep_three', 'dep_four')}
         mock_find_deps = mocker.patch(
@@ -153,7 +214,7 @@ If your system has a display, you can start the GUI anyway with
         mock_find_install.assert_called_once_with(missing)
 
         expect_err = self._err_msg + '''\
-the following Qt dependencies are missing on your system:
+the following Qt dependencies of PyQt6 are missing on your system:
     dep_one
     dep_two
     dep_three
@@ -175,23 +236,10 @@ Try again after installing them'''
         assert stderr.endswith('no Qt binding is installed (looked for '
                                'PyQt5).')
 
-    def test_requested_binding_crash(self, mocker, capsys):
-        """Check that no other binding is suggested if one was tried."""
-        mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT5,))
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
-                     return_value=PyQtSanity.RUNTIME_CRASH)
-        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
-                     return_value={})
-        with pytest.raises(SystemExit):
-            ViPErLEEDGUICLI().check_can_run_gui()
-        stderr = capsys.readouterr().err.strip()
-        assert QT_API_ENV not in stderr
-        assert 'crashed at startup.' + self._mock_abi_msg in stderr
-
     @parametrize('sanity,err_msg', _can_run.values(), ids=_can_run)
-    def test_result(self, sanity, err_msg, mocker, capsys):
+    def test_result(self, sanity, err_msg, mock_sanity, mocker, capsys):
         """Check the expected outcome."""
-        mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=sanity)
+        mock_sanity(sanity)
         find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
         cli = ViPErLEEDGUICLI()
         context = pytest.raises(SystemExit) if err_msg else nullcontext()

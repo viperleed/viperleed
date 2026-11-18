@@ -20,10 +20,16 @@ from viperleed.gui.detect_graphics import _STARTUP_TIMEOUT
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import PyQtSanityChecker
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 
 from .conftest import BOTH
 from .conftest import MODULE
+
+_FALLBACK = {PyQtSanity.NOT_FOUND,
+             PyQtSanity.IMPORT_ERROR,
+             PyQtSanity.RUNTIME_CRASH}
+_STOP = set(PyQtSanity) - _FALLBACK - {PyQtSanity.INVALID_QT_API}
 
 
 @fixture(name='mock_multiprocessing')
@@ -41,7 +47,7 @@ def fixture_mock_multiprocessing(mocker):
     The returned factory takes the following arguments:
     ready : {'imports', 'exited', 'none'}
         Which of the waited-for objects is ready within the start-up
-        time: the pipe (a binding was imported), the process sentinel
+        time: the pipe (the binding was imported), the process sentinel
         (the subprocess exited before), or none of them.
     alive : bool
         Whether the subprocess is still alive after the QApplication
@@ -49,9 +55,8 @@ def fixture_mock_multiprocessing(mocker):
     exitcode : object
         The exit code of the subprocess.
     """
-    def _mock(ready='imports', alive=False, exitcode=0):
+    def _mock(ready='imports', alive=False, exitcode=_EXIT_CODE_OFFSET):
         imports_done = mocker.MagicMock(name='imports_done')
-        imports_done.recv.return_value = PYQT5
         child_end = mocker.MagicMock(name='child_end')
         process = mocker.MagicMock(name='process', exitcode=exitcode)
         process.is_alive.return_value = alive
@@ -77,101 +82,124 @@ def fixture_mock_multiprocessing(mocker):
             process_cls=mocker.patch(f'{MODULE}.Process',
                                      return_value=process),
             wait=mocker.patch(f'{MODULE}.wait', side_effect=_wait),
-            candidates=mocker.patch(f'{MODULE}.get_candidates',
-                                    return_value=BOTH),
             )
     return _mock
 
 
 @parametrize(sanity=PyQtSanity)
-def test_sanity_importable(sanity):
-    """Check which statuses allow importing Qt."""
-    expect = sanity in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
-    assert sanity.importable == expect
+class TestPyQtSanity:
+    """Tests for the PyQtSanity enumeration."""
+
+    def test_allows_fallback(self, sanity):
+        """Check after which statuses another binding is tried."""
+        assert sanity.allows_fallback == (sanity in _FALLBACK)
+
+    def test_importable(self, sanity):
+        """Check which statuses allow importing Qt."""
+        expect = sanity in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
+        assert sanity.importable == expect
 
 
 class TestPyQtSanityChecker:
-    """Tests for the PyQtSanityChecker class."""
+    """Tests for the public interface of PyQtSanityChecker."""
 
     @fixture(autouse=True)
     def fresh_checker(self, mocker):
         """Forget previous checks."""
         mocker.patch.object(PyQtSanityChecker, '_status', None)
         mocker.patch.object(PyQtSanityChecker, '_binding', None)
+        mocker.patch.object(PyQtSanityChecker, '_results', ())
 
     @fixture(name='set_binding', autouse=True)
     def fixture_set_binding(self, mocker):
         """Do not select bindings globally."""
         return mocker.patch(f'{MODULE}.set_binding')
 
-    def test_checks_only_once(self, mocker):
-        """Ensure that checking is skipped when already done."""
-        mock_sanity = mocker.MagicMock()
-        mock_do_check = mocker.patch.object(PyQtSanityChecker,
-                                            '_check_pyqt_sanity',
-                                            return_value=(mock_sanity, None))
+    @fixture(name='mock_check')
+    def fixture_mock_check(self, mocker):
+        """Return a function that fakes the results of the checks."""
+        def _mock(*results):
+            return mocker.patch.object(PyQtSanityChecker,
+                                       '_check_bindings',
+                                       return_value=results)
+        return _mock
+
+    def test_assume_ok(self, mock_check):
+        """Ensure that assuming a sane Qt binding skips checking."""
+        mock_do_check = mock_check((PYQT6, PyQtSanity.RUNTIME_CRASH))
         checker = PyQtSanityChecker()
+        checker.assume_ok()
+        assert checker() is PyQtSanity.OK
+        assert checker.binding is None  # qt_compat selects one
+        assert not checker.results
+        mock_do_check.assert_not_called()
 
-        # Call it once: performs the check.
-        assert checker() is mock_sanity
-        # pylint: disable-next=protected-access
-        assert PyQtSanityChecker._status is mock_sanity
-
-        # Call it again: should skip the check
-        assert checker() is mock_sanity
+        # forget_status undoes it
+        checker.forget_status()
+        assert checker() is PyQtSanity.RUNTIME_CRASH
         mock_do_check.assert_called_once_with()
 
-    @parametrize(binding=BOTH)
-    def test_selects_binding(self, binding, set_binding, mocker):
-        """Check that the binding found is selected for qt_compat."""
-        mocker.patch.object(PyQtSanityChecker, '_check_pyqt_sanity',
-                            return_value=(PyQtSanity.OK, binding))
+    def test_checks_only_once(self, mock_check):
+        """Ensure that checking is skipped when already done."""
+        mock_do_check = mock_check((PYQT6, PyQtSanity.OK))
         checker = PyQtSanityChecker()
         assert checker() is PyQtSanity.OK
-        assert checker.binding == binding
-        set_binding.assert_called_once_with(binding)
+        assert checker() is PyQtSanity.OK
+        mock_do_check.assert_called_once_with()
 
-    def test_no_binding(self, set_binding, mocker):
+    @parametrize(sanity=(PyQtSanity.IMPORT_ERROR,
+                         PyQtSanity.RUNTIME_CRASH,
+                         PyQtSanity.UNRESPONSIVE))
+    def test_failed_binding(self, sanity, set_binding, mock_check):
+        """Check that a binding that failed is reported, not selected."""
+        mock_check((PYQT6, sanity))
+        checker = PyQtSanityChecker()
+        assert checker() is sanity
+        assert checker.binding == PYQT6
+        set_binding.assert_not_called()
+
+    def test_forget_status(self, mock_check):
+        """Ensure resetting re-checks."""
+        mock_do_check = mock_check((PYQT5, PyQtSanity.OK))
+        checker = PyQtSanityChecker()
+        checker()
+        checker.forget_status()
+        assert checker.binding is None
+        assert not checker.results
+        checker()
+        # pylint: disable-next=magic-value-comparison
+        assert mock_do_check.call_count == 2
+
+    def test_no_binding(self, set_binding, mock_check):
         """Check that no binding is selected if none was found."""
-        mocker.patch.object(PyQtSanityChecker, '_check_pyqt_sanity',
-                            return_value=(PyQtSanity.NOT_FOUND, None))
+        mock_check((PYQT6, PyQtSanity.NOT_FOUND),
+                   (PYQT5, PyQtSanity.NOT_FOUND))
         checker = PyQtSanityChecker()
         assert checker() is PyQtSanity.NOT_FOUND
         assert checker.binding is None
         set_binding.assert_not_called()
 
-    def test_forget_status(self, mocker):
-        """Ensure resetting re-checks."""
-        mock_do_check = mocker.patch.object(PyQtSanityChecker,
-                                            '_check_pyqt_sanity',
-                                            return_value=(None, PYQT5))
+    def test_results(self, mock_check):
+        """Check that the results of all bindings checked are kept."""
+        results = ((PYQT6, PyQtSanity.RUNTIME_CRASH),
+                   (PYQT5, PyQtSanity.OK))
+        mock_check(*results)
         checker = PyQtSanityChecker()
-        # Check once to ensure forget_status does the right thing
-        checker()
-
-        checker.forget_status()
-        assert checker.binding is None
-        checker()
-
-        # pylint: disable-next=magic-value-comparison
-        assert mock_do_check.call_count == 2
-
-    def test_assume_ok(self, mocker):
-        """Ensure that assuming a sane Qt binding skips checking."""
-        mock_sanity = mocker.MagicMock()
-        mock_do_check = mocker.patch.object(PyQtSanityChecker,
-                                            '_check_pyqt_sanity',
-                                            return_value=(mock_sanity, None))
-        checker = PyQtSanityChecker()
-        checker.assume_ok()
         assert checker() is PyQtSanity.OK
-        assert checker.binding is None  # qt_compat selects one
-        mock_do_check.assert_not_called()
+        assert checker.results == results
 
-        # forget_status undoes it
-        checker.forget_status()
-        assert checker() is mock_sanity
-        mock_do_check.assert_called_once_with()
+    @parametrize(binding=BOTH)
+    def test_selects_binding(self, binding, set_binding, mock_check):
+        """Check that the binding found is selected for qt_compat."""
+        mock_check((binding, PyQtSanity.OK))
+        checker = PyQtSanityChecker()
+        assert checker() is PyQtSanity.OK
+        assert checker.binding == binding
+        set_binding.assert_called_once_with(binding)
+
+
+class TestCheckBinding:
+    """Tests for checking one binding in a subprocess."""
 
     _exit_codes = {
         # Offset exit codes are mapped to the PyQtSanity members
@@ -187,14 +215,14 @@ class TestPyQtSanityChecker:
         }
 
     @staticmethod
-    def check_common_calls(mocks):
+    def check_common_calls(mocks, binding):
         """Check the calls made whatever the outcome of the check."""
         mocks.pipe.assert_called_once_with(duplex=False)
         mocks.process_cls.assert_called_once_with(target=ANY,
                                                   args=(mocks.child_end,))
         probe = mocks.process_cls.call_args[1]['target']
         assert isinstance(probe, _QtProbe)
-        assert probe._candidates == BOTH  # pylint: disable=W0212
+        assert probe._binding == binding  # pylint: disable=W0212
         mocks.process.start.assert_called_once_with()
         mocks.child_end.close.assert_called_once_with()
         mocks.wait.assert_called_once_with(
@@ -206,60 +234,123 @@ class TestPyQtSanityChecker:
         # pipe right after starting, i.e., before waiting.
         assert mocks.order == ['start', 'close_child', 'wait']
 
+    @parametrize(binding=BOTH)
     @parametrize(ready=('imports', 'exited'))
     @parametrize('exit_code,expect', _exit_codes.items())
-    def test_check_sanity_exits(self, ready, exit_code, expect,
-                                mock_multiprocessing):
+    def test_exits(self, binding, ready, exit_code, expect,
+                   mock_multiprocessing):
         """Check the result when the subprocess exits by itself."""
         mocks = mock_multiprocessing(ready=ready, exitcode=exit_code)
         # pylint: disable-next=protected-access
-        sanity, binding = PyQtSanityChecker._check_pyqt_sanity()
-        assert sanity is expect
-        # The binding is known only if it was sent before exiting,
-        # and it is reported only if it can be used
-        # pylint: disable-next=magic-value-comparison
-        usable = ready == 'imports' and expect.importable
-        expect_binding = PYQT5 if usable else None
-        assert binding == expect_binding
-        self.check_common_calls(mocks)
+        assert PyQtSanityChecker._check_binding(binding) is expect
+        self.check_common_calls(mocks, binding)
         mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
         mocks.process.terminate.assert_not_called()
 
-    def test_check_sanity_invalid_qt_api(self, mock_multiprocessing):
-        """Check the result when QT_API has an invalid value."""
-        mocks = mock_multiprocessing()
-        mocks.candidates.side_effect = QtBindingNotFoundError
-        # pylint: disable-next=protected-access
-        result = PyQtSanityChecker._check_pyqt_sanity()
-        assert result == (PyQtSanity.INVALID_QT_API, None)
-        mocks.pipe.assert_not_called()
-        mocks.process_cls.assert_not_called()
-
-    def test_check_sanity_no_display(self, mock_multiprocessing):
+    def test_no_display(self, mock_multiprocessing, mocker):
         """Check the result when creating a QApplication hangs."""
-        mocks = mock_multiprocessing(ready='imports', alive=True)
+        mocks = mock_multiprocessing(alive=True)
         # pylint: disable-next=protected-access
-        result = PyQtSanityChecker._check_pyqt_sanity()
-        assert result == (PyQtSanity.NO_DISPLAY, PYQT5)
-        self.check_common_calls(mocks)
-        mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
+        result = PyQtSanityChecker._check_binding(PYQT6)
+        assert result is PyQtSanity.NO_DISPLAY
+        self.check_common_calls(mocks, PYQT6)
         mocks.process.terminate.assert_called_once_with()
+        # Once for the QApplication, once after terminating it
+        assert mocks.process.join.mock_calls == [
+            mocker.call(_DISPLAY_TIMEOUT),
+            mocker.call(_DISPLAY_TIMEOUT),
+            ]
 
-    def test_check_sanity_no_message(self, mock_multiprocessing):
-        """Check the result when the subprocess dies without sending."""
-        mocks = mock_multiprocessing(ready='imports',
-                                     exitcode=-6)  # SIGABRT
-        mocks.imports_done.recv.side_effect = EOFError
-        # pylint: disable-next=protected-access
-        result = PyQtSanityChecker._check_pyqt_sanity()
-        assert result == (PyQtSanity.RUNTIME_CRASH, None)
-
-    def test_check_sanity_unresponsive(self, mock_multiprocessing):
+    def test_unresponsive(self, mock_multiprocessing):
         """Check the result when importing does not finish in time."""
         mocks = mock_multiprocessing(ready='none', alive=True)
         # pylint: disable-next=protected-access
-        result = PyQtSanityChecker._check_pyqt_sanity()
-        assert result == (PyQtSanity.UNRESPONSIVE, None)
-        self.check_common_calls(mocks)
-        mocks.process.join.assert_not_called()
+        result = PyQtSanityChecker._check_binding(PYQT6)
+        assert result is PyQtSanity.UNRESPONSIVE
+        self.check_common_calls(mocks, PYQT6)
         mocks.process.terminate.assert_called_once_with()
+        # Only after terminating, not to leave a zombie behind
+        mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
+
+
+class TestCheckBindings:
+    """Tests for checking the candidate bindings one at a time."""
+
+    @fixture(name='mocks')
+    def fixture_mocks(self, mocker):
+        """Fake the candidates (all installed), and their checks."""
+        return SimpleNamespace(
+            candidates=mocker.patch(f'{MODULE}.get_candidates',
+                                    return_value=BOTH),
+            find_spec=mocker.patch('importlib.util.find_spec'),
+            check=mocker.patch.object(PyQtSanityChecker, '_check_binding'),
+            )
+
+    def test_invalid_qt_api(self, mocks):
+        """Check the results if QT_API prevents selecting a binding."""
+        mocks.candidates.side_effect = QtBindingNotFoundError
+        # pylint: disable-next=protected-access
+        results = PyQtSanityChecker._check_bindings()
+        assert results == ((None, PyQtSanity.INVALID_QT_API),)
+        mocks.check.assert_not_called()
+
+    def test_not_installed(self, mocks, mocker):
+        """Check that no subprocess is started for a missing binding."""
+        mocks.find_spec.side_effect = (
+            lambda name: None if name == PYQT6 else mocker.MagicMock()
+            )
+        mocks.check.return_value = PyQtSanity.OK
+        # pylint: disable-next=protected-access
+        results = PyQtSanityChecker._check_bindings()
+        assert results == ((PYQT6, PyQtSanity.NOT_FOUND),
+                           (PYQT5, PyQtSanity.OK))
+        mocks.check.assert_called_once_with(PYQT5)
+
+    @parametrize(first=sorted(_STOP))
+    def test_stops(self, first, mocks):
+        """Check that no other binding is tried after some statuses."""
+        mocks.check.return_value = first
+        # pylint: disable-next=protected-access
+        results = PyQtSanityChecker._check_bindings()
+        assert results == ((PYQT6, first),)
+        mocks.check.assert_called_once_with(PYQT6)
+
+    @parametrize(first=sorted(_FALLBACK - {PyQtSanity.NOT_FOUND}))
+    def test_tries_next(self, first, mocks):
+        """Check that the next binding is tried after some failures."""
+        mocks.check.side_effect = [first, PyQtSanity.OK]
+        # pylint: disable-next=protected-access
+        results = PyQtSanityChecker._check_bindings()
+        assert results == ((PYQT6, first), (PYQT5, PyQtSanity.OK))
+
+
+# The results of the checks, and the expected (status, binding)
+# pylint: disable-next=consider-using-namedtuple-or-dataclass
+_SUMMARIES = {
+    'first OK': (((PYQT6, PyQtSanity.OK),),
+                 (PyQtSanity.OK, PYQT6)),
+    'fallback OK': (((PYQT6, PyQtSanity.RUNTIME_CRASH),
+                     (PYQT5, PyQtSanity.OK)),
+                    (PyQtSanity.OK, PYQT5)),
+    'none installed': (((PYQT6, PyQtSanity.NOT_FOUND),
+                        (PYQT5, PyQtSanity.NOT_FOUND)),
+                       (PyQtSanity.NOT_FOUND, None)),
+    'first unusable': (((PYQT6, PyQtSanity.IMPORT_ERROR),
+                        (PYQT5, PyQtSanity.RUNTIME_CRASH)),
+                       (PyQtSanity.IMPORT_ERROR, PYQT6)),
+    'skip missing': (((PYQT6, PyQtSanity.NOT_FOUND),
+                      (PYQT5, PyQtSanity.IMPORT_ERROR)),
+                     (PyQtSanity.IMPORT_ERROR, PYQT5)),
+    'last stops': (((PYQT6, PyQtSanity.RUNTIME_CRASH),
+                    (PYQT5, PyQtSanity.NO_DISPLAY)),
+                   (PyQtSanity.NO_DISPLAY, PYQT5)),
+    'invalid QT_API': (((None, PyQtSanity.INVALID_QT_API),),
+                       (PyQtSanity.INVALID_QT_API, None)),
+    }
+
+
+@parametrize('results,expect', _SUMMARIES.values(), ids=_SUMMARIES)
+def test_summarize(results, expect):
+    """Check the status and binding of all results."""
+    # pylint: disable-next=protected-access
+    assert PyQtSanityChecker._summarize(results) == expect

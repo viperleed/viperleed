@@ -2,11 +2,11 @@
 
 Defines functionality to detect whether the current system is capable
 of displaying widgets, and which Qt binding (PyQt5 or PyQt6) can be
-used for this. The bindings are tried in a subprocess, as a broken
-Qt installation may crash the interpreter. The candidates, and their
-order, are the same as for viperleed.gui.qt_compat (see the binding
-module there). The first one that works is then selected for use by
-viperleed.gui.qt_compat.
+used for this. The bindings are tried one at a time, each in its own
+subprocess, as a broken Qt installation may crash the interpreter. The
+candidates, and their order, are the same as for viperleed.gui.qt_compat
+(see the binding module there). The first one that works is then
+selected for use by viperleed.gui.qt_compat.
 """
 
 __authors__ = (
@@ -65,6 +65,18 @@ class PyQtSanity(IntEnum):
     INVALID_QT_API = 6  # The QT_API environment variable is invalid
 
     @property
+    def allows_fallback(self):
+        """Return whether another binding may work after this status.
+
+        Another binding may work if this one is missing, broken, or
+        crashes. A missing display, or a system so busy that
+        importing does not finish in time, would affect any binding.
+        """
+        return self in {PyQtSanity.NOT_FOUND,
+                        PyQtSanity.IMPORT_ERROR,
+                        PyQtSanity.RUNTIME_CRASH}
+
+    @property
     def importable(self):
         """Return whether this status means that Qt can be imported."""
         return self in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
@@ -77,19 +89,43 @@ class PyQtSanityChecker:
     the environment to have changed, call .forget_status() first to
     force a new explicit check. If a binding can be imported, it is
     selected for use by viperleed.gui.qt_compat.
+
+    The candidate bindings (see qt_compat.binding.get_candidates) are
+    checked one at a time, each in its own subprocess, in order. The
+    check stops at the first binding that can be used, or after a
+    status that would affect any binding (see allows_fallback of
+    PyQtSanity).
     """
 
-    _status = None
     _binding = None
+    _results = ()
+    _status = None
 
     @property
     def binding(self):
-        """Return the name of the binding that was imported, or None.
+        """Return the name of the binding the status is about, or None.
 
-        This is None also before checking, or if the check was skipped
-        via assume_ok.
+        For a status that allows importing Qt, this is the binding
+        that was imported (and selected for use by qt_compat). If the
+        check of the last binding stopped the checks (e.g., because
+        there is no display), it is that binding. Otherwise, it is the
+        first binding that is installed but unusable (e.g., broken).
+        It is None if no binding was found, before checking, or if the
+        check was skipped via assume_ok.
         """
         return type(self)._binding
+
+    @property
+    def results(self):
+        """Return the (binding, PyQtSanity) of each binding checked.
+
+        The bindings are in the order they were checked. Those that
+        are not installed are included, with status NOT_FOUND. It is
+        ((None, INVALID_QT_API),) if the QT_API environment variable
+        prevents selecting any binding, and empty before checking, or
+        if the check was skipped via assume_ok.
+        """
+        return type(self)._results
 
     def __call__(self):
         """Check whether a Qt binding is usable.
@@ -101,8 +137,9 @@ class PyQtSanityChecker:
         """
         cls = type(self)
         if cls._status is None:
-            cls._status, cls._binding = self._check_pyqt_sanity()
-            if cls._binding:
+            cls._results = self._check_bindings()
+            cls._status, cls._binding = self._summarize(cls._results)
+            if cls._binding and cls._status.importable:
                 set_binding(cls._binding)
         return cls._status
 
@@ -111,60 +148,83 @@ class PyQtSanityChecker:
         """Take Qt as usable without checking the environment."""
         cls._status = PyQtSanity.OK
         cls._binding = None
+        cls._results = ()
 
     @classmethod
     def forget_status(cls):
         """Forget any previous checks of the environment."""
         cls._status = None
         cls._binding = None
+        cls._results = ()
 
     @classmethod
-    def _check_pyqt_sanity(cls):
-        """Check whether a Qt binding is usable.
+    def _check_binding(cls, binding):
+        """Return the PyQtSanity of `binding`, checked in a subprocess.
 
         The check runs in a subprocess, not to crash the current
         interpreter. Two time limits apply. The subprocess has up
-        to _STARTUP_TIMEOUT seconds to start and import one of the
-        candidate Qt bindings. It then has _DISPLAY_TIMEOUT seconds
-        to create a QApplication. Creating a QApplication may hang
-        on a system that has no working display (e.g., if the DISPLAY
-        environment variable points to an X server that does not
-        answer).
+        to _STARTUP_TIMEOUT seconds to start and import `binding`.
+        It then has _DISPLAY_TIMEOUT seconds to create a QApplication.
+        Creating a QApplication may hang on a system that has no
+        working display (e.g., if the DISPLAY environment variable
+        points to an X server that does not answer).
+
+        Parameters
+        ----------
+        binding : str
+            The name of the binding to be checked.
 
         Returns
         -------
-        sanity : PyQtSanity
-            The status of the Qt installation.
-        binding : str or None
-            The name of the binding that could be imported. None if
-            none could, or if the subprocess did not report it.
+        PyQtSanity
+            The status of `binding`.
         """
-        try:
-            candidates = get_candidates()
-        except QtBindingNotFoundError:
-            return PyQtSanity.INVALID_QT_API, None
         imports_done, child_end = Pipe(duplex=False)
-        proc = Process(target=_QtProbe(candidates), args=(child_end,))
+        proc = Process(target=_QtProbe(binding), args=(child_end,))
         proc.start()
         # Close our copy of the child's end, so that imports_done
         # becomes ready (end of file) also if the subprocess dies
         child_end.close()
         try:
-            ready, binding = cls._wait_for_imports(imports_done,
-                                                   proc.sentinel)
+            # Wait until the binding was imported or the subprocess
+            # exited. What was sent, if anything, is irrelevant.
+            ready = wait((imports_done, proc.sentinel), _STARTUP_TIMEOUT)
         finally:
             imports_done.close()
         if not ready:
-            proc.terminate()
-            return PyQtSanity.UNRESPONSIVE, None
+            cls._stop(proc)
+            return PyQtSanity.UNRESPONSIVE
         proc.join(_DISPLAY_TIMEOUT)
         if proc.is_alive():
             # The QApplication did not crash the interpreter, but it is
             # still trying to start up. This means we have no display.
-            proc.terminate()
-            return PyQtSanity.NO_DISPLAY, binding
-        sanity = cls._sanity_from_exit_code(proc.exitcode)
-        return sanity, binding if sanity.importable else None
+            cls._stop(proc)
+            return PyQtSanity.NO_DISPLAY
+        return cls._sanity_from_exit_code(proc.exitcode)
+
+    @classmethod
+    def _check_bindings(cls):
+        """Return the (binding, PyQtSanity) of the bindings checked.
+
+        Returns
+        -------
+        results : tuple
+            See the results property.
+        """
+        try:
+            candidates = get_candidates()
+        except QtBindingNotFoundError:
+            return ((None, PyQtSanity.INVALID_QT_API),)
+        results = []
+        for binding in candidates:
+            # A binding that is not installed needs no subprocess
+            installed = importlib.util.find_spec(binding) is not None
+            sanity = (cls._check_binding(binding) if installed
+                      else PyQtSanity.NOT_FOUND)
+            results.append((binding, sanity))
+            if not sanity.allows_fallback:
+                break
+        return tuple(results)
 
     @staticmethod
     def _sanity_from_exit_code(exit_code):
@@ -179,33 +239,38 @@ class PyQtSanityChecker:
             return PyQtSanity.RUNTIME_CRASH
 
     @staticmethod
-    def _wait_for_imports(imports_done, sentinel):
-        """Wait until a binding was imported, or the subprocess exited.
+    def _stop(proc):
+        """Terminate the checker subprocess `proc`, and wait for it."""
+        proc.terminate()
+        # Do not leave a zombie process behind on UNIX
+        proc.join(_DISPLAY_TIMEOUT)
+
+    @staticmethod
+    def _summarize(results):
+        """Return the status, and the binding, of all `results`.
 
         Parameters
         ----------
-        imports_done : multiprocessing.connection.Connection
-            The receiving end of the pipe, to which the checker
-            subprocess sends the name of the binding once it was
-            imported.
-        sentinel : int
-            The sentinel of the checker subprocess.
+        results : Sequence
+            (binding, PyQtSanity) pairs, in the order they were
+            checked. There is at least one.
 
         Returns
         -------
-        ready : list
-            Those among `imports_done` and `sentinel` that are ready
-            within _STARTUP_TIMEOUT seconds.
+        status : PyQtSanity
+            The status of the last binding checked, if it stopped
+            the checks. Otherwise, that of the first binding that is
+            installed but unusable, or NOT_FOUND if none is installed.
         binding : str or None
-            The name of the binding that was imported, if it was sent.
+            The binding that `status` is about, or None if no binding
+            is installed.
         """
-        ready = wait((imports_done, sentinel), _STARTUP_TIMEOUT)
-        if imports_done not in ready:
-            return ready, None
-        try:
-            return ready, imports_done.recv()
-        except (EOFError, OSError):  # Subprocess ended without sending
-            return ready, None
+        *_, (last_binding, last_status) = results
+        if not last_status.allows_fallback:
+            return last_status, last_binding
+        unusable = ((sanity, binding) for binding, sanity in results
+                    if sanity is not PyQtSanity.NOT_FOUND)
+        return next(unusable, (PyQtSanity.NOT_FOUND, None))
 
 
 check_pyqt_sanity = PyQtSanityChecker()
@@ -508,42 +573,40 @@ class QtDependencyFinder:
 # The only public method is __call__, as this is a subprocess target
 # pylint: disable-next=too-few-public-methods
 class _QtProbe:
-    """The checker of Qt bindings that runs in a subprocess.
+    """The checker of a Qt binding that runs in a subprocess.
 
     Importing a broken Qt installation may crash the interpreter, and
     creating a QApplication may hang on a system without a display.
-    Hence, PyQtSanityChecker runs this in a subprocess. An instance is
-    the target of the subprocess: it is pickled when the subprocess is
-    spawned (the default on Windows and macOS), hence it only stores
-    the names of the candidate bindings.
+    Hence, PyQtSanityChecker runs this in a subprocess, once for each
+    binding. An instance is the target of the subprocess: it is pickled
+    when the subprocess is spawned (the default on Windows and macOS),
+    hence it only stores the name of the binding.
     """
 
-    def __init__(self, candidates):
+    def __init__(self, binding):
         """Initialize an instance.
 
         Parameters
         ----------
-        candidates : Sequence of str
-            The names of the bindings to be tried, in order.
+        binding : str
+            The name of the binding to be checked.
         """
-        self._candidates = tuple(candidates)
+        self._binding = binding
 
     def __call__(self, imports_done):
-        """Import a Qt binding and its modules, then exit.
+        """Import the binding and its modules, then exit.
 
         Calling this may block forever on a system that has no
         graphical capability. Otherwise, it always exits the
         interpreter, with an exit code that gives the outcome (see
-        _exit_with): IMPORT_ERROR if any binding was found but could
-        not be imported, NOT_FOUND if none was found. If a binding
-        could be imported, the exit code is that of _init_dummy_qapp.
+        _exit_with): that of _try_importing if importing fails, that
+        of _init_dummy_qapp otherwise.
 
         Parameters
         ----------
         imports_done : multiprocessing.connection.Connection
-            The sending end of a pipe. The name of the binding is
-            sent, and the connection closed, once all its modules
-            were imported.
+            The sending end of a pipe. A message is sent, and the
+            connection closed, once all modules were imported.
 
         Returns
         -------
@@ -556,21 +619,12 @@ class _QtProbe:
         # temporary (e.g., json) file for better context. We can
         # consider doing so in the future if it can help debugging
         # user problems.
-        failures = set()
-        binding = None
-        for candidate in self._candidates:
-            sanity = self._try_importing(candidate)
-            if sanity is PyQtSanity.OK:
-                binding = candidate
-                break
-            failures.add(sanity)
-        if binding is None:
-            self._exit_with(PyQtSanity.IMPORT_ERROR
-                            if PyQtSanity.IMPORT_ERROR in failures
-                            else PyQtSanity.NOT_FOUND)
-        imports_done.send(binding)
+        sanity = self._try_importing(self._binding)
+        if sanity is not PyQtSanity.OK:
+            self._exit_with(sanity)
+        imports_done.send(True)
         imports_done.close()
-        self._init_dummy_qapp(binding)
+        self._init_dummy_qapp(self._binding)
 
     @staticmethod
     def _exit_with(sanity):
