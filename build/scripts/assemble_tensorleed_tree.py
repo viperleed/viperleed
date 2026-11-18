@@ -15,7 +15,9 @@ TREE_CONTENTS lists the folders copied from each tag, and the
 eeasisss executable is compiled from EEASISSS_TAG. In LEGACY_LIB, the
 shipped random_.o and MPIrandom_.o are replaced by a random_.o
 compiled on this machine, as the installation instructions of that
-TensErLEED version require.
+TensErLEED version require. It is compiled from RANDOM_SOURCE, the
+cross-platform random_.c of the ViPErLEED documentation, which also
+replaces the shipped random_.c in the tree.
 
 TARGET_DIR must not exist or be empty: the script refuses to write
 into a non-empty directory. Downloads and builds are made in a
@@ -74,6 +76,10 @@ EEASISSS_MAKE = (
     else ('make', 'gcc')
     )
 LEGACY_LIB = Path('TensErLEED-v1.61', 'lib')
+# The shipped random_.c compiles on UNIX only. This one is used on
+# all platforms, as the installation instructions suggest for Windows.
+RANDOM_SOURCE = (Path(__file__).resolve().parents[2]
+                 / 'doc/_static/tenserleed_windows/random_.c')
 WORK_DIR_NAME = '_assemble_tmp'
 
 
@@ -166,10 +172,11 @@ def _compile_eeasisss(src, target):
 
 
 def _compile_random(lib):
-    """Replace the shipped randomizer objects with a compiled one."""
-    print(f'Compiling random_.o in {lib}')
+    """Compile RANDOM_SOURCE in place of the shipped randomizer."""
+    print(f'Compiling random_.o in {lib} from {RANDOM_SOURCE}')
     for name in ('random_.o', 'MPIrandom_.o'):
         (lib / name).unlink()
+    shutil.copyfile(RANDOM_SOURCE, lib / 'random_.c')
     _run(['gcc', '-O3', '-c', 'random_.c', '-o', 'random_.o'], lib)
 
 

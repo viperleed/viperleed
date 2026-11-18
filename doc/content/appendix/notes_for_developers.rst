@@ -31,8 +31,10 @@ root of your local copy of the |repo|:
 
 The script downloads release tags of the ``viperleed-tensorleed`` repository,
 copies the :term:`TensErLEED` versions used by the tests into the given
-directory, compiles :file:`random_.o` for :term:`TensErLEED` v1.6.1, and
-compiles :program:`eeasisss`. It needs Internet access, :program:`gcc`,
+directory, compiles :file:`random_.o` for :term:`TensErLEED` v1.6.1 (from
+the cross-platform :download:`random_.c</_static/tenserleed_windows/random_.c>`
+of :ref:`install_tensorleed`, on all platforms), and compiles
+:program:`eeasisss`. It needs Internet access, :program:`gcc`,
 :program:`gfortran`, and :program:`make` (on Windows, the
 :file:`make.bat` file shipped with :program:`eeasisss` is used instead;
 the script has been tested on Linux only). The directory must not exist or

@@ -10,9 +10,9 @@
 #   the check "TensErLEED tests" in the ruleset of master only. On
 #   pull requests into other branches the workflow does not start.
 # - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
-#   and cached. The cache key holds the hash of the script and the
-#   versions of the compilers it uses, as the tree contains objects
-#   compiled on the runner.
+#   and cached. The cache key holds the hashes of the script and of
+#   the random_.c it compiles, and the versions of the compilers it
+#   uses, as the tree contains objects compiled on the runner.
 
 name: TensErLEED tests
 
@@ -70,7 +70,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.VIPERLEED_TENSORLEED }}
-          key: tensorleed-tree-${{ runner.os }}-${{ steps.compilers.outputs.versions }}-${{ hashFiles('build/scripts/assemble_tensorleed_tree.py') }}
+          key: tensorleed-tree-${{ runner.os }}-${{ steps.compilers.outputs.versions }}-${{ hashFiles('build/scripts/assemble_tensorleed_tree.py', 'doc/_static/tenserleed_windows/random_.c') }}
       - name: Assemble the TensErLEED tree
         if: ${{ steps.tree-cache.outputs.cache-hit != 'true' }}
         run: python build/scripts/assemble_tensorleed_tree.py "$VIPERLEED_TENSORLEED"
