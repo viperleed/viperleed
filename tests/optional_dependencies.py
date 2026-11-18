@@ -4,6 +4,10 @@ Tests that need an optional dependency (mpifort/gfortran) skip, with
 a reason naming the dependency, when it is missing. With the
 command-line option --require-all, those skips become failures, so
 that a run on a complete environment cannot silently skip tests.
+The option --allow-missing exempts the dependencies it names (comma
+separated, may be repeated) from --require-all: their tests skip as
+without it, e.g., on a machine with no compilers, with
+--require-all --allow-missing=mpifort,gfortran.
 
 Call the `missing_dependency` fixture where a test finds that a
 dependency is missing:
@@ -24,6 +28,7 @@ __license__ = 'GPLv3+'
 
 import pytest
 
+ALLOW_MISSING_OPTION = '--allow-missing'
 REQUIRE_ALL_OPTION = '--require-all'
 
 
@@ -33,13 +38,24 @@ def _skip_or_fail(config, name, detail=''):
     if detail:
         reason = f'{reason}: {detail}'
     if config.getoption('require_all'):
-        pytest.fail(f'{reason} (required by {REQUIRE_ALL_OPTION})',
-                    pytrace=False)
+        if name not in _allowed(config):
+            pytest.fail(f'{reason} (required by {REQUIRE_ALL_OPTION})',
+                        pytrace=False)
+        reason = f'{reason} (allowed by {ALLOW_MISSING_OPTION})'
     pytest.skip(reason)
 
 
+def _allowed(config):
+    """Return the names given to --allow-missing."""
+    given = config.getoption('allow_missing') or ()
+    return {name.strip()
+            for names in given
+            for name in names.split(',')
+            if name.strip()}
+
+
 def pytest_addoption(parser):
-    """Add the option that makes missing dependencies fail tests."""
+    """Add the options that make missing dependencies fail tests."""
     parser.addoption(
         REQUIRE_ALL_OPTION,
         dest='require_all',
@@ -47,6 +63,16 @@ def pytest_addoption(parser):
         default=False,
         help=('Fail, rather than skip, tests that need a missing '
               'optional dependency (mpifort/gfortran).'),
+        )
+    parser.addoption(
+        ALLOW_MISSING_OPTION,
+        dest='allow_missing',
+        action='append',
+        metavar='NAME[,NAME...]',
+        help=('Skip, even with --require-all, tests that need one of '
+              'these missing optional dependencies (comma separated, '
+              'may be repeated). Example: '
+              '--allow-missing=mpifort,gfortran.'),
         )
 
 
