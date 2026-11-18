@@ -28,9 +28,9 @@ def test_unaffected():
 """
 
 
-def _run(pytester, *args):
-    """Run pytest on the test file with the plugin."""
-    pytester.makepyfile(_TEST_FILE)
+def _run(pytester, *args, source=_TEST_FILE):
+    """Run pytest on a test file with the plugin."""
+    pytester.makepyfile(source)
     return pytester.runpytest_inprocess(
         *args,
         '-p', 'no:cacheprovider',
@@ -51,11 +51,35 @@ def _run_xdist(pytester, monkeypatch, *args):
         )
 
 
+_UNREGISTERED = 'not-a-dependency'
+_UNREGISTERED_FILE = f"""
+def test_unregistered(missing_dependency):
+    missing_dependency({_UNREGISTERED!r})
+"""
+
+
 @parametrize(option=(_REQUIRE, _ALLOW))
 def test_option_in_help(pytester, option):
     """Check that the options are documented in the help."""
     result = _run(pytester, '--help')
     result.stdout.fnmatch_lines([f'*{option}*'])
+
+
+def test_help_lists_known(pytester):
+    """Check that --require-all lists the known dependencies."""
+    result = _run(pytester, '--help')
+    known = '/'.join(optional_dependencies.KNOWN_DEPENDENCIES)
+    result.stdout.fnmatch_lines([f'*({known})*'])
+
+
+@parametrize(args=((), (_REQUIRE,)))
+def test_unregistered_name(pytester, args):
+    """Check that a test fails on an unregistered dependency name."""
+    result = _run(pytester, *args, source=_UNREGISTERED_FILE)
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines([
+        f'*{_UNREGISTERED!r} is not one of the KNOWN_DEPENDENCIES*',
+        ])
 
 
 def test_skip_without_option(pytester):

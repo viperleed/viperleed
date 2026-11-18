@@ -1,9 +1,10 @@
 """Skip tests on missing optional dependencies, or fail on request.
 
-Tests that need an optional dependency (mpifort/gfortran) skip, with
-a reason naming the dependency, when it is missing. With the
-command-line option --require-all, those skips become failures, so
-that a run on a complete environment cannot silently skip tests.
+Tests that need an optional dependency (one of KNOWN_DEPENDENCIES,
+the registry of their names) skip, with a reason naming the
+dependency, when it is missing. With the command-line option
+--require-all, those skips become failures, so that a run on a
+complete environment cannot silently skip tests.
 The option --allow-missing exempts the dependencies it names (comma
 separated, may be repeated) from --require-all: their tests skip as
 without it, e.g., on a machine with no compilers, with
@@ -31,7 +32,7 @@ __license__ = 'GPLv3+'
 import pytest
 
 ALLOW_MISSING_OPTION = '--allow-missing'
-KNOWN_DEPENDENCIES = ('gfortran', 'mpifort')
+KNOWN_DEPENDENCIES = ('gfortran', 'mpifort')  # Add new names here
 REQUIRE_ALL_OPTION = '--require-all'
 
 
@@ -59,13 +60,14 @@ def _allowed(config):
 
 def pytest_addoption(parser):
     """Add the options that make missing dependencies fail tests."""
+    known = '/'.join(KNOWN_DEPENDENCIES)
     parser.addoption(
         REQUIRE_ALL_OPTION,
         dest='require_all',
         action='store_true',
         default=False,
         help=('Fail, rather than skip, tests that need a missing '
-              'optional dependency (mpifort/gfortran).'),
+              f'optional dependency ({known}).'),
         )
     parser.addoption(
         ALLOW_MISSING_OPTION,
@@ -93,7 +95,14 @@ def pytest_configure(config):
 
 @pytest.fixture(name='missing_dependency')
 def fixture_missing_dependency(request):
-    """Return a function that skips (or fails) the test for `name`."""
+    """Return a function that skips (or fails) the test for `name`.
+
+    The test fails if `name` is not one of KNOWN_DEPENDENCIES.
+    """
     def _missing(name, detail=''):
+        if name not in KNOWN_DEPENDENCIES:
+            pytest.fail(f'{name!r} is not one of the KNOWN_DEPENDENCIES '
+                        f'{KNOWN_DEPENDENCIES} of {__name__}',
+                        pytrace=False)
         _skip_or_fail(request.config, name, detail)
     return _missing
