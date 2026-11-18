@@ -49,7 +49,9 @@ class TestQtProbe:
     @fixture(name='check_version', autouse=True)
     def fixture_check_version(self, mocker):
         """Take any binding as new enough, unless told otherwise."""
-        return mocker.patch(f'{MODULE}.check_version')
+        return mocker.patch(
+            'viperleed.gui.qt_compat.binding.check_version'
+            )
 
     @fixture(name='imports_done')
     def fixture_imports_done(self, mocker):

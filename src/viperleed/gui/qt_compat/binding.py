@@ -151,6 +151,53 @@ def get_candidates():
     return already_imported[:1] or SUPPORTED_BINDINGS
 
 
+def import_binding(binding, modules=()):
+    """Import `binding` and its `modules`, and check its version.
+
+    This defines when a binding counts as not installed, broken, or
+    too old, both for selecting a binding and for checking bindings
+    in a subprocess (see viperleed.gui.detect_graphics). A binding
+    counts as not installed only if its package, or its QtCore, is
+    missing. The latter happens if the package is a namespace package
+    without modules (e.g., if only PyQt5-sip and PyQt5-Qt5 are left
+    after uninstalling PyQt5). Any other missing module (e.g.,
+    PyQt5.sip, or QtWidgets) means that the binding is installed, but
+    broken. QtCore is always imported, and the version is checked
+    before importing other modules.
+
+    Parameters
+    ----------
+    binding : str
+        Either PYQT5 or PYQT6.
+    modules : Sequence of str, optional
+        Names of the Qt modules (e.g., 'QtWidgets') to import besides
+        QtCore. Default is none.
+
+    Raises
+    ------
+    QtBindingNotFoundError
+        If `binding` is not installed.
+    QtBindingTooOldError
+        If `binding` is older than its MIN_VERSIONS.
+    ImportError
+        If `binding` is installed, but broken (e.g., it misses some
+        of its own modules, or a library it needs fails to load).
+    """
+    qt_core = f'{binding}.QtCore'
+    # Each module once, in this order (QtCore may be in modules)
+    to_import = dict.fromkeys((binding, qt_core,
+                               *(f'{binding}.{m}' for m in modules)))
+    for module in to_import:
+        try:
+            imported = importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            if exc.name in (binding, qt_core):
+                raise QtBindingNotFoundError(str(exc)) from exc
+            raise
+        if module == qt_core:
+            check_version(binding, imported)
+
+
 def set_binding(binding):
     """Select `binding`, without importing it.
 
@@ -199,27 +246,15 @@ def _select_binding():
     errors = []
     broken = False
     for binding in candidates:
-        qt_core = f'{binding}.QtCore'
         try:
-            qt_core_module = importlib.import_module(qt_core)
-        except ImportError as exc:
+            import_binding(binding)
+        except QtBindingNotFoundError as exc:
             errors.append(f'{binding}: {exc}')
-            # The package, or its QtCore, may be missing altogether,
-            # e.g., if only PyQt5-sip and PyQt5-Qt5 are left after
-            # uninstalling PyQt5. Anything else (e.g., a missing
-            # PyQt6.sip, or a DLL that fails to load) means that the
-            # binding is installed, but broken.
-            not_found = (isinstance(exc, ModuleNotFoundError)
-                         and exc.name in (binding, qt_core))
-            broken = broken or not not_found
-            continue
-        try:
-            check_version(binding, qt_core_module)
-        except QtBindingTooOldError as exc:
-            errors.append(str(exc))
+        except ImportError as exc:  # Installed, but broken or too old
+            errors.append(f'{binding}: {exc}')
             broken = True
-            continue
-        return binding
+        else:
+            return binding
     msg = (f'Could not import {requested}, requested via '
            f'{QT_API_ENV}={os.environ[QT_API_ENV]!r}. ' if requested
            else f'Could not import any Qt binding among {candidates}. ')

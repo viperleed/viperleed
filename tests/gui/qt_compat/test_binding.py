@@ -138,7 +138,8 @@ class TestDefaultSelection:
         """Check that PyQt5 is tried if PyQt6 cannot be imported."""
         mock_import = fake_bindings((PYQT5,))
         get_binding()
-        assert mock_import.mock_calls == [mocker.call('PyQt6.QtCore'),
+        assert mock_import.mock_calls == [mocker.call('PyQt6'),
+                                          mocker.call('PyQt5'),
                                           mocker.call('PyQt5.QtCore')]
 
     def test_namespace_package_left(self, fake_bindings):
@@ -219,15 +220,16 @@ class TestQtApi:
         mock_import = fake_bindings((PYQT6,))
         with pytest.raises(QtApiError, match=QT_API_ENV):
             get_binding()
-        mock_import.assert_called_once_with('PyQt5.QtCore')
+        mock_import.assert_called_once_with('PyQt5')
 
     def test_requested_overrides_preference(self, fake_bindings,
-                                            monkeypatch):
+                                            monkeypatch, mocker):
         """Check that QT_API wins over the preferred binding."""
         monkeypatch.setenv(QT_API_ENV, 'pyqt5')
         mock_import = fake_bindings(BOTH)
         assert get_binding() == PYQT5
-        mock_import.assert_called_once_with('PyQt5.QtCore')
+        assert mock_import.mock_calls == [mocker.call('PyQt5'),
+                                          mocker.call('PyQt5.QtCore')]
 
     @parametrize(qt_api=('pyside6', 'pyqt4', 'qt5'))
     def test_unsupported(self, qt_api, fake_bindings, monkeypatch):
@@ -274,6 +276,66 @@ class TestGetCandidates:
         monkeypatch.setenv(QT_API_ENV, 'pyside6')
         with pytest.raises(QtApiError):
             binding.get_candidates()
+
+
+class TestImportBinding:
+    """Tests for the import_binding function."""
+
+    _widgets = f'{PYQT6}.QtWidgets'
+
+    @fixture(name='mock_import')
+    def fixture_mock_import(self, mocker):
+        """Return a fake import_module, for a recent binding."""
+        def _import(name):
+            package = name.split('.')[0]
+            return _fake_qt_core(mocker, package, _NEW_ENOUGH[package])
+        mock_importlib = mocker.patch(f'{_MODULE}.importlib')
+        mock_importlib.import_module.side_effect = _import
+        return mock_importlib.import_module
+
+    @parametrize(error=(ModuleNotFoundError(name=_widgets),
+                        ModuleNotFoundError(name=f'{PYQT6}.sip'),
+                        ImportError('DLL load failed')))
+    def test_broken(self, error, mock_import):
+        """Check that other import errors mean a broken binding."""
+        default = mock_import.side_effect
+        def _import(name):
+            if name == self._widgets:
+                raise error
+            return default(name)
+        mock_import.side_effect = _import
+        with pytest.raises(ImportError) as exc_info:
+            binding.import_binding(PYQT6, ('QtWidgets',))
+        assert exc_info.value is error
+        assert not isinstance(exc_info.value, QtBindingNotFoundError)
+
+    @parametrize(qt_binding=BOTH)
+    def test_imports_once_in_order(self, qt_binding, mock_import, mocker):
+        """Check that each module is imported once, QtCore first."""
+        binding.import_binding(qt_binding, ('QtWidgets', 'QtCore', 'QtGui'))
+        assert mock_import.mock_calls == [
+            mocker.call(qt_binding),
+            mocker.call(f'{qt_binding}.QtCore'),
+            mocker.call(f'{qt_binding}.QtWidgets'),
+            mocker.call(f'{qt_binding}.QtGui'),
+            ]
+
+    @parametrize(missing=('', '.QtCore'))
+    def test_not_installed(self, missing, mock_import):
+        """Check that a missing package or QtCore means 'missing'."""
+        missing = PYQT6 + missing
+        mock_import.side_effect = ModuleNotFoundError(name=missing)
+        with pytest.raises(QtBindingNotFoundError):
+            binding.import_binding(PYQT6, ('QtWidgets',))
+
+    def test_too_old(self, mock_import, mocker):
+        """Check that nothing else is imported for an old binding."""
+        mock_import.side_effect = (
+            lambda name: _fake_qt_core(mocker, PYQT6, _TOO_OLD[PYQT6])
+            )
+        with pytest.raises(QtBindingTooOldError):
+            binding.import_binding(PYQT6, ('QtWidgets',))
+        assert mock_import.mock_calls[-1] == mocker.call(f'{PYQT6}.QtCore')
 
 
 class TestSetBinding:

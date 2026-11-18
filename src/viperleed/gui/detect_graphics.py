@@ -32,9 +32,9 @@ from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import QtBindingTooOldError
-from viperleed.gui.qt_compat.binding import check_version
 from viperleed.gui.qt_compat.binding import get_binding
 from viperleed.gui.qt_compat.binding import get_candidates
+from viperleed.gui.qt_compat.binding import import_binding
 from viperleed.gui.qt_compat.binding import set_binding
 
 # How long (in seconds) to wait for the checker subprocess to start
@@ -690,31 +690,18 @@ class _QtProbe:
     def _try_importing(binding):
         """Return the PyQtSanity of importing modules of `binding`.
 
-        The binding counts as not installed only if its package,
-        or its QtCore, is missing. The latter happens if the package
-        is a namespace package without modules (e.g., if only
-        PyQt5-sip and PyQt5-Qt5 are left after uninstalling PyQt5).
-        Any other missing module (e.g., PyQt5.sip, or QtWidgets)
-        means that the installation is broken. A binding older than
-        qt_compat.binding.MIN_VERSIONS is TOO_OLD. These are the same
-        rules used for selecting a binding (see qt_compat.binding).
+        Whether the binding is not installed, broken, or too old, is
+        decided as when selecting a binding (see import_binding in
+        qt_compat.binding).
         """
-        qt_core = f'{binding}.QtCore'
-        for module in (binding, *(f'{binding}.{m}' for m in _QT_MODULES)):
-            try:
-                imported = importlib.import_module(module)
-            except ModuleNotFoundError as exc:
-                not_found = exc.name in (binding, qt_core)
-                return (PyQtSanity.NOT_FOUND if not_found
-                        else PyQtSanity.IMPORT_ERROR)
-            except ImportError:
-                return PyQtSanity.IMPORT_ERROR
-            if module != qt_core:
-                continue
-            try:  # Before importing other modules of an old binding
-                check_version(binding, imported)
-            except QtBindingTooOldError:
-                return PyQtSanity.TOO_OLD
+        try:
+            import_binding(binding, _QT_MODULES)
+        except QtBindingNotFoundError:
+            return PyQtSanity.NOT_FOUND
+        except QtBindingTooOldError:
+            return PyQtSanity.TOO_OLD
+        except ImportError:
+            return PyQtSanity.IMPORT_ERROR
         return PyQtSanity.OK
 
 
