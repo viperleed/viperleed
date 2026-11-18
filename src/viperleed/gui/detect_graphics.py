@@ -604,23 +604,22 @@ class _QtProbe:
 
     @staticmethod
     def _try_importing(binding):
-        """Return the PyQtSanity of importing modules of `binding`."""
-        try:
-            importlib.import_module(binding)
-        except ModuleNotFoundError:
-            return PyQtSanity.NOT_FOUND
-        except ImportError:
-            return PyQtSanity.IMPORT_ERROR
-        for module in (f'{binding}.{m}' for m in _QT_MODULES):
+        """Return the PyQtSanity of importing modules of `binding`.
+
+        The binding counts as not installed only if its package,
+        or its QtCore, is missing. The latter happens if the package
+        is a namespace package without modules (e.g., if only
+        PyQt5-sip and PyQt5-Qt5 are left after uninstalling PyQt5).
+        Any other missing module (e.g., PyQt5.sip, or QtWidgets)
+        means that the installation is broken. This is the same rule
+        used for selecting a binding (see qt_compat.binding).
+        """
+        qt_core = f'{binding}.QtCore'
+        for module in (binding, *(f'{binding}.{m}' for m in _QT_MODULES)):
             try:
                 importlib.import_module(module)
             except ModuleNotFoundError as exc:
-                # The binding may be a namespace package without its
-                # modules, e.g., if only PyQt5-sip and PyQt5-Qt5 are
-                # left after uninstalling PyQt5. Any other missing
-                # module (e.g., PyQt5.sip) means that the installation
-                # is broken.
-                not_found = exc.name == module
+                not_found = exc.name in (binding, qt_core)
                 return (PyQtSanity.NOT_FOUND if not_found
                         else PyQtSanity.IMPORT_ERROR)
             except ImportError:

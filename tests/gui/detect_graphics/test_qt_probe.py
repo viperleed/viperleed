@@ -64,28 +64,20 @@ class TestQtProbe:
         assert mock_import.mock_calls == [mocker.call(b) for b in BOTH]
 
     # Exceptions raised when importing a submodule of a binding, as a
-    # function of the submodule's name, and the expected exit status.
+    # function of the submodule's name. All mean a broken binding.
     _submodule_errors = {
-        'import error': (lambda _: ImportError(),
-                         PyQtSanity.IMPORT_ERROR),
-        # E.g., only PyQt5-sip and PyQt5-Qt5 are left after
-        # uninstalling PyQt5: 'PyQt5' is a namespace package
-        'submodule missing': (lambda mod: ModuleNotFoundError(name=mod),
-                              PyQtSanity.NOT_FOUND),
+        'import error': lambda _: ImportError(),
         # A dependency of the submodule is missing: broken PyQt5
         'dependency missing': (
-            lambda mod: ModuleNotFoundError(name=mod.split('.')[0] + '.sip'),
-            PyQtSanity.IMPORT_ERROR,
+            lambda mod: ModuleNotFoundError(name=mod.split('.')[0] + '.sip')
             ),
         }
 
     @parametrize(binding=BOTH)
     @parametrize(module=_modules)
-    @parametrize('make_exc,expect', _submodule_errors.values(),
-                 ids=_submodule_errors)
-    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    @parametrize(make_exc=_submodule_errors.values(), ids=_submodule_errors)
     def test_cant_import_pyqt_submodule(self, binding, module, make_exc,
-                                        expect, imports_done, mocker):
+                                        imports_done, mocker):
         """Check the exit code when importing a submodule fails."""
         failing = f'{binding}.{module}'
         def _fail_module_import(mod_name):
@@ -95,13 +87,46 @@ class TestQtProbe:
                      side_effect=_fail_module_import)
         with pytest.raises(SystemExit) as excinfo:
             _QtProbe((binding,))(imports_done)
-        self.check_exit_code(excinfo, expect)
+        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
         imports_done.send.assert_not_called()
+
+    @parametrize(binding=BOTH)
+    @parametrize(module=_modules)
+    def test_missing_pyqt_submodule(self, binding, module,
+                                    imports_done, mocker):
+        """Check that only a missing QtCore means 'not installed'."""
+        # E.g., only PyQt5-sip and PyQt5-Qt5 are left after
+        # uninstalling PyQt5: 'PyQt5' is a namespace package
+        failing = f'{binding}.{module}'
+        def _fail_module_import(mod_name):
+            if mod_name == failing:
+                raise ModuleNotFoundError(name=mod_name)
+        mocker.patch('importlib.import_module',
+                     side_effect=_fail_module_import)
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe((binding,))(imports_done)
+        # pylint: disable-next=magic-value-comparison
+        expect = (PyQtSanity.NOT_FOUND if module == 'QtCore'
+                  else PyQtSanity.IMPORT_ERROR)
+        self.check_exit_code(excinfo, expect)
+
+    @parametrize(binding=BOTH)
+    def test_pyqt_dependency_missing(self, binding, imports_done, mocker):
+        """Check that a package missing a dependency is broken."""
+        def _fail_package_import(mod_name):
+            if mod_name == binding:
+                raise ModuleNotFoundError(name=f'{binding}.sip')
+        mocker.patch('importlib.import_module',
+                     side_effect=_fail_package_import)
+        with pytest.raises(SystemExit) as excinfo:
+            _QtProbe((binding,))(imports_done)
+        self.check_exit_code(excinfo, PyQtSanity.IMPORT_ERROR)
 
     def test_pyqt_not_found(self, imports_done, mocker):
         """Check the expected exit code when no binding is found."""
-        mocker.patch('importlib.import_module',
-                     side_effect=ModuleNotFoundError)
+        def _not_installed(mod_name):
+            raise ModuleNotFoundError(name=mod_name.split('.')[0])
+        mocker.patch('importlib.import_module', side_effect=_not_installed)
         with pytest.raises(SystemExit) as excinfo:
             _QtProbe(BOTH)(imports_done)
         self.check_exit_code(excinfo, PyQtSanity.NOT_FOUND)
@@ -112,7 +137,7 @@ class TestQtProbe:
         def _import(name):
             if name.startswith(PYQT6):
                 raise ImportError
-            raise ModuleNotFoundError
+            raise ModuleNotFoundError(name=name)
         mocker.patch('importlib.import_module', side_effect=_import)
         with pytest.raises(SystemExit) as excinfo:
             _QtProbe(BOTH)(imports_done)
@@ -150,7 +175,7 @@ class TestQtProbe:
         """Check that the next candidate is used if the first fails."""
         def _import(name):
             if name.startswith(PYQT6):
-                raise ModuleNotFoundError
+                raise ModuleNotFoundError(name=name)
         mocker.patch('importlib.import_module', side_effect=_import)
         _QtProbe(BOTH)(imports_done)
         imports_done.send.assert_called_once_with(PYQT5)
