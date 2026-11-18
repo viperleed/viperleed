@@ -493,6 +493,7 @@ class TestViPErLEEDGUICLI:
         """Ensure that has_pyqt does not check after skipping the check."""
         detect_graphics = 'viperleed.gui.detect_graphics'
         mocker.patch(f'{detect_graphics}.PyQtSanityChecker._status', None)
+        mocker.patch(f'{detect_graphics}.PyQtSanityChecker._binding', None)
         mock_process = mocker.patch(f'{detect_graphics}.Process')
         mock_gui_main = mocker.patch(f'{_MODULE}.gui_main',
                                      side_effect=has_pyqt)

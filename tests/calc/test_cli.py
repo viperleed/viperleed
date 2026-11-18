@@ -543,7 +543,10 @@ def _find_graphics_modules():
     -------
     graphics_modules : dict
         Keys are names of viperleed.gui modules, values the names of
-        the graphics-related objects that they contain.
+        the graphics-related objects that they contain. Graphics
+        modules of the Qt bindings themselves, if imported (from
+        anywhere, e.g., by matplotlib), are listed under the key
+        'sys.modules'.
     """
     with patch('viperleed.gui.detect_graphics.has_pyqt', return_value=True):
         cli = ViPErLEEDMain()
@@ -569,4 +572,10 @@ def _find_graphics_modules():
             ]
         if unexpected:
             graphics_modules[module_name] = unexpected
+    bindings_graphics = [f'{binding}.{module}'
+                         for binding in ('PyQt5', 'PyQt6')
+                         for module in ('QtGui', 'QtWidgets')
+                         if f'{binding}.{module}' in sys.modules]
+    if bindings_graphics:
+        graphics_modules['sys.modules'] = bindings_graphics
     return graphics_modules

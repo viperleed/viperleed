@@ -26,7 +26,8 @@ def test_error_box(errorbox, qtbot, mocker):
     qtbot.addWidget(box)
     show_modal = mocker.patch(  # Would block the test
         'viperleed.gui.qt_compat.QtWidgets.QMessageBox.exec',
-        return_value=box.StandardButton.Ok,
+        # Like QDialog.exec, return an int, not the enum member
+        return_value=int(box.StandardButton.Ok),
         )
     assert box.exec() == box.StandardButton.Ok
     show_modal.assert_not_called()
