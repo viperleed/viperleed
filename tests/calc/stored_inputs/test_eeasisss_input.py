@@ -97,8 +97,6 @@ def _use_forward_slashes(written):
     written : Path
         The file to edit in place.
     """
-    if os.sep == POSIX_SEP:
-        return
     text = written.read_text(encoding='utf-8')
     written.write_text(text.replace(os.sep, POSIX_SEP), encoding='utf-8')
 
