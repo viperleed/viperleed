@@ -37,8 +37,12 @@ of :ref:`install_tensorleed`, on all platforms), and compiles
 :program:`eeasisss`. It needs Internet access, a C and a Fortran
 compiler (:program:`gcc` and :program:`gfortran` by default), and
 :program:`make` (on Windows, the
-:file:`make.bat` file shipped with :program:`eeasisss` is used instead;
-the script has been tested on Linux only). For the Intel compilers, add
+:file:`make.bat` file shipped with :program:`eeasisss` is used instead).
+The script has been tested on Linux, and on Windows with :program:`gcc`
+and :program:`gfortran` of MSYS2 (UCRT64). The tests also need LAPACK
+and BLAS, which :term:`TensErLEED` links with ``-llapack -lblas``: in
+MSYS2, install them with
+``pacman -S mingw-w64-ucrt-x86_64-lapack``. For the Intel compilers, add
 ``--compilers intel`` (:program:`icx` and the ``intel`` target of
 :program:`eeasisss`); ``--cc`` and ``--fc`` choose other C and Fortran
 compilers (``--fc`` not on Windows). See
