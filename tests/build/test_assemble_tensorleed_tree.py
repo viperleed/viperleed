@@ -96,21 +96,17 @@ class TestCommands:
         """Check the default command compiling random_.c."""
         assert script._random_command('gcc', None) == ['gcc', *_RANDOM_POSIX]
 
-    def test_default_make(self, on_windows):
-        """Check the default command compiling eeasisss."""
-        assert (script._make_command('gcc', None)
-                == [*_MAKE[on_windows], 'gcc'])
+    @parametrize(compilers=('gcc', 'intel'))
+    def test_make(self, compilers, on_windows):
+        """Check the command compiling eeasisss without --fc."""
+        assert (script._make_command(compilers, None)
+                == [*_MAKE[on_windows], compilers])
 
     def test_intel_random(self, on_windows):
         """Check the command compiling random_.c with Intel."""
         expect = (['icx', '/c', 'random_.c', '/Fo:random_.o', '/O3']
                   if on_windows else ['icx', *_RANDOM_POSIX])
         assert script._random_command('intel', None) == expect
-
-    def test_intel_make(self, on_windows):
-        """Check the command compiling eeasisss with Intel."""
-        assert (script._make_command('intel', None)
-                == [*_MAKE[on_windows], 'intel'])
 
     @parametrize(compilers=('gcc', 'intel'))
     @pytest.mark.usefixtures('on_windows')
