@@ -178,7 +178,7 @@ class Bulk3DSymDialog(qtw.QDialog):
         all_ops = (*self.__bulk.group.operations(),
                    *[op
                      for i, op in enumerate(self.__extra_ops)
-                     if extras(i).checkState()])
+                     if extras(i).checkState() != qtc.Qt.CheckState.Unchecked])
 
         # Get the smallest group that contains all the operations
         for group in PlaneGroup.groups_compatible_with(self.__bulk.cell_shape):
@@ -243,7 +243,7 @@ class Bulk3DSymDialog(qtw.QDialog):
         for op in related_ops:
             idx = self.__extra_ops.index(op)
             items(idx).setCheckState(checked)
-            items(idx).setEnabled(not bool(checked))
+            items(idx).setEnabled(checked == qtc.Qt.CheckState.Unchecked)
 
     @property
     def n_extra_ops(self):
