@@ -3,10 +3,12 @@
 Assembles the TensErLEED tree that the tensorleed test tier runs
 against (pytest -m tensorleed, with VIPERLEED_TENSORLEED pointing to
 the tree). Used by .github/workflows/tensorleed_tests.yml and by
-developers. Needs Internet access, gcc, gfortran, and make (Linux,
-macOS) or make.bat (Windows, shipped with the EEASiSSS sources).
+developers. Needs Internet access, a C and a Fortran compiler (by
+default gcc and gfortran; see --help for the Intel compilers), and
+make (Linux, macOS) or make.bat (Windows, shipped with the EEASiSSS
+sources).
 
-Usage: python assemble_tensorleed_tree.py TARGET_DIR
+Usage: python assemble_tensorleed_tree.py [options] TARGET_DIR
 
 The tree is made from release tags of viperleed/viperleed-tensorleed,
 downloaded as archives of the tagged commits (no git needed). The
@@ -25,7 +27,7 @@ temporary subfolder of TARGET_DIR, which is removed at the end. If a
 step fails, everything the script wrote is removed, so that it can
 be run again on the same TARGET_DIR.
 
-Tested on Linux only.
+Tested on Linux only, and in CI with gcc and gfortran only.
 """
 
 __authors__ = (
@@ -71,10 +73,14 @@ TREE_CONTENTS = (
     (EEASISSS_TAG, 'seSernelius', 'seSernelius'),
     )
 
-EEASISSS_MAKE = (
-    ('cmd', '/c', 'make.bat', 'gcc') if sys.platform.startswith('win')
-    else ('make', 'gcc')
-    )
+# Compiler families, named as the make targets of eeasisss, and the
+# C compiler each uses for random_.c by default
+DEFAULT_C_COMPILERS = {
+    'gcc': 'gcc',
+    'intel': 'icx',
+    }
+# Compiler families whose C compiler takes MSVC-style options on Windows
+MSVC_STYLE_ON_WINDOWS = {'intel'}
 LEGACY_LIB = Path('TensErLEED-v1.61', 'lib')
 # The shipped random_.c compiles on UNIX only. This one is used on
 # all platforms, as the installation instructions suggest for Windows.
@@ -87,7 +93,8 @@ class TreeAssemblyError(Exception):
     """The TensErLEED tree could not be assembled."""
 
 
-def assemble_tree(target):
+def assemble_tree(target, compilers='gcc', c_compiler=None,
+                  fortran_compiler=None):
     """Assemble the TensErLEED test tree into a directory.
 
     Parameters
@@ -95,19 +102,32 @@ def assemble_tree(target):
     target : str or Path
         The directory to assemble the tree into. It is created if it
         does not exist.
+    compilers : {'gcc', 'intel'}, optional
+        The compiler family: the make target of eeasisss, and the
+        command-line syntax of the C compiler on Windows. Default is
+        'gcc'.
+    c_compiler : str, optional
+        The C compiler that compiles random_.c. Default is the one of
+        DEFAULT_C_COMPILERS for compilers.
+    fortran_compiler : str, optional
+        The Fortran compiler that compiles eeasisss. Default is the
+        one of the make target of eeasisss (gfortran or ifort). Not
+        supported on Windows, where make.bat fixes it.
 
     Raises
     ------
     TreeAssemblyError
-        If target is not an empty directory, if an archive contains
-        an unsafe member or more than one root folder, or if a
-        compilation step fails.
+        If target is not an empty directory, if fortran_compiler is
+        given on Windows, if an archive contains an unsafe member or
+        more than one root folder, or if a compilation step fails.
     OSError
         If a download fails (urllib.error.URLError is an OSError) or
         a file cannot be written.
     tarfile.TarError
         If a downloaded archive cannot be read.
     """
+    random_command = _random_command(compilers, c_compiler)
+    make_command = _make_command(compilers, fortran_compiler)
     target = Path(target).resolve()
     if target.exists() and (not target.is_dir() or any(target.iterdir())):
         raise TreeAssemblyError(
@@ -115,11 +135,11 @@ def assemble_tree(target):
             'or choose another target.'
             )
     with _removed_on_failure(target):
-        _assemble_tree(target)
+        _assemble_tree(target, random_command, make_command)
     print(f'TensErLEED tree assembled in {target}')
 
 
-def _assemble_tree(target):
+def _assemble_tree(target, random_command, make_command):
     """Assemble the tree into the empty or missing directory target."""
     work = target / WORK_DIR_NAME
     work.mkdir(parents=True)
@@ -131,8 +151,8 @@ def _assemble_tree(target):
             shutil.copytree(src, target / tree_path)
         else:
             shutil.copy2(src, target / tree_path)
-    _compile_random(target / LEGACY_LIB)
-    _compile_eeasisss(sources[EEASISSS_TAG], target)
+    _compile_random(target / LEGACY_LIB, random_command)
+    _compile_eeasisss(sources[EEASISSS_TAG], target, make_command)
     shutil.rmtree(work)
 
 
@@ -158,10 +178,10 @@ def _checked_members(tar, tag):
     return members
 
 
-def _compile_eeasisss(src, target):
+def _compile_eeasisss(src, target, make_command):
     """Compile eeasisss in folder src and move it to target."""
     print(f'Compiling eeasisss from {EEASISSS_TAG}')
-    _run(EEASISSS_MAKE, src)
+    _run(make_command, src)
     for name in ('eeasisss', 'eeasisss.exe'):
         executable = src / name
         if executable.is_file():
@@ -171,13 +191,13 @@ def _compile_eeasisss(src, target):
                             f'in {src}')
 
 
-def _compile_random(lib):
+def _compile_random(lib, command):
     """Compile RANDOM_SOURCE in place of the shipped randomizer."""
     print(f'Compiling random_.o in {lib} from {RANDOM_SOURCE}')
     for name in ('random_.o', 'MPIrandom_.o'):
         (lib / name).unlink()
     shutil.copyfile(RANDOM_SOURCE, lib / 'random_.c')
-    _run(['gcc', '-O3', '-c', 'random_.c', '-o', 'random_.o'], lib)
+    _run(command, lib)
 
 
 def _download_tag(tag, work):
@@ -203,6 +223,63 @@ def _download_tag(tag, work):
         raise TreeAssemblyError(f'The archive of {tag} has {len(roots)} '
                                 'root folders instead of one')
     return roots[0]
+
+
+def _make_command(compilers, fortran_compiler):
+    """Return the command that compiles eeasisss."""
+    if _on_windows():
+        if fortran_compiler:
+            msg = ('A Fortran compiler cannot be chosen on Windows: '
+                   'make.bat of eeasisss always uses its own for target '
+                   f'{compilers}')
+            raise TreeAssemblyError(msg)
+        return ['cmd', '/c', 'make.bat', compilers]
+    command = ['make', compilers]
+    if fortran_compiler:  # Variables gcc_fcomp, intel_fcomp
+        command.append(f'{compilers}_fcomp={fortran_compiler}')
+    return command
+
+
+def _make_parser():
+    """Return the parser of the command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Assemble the TensErLEED tree for the tensorleed '
+                    'test tier into TARGET_DIR (must not exist or be '
+                    'empty). Only gcc and gfortran are tested in CI.',
+        )
+    parser.add_argument('target_dir', help='directory to assemble into')
+    parser.add_argument(
+        '--compilers',
+        choices=sorted(DEFAULT_C_COMPILERS),
+        default='gcc',
+        help='compiler family: the make target of eeasisss (default: '
+             '%(default)s)',
+        )
+    parser.add_argument(
+        '--cc',
+        help='C compiler for random_.c (default: gcc for gcc, icx for '
+             'intel; e.g., icc for older Intel oneAPI)',
+        )
+    parser.add_argument(
+        '--fc',
+        help='Fortran compiler for eeasisss (default: the one of its '
+             'make target, gfortran or ifort; e.g., ifx). Not on '
+             'Windows, where make.bat fixes it',
+        )
+    return parser
+
+
+def _on_windows():
+    """Return whether this is Windows."""
+    return sys.platform.startswith('win')
+
+
+def _random_command(compilers, c_compiler):
+    """Return the command that compiles random_.c to random_.o."""
+    c_compiler = c_compiler or DEFAULT_C_COMPILERS[compilers]
+    if compilers in MSVC_STYLE_ON_WINDOWS and _on_windows():
+        return [c_compiler, '/c', 'random_.c', '/Fo:random_.o', '/O3']
+    return [c_compiler, '-O3', '-c', 'random_.c', '-o', 'random_.o']
 
 
 @contextlib.contextmanager
@@ -234,17 +311,20 @@ def _run(command, cwd):
             ) from exc
 
 
-def main():
-    """Assemble the TensErLEED test tree into the directory given."""
-    parser = argparse.ArgumentParser(
-        description='Assemble the TensErLEED tree for the tensorleed '
-                    'test tier into TARGET_DIR (must not exist or be '
-                    'empty).',
-        )
-    parser.add_argument('target_dir', help='directory to assemble into')
-    args = parser.parse_args()
+def main(argv=None):
+    """Assemble the TensErLEED test tree into the directory given.
+
+    Parameters
+    ----------
+    argv : list of str, optional
+        The command-line arguments. Default is sys.argv[1:].
+    """
+    args = _make_parser().parse_args(argv)
     try:
-        assemble_tree(args.target_dir)
+        assemble_tree(args.target_dir,
+                      compilers=args.compilers,
+                      c_compiler=args.cc,
+                      fortran_compiler=args.fc)
     except (OSError, TreeAssemblyError, tarfile.TarError) as exc:
         sys.exit(f'Error: {exc}')
 

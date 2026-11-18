@@ -37,7 +37,13 @@ of :ref:`install_tensorleed`, on all platforms), and compiles
 :program:`eeasisss`. It needs Internet access, :program:`gcc`,
 :program:`gfortran`, and :program:`make` (on Windows, the
 :file:`make.bat` file shipped with :program:`eeasisss` is used instead;
-the script has been tested on Linux only). The directory must not exist or
+the script has been tested on Linux only). For the Intel compilers, add
+``--compilers intel`` (:program:`icx` and the ``intel`` target of
+:program:`eeasisss`); ``--cc`` and ``--fc`` choose other C and Fortran
+compilers (``--fc`` not on Windows). See
+``python build/scripts/assemble_tensorleed_tree.py --help``. Only
+:program:`gcc` and :program:`gfortran` are tested in continuous
+integration. The directory must not exist or
 be empty: the script does not overwrite an existing tree. If a step fails,
 the script removes what it wrote, so that it can be run again with the same
 directory. To update the tree after a change of the script, assemble it
