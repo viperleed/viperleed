@@ -66,6 +66,20 @@ class QtApiError(QtBindingNotFoundError):
 class QtBindingTooOldError(ImportError):
     """A Qt binding is older than its version in MIN_VERSIONS."""
 
+    def __init__(self, *args, qt_version=None):
+        """Initialize an instance.
+
+        Parameters
+        ----------
+        *args : object
+            Passed on to ImportError, e.g., the error message.
+        qt_version : str or None, optional
+            The version of Qt used by the binding (as QT_VERSION_STR),
+            if known. Default is None.
+        """
+        super().__init__(*args)
+        self.qt_version = qt_version
+
 
 def check_version(binding, qt_core):
     """Raise if `binding` is older than its MIN_VERSIONS.
@@ -89,7 +103,8 @@ def check_version(binding, qt_core):
         oldest_str = '.'.join(str(v) for v in oldest)
         raise QtBindingTooOldError(
             f'{binding} {qt_core.PYQT_VERSION_STR} is too old. ViPErLEED '
-            f'needs {binding}>={oldest_str}.'
+            f'needs {binding}>={oldest_str}.',
+            qt_version=qt_core.QT_VERSION_STR,
             )
 
 
@@ -173,6 +188,11 @@ def import_binding(binding, modules=()):
         Names of the Qt modules (e.g., 'QtWidgets') to import besides
         QtCore. Default is none.
 
+    Returns
+    -------
+    qt_core : module
+        The QtCore module of `binding`.
+
     Raises
     ------
     QtBindingNotFoundError
@@ -187,15 +207,17 @@ def import_binding(binding, modules=()):
     # Each module once, in this order (QtCore may be in modules)
     to_import = dict.fromkeys((binding, qt_core,
                                *(f'{binding}.{m}' for m in modules)))
+    imported = {}
     for module in to_import:
         try:
-            imported = importlib.import_module(module)
+            imported[module] = importlib.import_module(module)
         except ModuleNotFoundError as exc:
             if exc.name in (binding, qt_core):
                 raise QtBindingNotFoundError(str(exc)) from exc
             raise
         if module == qt_core:
-            check_version(binding, imported)
+            check_version(binding, imported[module])
+    return imported[qt_core]
 
 
 def set_binding(binding):

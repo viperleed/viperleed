@@ -96,6 +96,7 @@ class TestCheckVersion:
         with pytest.raises(QtBindingTooOldError, match='too old') as exc:
             check_version(qt_binding, qt_core)
         assert qt_core.PYQT_VERSION_STR in str(exc.value)
+        assert exc.value.qt_version is qt_core.QT_VERSION_STR
         assert not isinstance(exc.value, QtBindingNotFoundError)
 
 
@@ -327,6 +328,18 @@ class TestImportBinding:
         mock_import.side_effect = ModuleNotFoundError(name=missing)
         with pytest.raises(QtBindingNotFoundError):
             binding.import_binding(PYQT6, ('QtWidgets',))
+
+    @parametrize(qt_binding=BOTH)
+    def test_returns_qt_core(self, qt_binding, mock_import):
+        """Check that the QtCore module imported is returned."""
+        imported = {}
+        default = mock_import.side_effect
+        def _import(name):
+            imported[name] = default(name)
+            return imported[name]
+        mock_import.side_effect = _import
+        qt_core = binding.import_binding(qt_binding, ('QtWidgets',))
+        assert qt_core is imported[f'{qt_binding}.QtCore']
 
     def test_too_old(self, mock_import, mocker):
         """Check that nothing else is imported for an old binding."""

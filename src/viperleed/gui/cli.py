@@ -215,11 +215,11 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         """
         binding = check_pyqt_sanity.binding
         return ''.join(
-            f'\n{other} was also tried, but '
-            f'{_OTHER_FAILURE.get(sanity, sanity.name)}.'
-            for other, sanity in check_pyqt_sanity.results
-            if other not in (None, binding)
-            and sanity is not PyQtSanity.NOT_FOUND
+            f'\n{other.binding} was also tried, but '
+            f'{_OTHER_FAILURE.get(other.sanity, other.sanity.name)}.'
+            for other in check_pyqt_sanity.results
+            if other.binding not in (None, binding)
+            and other.sanity is not PyQtSanity.NOT_FOUND
             )
 
     def _exit(self, details):

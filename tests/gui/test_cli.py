@@ -20,6 +20,7 @@ from viperleed.gui.cli import ViPErLEEDGUICLI
 from viperleed.gui.cli import commandline_main
 from viperleed.gui.cli import gui_main
 from viperleed.gui.cli import import_graphics_modules
+from viperleed.gui.detect_graphics import BindingCheck
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.qt_compat.binding import PYQT5
@@ -86,8 +87,8 @@ If your system has a display, you can start the GUI anyway with
             ),
         }
     # Results of the checks of two bindings that both failed
-    _both_failed = ((PYQT6, PyQtSanity.RUNTIME_CRASH),
-                    (PYQT5, PyQtSanity.IMPORT_ERROR))
+    _both_failed = (BindingCheck(PYQT6, PyQtSanity.RUNTIME_CRASH),
+                    BindingCheck(PYQT5, PyQtSanity.IMPORT_ERROR))
     _also_tried = '\nPyQt5 was also tried, but it could not be loaded.'
 
     @fixture(autouse=True)
@@ -106,7 +107,7 @@ If your system has a display, you can start the GUI anyway with
         """
         def _mock(sanity, binding=PYQT6, results=None):
             if results is None:
-                results = ((binding, sanity),)
+                results = (BindingCheck(binding, sanity),)
             return mocker.patch(f'{_MODULE}.check_pyqt_sanity',
                                 return_value=sanity,
                                 binding=binding,
@@ -147,8 +148,8 @@ If your system has a display, you can start the GUI anyway with
         """Check that bindings not installed are not mentioned."""
         mock_sanity(PyQtSanity.IMPORT_ERROR,
                     binding=PYQT5,
-                    results=((PYQT6, PyQtSanity.NOT_FOUND),
-                             (PYQT5, PyQtSanity.IMPORT_ERROR)))
+                    results=(BindingCheck(PYQT6, PyQtSanity.NOT_FOUND),
+                             BindingCheck(PYQT5, PyQtSanity.IMPORT_ERROR)))
         mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
                      return_value={})
         with pytest.raises(SystemExit):
@@ -506,8 +507,7 @@ class TestViPErLEEDGUICLI:
     def test_skip_check_prevents_later_checks(self, mocker):
         """Ensure that has_pyqt does not check after skipping the check."""
         detect_graphics = 'viperleed.gui.detect_graphics'
-        mocker.patch(f'{detect_graphics}.PyQtSanityChecker._status', None)
-        mocker.patch(f'{detect_graphics}.PyQtSanityChecker._binding', None)
+        mocker.patch(f'{detect_graphics}.PyQtSanityChecker._summary', None)
         mock_process = mocker.patch(f'{detect_graphics}.Process')
         mock_gui_main = mocker.patch(f'{_MODULE}.gui_main',
                                      side_effect=has_pyqt)
