@@ -16,7 +16,7 @@ IVShiftRange
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 
@@ -240,7 +240,26 @@ class EnergyRange(SpecialParameter):
 
     @staticmethod
     def parse_string_sequence(string_sequence):
-        """Return floating-point or NO_VALUE from a string sequence."""
+        """Return floating-point or NO_VALUE from a string sequence.
+
+        Parameters
+        ----------
+        string_sequence : Sequence of str
+            The items to convert. An underscore stands for NO_VALUE.
+
+        Returns
+        -------
+        values : list
+            One float or NO_VALUE per item of `string_sequence`.
+
+        Raises
+        ------
+        ValueError
+            If `string_sequence` cannot be parsed as a sequence of
+            Python literals.
+        TypeError
+            If a parsed literal cannot be converted to float.
+        """
         # We will use ast to interpret the sequence as a tuple.
         # Notice the trailing comma, in case string_sequence is
         # only one-element-long
@@ -251,12 +270,14 @@ class EnergyRange(SpecialParameter):
         # again further down when converting the rest to float
         string = string.replace('_', 'None')
         try:
-            return [float(v) if v is not None else NO_VALUE
-                    for v in ast.literal_eval(string)]
+            values = ast.literal_eval(string)
         except (SyntaxError, ValueError, TypeError,
                 MemoryError, RecursionError) as exc:
-            new_exc = TypeError if 'float' in exc.args[0] else ValueError
-            raise new_exc(' '.join(string_sequence)) from exc
+            raise ValueError(' '.join(string_sequence)) from exc
+        try:
+            return [float(v) if v is not None else NO_VALUE for v in values]
+        except (ValueError, TypeError) as exc:
+            raise TypeError(' '.join(string_sequence)) from exc
 
     def set_undefined_values(self, *new_values):
         """Assign undefined values from new_values, then adjust start."""

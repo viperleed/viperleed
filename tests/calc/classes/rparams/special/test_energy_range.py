@@ -7,11 +7,13 @@ subclasses of EnergyRange.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-27'
 __license__ = 'GPLv3+'
 
 import itertools
+import re
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -601,3 +603,48 @@ class TestIVShiftRange(TestEnergyRange):
         iv_shift = self._class(*ini_vals)
         with pytest.raises(exc):
             iv_shift.set_undefined_step(step)
+
+
+class TestParseStringSequence:
+    """Tests for the EnergyRange.parse_string_sequence static method."""
+
+    _valid = {
+        'floats': (('1', '2.5', '0.5'), [1.0, 2.5, 0.5]),
+        'no value': (('1', '_', '0.5'), [1.0, NO_VALUE, 0.5]),
+        }
+    _invalid = {  # Parsing fails -> ValueError; float() fails -> TypeError
+        'name': (('abc',), ValueError),
+        'name float': (('float',), ValueError),
+        'call float': (('float("inf")', '1'), ValueError),
+        'syntax': (('1)', '(2'), ValueError),
+        'deep': (('1' + '+1' * 50000,), ValueError),
+        'string': (('1', '"a"'), TypeError),
+        'complex': (('1j',), TypeError),
+        'tuple': (('(1, 2)',), TypeError),
+        }
+    _no_float = MagicMock(**{'__float__.side_effect': ValueError('no')})
+    _message_irrelevant = {  # Error text that hints at the other stage
+        'parse': ({'side_effect': ValueError('float')}, ValueError),
+        'float': ({'return_value': (_no_float,)}, TypeError),
+        }
+
+    @parametrize('sequence,expect', _valid.values(), ids=_valid)
+    def test_valid(self, sequence, expect):
+        """Check conversion of a valid sequence of strings."""
+        assert EnergyRange.parse_string_sequence(sequence) == expect
+
+    @parametrize('sequence,exc', _invalid.values(), ids=_invalid)
+    def test_invalid(self, sequence, exc):
+        """Check the exception raised for an invalid sequence."""
+        match = f'^{re.escape(" ".join(sequence))}$'
+        with pytest.raises(exc, match=match):
+            EnergyRange.parse_string_sequence(sequence)
+
+    @parametrize('literal_eval,exc',
+                 _message_irrelevant.values(),
+                 ids=_message_irrelevant)
+    def test_error_message_irrelevant(self, literal_eval, exc, mocker):
+        """Check that the stage that fails decides the exception."""
+        mocker.patch('ast.literal_eval', **literal_eval)
+        with pytest.raises(exc, match=r'^1$'):
+            EnergyRange.parse_string_sequence(('1',))
