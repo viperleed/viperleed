@@ -28,7 +28,8 @@ from .conftest import MODULE
 
 _FALLBACK = {PyQtSanity.NOT_FOUND,
              PyQtSanity.IMPORT_ERROR,
-             PyQtSanity.RUNTIME_CRASH}
+             PyQtSanity.RUNTIME_CRASH,
+             PyQtSanity.TOO_OLD}
 _STOP = set(PyQtSanity) - _FALLBACK - {PyQtSanity.INVALID_QT_API}
 
 
@@ -335,9 +336,9 @@ _SUMMARIES = {
     'none installed': (((PYQT6, PyQtSanity.NOT_FOUND),
                         (PYQT5, PyQtSanity.NOT_FOUND)),
                        (PyQtSanity.NOT_FOUND, None)),
-    'first unusable': (((PYQT6, PyQtSanity.IMPORT_ERROR),
+    'first unusable': (((PYQT6, PyQtSanity.TOO_OLD),
                         (PYQT5, PyQtSanity.RUNTIME_CRASH)),
-                       (PyQtSanity.IMPORT_ERROR, PYQT6)),
+                       (PyQtSanity.TOO_OLD, PYQT6)),
     'skip missing': (((PYQT6, PyQtSanity.NOT_FOUND),
                       (PYQT5, PyQtSanity.IMPORT_ERROR)),
                      (PyQtSanity.IMPORT_ERROR, PYQT5)),

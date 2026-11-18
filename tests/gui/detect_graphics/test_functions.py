@@ -66,7 +66,9 @@ class TestFindMissingDependencies:
                      return_value=PyQtSanity.OK,
                      binding=PYQT5)
 
-    @parametrize(sanity=(PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API))
+    @parametrize(sanity=(PyQtSanity.NOT_FOUND,
+                         PyQtSanity.INVALID_QT_API,
+                         PyQtSanity.TOO_OLD))
     def test_raises(self, sanity, mocker):
         """Check complaints when calling the function without Qt."""
         mocker.patch(f'{MODULE}.check_pyqt_sanity', return_value=sanity)

@@ -26,6 +26,7 @@ from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
+from viperleed.gui.qt_compat.binding import MIN_VERSIONS
 from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import SUPPORTED_BINDINGS
 from viperleed.gui.qt_compat.binding import QtApiError
@@ -57,6 +58,9 @@ If your system has a display, you can start the GUI anyway with
 _CANNOT_RUN_MSG = (
     'Cannot execute the ViPErLEED graphical user interface because {}'
     )
+_MIN_VERSIONS_MSG = ' or '.join(f'{binding}>={major}.{minor}'
+                                for binding, (major, minor)
+                                in MIN_VERSIONS.items())
 
 # Error messages emitted if the sanity check fails. {qt} is replaced
 # by the Qt bindings that were looked for (e.g., 'PyQt6 or PyQt5'),
@@ -66,6 +70,11 @@ _CANNOT_RUN_MSG = (
 _SANITY_TO_ERR_MSG = {
     PyQtSanity.NOT_FOUND: 'no Qt binding is installed (looked for {qt}).',
     PyQtSanity.INVALID_QT_API: 'no Qt binding can be selected. {qt_api_error}',
+    PyQtSanity.TOO_OLD: (
+        'the installed {binding} is too old. ViPErLEED needs '
+        + _MIN_VERSIONS_MSG + '. Upgrade it, e.g., via'
+        '\n    python -m pip install --upgrade {binding}{also_tried}'
+        ),
     # All of the following may still be caused by missing dependencies
     PyQtSanity.OK: '',
     PyQtSanity.IMPORT_ERROR: (
@@ -90,6 +99,7 @@ _SANITY_TO_ERR_MSG = {
 _OTHER_FAILURE = {
     PyQtSanity.IMPORT_ERROR: 'it could not be loaded',
     PyQtSanity.RUNTIME_CRASH: 'the GUI crashed at startup with it',
+    PyQtSanity.TOO_OLD: 'it is too old',
     }
 
 
@@ -137,6 +147,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         SystemExit
             If the GUI cannot execute because
             - neither PyQt5 nor PyQt6 is installed,
+            - the installed binding is too old,
             - Qt misses any system dependencies,
             - loading Qt or opening the GUI would crash Python,
             - the current machine has no graphics capability,
@@ -163,7 +174,9 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             # wayland, if Qt 6 uses xcb) do not prevent the GUI from
             # running: do not look for them.
             return
-        if sanity in {PyQtSanity.NOT_FOUND, PyQtSanity.INVALID_QT_API}:
+        if sanity in {PyQtSanity.NOT_FOUND,
+                      PyQtSanity.INVALID_QT_API,
+                      PyQtSanity.TOO_OLD}:
             # These are the only failures for which it makes no sense
             # to check for missing dependencies. All other non-sane
             # configurations may be because of missing dependencies.

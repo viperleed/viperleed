@@ -31,6 +31,8 @@ from viperleed.gui.qt_compat.binding import PYQT5
 from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import QtBindingTooOldError
+from viperleed.gui.qt_compat.binding import check_version
 from viperleed.gui.qt_compat.binding import get_binding
 from viperleed.gui.qt_compat.binding import get_candidates
 from viperleed.gui.qt_compat.binding import set_binding
@@ -65,18 +67,20 @@ class PyQtSanity(IntEnum):
     NO_DISPLAY = 4     # OK, but graphics support is missing
     UNRESPONSIVE = 5   # Importing the binding did not finish in time
     INVALID_QT_API = 6  # The QT_API environment variable is invalid
+    TOO_OLD = 7         # Older than in qt_compat.binding.MIN_VERSIONS
 
     @property
     def allows_fallback(self):
         """Return whether another binding may work after this status.
 
-        Another binding may work if this one is missing, broken, or
-        crashes. A missing display, or a system so busy that
+        Another binding may work if this one is missing, broken, too
+        old, or crashes. A missing display, or a system so busy that
         importing does not finish in time, would affect any binding.
         """
         return self in {PyQtSanity.NOT_FOUND,
                         PyQtSanity.IMPORT_ERROR,
-                        PyQtSanity.RUNTIME_CRASH}
+                        PyQtSanity.RUNTIME_CRASH,
+                        PyQtSanity.TOO_OLD}
 
     @property
     def importable(self):
@@ -306,6 +310,9 @@ def find_missing_qt_dependencies():
     if sanity is PyQtSanity.INVALID_QT_API:
         raise NotImplementedError('Cannot check Qt dependencies with an '
                                   'invalid QT_API environment variable')
+    if sanity is PyQtSanity.TOO_OLD:
+        raise NotImplementedError('Cannot check Qt dependencies of a Qt '
+                                  'binding that is too old')
     if sys.platform.startswith('win'):
         # No evidence of missing dependencies on Windows
         return {}
@@ -688,19 +695,26 @@ class _QtProbe:
         is a namespace package without modules (e.g., if only
         PyQt5-sip and PyQt5-Qt5 are left after uninstalling PyQt5).
         Any other missing module (e.g., PyQt5.sip, or QtWidgets)
-        means that the installation is broken. This is the same rule
-        used for selecting a binding (see qt_compat.binding).
+        means that the installation is broken. A binding older than
+        qt_compat.binding.MIN_VERSIONS is TOO_OLD. These are the same
+        rules used for selecting a binding (see qt_compat.binding).
         """
         qt_core = f'{binding}.QtCore'
         for module in (binding, *(f'{binding}.{m}' for m in _QT_MODULES)):
             try:
-                importlib.import_module(module)
+                imported = importlib.import_module(module)
             except ModuleNotFoundError as exc:
                 not_found = exc.name in (binding, qt_core)
                 return (PyQtSanity.NOT_FOUND if not_found
                         else PyQtSanity.IMPORT_ERROR)
             except ImportError:
                 return PyQtSanity.IMPORT_ERROR
+            if module != qt_core:
+                continue
+            try:  # Before importing other modules of an old binding
+                check_version(binding, imported)
+            except QtBindingTooOldError:
+                return PyQtSanity.TOO_OLD
         return PyQtSanity.OK
 
 

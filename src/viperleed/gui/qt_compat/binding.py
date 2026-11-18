@@ -16,10 +16,11 @@ according to these rules:
   Qt bindings cannot coexist in the same process.
 - Otherwise, the first binding that can be imported among PyQt6 and
   PyQt5 (in this order) is used. A binding that is installed but
-  broken (e.g., it misses some of its own modules) is skipped too.
-  If no binding can be imported and any of them is broken, a plain
-  ImportError is raised rather than a QtBindingNotFoundError, as
-  the installation needs fixing rather than completing.
+  broken (e.g., it misses some of its own modules), or older than
+  MIN_VERSIONS, is skipped too. If no binding can be used and any
+  of them is broken or too old, a plain ImportError is raised rather
+  than a QtBindingNotFoundError, as the installation needs fixing
+  rather than completing.
 
 Which bindings would be tried, in which order, is returned by
 get_candidates, which imports none of them. This allows checking the
@@ -43,6 +44,12 @@ PYQT5 = 'PyQt5'
 PYQT6 = 'PyQt6'
 QT_API_ENV = 'QT_API'
 SUPPORTED_BINDINGS = (PYQT6, PYQT5)  # In order of preference
+# The oldest (major, minor) versions of the bindings that work. PyQt6
+# before 6.1 lacks names of enums used in viperleed.gui (e.g., it has
+# Qt.MouseButtons rather than Qt.MouseButton), and some enums that
+# Qt functions return as int (e.g., Qt.Key) are not int-based there.
+# pylint: disable-next=consider-using-namedtuple-or-dataclass
+MIN_VERSIONS = {PYQT5: (5, 15), PYQT6: (6, 1)}
 _QT_API_VALUES = {binding.lower(): binding for binding in SUPPORTED_BINDINGS}
 
 _SELECTED_BINDING = None
@@ -54,6 +61,36 @@ class QtBindingNotFoundError(ImportError):
 
 class QtApiError(QtBindingNotFoundError):
     """The QT_API environment variable prevents selecting a binding."""
+
+
+class QtBindingTooOldError(ImportError):
+    """A Qt binding is older than its version in MIN_VERSIONS."""
+
+
+def check_version(binding, qt_core):
+    """Raise if `binding` is older than its MIN_VERSIONS.
+
+    Parameters
+    ----------
+    binding : str
+        Either PYQT5 or PYQT6.
+    qt_core : module
+        The (imported) QtCore module of `binding`.
+
+    Raises
+    ------
+    QtBindingTooOldError
+        If the version of `binding` is older than MIN_VERSIONS.
+    """
+    version = qt_core.PYQT_VERSION  # E.g., 0x060c00 for 6.12.0
+    major_minor = (version >> 16, (version >> 8) & 0xFF)
+    oldest = MIN_VERSIONS[binding]
+    if major_minor < oldest:
+        oldest_str = '.'.join(str(v) for v in oldest)
+        raise QtBindingTooOldError(
+            f'{binding} {qt_core.PYQT_VERSION_STR} is too old. ViPErLEED '
+            f'needs {binding}>={oldest_str}.'
+            )
 
 
 def get_binding():
@@ -76,8 +113,8 @@ def get_binding():
     QtBindingNotFoundError
         If no binding is installed.
     ImportError
-        If no binding can be imported, and any of them is installed
-        but broken.
+        If no binding can be used, and any of them is installed but
+        broken or too old (see MIN_VERSIONS).
     """
     if _SELECTED_BINDING is None:
         set_binding(_select_binding())
@@ -164,7 +201,7 @@ def _select_binding():
     for binding in candidates:
         qt_core = f'{binding}.QtCore'
         try:
-            importlib.import_module(qt_core)
+            qt_core_module = importlib.import_module(qt_core)
         except ImportError as exc:
             errors.append(f'{binding}: {exc}')
             # The package, or its QtCore, may be missing altogether,
@@ -175,6 +212,12 @@ def _select_binding():
             not_found = (isinstance(exc, ModuleNotFoundError)
                          and exc.name in (binding, qt_core))
             broken = broken or not not_found
+            continue
+        try:
+            check_version(binding, qt_core_module)
+        except QtBindingTooOldError as exc:
+            errors.append(str(exc))
+            broken = True
             continue
         return binding
     msg = (f'Could not import {requested}, requested via '

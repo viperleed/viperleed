@@ -17,6 +17,8 @@ from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
+from viperleed.gui.qt_compat.binding import QtBindingTooOldError
+from viperleed.gui.qt_compat.binding import check_version
 from viperleed.gui.qt_compat.binding import get_binding
 
 BOTH = (PYQT5, PYQT6)
@@ -26,6 +28,18 @@ _BROKEN = {
                                        name='PyQt6.sip'),
     'DLL load failed': ImportError('DLL load failed'),
     }
+# PYQT_VERSION of usable bindings, and of too old ones
+_NEW_ENOUGH = {PYQT5: 0x050F0A, PYQT6: 0x060C00}  # 5.15.10, 6.12.0
+_OLDEST = {PYQT5: 0x050F00, PYQT6: 0x060100}      # 5.15.0, 6.1.0
+_TOO_OLD = {PYQT5: 0x050E02, PYQT6: 0x060003}     # 5.14.2, 6.0.3
+
+
+def _fake_qt_core(mocker, qt_binding, version):
+    """Return a fake QtCore with PYQT_VERSION `version`."""
+    version_str = '.'.join(str((version >> s) & 0xFF) for s in (16, 8, 0))
+    return mocker.MagicMock(name=f'{qt_binding}.QtCore',
+                            PYQT_VERSION=version,
+                            PYQT_VERSION_STR=version_str)
 
 
 @fixture(autouse=True)
@@ -40,15 +54,18 @@ def fixture_fake_bindings(mocker):
     """Fake which Qt bindings can be imported/were already imported.
 
     The returned function takes the bindings that can be imported,
-    those that were already imported, and a dict {binding: exception}
-    of bindings that are installed but raise exception on import.
+    those that were already imported, a dict {binding: exception}
+    of bindings that are installed but raise exception on import,
+    and the bindings that can be imported but are too old.
     """
-    def _fake(available, imported=(), broken=None):
+    def _fake(available, imported=(), broken=None, too_old=()):
         broken = broken or {}
         def _import(name):
             package = name.split('.')[0]
+            if package in too_old:
+                return _fake_qt_core(mocker, package, _TOO_OLD[package])
             if package in available:
-                return mocker.MagicMock()
+                return _fake_qt_core(mocker, package, _NEW_ENOUGH[package])
             if package in broken:
                 raise broken[package]
             raise ModuleNotFoundError(f'No module named {package!r}',
@@ -59,6 +76,27 @@ def fixture_fake_bindings(mocker):
         mock_importlib.import_module.side_effect = _import
         return mock_importlib.import_module
     return _fake
+
+
+class TestCheckVersion:
+    """Tests for the check_version function."""
+
+    @parametrize(qt_binding=BOTH)
+    def test_new_enough(self, qt_binding, mocker):
+        """Check that recent bindings pass."""
+        oldest = _fake_qt_core(mocker, qt_binding, _OLDEST[qt_binding])
+        recent = _fake_qt_core(mocker, qt_binding, _NEW_ENOUGH[qt_binding])
+        check_version(qt_binding, oldest)
+        check_version(qt_binding, recent)
+
+    @parametrize(qt_binding=BOTH)
+    def test_too_old(self, qt_binding, mocker):
+        """Check complaints for a binding that is too old."""
+        qt_core = _fake_qt_core(mocker, qt_binding, _TOO_OLD[qt_binding])
+        with pytest.raises(QtBindingTooOldError, match='too old') as exc:
+            check_version(qt_binding, qt_core)
+        assert qt_core.PYQT_VERSION_STR in str(exc.value)
+        assert not isinstance(exc.value, QtBindingNotFoundError)
 
 
 class TestDefaultSelection:
@@ -128,6 +166,18 @@ class TestDefaultSelection:
         mock_import.reset_mock()
         assert get_binding() == first
         mock_import.assert_not_called()
+
+    def test_too_old_none_available(self, fake_bindings):
+        """Check that a too-old binding is not reported as missing."""
+        fake_bindings((), too_old=(PYQT6,))
+        with pytest.raises(ImportError, match='too old') as exc_info:
+            get_binding()
+        assert not isinstance(exc_info.value, QtBindingNotFoundError)
+
+    def test_too_old_skipped(self, fake_bindings):
+        """Check that another binding is used if one is too old."""
+        fake_bindings((PYQT5,), too_old=(PYQT6,))
+        assert get_binding() == PYQT5
 
 
 class TestQtApi:

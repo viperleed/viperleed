@@ -44,7 +44,8 @@ class TestCheckCanRunGui:
     # Missing dependencies are not looked for with these
     _no_deps_check = {PyQtSanity.OK,
                       PyQtSanity.NOT_FOUND,
-                      PyQtSanity.INVALID_QT_API}
+                      PyQtSanity.INVALID_QT_API,
+                      PyQtSanity.TOO_OLD}
 
     _mock_abi_msg = '''
 If you are executing viperleed in a conda environment, try one of the
@@ -270,6 +271,19 @@ Try again after installing them'''
     def test_sanity_msg(self, sanity):
         """Ensure there is a message for each PyQtSanity."""
         assert sanity in _SANITY_TO_ERR_MSG
+
+    def test_too_old(self, mock_sanity, mocker, capsys):
+        """Check complaints when the binding found is too old."""
+        mock_sanity(PyQtSanity.TOO_OLD)
+        find_deps = mocker.patch(f'{_MODULE}.find_missing_qt_dependencies')
+        with pytest.raises(SystemExit):
+            ViPErLEEDGUICLI().check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        expect = ('the installed PyQt6 is too old. ViPErLEED needs '
+                  'PyQt5>=5.15 or PyQt6>=6.1. Upgrade it, e.g., via')
+        assert self._err_msg + expect in stderr
+        assert stderr.endswith('python -m pip install --upgrade PyQt6')
+        find_deps.assert_not_called()
 
 
 # pylint: disable-next=too-few-public-methods  # It's parameterized

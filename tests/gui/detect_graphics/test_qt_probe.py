@@ -17,6 +17,7 @@ from viperleed.gui.detect_graphics import _EXIT_CODE_OFFSET
 from viperleed.gui.detect_graphics import _QT_MODULES
 from viperleed.gui.detect_graphics import _QtProbe
 from viperleed.gui.detect_graphics import PyQtSanity
+from viperleed.gui.qt_compat.binding import QtBindingTooOldError
 
 from .conftest import BOTH
 from .conftest import MODULE
@@ -44,6 +45,11 @@ class TestQtProbe:
         # This is to ensure tests don't hang forever on a system
         # without graphics.
         return mocker.patch(f'{MODULE}._QtProbe._init_dummy_qapp')
+
+    @fixture(name='check_version', autouse=True)
+    def fixture_check_version(self, mocker):
+        """Take any binding as new enough, unless told otherwise."""
+        return mocker.patch(f'{MODULE}.check_version')
 
     @fixture(name='imports_done')
     def fixture_imports_done(self, mocker):
@@ -128,7 +134,7 @@ class TestQtProbe:
         mocker.patch('importlib.import_module', side_effect=_not_installed)
         self.check_failed(binding, imports_done, PyQtSanity.NOT_FOUND)
 
-    def test_success(self, binding, imports_done, mocker,
+    def test_success(self, binding, imports_done, check_version, mocker,
                      mock_dummy_qapp):
         """Test an execution that does not make the interpreter exit."""
         # NB: normally, the interpreter always exits when
@@ -146,6 +152,8 @@ class TestQtProbe:
             *(mocker.call(f'{binding}.{m}') for m in self._modules)
             ]
         assert mock_import.mock_calls == expect_calls
+        check_version.assert_called_once_with(binding,
+                                              mock_import.return_value)
         # The parent must be told before creating the QApplication.
         # Build the expected calls outside the assert: code-quality
         # checkers take mocker.call.<...>.send() for a real call.
@@ -155,6 +163,16 @@ class TestQtProbe:
             mocker.call.init_dummy_qapp(binding),
             ]
         assert calls.mock_calls == expect_order
+
+    def test_too_old(self, binding, check_version, imports_done, mocker):
+        """Check the exit code when the binding is too old."""
+        mock_import = mocker.patch('importlib.import_module')
+        check_version.side_effect = QtBindingTooOldError
+        self.check_failed(binding, imports_done, PyQtSanity.TOO_OLD)
+        check_version.assert_called_once_with(binding,
+                                              mock_import.return_value)
+        # Nothing is imported after QtCore
+        assert mock_import.mock_calls[-1] == mocker.call(f'{binding}.QtCore')
 
 
 class TestQtProbeDummyQapp:
