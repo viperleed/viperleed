@@ -7,7 +7,7 @@ input files for a single domain.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-19'
 __license__ = 'GPLv3+'
 
@@ -266,6 +266,17 @@ class TestCollectFromZip:
         """Check complaints when no tensors exist."""
         with pytest.raises(FileNotFoundError):
             collect(mock_copy=False)
+
+    def test_inputs_missing_no_filename(self, collect, mocker, caplog):
+        """Check the missing file is named if shutil does not name it."""
+        # shutil.copy2 on Windows with Python 3.12+ raises
+        # FileNotFoundError without a filename
+        mocker.patch('shutil.copy2', side_effect=FileNotFoundError(2, 'no'))
+        with pytest.raises(FileNotFoundError) as exc_info:
+            collect(mock_copy=False)
+        missing = _DOMAIN_INPUT_FILES[0]
+        assert Path(exc_info.value.filename).name == missing
+        assert f'Required file {missing} ' in caplog.text
 
     @parametrize(exc=(OSError, BadZipFile))
     def test_unzip_fails(self, exc, mock_implementation, collect):
