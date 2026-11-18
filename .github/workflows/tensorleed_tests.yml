@@ -2,6 +2,9 @@
 # which run viperleed.calc against a TensErLEED tree. They run on every
 # pull request into master, and by hand ("Run workflow", any branch).
 #
+# - Pull requests into master also run the release tests (--release),
+#   as master is the release branch. Runs by hand do so only with the
+#   input "release" checked.
 # - The workflow is selected by its trigger, not by a condition on the
 #   job: a required check must never pass by being skipped. Require
 #   the check "TensErLEED tests" in the ruleset of master only. On
@@ -18,6 +21,11 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      release:
+        description: Also run the release tests (--release)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -71,4 +79,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/tests.txt -e .
       - name: Run the TensErLEED tests
-        run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs
+        env:
+          RELEASE_OPTION: ${{ (github.event_name == 'pull_request' || inputs.release) && '--release' || '' }}
+        run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs $RELEASE_OPTION

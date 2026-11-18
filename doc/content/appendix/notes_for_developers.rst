@@ -210,6 +210,8 @@ The tests also run on GitHub Actions:
 - The *TensErLEED tests* (:file:`.github/workflows/tensorleed_tests.yml`)
   run the TensErLEED tier on every pull request into ``master``, against a
   tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.
+  On pull requests, they include the release tests (``--release``, see
+  above).
   Their result is the check ``TensErLEED tests``. The workflow does not run
   on pull requests into other branches. It starts when a pull request into
   ``master`` is opened or receives new commits: if the base of a pull
@@ -230,6 +232,9 @@ on the *Actions* page of the |repo|, select ``TensErLEED tests``, click
 .. code-block:: bash
 
     gh workflow run tensorleed_tests.yml --ref <branch>
+
+Runs started by hand skip the release tests unless the input ``release`` is
+checked (with the GitHub CLI, add ``-f release=true``).
 
 
 .. _editable_install:
