@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-19'
 __license__ = 'GPLv3+'
 
+import errno
 import logging
 from pathlib import Path
 from zipfile import BadZipFile
@@ -25,6 +26,14 @@ from .....helpers import filesystem_from_dict
 from .....helpers import filesystem_to_dict
 
 _MODULE = 'viperleed.calc.classes.rparams.domain_params'
+
+
+def _raise_no_filename(*_):
+    """Raise FileNotFoundError without a filename.
+
+    shutil.copy2 does so on Windows with Python 3.12+.
+    """
+    raise FileNotFoundError(errno.ENOENT, 'no')
 
 
 @fixture(name='domain')
@@ -221,6 +230,20 @@ class TestCollectFromDirectory:
         work_tree = filesystem_to_dict(domain.workdir)
         assert work_tree == {**unzipped_tensor, **src_inputs}
 
+    def test_tensor_file_missing_no_filename(self, domain, collect, caplog):
+        """Check that the missing file is named without a filename."""
+        unzipped_tensor = {'Tensors': {'Tensors_001': {}}}
+        filesystem_from_dict(unzipped_tensor, domain.workdir)
+        def _copy_raises(src, _):
+            # pylint: disable-next=magic-value-comparison
+            if src.parent.name == 'Tensors_001':
+                _raise_no_filename()
+        caplog.set_level(logging.WARNING)
+        collect(copy_raises=_copy_raises)
+        assert domain.refcalc_required
+        missing = _DOMAIN_INPUT_FILES[0]
+        assert f'Input file {missing} is missing' in caplog.text
+
 
 class TestCollectFromZip:
     """Tests for the _collect_inputs_from_tensor_file method."""
@@ -268,10 +291,8 @@ class TestCollectFromZip:
             collect(mock_copy=False)
 
     def test_inputs_missing_no_filename(self, collect, mocker, caplog):
-        """Check the missing file is named if shutil does not name it."""
-        # shutil.copy2 on Windows with Python 3.12+ raises
-        # FileNotFoundError without a filename
-        mocker.patch('shutil.copy2', side_effect=FileNotFoundError(2, 'no'))
+        """Check that the missing file is named without a filename."""
+        mocker.patch('shutil.copy2', side_effect=_raise_no_filename)
         with pytest.raises(FileNotFoundError) as exc_info:
             collect(mock_copy=False)
         missing = _DOMAIN_INPUT_FILES[0]
