@@ -181,7 +181,13 @@ Writing GUI code for PyQt5 and PyQt6
 
 The graphical user interface runs with either PyQt5 or PyQt6. PyQt5 is the
 one installed with ``viperleed[GUI]``, as Qt 6 does not run on Windows 7.
-Code in :file:`viperleed/gui` must work with both:
+The oldest versions that work are PyQt5 5.15 and PyQt6 6.1 (see
+``MIN_VERSIONS`` in ``viperleed.gui.qt_compat.binding``): PyQt6 6.0 lacks
+names of enumerations used in the code (e.g., it has ``Qt.MouseButtons``
+rather than ``Qt.MouseButton``), and some of its enumerations do not compare
+equal to the integers that Qt functions return (e.g., ``Qt.Key``). Older
+bindings are treated as unusable. Code in :file:`viperleed/gui` must work
+with both:
 
 - Import Qt modules only from ``viperleed.gui.qt_compat``, never from
   ``PyQt5`` or ``PyQt6`` directly:
@@ -196,6 +202,10 @@ Code in :file:`viperleed/gui` must work with both:
   ``qtc.Qt.AlignmentFlag.AlignLeft`` rather than ``qtc.Qt.AlignLeft``, also
   when accessing them via an object (``palette.ColorRole.Text`` rather than
   ``palette.Text``).
+- Do not take values of enumerations as booleans: some are plain ``Enum``
+  in PyQt6, whose members are all true (e.g., ``Qt.CheckState.Unchecked``).
+  Compare with the members instead, e.g.,
+  ``item.checkState() != qtc.Qt.CheckState.Unchecked``.
 - Use ``.exec()`` rather than ``.exec_()``.
 - Take ``QAction``, ``QActionGroup``, ``QShortcut``, ``QUndoCommand``,
   ``QUndoGroup``, ``QUndoStack``, and ``QFileSystemModel`` from ``QtGui``.
