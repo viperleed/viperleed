@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-18'
 __license__ = 'GPLv3+'
 
+import http.client
 import importlib.util
 import io
 from pathlib import Path
@@ -192,6 +193,7 @@ class TestNewerTags:
         TimeoutError('timed out'),
         ValueError('not JSON'),
         KeyError('name'),
+        http.client.IncompleteRead(b'[{"na'),
         ))
     def test_listing_fails(self, exc, mocker, capsys):
         """Check that a failure to list the tags only gives a note."""

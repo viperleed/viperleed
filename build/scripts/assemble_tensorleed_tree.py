@@ -43,6 +43,7 @@ __license__ = 'GPLv3+'
 
 import argparse
 import contextlib
+import http.client
 import json
 import ntpath
 import os
@@ -355,9 +356,11 @@ def _warn_about_newer_tags():
     """Print a warning if newer tags exist than those in TAG_COMMITS."""
     try:
         tags = _list_tags()
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        # No connection (URLError is an OSError), or not the expected
-        # JSON. Never fail for this: the tree is assembled already
+    except (OSError, http.client.HTTPException,
+            ValueError, KeyError, TypeError) as exc:
+        # No connection (URLError is an OSError), a truncated response
+        # (e.g., IncompleteRead), or not the expected JSON. Never fail
+        # for this: the tree is assembled already
         print('Note: could not check viperleed-tensorleed for newer '
               f'release tags: {exc!r}', file=sys.stderr)
         return
