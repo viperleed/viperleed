@@ -86,10 +86,10 @@ def pytest_configure(config):
     unknown = _allowed(config).difference(KNOWN_DEPENDENCIES)
     if not unknown:
         return
-    unknown = ', '.join(sorted(unknown))
+    unknown_names = ', '.join(sorted(unknown))
     valid = ', '.join(KNOWN_DEPENDENCIES)
     msg = (f'{ALLOW_MISSING_OPTION}: unknown optional dependencies '
-           f'{unknown}. Valid names are {valid}.')
+           f'{unknown_names}. Valid names are {valid}.')
     raise pytest.UsageError(msg)
 
 

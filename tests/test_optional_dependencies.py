@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-21'
 __license__ = 'GPLv3+'
 
+import os
 from pathlib import Path
 
 import pytest
@@ -24,8 +25,7 @@ def test_fixture(missing_dependency):
     missing_dependency('gfortran', 'some detail')
 
 def test_unaffected():
-    pass
-"""
+    pass"""
 
 
 def _run(pytester, *args, source=_TEST_FILE):
@@ -38,10 +38,10 @@ def _run(pytester, *args, source=_TEST_FILE):
         )
 
 
-def _run_xdist(pytester, monkeypatch, *args):
+def _run_xdist(pytester, mocker, *args):
     """Run pytest with pytest-xdist on the test file with the plugin."""
     root = Path(__file__).resolve().parent.parent
-    monkeypatch.setenv('PYTHONPATH', str(root))
+    mocker.patch.dict(os.environ, {'PYTHONPATH': str(root)})
     pytester.makepyfile(_TEST_FILE)
     return pytester.runpytest_subprocess(
         *args,
@@ -101,9 +101,9 @@ def test_fail_with_option(pytester):
 
 
 _ALLOWED_DEP = (
-    f'{_ALLOW}=gfortran',
-    f'{_ALLOW}=mpifort,gfortran',
-    f'{_ALLOW}= mpifort , gfortran ',
+    (f'{_ALLOW}=gfortran',),
+    (f'{_ALLOW}=mpifort,gfortran',),
+    (f'{_ALLOW}= mpifort , gfortran ',),
     (f'{_ALLOW}=mpifort', f'{_ALLOW}=gfortran'),
     )
 
@@ -111,7 +111,6 @@ _ALLOWED_DEP = (
 @parametrize(allow=_ALLOWED_DEP)
 def test_allow_missing(pytester, allow):
     """Check that --allow-missing exempts the named dependencies."""
-    allow = (allow,) if isinstance(allow, str) else allow
     result = _run(pytester, _REQUIRE, *allow, '-rs')
     result.assert_outcomes(passed=1, skipped=1)
     result.stdout.fnmatch_lines([
@@ -135,19 +134,19 @@ def test_allow_missing_alone(pytester):
 
 
 @pytest.mark.slow  # About 1 s (pytester, subprocess)
-@parametrize(allow=((), (f'{_ALLOW}=gfortran',)))
-def test_allow_missing_xdist(pytester, monkeypatch, allow):
+@parametrize('allow,outcome', (
+    ((), {'failed': 1}),
+    ((f'{_ALLOW}=gfortran',), {'skipped': 1}),
+    ))
+def test_allow_missing_xdist(pytester, mocker, allow, outcome):
     """Check --require-all and --allow-missing with pytest-xdist."""
-    result = _run_xdist(pytester, monkeypatch, _REQUIRE, *allow)
-    if allow:
-        result.assert_outcomes(passed=1, skipped=1)
-    else:
-        result.assert_outcomes(passed=1, failed=1)
+    result = _run_xdist(pytester, mocker, _REQUIRE, *allow)
+    result.assert_outcomes(passed=1, **outcome)
 
 
 _UNKNOWN = (
-    f'{_ALLOW}=gfortan',
-    f'{_ALLOW}=gfortran,fake-dep',
+    (f'{_ALLOW}=gfortan',),
+    (f'{_ALLOW}=gfortran,fake-dep',),
     (f'{_ALLOW}=mpifort', f'{_ALLOW}=gfortan'),
     )
 
@@ -155,7 +154,6 @@ _UNKNOWN = (
 @parametrize(allow=_UNKNOWN)
 def test_allow_missing_unknown(pytester, allow):
     """Check that unknown names for --allow-missing are an error."""
-    allow = (allow,) if isinstance(allow, str) else allow
     result = _run(pytester, _REQUIRE, *allow)
     assert result.ret == pytest.ExitCode.USAGE_ERROR
     result.stderr.fnmatch_lines([
@@ -165,8 +163,8 @@ def test_allow_missing_unknown(pytester, allow):
 
 
 @pytest.mark.slow  # About 1 s (pytester, subprocess)
-def test_allow_missing_unknown_xdist(pytester, monkeypatch):
+def test_allow_missing_unknown_xdist(pytester, mocker):
     """Check that unknown names are an error with pytest-xdist."""
-    result = _run_xdist(pytester, monkeypatch, _REQUIRE, f'{_ALLOW}=gfortan')
+    result = _run_xdist(pytester, mocker, _REQUIRE, f'{_ALLOW}=gfortan')
     assert result.ret == pytest.ExitCode.USAGE_ERROR
     result.stderr.fnmatch_lines(['*unknown optional dependencies gfortan.*'])
