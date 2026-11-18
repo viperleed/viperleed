@@ -19,7 +19,11 @@ shipped random_.o and MPIrandom_.o are replaced by a random_.o
 compiled on this machine, as the installation instructions of that
 TensErLEED version require. It is compiled from RANDOM_SOURCE, the
 cross-platform random_.c of the ViPErLEED documentation, which also
-replaces the shipped random_.c in the tree.
+replaces the shipped random_.c in the tree. At the end, the script
+warns if viperleed-tensorleed has release tags newer than the newest
+pinned one of their kind (TensErLEED or EEASiSSS), as TAG_COMMITS may
+need an update then. If the tags cannot be listed, it says so and
+carries on.
 
 TARGET_DIR must not exist or be empty: the script refuses to write
 into a non-empty directory. Downloads and builds are made in a
@@ -39,9 +43,11 @@ __license__ = 'GPLv3+'
 
 import argparse
 import contextlib
+import json
 import ntpath
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -52,6 +58,10 @@ ARCHIVE_URL = ('https://github.com/viperleed/viperleed-tensorleed/'
                'archive/{commit}.tar.gz')
 
 EEASISSS_TAG = 'EEASiSSS-v1.0.2'
+TAGS_URL = ('https://api.github.com/repos/viperleed/viperleed-tensorleed/'
+            'tags?per_page=100')
+# A release tag: a kind ('' for TensErLEED, 'EEASiSSS-') and a version
+VERSION_TAG = re.compile(r'(?P<kind>.*?)v(?P<version>\d+(?:\.\d+)*)')
 
 # Commits of the release tags. Pinned, so that a moved tag cannot
 # change the tree silently.
@@ -137,6 +147,7 @@ def assemble_tree(target, compilers='gcc', c_compiler=None,
     with _removed_on_failure(target):
         _assemble_tree(target, random_command, make_command)
     print(f'TensErLEED tree assembled in {target}')
+    _warn_about_newer_tags()
 
 
 def _assemble_tree(target, random_command, make_command):
@@ -225,6 +236,12 @@ def _download_tag(tag, work):
     return roots[0]
 
 
+def _list_tags():
+    """Return the names of the tags of viperleed-tensorleed."""
+    with urllib.request.urlopen(TAGS_URL, timeout=30) as response:
+        return [tag['name'] for tag in json.load(response)]
+
+
 def _make_command(compilers, fortran_compiler):
     """Return the command that compiles eeasisss."""
     if _on_windows():
@@ -269,9 +286,32 @@ def _make_parser():
     return parser
 
 
+def _newer_tags(tags):
+    """Return the tags newer than the newest pinned of their kind."""
+    newest = {}
+    for tag in TAG_COMMITS:
+        kind, version = _parse_tag(tag)
+        newest[kind] = max(version, newest.get(kind, version))
+    newer = []
+    for tag in tags:
+        kind, version = _parse_tag(tag)
+        if kind in newest and version > newest[kind]:
+            newer.append(tag)
+    return sorted(newer)
+
+
 def _on_windows():
     """Return whether this is Windows."""
     return sys.platform.startswith('win')
+
+
+def _parse_tag(tag):
+    """Return the kind and the version tuple of tag, or (None, ())."""
+    match = VERSION_TAG.fullmatch(tag)
+    if not match:
+        return None, ()
+    version = tuple(int(part) for part in match['version'].split('.'))
+    return match['kind'], version
 
 
 def _random_command(compilers, c_compiler):
@@ -309,6 +349,24 @@ def _run(command, cwd):
         raise TreeAssemblyError(
             f'{subprocess.list2cmdline(command)} failed in {cwd}: {exc}'
             ) from exc
+
+
+def _warn_about_newer_tags():
+    """Print a warning if newer tags exist than those in TAG_COMMITS."""
+    try:
+        tags = _list_tags()
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        # No connection (URLError is an OSError), or not the expected
+        # JSON. Never fail for this: the tree is assembled already
+        print('Note: could not check viperleed-tensorleed for newer '
+              f'release tags: {exc!r}', file=sys.stderr)
+        return
+    newer = ', '.join(_newer_tags(tags))
+    if newer:
+        print('Warning: viperleed-tensorleed has release tags newer than '
+              f'those in TAG_COMMITS of {Path(__file__).name}: {newer}. '
+              'Consider adding them.',
+              file=sys.stderr)
 
 
 def main(argv=None):

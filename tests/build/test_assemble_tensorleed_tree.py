@@ -8,7 +8,9 @@ __created__ = '2026-11-18'
 __license__ = 'GPLv3+'
 
 import importlib.util
+import io
 from pathlib import Path
+import urllib.error
 
 import pytest
 from pytest_cases import fixture
@@ -136,6 +138,7 @@ class TestCommands:
     def test_commands_passed_on(self, mocker, tmp_path):
         """Check that assemble_tree uses the commands built."""
         mocker.patch.object(script, '_on_windows', return_value=False)
+        mocker.patch.object(script, '_warn_about_newer_tags')
         mock_assemble = mocker.patch.object(script, '_assemble_tree')
         script.assemble_tree(tmp_path,
                              compilers='intel',
@@ -145,3 +148,69 @@ class TestCommands:
             ['icx', *_RANDOM_POSIX],
             ['make', 'intel', 'intel_fcomp=ifx'],
             )
+
+
+class TestNewerTags:
+    """Tests for the warning about tags newer than those pinned."""
+
+    _pinned = ('v2.1.0', 'v2.0.0', 'v1.7.6', 'v1.7.5', 'v1.6.1',
+               'EEASiSSS-v1.0.2')
+
+    @parametrize(new_tags=(
+        ('v2.2.0',),
+        ('v2.1.1', 'v3.0'),
+        ('EEASiSSS-v1.1.0',),
+        ))
+    def test_newer(self, new_tags, mocker, capsys):
+        """Check the warning when newer tags exist."""
+        mocker.patch.object(script,
+                            '_list_tags',
+                            return_value=[*new_tags, *self._pinned])
+        script._warn_about_newer_tags()
+        err = capsys.readouterr().err
+        assert err.startswith('Warning:')
+        assert ', '.join(sorted(new_tags)) in err
+
+    @parametrize(tags=(
+        (),
+        _pinned,
+        ('v1.7.7', 'v2.0.1', 'EEASiSSS-v1.0.1', 'latest', 'Other-v9'),
+        ))
+    def test_none_newer(self, tags, mocker, capsys):
+        """Check that tags not newer than pinned give no output.
+
+        Older versions than the newest pinned one of their kind (e.g.,
+        v1.7.7 with v2.1.0 pinned), tags without a version, and kinds
+        that are not pinned do not count.
+        """
+        mocker.patch.object(script, '_list_tags', return_value=list(tags))
+        script._warn_about_newer_tags()
+        assert not any(capsys.readouterr())
+
+    @parametrize(exc=(
+        urllib.error.URLError('no network'),
+        TimeoutError('timed out'),
+        ValueError('not JSON'),
+        KeyError('name'),
+        ))
+    def test_listing_fails(self, exc, mocker, capsys):
+        """Check that a failure to list the tags only gives a note."""
+        mocker.patch.object(script, '_list_tags', side_effect=exc)
+        script._warn_about_newer_tags()
+        assert capsys.readouterr().err.startswith('Note:')
+
+    def test_list_tags(self, mocker):
+        """Check that tag names are read from the JSON listing."""
+        listing = b'[{"name": "v2.1.0", "commit": {}}, {"name": "v2.0.0"}]'
+        urlopen = mocker.patch.object(script.urllib.request,
+                                      'urlopen',
+                                      return_value=io.BytesIO(listing))
+        assert script._list_tags() == ['v2.1.0', 'v2.0.0']
+        assert urlopen.call_args[0] == (script.TAGS_URL,)
+
+    def test_warned_after_assembly(self, mocker, tmp_path):
+        """Check that assemble_tree checks for newer tags."""
+        mocker.patch.object(script, '_assemble_tree')
+        warn = mocker.patch.object(script, '_warn_about_newer_tags')
+        script.assemble_tree(tmp_path)
+        warn.assert_called_once_with()

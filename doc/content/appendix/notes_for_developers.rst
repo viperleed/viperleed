@@ -47,7 +47,10 @@ integration. The directory must not exist or
 be empty: the script does not overwrite an existing tree. If a step fails,
 the script removes what it wrote, so that it can be run again with the same
 directory. To update the tree after a change of the script, assemble it
-into a new directory.
+into a new directory. At the end, the script warns if
+``viperleed-tensorleed`` has release tags newer than those it uses (it
+does not fail, also not if the tags cannot be listed): the script may then
+need an update.
 
 Tests are *not* distributed with the ``viperleed`` package on
 `pypi <https://pypi.org/project/viperleed/>`__. To run the tests, clone the
