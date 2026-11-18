@@ -30,6 +30,7 @@ from ..poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 from .conftest import SYSTEM_NAME
 
 INPUT_NAME = 'eeasisss-input'
+POSIX_SEP = '/'  # Path separator in the references
 WINDOWS = 'nt'  # Value of os.name on Windows, as psgen checks it
 
 # Cases of POSCARSlabs that carry parameters (presets or mixed sites).
@@ -77,8 +78,29 @@ def fixture_written_input(stub_tree, tmp_path, mocker):
         with execute_in_dir(work), private_random(psgen, PSGEN_SEED), \
                 pytest.raises(CustomTestException):
             psgen.runPhaseshiftGen_old(slab, rpars)
-        return work / INPUT_NAME
+        written = work / INPUT_NAME
+        _use_forward_slashes(written)
+        return written
     return _write
+
+
+def _use_forward_slashes(written):
+    """Replace OS-native path separators in `written` with '/'.
+
+    psgen writes the paths of the charge-density files with the
+    separators of the OS (backslashes on Windows, where eeasisss
+    accepts them). The references use forward slashes, so that the
+    same reference holds on every OS.
+
+    Parameters
+    ----------
+    written : Path
+        The file to edit in place.
+    """
+    if os.sep == POSIX_SEP:
+        return
+    text = written.read_text(encoding='utf-8')
+    written.write_text(text.replace(os.sep, POSIX_SEP), encoding='utf-8')
 
 
 @parametrize_with_cases('args', cases=CASES)
