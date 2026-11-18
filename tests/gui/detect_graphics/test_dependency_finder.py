@@ -17,6 +17,7 @@ from pytest_cases import parametrize
 
 from viperleed.gui.detect_graphics import QtDependencyFinder
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 
@@ -60,25 +61,41 @@ class TestQtDependencyFinder:
             # pylint: disable-next=protected-access
             QtDependencyFinder._find_installed_binding()
 
-    @parametrize(binding=BOTH)
-    def test_get_platforms_path_calls(self, binding, mocker,
-                                      mock_import_module):
-        """Check that the plugins path is taken from QLibraryInfo."""
-        qtc = mocker.MagicMock()
-        mock_import_module(**{f'{binding}.QtCore': qtc})
-        info = qtc.QLibraryInfo
-        info.location.return_value = info.path.return_value = '/qt/plugins'
+    # {name: (binding, folders in the package, expected platforms)}
+    _platforms_folders = {
+        'PyQt5': (PYQT5, ('Qt5/plugins/platforms',), 'Qt5/plugins/platforms'),
+        'PyQt6': (PYQT6, ('Qt6/plugins/platforms',), 'Qt6/plugins/platforms'),
+        'PyQt5<=5.15.2': (PYQT5, ('Qt/plugins/platforms',),
+                          'Qt/plugins/platforms'),
+        'both': (PYQT6, ('Qt/plugins/platforms', 'Qt6/plugins/platforms'),
+                 'Qt6/plugins/platforms'),
+        'other major': (PYQT6, ('Qt5/plugins/platforms',), None),
+        'system Qt': (PYQT5, (), None),
+        }
+
+    @parametrize('binding,folders,expect', _platforms_folders.values(),
+                 ids=_platforms_folders)
+    def test_get_platforms_path(self, binding, folders, expect,
+                                tmp_path, mocker):
+        """Check that plugins are found where the wheels put them."""
+        for folder in folders:
+            (tmp_path / folder).mkdir(parents=True)
+        spec = SimpleNamespace(submodule_search_locations=[str(tmp_path)])
+        find_spec = mocker.patch('importlib.util.find_spec',
+                                 return_value=spec)
+        import_module = mocker.patch('importlib.import_module')
         # pylint: disable-next=protected-access
         path = QtDependencyFinder(binding)._get_platforms_path()
-        assert path == Path('/qt/plugins/platforms')
-        if binding == PYQT5:
-            info.location.assert_called_once_with(
-                info.LibraryLocation.PluginsPath
-                )
-            info.path.assert_not_called()
-        else:
-            info.path.assert_called_once_with(info.LibraryPath.PluginsPath)
-            info.location.assert_not_called()
+        assert path == (tmp_path / expect if expect else None)
+        find_spec.assert_called_once_with(binding)
+        import_module.assert_not_called()
+
+    @parametrize(spec=(None, SimpleNamespace(submodule_search_locations=None)))
+    def test_get_platforms_path_no_package(self, spec, mocker):
+        """Check that there are no plugins without a binding package."""
+        mocker.patch('importlib.util.find_spec', return_value=spec)
+        # pylint: disable-next=protected-access
+        assert QtDependencyFinder(PYQT5)._get_platforms_path() is None
 
     @pytest.mark.usefixtures('qtc')  # Skips without Qt
     def test_get_platforms_path_real(self):
@@ -282,6 +299,17 @@ class TestQtDependencyFinderLinux:
         assert missing == {'QtGui.abi3.so': ['libGL'],
                            'libqxcb.so': ['libxcb']}
 
+    def test_find_missing_deps_linux_unknown_platforms(self, mocker):
+        """Check that missing module dependencies survive unknown Qt."""
+        finder = QtDependencyFinder('PyQt7')
+        mocker.patch.object(finder, '_find_missing_deps_of_modules_linux',
+                            return_value={'QtGui.abi3.so': ['libGL']})
+        mocker.patch.object(finder, '_get_platforms_path',
+                            return_value=Path('platforms'))
+        # pylint: disable-next=protected-access
+        missing = finder._find_missing_deps_linux()
+        assert missing == {'QtGui.abi3.so': ['libGL']}
+
     def test_find_missing_deps_of_modules_linux(self, fake_libs, mocker):
         """Check the missing dependencies of the Qt modules."""
         root = fake_libs(self._modules_ldd)
@@ -325,14 +353,16 @@ class TestQtDependencyFinderLinux:
         mock_get.assert_called_once_with(PYQT5)
 
     def test_find_missing_deps_of_platforms_linux_none(self, mocker):
-        """Check that nothing is looked for without platform names."""
+        """Check that nothing is looked for without platform plugins."""
         finder = QtDependencyFinder(PYQT5)
-        mocker.patch(f'{MODULE}._QtUnixPlatformsGetter.get',
-                     return_value=set())
-        get_path = mocker.patch.object(finder, '_get_platforms_path')
+        get_platforms = mocker.patch(f'{MODULE}._QtUnixPlatformsGetter.get')
+        mocker.patch.object(finder, '_get_platforms_path',
+                            return_value=None)
+        run = mocker.patch('subprocess.run')
         # pylint: disable-next=protected-access
         assert not finder._find_missing_deps_of_platforms_linux()
-        get_path.assert_not_called()
+        get_platforms.assert_not_called()
+        run.assert_not_called()
 
     def test_list_install_libs_success(self, mocker):
         """Check the successful listing of apt modules."""

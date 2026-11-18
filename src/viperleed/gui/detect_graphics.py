@@ -28,6 +28,7 @@ import subprocess
 import sys
 
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import PYQT6
 from viperleed.gui.qt_compat.binding import QtBindingNotFoundError
 from viperleed.gui.qt_compat.binding import get_binding
 from viperleed.gui.qt_compat.binding import get_candidates
@@ -452,7 +453,10 @@ class QtDependencyFinder:
             libraries.
         """
         missing = self._find_missing_deps_of_modules_linux()
-        missing.update(self._find_missing_deps_of_platforms_linux())
+        try:
+            missing.update(self._find_missing_deps_of_platforms_linux())
+        except NotImplementedError:  # No platform rules for the binding
+            pass
         return missing
 
     def _find_missing_deps_of_modules_linux(self):
@@ -461,10 +465,8 @@ class QtDependencyFinder:
         The modules are not imported: libraries missing for them
         make importing the binding fail (IMPORT_ERROR).
         """
-        spec = importlib.util.find_spec(self._binding)
-        roots = (spec.submodule_search_locations or ()) if spec else ()
         missing = {}
-        for root in (Path(r) for r in roots):
+        for root in self._get_package_folders():
             for module in _QT_MODULES:
                 for so_file in root.glob(f'{module}.*so'):
                     missing_libs = self._find_missing_libs_linux(so_file)
@@ -476,13 +478,19 @@ class QtDependencyFinder:
         """Return missing dependencies of the Qt platform plugins.
 
         Libraries missing for the platform plugins make Qt abort
-        when starting (RUNTIME_CRASH). Finding the plugins imports
-        QtCore of the binding: nothing is looked for if this fails.
+        when starting (RUNTIME_CRASH). Nothing is imported: nothing
+        is looked for if the plugins are not where the wheels of the
+        binding have them (see _get_platforms_path).
+
+        Raises
+        ------
+        NotImplementedError
+            If it is not known which platforms the binding uses.
         """
-        lib_names = _QtUnixPlatformsGetter.get(self._binding)
-        if not lib_names:  # Also if QtCore cannot be imported
-            return {}
         root = self._get_platforms_path()
+        if root is None:
+            return {}
+        lib_names = _QtUnixPlatformsGetter.get(self._binding)
         missing = {}
         for lib_name in lib_names:
             for so_file in self._find_plugin_files_linux(root, lib_name):
@@ -523,19 +531,33 @@ class QtDependencyFinder:
             if so_file.name.split('.so')[0] in stems:
                 yield so_file
 
-    def _get_platforms_path(self):
-        """Return the folder of the Qt platform plugins of the binding.
+    def _get_package_folders(self):
+        """Yield the folders of the binding's package, as Path objects.
 
-        This imports QtCore of the binding, which may crash the
-        interpreter if check_pyqt_sanity() is RUNTIME_CRASH (as
-        _QtUnixPlatformsGetter.get does).
+        The binding is not imported. Nothing is yielded if the binding
+        is not installed, or not a package.
         """
-        qtc = importlib.import_module(f'{self._binding}.QtCore')
-        info = qtc.QLibraryInfo
-        plugins = (info.location(info.LibraryLocation.PluginsPath)
-                   if self._binding == PYQT5
-                   else info.path(info.LibraryPath.PluginsPath))
-        return Path(plugins) / 'platforms'
+        spec = importlib.util.find_spec(self._binding)
+        roots = (spec.submodule_search_locations or ()) if spec else ()
+        yield from (Path(root) for root in roots)
+
+    def _get_platforms_path(self):
+        """Return the folder of the Qt platform plugins, or None.
+
+        The folder is found without importing the binding (which may
+        crash the interpreter), where the wheels of the binding have
+        it: Qt5/plugins/platforms (Qt6/... for PyQt6) in the package
+        folder, or Qt/plugins/platforms for PyQt5<=5.15.2 and PyQt6
+        6.0. It is None elsewhere, e.g., for a binding that uses the
+        Qt libraries of the system.
+        """
+        major = self._binding[-1]  # E.g., '5' for PyQt5
+        for root in self._get_package_folders():
+            for qt_folder in (f'Qt{major}', 'Qt'):
+                platforms = root / qt_folder / 'plugins' / 'platforms'
+                if platforms.is_dir():
+                    return platforms
+        return None
 
     @staticmethod
     def _list_install_for_libs_linux(missing):
@@ -686,43 +708,37 @@ class _QtProbe:
 class _QtUnixPlatformsGetter:
     """A helper for finding the names of Qt platform plugins on UNIX.
 
-    This class imports a Qt binding dynamically and may crash the
-    interpreter if check_pyqt_sanity() is PyQtSanity.RUNTIME_CRASH.
+    The Qt version is deduced from the name of the binding, which is
+    not imported (importing it may crash the interpreter).
     """
 
-    # Mapping {version-str: platform-getter-name} for known versions.
-    # A version is looked up as a whole first, then by its major
-    # version only.
-    _version_to_getter_name = {
-        **{f'5.15.{minor}': '_get_5_15' for minor in range(18)},
-        # Qt 6 picks platforms alike from 6.0 to (at least) 6.11
-        '6': '_get_6',
+    # Mapping {binding: platform-getter-name}. The wheels of PyQt5>=5.15
+    # (see pyproject.toml) ship Qt 5.15. Qt 6 picks platforms alike from
+    # 6.0 to (at least) 6.11.
+    _binding_to_getter_name = {
+        PYQT5: '_get_5_15',
+        PYQT6: '_get_6',
         }
 
     @classmethod
     def get(cls, binding):
-        """Return the platform names for the Qt version of `binding`."""
-        try:
-            qtc = importlib.import_module(f'{binding}.QtCore')
-        except ImportError:
-            return set()
-        version = qtc.QT_VERSION_STR
-        major = version.split('.')[0]
-        underscored = version.replace('.', '_')
-        getter_name = (
-            cls._version_to_getter_name.get(version)
-            or cls._version_to_getter_name.get(major)
-            or f'_get_{underscored}'
-            )
-        try:
-            getter = getattr(cls, getter_name)
-        except AttributeError:
-            raise NotImplementedError('Unsupported Qt version '
-                                      + qtc.QT_VERSION_STR) from None
-        return getter()
+        """Return the platform names that the Qt of `binding` may use.
 
-    @staticmethod
-    def _get_5_15():
+        Raises
+        ------
+        NotImplementedError
+            If `binding` is not known.
+        """
+        try:
+            getter_name = cls._binding_to_getter_name[binding]
+        except KeyError:
+            raise NotImplementedError(
+                f'Unknown platforms for Qt binding {binding!r}'
+                ) from None
+        return getattr(cls, getter_name)()
+
+    @classmethod
+    def _get_5_15(cls):
         """Return the known platforms used by Qt 5.15 by default."""
         # In order of importance used by Qt, according to the
         # implementation in qguiapplication.cpp, specifically
@@ -732,7 +748,7 @@ class _QtUnixPlatformsGetter:
         env_session = os.environ.get('XDG_SESSION_TYPE')
         env_desktop = (os.environ.get('XDG_CURRENT_DESKTOP')
                        or os.environ.get('XDG_SESSION_DESKTOP'))
-        env_platforms = _QtUnixPlatformsGetter._get_requested_platforms()
+        env_platforms = cls._get_requested_platforms()
 
         if env_platforms:    # QT_QPA_PLATFORM always takes precedence
             return env_platforms
@@ -744,7 +760,7 @@ class _QtUnixPlatformsGetter:
         if env_session == 'x11':      # pylint: disable=R2004
             return {default, env_default}   # Always XCB on X11
         if env_session == 'wayland':  # pylint: disable=R2004
-             # pylint: disable-next=R2004
+            # pylint: disable-next=R2004
             is_gnome = env_desktop and 'gnome' in env_desktop
             return {env_default} if is_gnome else {env_session, env_default}
         return {env_session, env_default}
