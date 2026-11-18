@@ -45,6 +45,11 @@ def plot_iv(data, filename, labels=[], annotations=[],
         Name of the file (with or without extension) to which the plots
         will be saved. If None, do not write to file, but return a list
         of matplotlib figure objects instead.
+
+        .. versionchanged:: 0.15.0
+            An error while closing the file is logged rather than
+            raised. KeyboardInterrupt and SystemExit while writing
+            the file are no longer swallowed.
     labels : kwarg, list of str
         Labels for the individual beams, e.g. (h|k) as strings. Must be same
         length as number of beams. If labels are not passed and at least one
@@ -339,7 +344,14 @@ def plot_iv(data, filename, labels=[], annotations=[],
             logger.error("plot_iv: Error while writing {}: ".format(filename),
                         exc_info=True)
         finally:
-            pdf.close()
-            return
-    else:
-        return figs
+            _close_pdf(pdf, filename)
+        return None
+    return figs
+
+
+def _close_pdf(pdf, filename):
+    """Close `pdf`, logging (not raising) any error while closing it."""
+    try:
+        pdf.close()
+    except Exception:  # Same as when writing pages, see plot_iv
+        logger.exception('plot_iv: Error while writing %s: ', filename)
