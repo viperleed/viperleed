@@ -33,6 +33,8 @@ class TestQtProbe:
     # function of the submodule's name. All mean a broken binding.
     _submodule_errors = {
         'import error': lambda _: ImportError(),
+        'sip mismatch': lambda _: RuntimeError('the sip module implements '
+                                               'API v12.8 but ...'),
         # A dependency of the submodule is missing: broken PyQt5
         'dependency missing': (
             lambda mod: ModuleNotFoundError(name=mod.split('.')[0] + '.sip')

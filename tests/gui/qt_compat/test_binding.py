@@ -27,6 +27,7 @@ _BROKEN = {
     'missing sip': ModuleNotFoundError("No module named 'PyQt6.sip'",
                                        name='PyQt6.sip'),
     'DLL load failed': ImportError('DLL load failed'),
+    'sip mismatch': RuntimeError('the sip module implements API v12.8'),
     }
 # PYQT_VERSION of usable bindings, and of too old ones
 _NEW_ENOUGH = {PYQT5: 0x050F0A, PYQT6: 0x060C00}  # 5.15.10, 6.12.0
@@ -340,6 +341,16 @@ class TestImportBinding:
         mock_import.side_effect = _import
         qt_core = binding.import_binding(qt_binding, ('QtWidgets',))
         assert qt_core is imported[f'{qt_binding}.QtCore']
+
+    def test_sip_mismatch(self, mock_import):
+        """Check that an incompatible sip means a broken binding."""
+        error = RuntimeError('the sip module implements API v12.8 but '
+                             'the PyQt6.QtCore module requires API v12.15')
+        mock_import.side_effect = error
+        with pytest.raises(ImportError, match='sip module') as exc_info:
+            binding.import_binding(PYQT6)
+        assert exc_info.value.__cause__ is error
+        assert not isinstance(exc_info.value, QtBindingNotFoundError)
 
     def test_too_old(self, mock_import, mocker):
         """Check that nothing else is imported for an old binding."""

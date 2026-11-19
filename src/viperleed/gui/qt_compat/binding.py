@@ -201,7 +201,8 @@ def import_binding(binding, modules=()):
         If `binding` is older than its MIN_VERSIONS.
     ImportError
         If `binding` is installed, but broken (e.g., it misses some
-        of its own modules, or a library it needs fails to load).
+        of its own modules, a library it needs fails to load, or its
+        sip module is incompatible with it).
     """
     qt_core = f'{binding}.QtCore'
     # Each module once, in this order (QtCore may be in modules)
@@ -215,6 +216,10 @@ def import_binding(binding, modules=()):
             if exc.name in (binding, qt_core):
                 raise QtBindingNotFoundError(str(exc)) from exc
             raise
+        except RuntimeError as exc:
+            # E.g., 'the sip module implements API v12.x but the
+            # PyQt6.QtCore module requires API v12.y'
+            raise ImportError(f'{module}: {exc}') from exc
         if module == qt_core:
             check_version(binding, imported[module])
     return imported[qt_core]
