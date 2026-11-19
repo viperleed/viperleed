@@ -272,14 +272,52 @@ def prepare_rfactor_energy_ranges(rpars, theobeams=None, for_error=False,
         raise RfactorError('No experimental beams loaded')
 
     # Prepare experimental range
-    exp_grid = sorted_energies_from_beams(rpars.expbeams)
-    exp_range = EnergyRange.from_sorted_grid(exp_grid)
+    exp_range = experiment_energy_range(rpars.expbeams)
 
     # Now handle iv_shift. Notice that _prepare_iv_shift_range always
     # sets the step to the one of IV_SHIFT_RANGE to ensure consistency
     iv_shift = _prepare_iv_shift_range(rpars, exp_range, for_error)
 
-    small_step = min(exp_range.step, rpars.THEO_ENERGIES.step)
+    theo_range = find_theory_range(rpars.THEO_ENERGIES, exp_range,
+                                   iv_shift, n_expand)
+    return exp_range, theo_range, iv_shift, iv_shift.step
+
+
+def experiment_energy_range(expbeams):
+    """Return the EnergyRange covered by a collection of Beam objects."""
+    return EnergyRange.from_sorted_grid(sorted_energies_from_beams(expbeams))
+
+
+def find_theory_range(theo_energies, exp_range, iv_shift, n_expand):
+    """Return the range of theory energies relevant for an R-factor.
+
+    Parameters
+    ----------
+    theo_energies : TheoEnergies
+        The (defined) energies of the theoretical beams.
+    exp_range : EnergyRange
+        The range of energies of the experimental beams.
+    iv_shift : IVShiftRange
+        The range of shifts to be applied, with a defined step.
+    n_expand : int
+        How many steps should the theory range be expanded at both
+        ends not to disregard available values that may be useful
+        for interpolation. This is on top of the expansion that is
+        considered due to shifting.
+
+    Returns
+    -------
+    theo_range : TheoEnergies
+        The range of theory energies in common with experiment,
+        accounting for relative shifting and for n_expand.
+
+    Raises
+    ------
+    RfactorError
+        If there are no energies in common between experiment
+        and theory.
+    """
+    small_step = min(exp_range.step, theo_energies.step)
     if not iv_shift.is_fixed and iv_shift.step > small_step:
         # Warn only if we're not fixed. If we are, it may just be
         # that the user gave us this specific step value because
@@ -290,12 +328,8 @@ def prepare_rfactor_energy_ranges(rpars, theobeams=None, for_error=False,
                        f'and theory ({small_step} eV). Consider using '
                        f'{small_step} or not defining a step for the '
                        'IV_SHIFT_RANGE parameter')
-
-    # Finally, the relevant range of theory energies
-    theo_range = _find_common_theory_experiment_range(rpars.THEO_ENERGIES,
-                                                      exp_range, iv_shift,
-                                                      n_expand)
-    return exp_range, theo_range, iv_shift, iv_shift.step
+    return _find_common_theory_experiment_range(theo_energies, exp_range,
+                                                iv_shift, n_expand)
 
 
 def _prepare_iv_shift_range(rpars, experiment, for_error):
