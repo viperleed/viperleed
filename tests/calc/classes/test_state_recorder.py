@@ -53,8 +53,15 @@ class TestStateSequence:
         """Check that state_sequence has the full Sequence interface."""
         # Not part of the interface: __class_getitem__ (Python >= 3.9)
         # is for subscripting in type hints; __annotations__ appears
-        # in dir(Sequence) on Python >= 3.10 once anything reads it.
-        not_interface = {'__annotations__', '__class_getitem__'}
+        # in dir(Sequence) on Python >= 3.10 once anything reads it,
+        # and so do __annotate_func__ and __annotations_cache__ on
+        # Python >= 3.14 (PEP 649 and PEP 749).
+        not_interface = {
+            '__annotate_func__',
+            '__annotations__',
+            '__annotations_cache__',
+            '__class_getitem__',
+            }
         sequence_interface = set(dir(Sequence)) - not_interface
         assert not sequence_interface - set(dir(state_sequence))
         assert not isinstance(state_sequence, Sequence)
