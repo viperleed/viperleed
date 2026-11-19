@@ -15,16 +15,18 @@ import cProfile
 import inspect
 import pstats
 from time import perf_counter as timer
+import threading
 
 import wrapt
 try:
     from line_profiler import LineProfiler
 except ImportError:
     pass
+# import memory-profiler   # consider for memory usage!
 
 
 def ensure_decorates_class(superclass=object):
-    """Make sure a @wrapt.decorator decrates a class.
+    """Make sure a @wrapt.decorator decorates a class.
 
     This decorator is meant to be applied to a @wrapt.decorator.
     Raises exceptions if the @wrapt.decorator on which it acts is
@@ -40,6 +42,7 @@ def ensure_decorates_class(superclass=object):
     decorator : callable
         The original @wrapt.decorator if the @wrapt.decorator
         is applied to a subclass of superclass.
+
     Raises
     ------
     RuntimeError
@@ -150,4 +153,18 @@ def print_call(func):
         print("Called", fname)
         return func(*args, **kwargs)
 
+    _wrapper.__name__ = func.__name__
+    return _wrapper
+
+
+def print_thread(func):
+    """Print the thread in which a function is executed."""
+    def _wrapper(*args, **kwargs):
+        fname = str(func).replace('<','').split(' at 0x')[0]
+        thread = threading.current_thread()
+        print(f"Executing {fname} in thread {thread.name} "
+              f"with id {thread.ident}")
+        return func(*args, **kwargs)
+
+    _wrapper.__name__ = func.__name__
     return _wrapper
