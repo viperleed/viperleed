@@ -610,9 +610,9 @@ def rfactor_from_csv(
 
     # Check if file is supposed to be read from disk or from memory and pass
     # it to readOUTBEMS accordingly.
-    # Beams are named expbeams and theobeams for convenience, as this
-    # is assumed if they are to be averaged. However, they could also be two
-    # sets of theoretical or experimental beams.
+    # Beams are named expbeams and theobeams for convenience, as
+    # this is assumed if they are to be averaged. However, they
+    # could also be two sets of theoretical or experimental beams.
     expbeams, theobeams = (
         _read_beams(file, is_content)
         for file, is_content in zip(beams_files, beams_file_is_content)
