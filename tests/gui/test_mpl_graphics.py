@@ -149,7 +149,8 @@ class TestImportMatplotlib:
             mocker.call('viperleed.gui.qt_compat.QtCore'),
             mocker.call('matplotlib'),
             ]
-        mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use)
+        mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use,
+                                                    force=False)
 
 
 class TestImportFigureCanvas:

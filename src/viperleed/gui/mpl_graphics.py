@@ -114,5 +114,10 @@ def import_matplotlib():
     importlib.import_module('viperleed.gui.qt_compat.QtCore')
     backend = find_and_import_backend()
     matplotlib = importlib.import_module('matplotlib')
-    matplotlib.use(backend.mpl_use)
+    # The GUI embeds FigureCanvas classes of the backend, which work
+    # also if the backend of pyplot cannot be set. This happens, e.g.,
+    # on Linux without DISPLAY (QT_QPA_PLATFORM=offscreen) before a
+    # QApplication exists, if pyplot was already imported: matplotlib
+    # then takes the system as 'headless', and refuses Qt backends.
+    matplotlib.use(backend.mpl_use, force=False)
     return backend
