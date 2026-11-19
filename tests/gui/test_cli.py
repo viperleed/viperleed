@@ -229,6 +229,7 @@ Try again after installing them'''
 
     def test_requested_binding(self, mocker, capsys):
         """Check that only a binding requested via QT_API is named."""
+        mocker.patch.dict('os.environ', {'QT_API': 'pyqt5'})
         mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT5,))
         mocker.patch(f'{_MODULE}.check_pyqt_sanity',
                      return_value=PyQtSanity.NOT_FOUND)
@@ -236,7 +237,7 @@ Try again after installing them'''
             ViPErLEEDGUICLI().check_can_run_gui()
         stderr = capsys.readouterr().err.strip()
         assert stderr.endswith('no Qt binding is installed (looked for '
-                               'PyQt5).')
+                               "PyQt5, requested via QT_API='pyqt5').")
 
     @parametrize('sanity,err_msg', _can_run.values(), ids=_can_run)
     def test_result(self, sanity, err_msg, mock_sanity, mocker, capsys):
@@ -503,6 +504,22 @@ class TestViPErLEEDGUICLI:
         assert not mocks.mock_calls
         stderr = capsys.readouterr().err.strip()
         assert stderr.endswith('no Qt binding can be selected. Some reason.')
+
+    def test_call_skip_graphics_check_requested_missing(self, mocks,
+                                                        mocker, capsys):
+        """Check complaints if QT_API requests an uninstalled binding."""
+        cli, mocks = mocks
+        mocker.patch.dict('os.environ', {'QT_API': 'pyqt6'})
+        mocker.patch(f'{_MODULE}.get_candidates', return_value=(PYQT6,))
+        mock_find_spec = mocker.patch(f'{_MODULE}.find_spec',
+                                      return_value=None)
+        with pytest.raises(SystemExit):
+            cli(['--skip-graphics-check'])
+        assert not mocks.mock_calls
+        mock_find_spec.assert_called_once_with(PYQT6)
+        stderr = capsys.readouterr().err.strip()
+        assert stderr.endswith('no Qt binding is installed (looked for '
+                               "PyQt6, requested via QT_API='pyqt6').")
 
     def test_skip_check_prevents_later_checks(self, mocker):
         """Ensure that has_pyqt does not check after skipping the check."""

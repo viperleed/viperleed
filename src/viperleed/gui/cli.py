@@ -12,7 +12,9 @@ __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 from importlib import import_module
+from importlib.util import find_spec
 from itertools import chain
+import os
 from pathlib import Path
 import sys
 
@@ -28,6 +30,7 @@ from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
 from viperleed.gui.qt_compat.binding import MIN_VERSIONS
 from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import QT_API_ENV
 from viperleed.gui.qt_compat.binding import SUPPORTED_BINDINGS
 from viperleed.gui.qt_compat.binding import QtApiError
 from viperleed.gui.qt_compat.binding import get_binding
@@ -65,10 +68,13 @@ _MIN_VERSIONS_MSG = ' or '.join(f'{binding}>={major}.{minor}'
 # Error messages emitted if the sanity check fails. {qt} is replaced
 # by the Qt bindings that were looked for (e.g., 'PyQt6 or PyQt5'),
 # {binding} by the one that the check is about, {qt_api_error} by why
-# no binding can be selected via QT_API, and {also_tried} by lines
-# about other bindings that were tried, and failed.
+# no binding can be selected via QT_API, {qt_api_note} by a note on
+# a binding requested via QT_API, and {also_tried} by lines about
+# other bindings that were tried, and failed.
 _SANITY_TO_ERR_MSG = {
-    PyQtSanity.NOT_FOUND: 'no Qt binding is installed (looked for {qt}).',
+    PyQtSanity.NOT_FOUND: (
+        'no Qt binding is installed (looked for {qt}{qt_api_note}).'
+        ),
     PyQtSanity.INVALID_QT_API: 'no Qt binding can be selected. {qt_api_error}',
     PyQtSanity.TOO_OLD: (
         'the installed {binding} is too old. ViPErLEED needs '
@@ -166,6 +172,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             qt=' or '.join(candidates),
             binding=check_pyqt_sanity.binding,
             qt_api_error=qt_api_error,
+            qt_api_note=self._describe_qt_api(),
             also_tried=also_tried,
             )
         if sanity is PyQtSanity.OK:
@@ -201,11 +208,16 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         self._exit(details)
 
     def _check_qt_api(self):
-        """Exit if no binding can be selected because of QT_API."""
-        _, qt_api_error = self._get_candidates()
+        """Exit if QT_API prevents selecting an installed binding."""
+        candidates, qt_api_error = self._get_candidates()
         if qt_api_error:
             msg = _SANITY_TO_ERR_MSG[PyQtSanity.INVALID_QT_API]
             self._exit(msg.format(qt_api_error=qt_api_error))
+        qt_api_note = self._describe_qt_api()
+        # A binding requested via QT_API is the only candidate
+        if qt_api_note and find_spec(candidates[0]) is None:
+            msg = _SANITY_TO_ERR_MSG[PyQtSanity.NOT_FOUND]
+            self._exit(msg.format(qt=candidates[0], qt_api_note=qt_api_note))
 
     @staticmethod
     def _describe_other_failures():
@@ -221,6 +233,14 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             if other.binding not in (None, binding)
             and other.sanity is not PyQtSanity.NOT_FOUND
             )
+
+    @staticmethod
+    def _describe_qt_api():
+        """Return a note on the binding requested via QT_API, or ''."""
+        requested = os.environ.get(QT_API_ENV, '').strip()
+        if not requested:
+            return ''
+        return f', requested via {QT_API_ENV}={requested!r}'
 
     def _exit(self, details):
         """Exit, as the GUI cannot run because of `details`."""
