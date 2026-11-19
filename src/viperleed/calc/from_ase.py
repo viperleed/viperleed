@@ -459,6 +459,14 @@ def _write_poscar(slab, exec_path):                                             
     poscar.write(slab, poscar_path)
 
 
+def _read_beams(file, is_content):
+    """Return the beams in a CSV file, or in a string with its contents."""
+    if not is_content:
+        return readOUTBEAMS(filename=file, sep=",")
+    with StringIO(file) as fproxy:
+        return readOUTBEAMS(filename=fproxy, sep=",")
+
+
 def _match_beams_by_label(expbeams, theobeams):
     """Return matched exp/theory beam lists using direct hkfrac matching."""
     theo_by_label = {beam.hkfrac: beam for beam in theobeams}
@@ -585,25 +593,16 @@ def rfactor_from_csv(
 
     # Check if file is supposed to be read from disk or from memory and pass
     # it to readOUTBEMS accordingly.
-    beams_tmp = [None, None]
-    for i, (is_content, file) in enumerate(zip(beams_file_is_content,
-                                               beams_files)):
-        if is_content:
-            with StringIO(file) as fproxy:
-                beams_tmp[i] = readOUTBEAMS(filename=fproxy, sep=",")
-        else:
-            beams_tmp[i] = readOUTBEAMS(filename=file, sep=",")
-
-    # beams are here named as expbeams and theobeams for convenience, as this
-    #  is assumed if they are to be averaged. However, they could also be two
-    #  sets of theoretical or experimental beams.
-    expbeams, theobeams = beams_tmp
+    # Beams are named expbeams and theobeams for convenience, as this
+    # is assumed if they are to be averaged. However, they could also be two
+    # sets of theoretical or experimental beams.
+    expbeams, theobeams = (
+        _read_beams(file, is_content)
+        for file, is_content in zip(beams_files, beams_file_is_content)
+    )
 
     for i, beams in enumerate((expbeams, theobeams)):
-        unique_lables = set()
-        for beam in beams:
-            unique_lables.add(beam.hkfrac)
-        if len(unique_lables) != len(beams):
+        if len({beam.hkfrac for beam in beams}) != len(beams):
             raise RuntimeError(
                 f"Multiple beams sharing the same index encountered"
                 f" in input beamset {i}!"
