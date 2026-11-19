@@ -5,18 +5,18 @@
 LAYER_CUTS
 ==========
 
-LAYER_CUTS determines how the slab provided in the :ref:`POSCAR` file is 
-divided in layers. Full dynamic multiple scattering is calculated inside 
-each layer. The electron beams are then propagated as attenuated plane 
+LAYER_CUTS determines how the slab provided in the :ref:`POSCAR` file is
+divided in layers. Full dynamic multiple scattering is calculated inside
+each layer. The electron beams are then propagated as attenuated plane
 waves in between adjacent layers.
 
 .. note::
 
-   The :ref:`BULK_LIKE_BELOW` parameter offers an easy way to detect the bulk 
-   repeat unit automatically, which will set both :ref:`N_BULK_LAYERS` and 
-   LAYER_CUTS. However, be careful combining :ref:`BULK_LIKE_BELOW` with 
-   LAYER_CUTS because the former will overwrite the latter during 
-   initialization producing a fixed list of cut positions. Particular 
+   The :ref:`BULK_LIKE_BELOW` parameter offers an easy way to detect the bulk
+   repeat unit automatically, which will set both :ref:`N_BULK_LAYERS` and
+   LAYER_CUTS. However, be careful combining :ref:`BULK_LIKE_BELOW` with
+   LAYER_CUTS because the former will overwrite the latter during
+   initialization producing a fixed list of cut positions. Particular
    care should be taken in adapting ``dc(float)`` and ``dz(float)``
    cut types after initialization.
 

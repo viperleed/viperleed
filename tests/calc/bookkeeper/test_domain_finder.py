@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-04-10'
 __license__ = 'GPLv3+'
 
@@ -396,14 +396,15 @@ class TestDomainFinderGetHistoryFolder:
         with pytest.raises(FileNotFoundError):
             get('not_a_root_folder', mocker.MagicMock())
 
-    def test_success(self, get, mock_explorer, mocker):
+    def test_success(self, get, mock_explorer, tmp_path, mocker):
         """Check the successful fetching of a history folder."""
         explorer_cls, explorer = mock_explorer
-        mock_root = mocker.MagicMock(spec=Path)
+        # The root must be an existing folder, given as str to check
+        # that it is converted to Path.
         mock_hash = mocker.MagicMock()
-        result = get(mock_root, mock_hash)
+        result = get(str(tmp_path), mock_hash)
         assert result is explorer.subfolder_from_hash.return_value
-        explorer_cls.assert_called_once_with(Path(mock_root))
+        explorer_cls.assert_called_once_with(tmp_path)
         explorer.collect_subfolders.assert_called_once_with()
         explorer.subfolder_from_hash.assert_called_once_with(mock_hash)
 

@@ -13,7 +13,7 @@ after the reference calculation and during the search.
     It is recommended to smooth the experimental curves beforehand, such
     that smoothing during TensErLEED operation is not necessary. See the
     |R-factor| :ref:`page <r-factor_calculation>` for details.
-    
+
     If you do use smoothing through the R_FACTOR_SMOOTHING parameter, check the
     experimental curves in the :ref:`Rfactor_analysis.pdf<rfactoranalysis>`
     file. This plots the curves after smoothing, as well as the Y-function used
@@ -37,6 +37,6 @@ after the reference calculation and during the search.
 .. warning::
    This parameter is only applied in the old TensErLEED-based fortran codes,
    and not in the newer |R-factor| implementations. If you use the newer,
-   python-based |R-factor| implementations, for example by setting 
+   python-based |R-factor| implementations, for example by setting
    :ref:`R_FACTOR_LEGACY<rfactorlegacy>` to ``False``, this parameter will have
    no effect.

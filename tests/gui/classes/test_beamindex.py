@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-03-03'
 __license__ = 'GPLv3+'
 
@@ -109,7 +109,7 @@ class TestBeamIndex:
         """Check correct handling of problematic hash values."""
         beams = tuple(BeamIndex(i) for i in indices)
         assert beams == expect
-        
+
         # Invalidate cache, and do the opposite
         BeamIndex.clear_cache()
         beams = tuple(BeamIndex(i) for i in reversed(indices))
@@ -218,5 +218,3 @@ class TestBeamIndexRaises:
         op_ = getattr(operator, op)
         with pytest.raises(TypeError):
             op_(beam, value)
-
-

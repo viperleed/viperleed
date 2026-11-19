@@ -7,7 +7,7 @@ or running tests.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
@@ -17,6 +17,7 @@ from dataclasses import dataclass, fields
 import functools
 import inspect
 from pathlib import Path
+import random
 
 import pytest
 from pytest_cases import case as case_decorator
@@ -37,6 +38,10 @@ from pytest_cases.filters import CaseFilter
 
 TEST_DATA = Path(__file__).resolve().parent / '_test_data'
 POSCAR_PATH = TEST_DATA / 'POSCARs'
+# Seed for the random choice of atoms that carry mixed elements in
+# psgen. Some draws give eeasisss inputs that make it crash (SIGSEGV),
+# seen with poscar_lsmo_001_rt2. This seed gives a working input.
+PSGEN_SEED = 0
 
 # ##############################   EXCEPTIONS   ###############################
 
@@ -232,7 +237,7 @@ def filesystem_to_dict(root, skip=None):
     return contents
 
 
-def flat_fixture(func, **fixture_args):                                         # TODO: better name. Only usable for parameter-less functions
+def flat_fixture(func, **fixture_args):                                         # TODO: better name. Parameters must be fixtures or @parametrize'd
     """Turn a function into a fixture with fixture_args.
 
     For use without decoration, like so:
@@ -240,8 +245,9 @@ def flat_fixture(func, **fixture_args):                                         
 
     Parameters
     ----------
-    func : function
-        The function to be turned into a fixture.
+    func : function or method
+        The function to be turned into a fixture. May be a bound
+        method, e.g., a method of a case-class instance.
     **fixture_args : object
         Argument to pass to the @fixture decorator.
 
@@ -249,8 +255,23 @@ def flat_fixture(func, **fixture_args):                                         
     -------
     fixture
     """
+    if inspect.ismethod(func):
+        func = _wrap_method(func)
     _decorator = fixture(**fixture_args)
     return _decorator(func)
+
+
+def _wrap_method(method):
+    """Return a plain function that calls a bound `method`."""
+    # pytest-cases removes the pytestmark attribute of a fixture
+    # function on pytest >= 8. This is impossible on a bound method.
+    # functools.wraps shares the pytestmark list of the method with
+    # the wrapper. This is safe: pytest-cases only deletes the
+    # attribute of the wrapper, so the method keeps its marks.
+    @functools.wraps(method)
+    def _wrapper(*args, **kwargs):
+        return method(*args, **kwargs)
+    return _wrapper
 
 
 # ######################   CONTEXT MANAGERS   #########################
@@ -264,6 +285,34 @@ def not_raises(exc):
         yield
     except exc:
         pytest.fail(f'DID RAISE {exc.__name__}')
+
+
+@contextmanager
+def private_random(module, seed):
+    """Temporarily make `module` draw from its own, seeded, generator.
+
+    The attribute `random` of `module` (i.e., the `random` module it
+    imported) is replaced by a random.Random instance. The state of the
+    global generator, as well as that of any other module, is neither
+    used nor changed.
+
+    Parameters
+    ----------
+    module : module
+        The module whose draws from `random` are to be seeded.
+    seed : int
+        The seed of the private generator.
+
+    Yields
+    ------
+    rng : random.Random
+        The private generator.
+    """
+    # S311: not for cryptography; only makes a test reproducible
+    rng = random.Random(seed)  # noqa: S311
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(module, 'random', rng)
+        yield rng
 
 
 @contextmanager
@@ -410,6 +459,49 @@ def has_any_tag(*tags):
     if not tags:
         raise ValueError('Must select at least one tag')
     return CaseFilter(_filter)
+
+
+# ###########################   DRAWS   ###############################
+
+def check_draws(draws, check):
+    """Call check for each draw; fail if any of them fails.
+
+    All draws are checked, even after a failure, so that a single
+    test reports every draw that fails.
+
+    Parameters
+    ----------
+    draws : Sequence
+        The draws to be checked, as given by the `draws` fixture.
+        Each one has `index` and `seed` attributes.
+    check : callable
+        Called with a single draw. Should raise AssertionError if
+        the draw does not pass. Any other exception (including
+        pytest skip/xfail outcomes) is not caught.
+
+    Raises
+    ------
+    AssertionError
+        If `check` raised AssertionError for at least one draw. The
+        message gives the number of failing draws, and the index,
+        seed, and first line of the message of each failure.
+    """
+    failures = []
+    for draw in draws:
+        try:
+            check(draw)
+        except AssertionError as exc:
+            lines = str(exc).strip().splitlines()
+            failures.append((draw, lines[0] if lines else ''))
+    if not failures:
+        return
+    report = '\n'.join(
+        f'  draw {draw.index} (seed {draw.seed}): {message}'
+        for draw, message in failures
+        )
+    raise AssertionError(
+        f'{len(failures)} of {len(draws)} draws failed:\n{report}'
+        )
 
 
 # ###########################   CLASSES   #############################

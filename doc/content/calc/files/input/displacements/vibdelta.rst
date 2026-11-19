@@ -24,7 +24,7 @@ Example
    Ir_top = -0.05 0.05 0.01      ! Vibration amplitude of Iridium atoms in Ir_top sites will be varied over the range [-0.05, 0.05] with step 0.01
 
 How atoms are addressed on the left is described on the main
-:ref:`DISPLACEMENTS`  page. The values on the right will be interpreted 
+:ref:`DISPLACEMENTS`  page. The values on the right will be interpreted
 relative to the atom's vibration amplitude as defined in the :ref:`VIBROCC`
 file.
 

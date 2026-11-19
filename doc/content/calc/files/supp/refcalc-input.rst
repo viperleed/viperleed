@@ -57,8 +57,13 @@ subroutine defining muffin-tin potentials, based on the :ref:`MUFTIN`
 and :ref:`V0_IMAG` parameters. Gets compiled at runtime, together
 with the other refcalc fortran files.
 
+.. _refcalc-param:
+
 refcalc-PARAM
 -------------
 Fortran source code file. Initializes fortran array sizes, which are
 automatically determined from the rest of the input. Part of fortran
 compilation at runtime.
+
+.. versionchanged:: 0.15.0
+   Also written if :ref:`SUPPRESS_EXECUTION<suppress_exe>` is on.

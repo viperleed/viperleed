@@ -8,7 +8,7 @@ truly executed.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -134,6 +134,8 @@ class TestCompileRefcalc:
         work = tmp_path / 'test_folder'
         work.mkdir()
         comptask = make_comptask(sources=(None, None, None, None))
-        run_compile(comptask)
+        # run_compile replaces os.mkdir, which Path.mkdir calls since
+        # Python 3.11: the mock must raise like the real one would.
+        run_compile(comptask, mkdir_raises=FileExistsError)
         expect_log = 'Contents may get overwritten.'
         assert expect_log in caplog.text

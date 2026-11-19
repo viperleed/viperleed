@@ -7,7 +7,7 @@ string into a matrix and vice versa, as well as for formatting.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-13'  # Was in leedsim.classes.py
 __license__ = 'GPLv3+'
 

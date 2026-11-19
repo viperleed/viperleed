@@ -3,10 +3,10 @@
 SYMMETRY_FIX
 ============
 
-SYMMETRY_FIX allows you to constrain the symmetry of the displacements, 
+SYMMETRY_FIX allows you to constrain the symmetry of the displacements,
 vibration amplitudes, and concentrations during LEED optimization.
 
-**Default**: SYMMETRY_FIX = True: Use the symmetry determined 
+**Default**: SYMMETRY_FIX = True: Use the symmetry determined
 automatically from the :ref:`POSCAR` file.
 
 **Syntax:**
@@ -17,26 +17,26 @@ automatically from the :ref:`POSCAR` file.
    SYMMETRY_FIX = false
    SYMMETRY_FIX = <group>
 
-**Accepted values**: ``true``, ``True``, ``false``, ``False`` or any 
-combination of small/capital letters or any abbreviation of the words 
+**Accepted values**: ``true``, ``True``, ``false``, ``False`` or any
+combination of small/capital letters or any abbreviation of the words
 ``true`` and ``false`` (only the first character matters).
-Alternatively, ``<group>`` can be the Hermann–Mauguin symbol for the 
-planar group you want to constrain your symmetry to. Acceptable values 
+Alternatively, ``<group>`` can be the Hermann–Mauguin symbol for the
+planar group you want to constrain your symmetry to. Acceptable values
 are listed in the table below.
 
-.. note:: 
-  The program will evaluate the symmetry group of your input 
-  :ref:`POSCAR`, and will allow only symmetry *reduction*, 
-  i.e., the group you select must be a subgroup of the group of your 
+.. note::
+  The program will evaluate the symmetry group of your input
+  :ref:`POSCAR`, and will allow only symmetry *reduction*,
+  i.e., the group you select must be a subgroup of the group of your
   input :ref:`POSCAR`.
-  Take a look :ref:`here<planegroups>` for (i) a graphical representation of the 
-  operations in the group of your slab, (ii) a graphical representation 
-  of the diplacements allowed for each plane group, and (iii) a list of 
+  Take a look :ref:`here<planegroups>` for (i) a graphical representation of the
+  operations in the group of your slab, (ii) a graphical representation
+  of the diplacements allowed for each plane group, and (iii) a list of
   subgroups for each plane group.
-  The symmetry group of your input slab is detected from the atomic 
-  coordinates in your input 
-  :ref:`POSCAR` (see also the parameter 
-  :ref:`sym_eps`), and written to the POSCAR header after 
+  The symmetry group of your input slab is detected from the atomic
+  coordinates in your input
+  :ref:`POSCAR` (see also the parameter
+  :ref:`sym_eps`), and written to the POSCAR header after
   initialization.
 
 +-----------+------------------------------------------------------------------+
