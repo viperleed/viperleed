@@ -19,6 +19,7 @@ from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files.iorfactor import beamlist_to_array
+from viperleed.calc.files.iorfactor import RfactorError
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 from viperleed.calc.sections import rfactor as rfactor_section
 
@@ -322,3 +323,41 @@ def test_rfactor_from_csv_pdf_r_type(which_r, expected,
     assert len(calls) == 1
     assert calls[0]['r_factor_type'] == r_type_name
     assert bool(calls[0]['kwargs']['analysis_file']) is has_analysis
+
+
+_CSV_HEADER = 'E, ( 1| 0), ( 0| 1)\n'
+
+
+def _csv_beams(energies):
+    """Return the content of a CSV file of two beams at `energies`."""
+    rows = (f'{energy:.2f}, {1 + i % 3}.0, {2 + i % 2}.0\n'
+            for i, energy in enumerate(energies))
+    return _CSV_HEADER + ''.join(rows)
+
+
+_GOOD_CSV = _csv_beams(range(30, 50))
+_BAD_CSV_INPUTS = {
+    'no exp energies': (_CSV_HEADER, _GOOD_CSV),
+    'one exp energy': (_csv_beams([30]), _GOOD_CSV),
+    'no theo energies': (_GOOD_CSV, _CSV_HEADER),
+    'one theo energy': (_GOOD_CSV, _csv_beams([30])),
+    }
+
+
+@pytest.mark.parametrize('contents', _BAD_CSV_INPUTS.values(),
+                         ids=_BAD_CSV_INPUTS)
+def test_rfactor_from_csv_rejects_bad_input(contents):
+    """Check that empty or single-energy beams are refused."""
+    with pytest.raises(ValueError, match='at least 2|is empty'):
+        from_ase.rfactor_from_csv(contents,
+                                  1.0,
+                                  beams_file_is_content=(True, True))
+
+
+def test_rfactor_from_csv_rejects_disjoint_energies():
+    """Check that beams with no common energies are refused."""
+    contents = _csv_beams(range(100, 110)), _GOOD_CSV
+    with pytest.raises(RfactorError, match='No common energies'):
+        from_ase.rfactor_from_csv(contents,
+                                  1.0,
+                                  beams_file_is_content=(True, True))

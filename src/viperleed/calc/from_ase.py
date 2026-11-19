@@ -644,12 +644,18 @@ def rfactor_from_csv(
                 f"({len(theobeams)}), got {len(beam_correspondence)}."
             )
 
-    # Treat first beam as 'experiment' and second as 'theory'.
-    iv_shift = IVShiftRange(*v0r_shift_range, intpol_step)
-    theo_range = rf_io.find_theory_range(
-        TheoEnergies.from_sorted_grid(rf_io.beamlist_to_array(theobeams)[0]),
-        rf_io.experiment_energy_range(expbeams),
-        iv_shift,
+    # Prepare an Rparams object to get the energy ranges right. Treat
+    # first beam as 'experiment' and second as 'theory'.
+    rpars = Rparams()
+    rpars.expbeams = expbeams
+    rpars.V0_IMAG = v0i
+    theo_grid, *_ = rf_io.beamlist_to_array(theobeams)
+    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(theo_grid)
+    rpars.IV_SHIFT_RANGE = IVShiftRange(*v0r_shift_range, intpol_step)
+    _, theo_range, iv_shift, _ = rf_io.prepare_rfactor_energy_ranges(
+        rpars,
+        theobeams,
+        for_error=False,
         n_expand=1,   # cubic only
     )
     scan = v0r_scan.scan_v0r(
@@ -664,10 +670,7 @@ def rfactor_from_csv(
     r_beams = scan.r_factor(groups="beam")
 
     if plot_iv is not None:
-        # The PDF writer reads its settings from an Rparams object
-        rpars = Rparams()
-        rpars.expbeams = expbeams
-        rpars.V0_IMAG = v0i
+        # The PDF writer reads its settings from the Rparams object
         rpars.PLOT_IV.update(plot_iv)
         analysis_file = ''
         try:
