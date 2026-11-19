@@ -266,13 +266,14 @@ on the *Actions* page of the |repo|, select ``TensErLEED tests``, click
 
     gh workflow run tensorleed_tests.yml --ref <branch>
 
-Runs started by hand skip the release tests and the Windows job unless the
-input ``release`` is checked (with the GitHub CLI, add ``-f release=true``).
-Without ``release``, the Linux check is named
-``TensErLEED tests (no release)``, and the skipped Windows job reports under
-a name that still contains the expression for its name. Such a run on the
-head of a pull request into ``master`` thus cannot satisfy the required
-checks ``TensErLEED tests`` and ``TensErLEED tests (Windows)``.
+Runs started by hand skip the release tests and the Windows tests unless
+the input ``release`` is checked (with the GitHub CLI, add
+``-f release=true``). Without ``release``, the checks are named
+``TensErLEED tests (no release)`` and
+``TensErLEED tests (Windows, no release)``, and the Windows job passes
+without running any test. Such a run on the head of a pull request into
+``master`` thus cannot satisfy the required checks ``TensErLEED tests`` and
+``TensErLEED tests (Windows)``.
 
 
 .. _editable_install:

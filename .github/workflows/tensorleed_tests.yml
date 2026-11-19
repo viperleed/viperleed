@@ -9,19 +9,20 @@
 #   other branches it does not start. Require the checks "TensErLEED
 #   tests" and "TensErLEED tests (Windows)" in the ruleset of master
 #   only.
-# - Release runs (pull requests into master, and runs by hand with
-#   "release" checked) also run the job "TensErLEED tests (Windows)":
-#   the same tests, with --release, on windows-latest with gcc,
-#   gfortran and LAPACK from MSYS2 (UCRT64). It takes about 35 min.
+# - In release runs (pull requests into master, and runs by hand with
+#   "release" checked), the job "TensErLEED tests (Windows)" runs the
+#   same tests, with --release, on windows-latest with gcc, gfortran
+#   and LAPACK from MSYS2 (UCRT64). It takes about 35 min.
 #   It has no MPI (MSYS2's mpifort fails when started from Python),
 #   so the searches there run as a single process.
 # - A required check must never pass by being skipped, nor by a run
 #   without the release tests. In runs without them (by hand, without
 #   "release"), the Linux job is therefore named "TensErLEED tests (no
-#   release)". The Windows job is skipped there, and GitHub reports a
-#   skipped job under its name unevaluated, expression included: not
-#   a required name either. On a pull request into master, both jobs
-#   always run under the required names.
+#   release)", and the Windows job "TensErLEED tests (Windows, no
+#   release)". The Windows job then starts, but skips all its steps
+#   and passes without running any test (a job skipped as a whole
+#   would report under its name expression, unevaluated). On a pull
+#   request into master, both jobs always run under the required names.
 # - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
 #   and cached on Linux (on Windows, assembling it takes about 15 s).
 #   The cache key holds the hashes of the script and of the random_.c
@@ -99,21 +100,29 @@ jobs:
         run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs $RELEASE_OPTION
 
   pytest-tensorleed-windows:
-    # Skipped, the job reports under this name unevaluated: keep the
-    # expression, so that it never reports under the required name
+    # Runs without the release tests get a name no ruleset requires
     name: TensErLEED tests (Windows${{ !(github.event_name == 'pull_request' || inputs.release) && ', no release' || '' }})
-    if: ${{ github.event_name == 'pull_request' || inputs.release }}
     runs-on: windows-latest
     timeout-minutes: 120
+    env:
+      # Each step runs only if this is 'true': without the release
+      # tests, the job passes as a no-op under its other name
+      RELEASE: ${{ github.event_name == 'pull_request' || inputs.release }}
     defaults:
       run:
         # Git Bash, so the steps share their syntax with the Linux job
         shell: bash
     steps:
+      - name: Skip the steps without the release tests
+        if: ${{ env.RELEASE != 'true' }}
+        run: echo '::notice::No release tests in this run, so nothing to do'
       - uses: actions/checkout@v7
+        if: ${{ env.RELEASE == 'true' }}
       - name: Set the location of the TensErLEED tree
+        if: ${{ env.RELEASE == 'true' }}
         run: echo "VIPERLEED_TENSORLEED=$RUNNER_TEMP/tensorleed" >> "$GITHUB_ENV"
       - name: Set up Python
+        if: ${{ env.RELEASE == 'true' }}
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -122,6 +131,7 @@ jobs:
             pyproject.toml
             requirements/tests.txt
       - name: Install compilers and LAPACK (MSYS2, UCRT64)
+        if: ${{ env.RELEASE == 'true' }}
         id: msys2
         uses: msys2/setup-msys2@v2
         with:
@@ -132,17 +142,22 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc-fortran
             mingw-w64-ucrt-x86_64-lapack
       - name: Put the UCRT64 compilers first on PATH
+        if: ${{ env.RELEASE == 'true' }}
         # Ahead of the other gcc/gfortran of the runner image
         run: echo '${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin' >> "$GITHUB_PATH"
       - name: Show the compiler versions
+        if: ${{ env.RELEASE == 'true' }}
         run: |
           which gcc gfortran
           echo "gcc$(gcc -dumpfullversion)-gfortran$(gfortran -dumpfullversion)"
       - name: Assemble the TensErLEED tree
+        if: ${{ env.RELEASE == 'true' }}
         run: python build/scripts/assemble_tensorleed_tree.py "$VIPERLEED_TENSORLEED"
       - name: Install viperleed and the test requirements
+        if: ${{ env.RELEASE == 'true' }}
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/tests.txt -e .
       - name: Run the TensErLEED tests
+        if: ${{ env.RELEASE == 'true' }}
         run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs --release
