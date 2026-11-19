@@ -60,7 +60,8 @@ class EnergyBlock(TextBoxWithButtons):
         bwLay.setContentsMargins(0,0,0,0)
         bwLay.addWidget(
             self.limits,
-            qtc.Qt.AlignmentFlag.AlignLeft | qtc.Qt.AlignmentFlag.AlignTop
+            alignment=(qtc.Qt.AlignmentFlag.AlignLeft
+                       | qtc.Qt.AlignmentFlag.AlignTop),
             )
 
         self.bottomWidget.setLayout(bwLay)
