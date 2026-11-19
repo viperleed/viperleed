@@ -57,25 +57,39 @@ def test_mismatched_lengths(is_content, mock_plot):
     mock_plot.assert_not_called()
 
 
-def test_wrong_type_is_content(mock_plot):
-    """Check complaints if a single file comes with a sequence of flags."""
-    with pytest.raises(TypeError):
-        from_ase.plot_iv_from_csv(BEAMS_FILE, beam_file_is_content=(False,))
-    mock_plot.assert_not_called()
-
-
-def test_one_flag_for_many_files(mock_plot):
-    """Check that a single bool applies to all the files."""
-    contents = BEAMS_FILE.read_text()
-    from_ase.plot_iv_from_csv([contents, contents],
-                              beam_file_is_content=True)
-    all_beam_data = mock_plot.call_args[0][0]
-    assert len(all_beam_data) == 2
-
-
 @pytest.mark.parametrize('which_beams', (None, [], 'all'))
 def test_all_beams(which_beams, mock_plot):
     """Check that None, an empty list, and 'all' select all beams."""
     from_ase.plot_iv_from_csv(BEAMS_FILE, which_beams=which_beams)
     all_beam_data = mock_plot.call_args[0][0]
     assert len(all_beam_data[0]) > 2
+
+
+def _plotted_labels(mock_plot):
+    """Return the labels of the beams passed to the mocked plot_iv."""
+    return [beam.label for beam in mock_plot.call_args[0][0][0]]
+
+
+def test_which_beams_indices(mock_plot):
+    """Check that integers select beams by their position."""
+    from_ase.plot_iv_from_csv(BEAMS_FILE)
+    all_labels = _plotted_labels(mock_plot)
+    from_ase.plot_iv_from_csv(BEAMS_FILE, which_beams=[2, 0])
+    assert _plotted_labels(mock_plot) == [all_labels[2], all_labels[0]]
+
+
+def test_which_beams_labels(mock_plot):
+    """Check that strings select beams by their label, in file order."""
+    from_ase.plot_iv_from_csv(BEAMS_FILE)
+    all_labels = _plotted_labels(mock_plot)
+    wanted = [all_labels[3], all_labels[1]]
+    from_ase.plot_iv_from_csv(BEAMS_FILE, which_beams=wanted)
+    assert _plotted_labels(mock_plot) == [all_labels[1], all_labels[3]]
+
+
+@pytest.mark.parametrize('which_beams', ([0, 'a'], [1.5]))
+def test_which_beams_invalid(which_beams, mock_plot):
+    """Check complaints for an invalid which_beams."""
+    with pytest.raises(ValueError, match='which_beams'):
+        from_ase.plot_iv_from_csv(BEAMS_FILE, which_beams=which_beams)
+    mock_plot.assert_not_called()

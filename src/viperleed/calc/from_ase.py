@@ -694,14 +694,9 @@ def rfactor_from_csv(
 
 def _as_file_sequence(beam_file, beam_file_is_content):
     """Return tuples of files and of content flags, of equal length."""
-    if isinstance(beam_file, (str, bytes, os.PathLike)):
-        if not isinstance(beam_file_is_content, bool):
-            raise TypeError('beam_file_is_content must be a bool for a '
-                            'single beam_file')
+    if isinstance(beam_file, (str, os.PathLike)):
         return (beam_file,), (beam_file_is_content,)
     files = tuple(beam_file)
-    if isinstance(beam_file_is_content, bool):
-        return files, (beam_file_is_content,) * len(files)
     is_content = tuple(beam_file_is_content)
     if len(is_content) != len(files):
         msg = (f'beam_file_is_content has {len(is_content)} entries, but '
@@ -737,9 +732,8 @@ def plot_iv_from_csv(
     beam_file_is_content : bool or Sequence of bool, default=False
         If True, it is assumed that the beam_file contains a string
         with the CSV contents rather than a path to the file. For
-        reading, a StringIO will be used internally. A single bool
-        applies to all files in beam_file. A sequence must have
-        one entry per file, and requires beam_file to be a sequence.
+        reading, a StringIO will be used internally. If beam_file is
+        a sequence, this must be a sequence with one entry per file.
     which_beams : None, 'all', range or Sequence of int or str, optional
         Indices or labels specifying which beams to plot. Order is the
         same as in the csv. None, an empty sequence, or 'all' select all
@@ -755,15 +749,11 @@ def plot_iv_from_csv(
 
     Raises
     ------
-    TypeError
-        If beam_file is a single file and beam_file_is_content is
-        not a bool.
     ValueError
         If beam_file_is_content is a sequence with a different length
-        than beam_file, or if there are no beams to plot.
-    RuntimeError
-        If which_beams is not a Sequence containing just integers
-        or strings.
+        than beam_file, if which_beams is not a sequence containing
+        just integers or just strings, or if there are no beams to
+        plot.
     """
     beam_files, is_content_flags = _as_file_sequence(beam_file,
                                                      beam_file_is_content)
@@ -771,8 +761,7 @@ def plot_iv_from_csv(
     all_beam_data = []
     labels = []
     for file, is_content in zip(beam_files, is_content_flags):
-        tmp_file = StringIO(file) if is_content else file
-        beam_list = readOUTBEAMS(filename=tmp_file, sep=",")
+        beam_list = _read_beams(file, is_content)
         if not beam_list:
             continue
 
@@ -789,7 +778,10 @@ def plot_iv_from_csv(
                     new_beam_list.append(beam)
             beam_list = new_beam_list
         else:
-            raise RuntimeError("Invalid argument which_beams in plot_iv_from_csv()")
+            raise ValueError(
+                'which_beams must be None, \'all\', or a sequence of '
+                'only integers or only strings'
+            )
 
         # normalize each beam by the max intensity
         for beam in beam_list:
