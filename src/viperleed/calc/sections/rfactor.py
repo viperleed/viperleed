@@ -114,6 +114,40 @@ def _fetch_and_check_spectra(rp, index, name):
 
 
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
+    """Run the spline-based (Python) R-factor calculation.
+
+    The V0r shift in rp.IV_SHIFT_RANGE that minimizes the overall R
+    factor is found, and R factors are evaluated at that shift. If
+    rp.PLOT_IV['plot'], PDF files with the R-factor plots are written.
+
+    Parameters
+    ----------
+    sl : Slab
+        The slab, used to find the correspondence between
+        experimental and theoretical beams.
+    rp : Rparams
+        The PARAMETERS. Attributes read include THEO_ENERGIES,
+        expbeams, IV_SHIFT_RANGE, V0_IMAG, R_FACTOR_TYPE, INTPOL_DEG,
+        and PLOT_IV. Attributes set: best_v0r, last_R, stored_R[name].
+        IV_SHIFT_RANGE may get its step set.
+    for_error : bool
+        Whether the calculation is meant for error curves. Used to
+        determine the energy ranges.
+    name : str
+        Either 'refcalc' or 'superpos'. Key under which the R factors
+        are stored in rp.stored_R, and part of the PDF file names.
+    theobeams : Sequence
+        Theoretical Beam objects to compare to experiment.
+    expbeams : Sequence
+        Experimental Beam objects. Currently unused: rp.expbeams
+        is used instead.
+
+    Returns
+    -------
+    r_fac_per_beam : numpy.ndarray
+        R factor of each experimental beam at the best V0r shift.
+        An empty list if rp.INTPOL_DEG is not 3.
+    """
     logger.warning(
         'Using new R-factor calculation. This is still experimental!'
     )
