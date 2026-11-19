@@ -53,15 +53,14 @@ _COARSE_STEP_CASES = {
 
 @parametrize('start,stop,step,warns',
              _COARSE_STEP_CASES.values(), ids=_COARSE_STEP_CASES)
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def test_find_theory_range_coarse_step(  # noqa: PLR0913, PLR0917
+def test_find_theory_range_coarse_step(
     start,
     stop,
     step,
     warns,
     caplog,
 ):
-    """Check the warning for a step coarser than experiment and theory."""
+    """Check the warning for a step coarser than the data steps."""
     exp_range = EnergyRange.from_sorted_grid(np.arange(50, 100, 1.0))
     iv_shift = IVShiftRange(start, stop, step)
     iorfactor.find_theory_range(
