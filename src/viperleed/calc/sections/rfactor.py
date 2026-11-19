@@ -15,15 +15,13 @@ from pathlib import Path
 import shutil
 import subprocess
 
-import numpy as np
-
 from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
-from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
+from viperleed.calc.lib import fs_utils, leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.rfactor import v0r_scan
 from viperleed.calc.lib.rfactor.selection import select_rfactor
-from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 logger = logging.getLogger(__name__)
 
@@ -125,15 +123,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.info('Calculating R-factor type %s.',
                 rp.R_FACTOR_TYPE.name.lower())
 
-    (_, theo_range, iv_shift, intpol_step) = (
-        iorfactor.prepare_rfactor_energy_ranges(
-            rp, theobeams, for_error, n_expand=(rp.INTPOL_DEG - 1) // 2
-        )
+    _, theo_range, _, _ = iorfactor.prepare_rfactor_energy_ranges(
+        rp, theobeams, for_error, n_expand=(rp.INTPOL_DEG - 1) // 2
     )
-    out_grid = np.arange(
-        theo_range.min, theo_range.max + 0.1 * intpol_step, intpol_step
-    )
-
     if rp.INTPOL_DEG != 3:
         logger.error(
             'New R-factor calculation only supports cubic '
@@ -147,99 +139,27 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     beam_correspondence = tuple(beam_correspondence)
     logger.debug(f'Beam correspondence: {beam_correspondence}')
 
-    # calculate splines from the spectra
-    logger.debug('Constructing splines from data...')
-
-    ## experiment
-    exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(
-        rp.expbeams
+    scan = v0r_scan.scan_v0r(
+        r_func,
+        rp.V0_IMAG,
+        rp.expbeams,
+        theobeams,
+        beam_correspondence,
+        rp.IV_SHIFT_RANGE,
+        theo_range,
     )
-    exp_spline = spline_interpolation.interpolate_ragged_array(
-        x=exp_energies,
-        y=exp_intensities,
-        bc_type='not-a-knot',  # TODO: from Rfactor parameter?
-    )
-    exp_spline = spline_interpolation.CachedSpline(exp_spline)
-
-    ## theory
-    (theo_grid, _, _, theo_intensities) = iorfactor.beamlist_to_array(theobeams)
-    theo_intensities = average_beam_array(theo_intensities, beam_correspondence)
-    theo_spline = spline_interpolation.interpolate_ragged_array(
-        x=theo_grid,
-        y=theo_intensities,
-        bc_type='not-a-knot',  # TODO: from Rfactor parameter?
-    )
-    theo_spline = spline_interpolation.CachedSpline(theo_spline)
-
-    logger.debug('Sweeping V0r...')
-    # sweep V0r shifts - TODO: continuous shifts?
-    shifts = np.arange(
-        rp.IV_SHIFT_RANGE.start,
-        rp.IV_SHIFT_RANGE.stop + rp.IV_SHIFT_RANGE.step,
-        rp.IV_SHIFT_RANGE.step,
-    )
-    r_values = [
-        r_func(
-            rp.V0_IMAG,
-            intpol_step,
-            out_grid,
-            data_spline_1=exp_spline,
-            data_spline_2=theo_spline,
-            shift_2nd_spline=shift,
-            groups=None,
-        )
-        for shift in shifts
-    ]
-
-    # use best shift
-    r_values = np.array(r_values)
-    best_index = np.argmin(r_values)
-    best_shift = shifts[best_index]
-    logger.info(
-        f'Best inner potential shift: {best_shift:.2f} eV '
-        f'with R = {r_values[best_index]:.4f}'
-    )
-    rp.best_v0r = best_shift
-
-    if best_shift != 0:
-        # re-build theoretical splines one more time on the shifted grid
-        theo_spline = spline_interpolation.interpolate_ragged_array(
-            x=theo_grid + best_shift,
-            y=theo_intensities,
-            bc_type='not-a-knot',  # TODO: from Rfactor parameter?
-            )
-        theo_spline = spline_interpolation.CachedSpline(theo_spline)
+    rp.best_v0r = scan.best_v0r
 
     # calculate R-factors at best shift
     logger.debug('Calculating R-factors...')
-    r_fac_overall = r_func(
-        rp.V0_IMAG,
-        intpol_step,
-        out_grid,
-        data_spline_1=exp_spline,
-        data_spline_2=theo_spline,
-        groups=None,
-        )
+    r_fac_overall = scan.r_factor(groups=None)
 
     integer_fractional_mask = determine_integer_or_fractional(rp)
-    r_fac_integer, r_fac_fractional = r_func(
-        rp.V0_IMAG,
-        intpol_step,
-        out_grid,
-        data_spline_1=exp_spline,
-        data_spline_2=theo_spline,
+    r_fac_integer, r_fac_fractional = scan.r_factor(
         groups=integer_fractional_mask,
         num_groups=2,
     )
-
-    r_fac_per_beam = r_func(
-        rp.V0_IMAG,
-        intpol_step,
-        out_grid,
-        data_spline_1=exp_spline,
-        data_spline_2=theo_spline,
-        groups='beam',
-    )
+    r_fac_per_beam = scan.r_factor(groups='beam')
 
     # plotting
     if rp.PLOT_IV['plot']:
@@ -247,9 +167,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         aname = f'Rfactor_analysis_{name}.pdf'
         iorfactor.write_Rfactorpdf_from_splines(
             rp,
-            theo_spline,
-            exp_spline,
-            out_grid,
+            scan.theo_spline,
+            scan.exp_spline,
+            scan.out_grid,
             r_fac_per_beam,
             outname=outname,
             analysis_file=aname,

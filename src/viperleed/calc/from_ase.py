@@ -32,12 +32,11 @@ from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.files.iorfactor import beamlist_to_array
 from viperleed.calc.files.iorfactor import write_Rfactorpdf_from_splines
-from viperleed.calc.lib import spline_interpolation
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.matrix import rotation_matrix
+from viperleed.calc.lib.rfactor import v0r_scan
 from viperleed.calc.lib.rfactor.selection import select_rfactor_by_name
-from viperleed.calc.lib.rfactor.utils import average_beam_array
 from viperleed.calc.run import run_calc
 
 
@@ -626,104 +625,42 @@ def rfactor_from_csv(
                 f"({len(theobeams)}), got {len(beam_correspondence)}."
             )
 
-    # Prepare an Rparams object to get the energy ranges right.
-    # Again treat first beam as 'experiment' and second as 'theory'.
-    rpars = Rparams()
-    rpars.expbeams = expbeams
-    rpars.V0_IMAG = v0i
-
-    theo_grid, _, _, theo_intensities = beamlist_to_array(theobeams)
-    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(theo_grid)
-    rpars.IV_SHIFT_RANGE = IVShiftRange(*v0r_shift_range, intpol_step)
-
-    _, theo_range, _, intpol_step = rf_io.prepare_rfactor_energy_ranges(
-        rpars,
-        theobeams,
-        for_error=False,
+    # Treat first beam as 'experiment' and second as 'theory'.
+    iv_shift = IVShiftRange(*v0r_shift_range, intpol_step)
+    theo_range = rf_io.find_theory_range(
+        TheoEnergies.from_sorted_grid(beamlist_to_array(theobeams)[0]),
+        rf_io.experiment_energy_range(expbeams),
+        iv_shift,
         n_expand=1,   # cubic only
     )
-    out_grid = np.arange(
-        theo_range.min,
-        theo_range.max + 0.1 * intpol_step,
-        intpol_step,
-    )
-
-    # Create splines
-    exp_grid, _, _, exp_intensities = beamlist_to_array(expbeams)
-    exp_spline = spline_interpolation.interpolate_ragged_array(
-        x=exp_grid,
-        y=exp_intensities,
-        bc_type="not-a-knot",
-    )
-    exp_spline = spline_interpolation.CachedSpline(exp_spline)
-
-    theo_intensities = average_beam_array(theo_intensities, beam_correspondence)
-    theo_spline = spline_interpolation.interpolate_ragged_array(
-        x=theo_grid,
-        y=theo_intensities,
-        bc_type="not-a-knot",
-    )
-    theo_spline = spline_interpolation.CachedSpline(theo_spline)
-
-    # sweep V0r shifts - TODO: continuous shifts?
-    shifts = np.arange(
-        rpars.IV_SHIFT_RANGE.start,
-        rpars.IV_SHIFT_RANGE.stop + rpars.IV_SHIFT_RANGE.step,
-        rpars.IV_SHIFT_RANGE.step,
-    )
-
-    r_values = np.array(
-        [
-            r_func(
-                v0i,
-                intpol_step,
-                out_grid,
-                data_spline_1=exp_spline,
-                data_spline_2=theo_spline,
-                shift_2nd_spline=shift,
-                groups=None,
-            )
-            for shift in shifts
-        ]
-    )
-
-    best_index = np.argmin(r_values)
-    best_v0r = shifts[best_index]
-    best_r = r_values[best_index]
-
-    # re-build theoretical splines one more time on the shifted grid
-    if best_v0r != 0:
-        theo_spline = spline_interpolation.interpolate_ragged_array(
-            x=theo_grid + best_v0r,
-            y=theo_intensities,
-            bc_type="not-a-knot",
-        )
-        theo_spline = spline_interpolation.CachedSpline(theo_spline)
-
-    r_beams = r_func(
+    scan = v0r_scan.scan_v0r(
+        r_func,
         v0i,
-        intpol_step,
-        out_grid,
-        data_spline_1=exp_spline,
-        data_spline_2=theo_spline,
-        groups="beam",
+        expbeams,
+        theobeams,
+        beam_correspondence,
+        iv_shift,
+        theo_range,
     )
+    r_beams = scan.r_factor(groups="beam")
 
     if plot_iv is not None:
-        rpars.PLOT_IV.update(plot_iv)
+        # The PDF writer reads its settings from an Rparams object
+        rpars = Rparams()
         rpars.expbeams = expbeams
-
+        rpars.V0_IMAG = v0i
+        rpars.PLOT_IV.update(plot_iv)
         write_Rfactorpdf_from_splines(
             rpars,
-            theo_spline,
-            exp_spline,
-            out_grid,
+            scan.theo_spline,
+            scan.exp_spline,
+            scan.out_grid,
             r_beams,
             outname="Rfactor_plots_from_ase.pdf",
             analysis_file="Rfactor_analysis_from_ase.pdf",
         )
 
-    return best_r, best_v0r, r_beams
+    return scan.best_r, scan.best_v0r, r_beams
 
 def plot_iv_from_csv(
     beam_file,
