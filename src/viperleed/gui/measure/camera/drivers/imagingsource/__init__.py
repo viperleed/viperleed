@@ -34,6 +34,7 @@ if not sys.platform.startswith('win'):
                       'unsupported on non-Windows platforms.')
 
 from viperleed.gui.measure.camera.drivers.imagingsource.tisgrabber import (
+    DisconnectedCallbackType,
     FrameReadyCallbackType,
     SinkFormat,
     WindowsCamera as ISCamera,
