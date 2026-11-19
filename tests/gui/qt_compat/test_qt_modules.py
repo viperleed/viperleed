@@ -49,7 +49,7 @@ def fixture_qt_binding(missing_dependency):
     except QtApiError:  # QT_API is wrong: fail, rather than skip
         raise
     except QtBindingNotFoundError as exc:
-        missing_dependency('PyQt5/PyQt6', str(exc))
+        missing_dependency('PyQt', str(exc))
     raise AssertionError('Unreachable')
 
 

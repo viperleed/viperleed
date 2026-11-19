@@ -70,9 +70,9 @@ def _find_missing():
     except qt_binding.QtApiError as exc:  # E.g., an unsupported value
         return qt_binding.QT_API_ENV, str(exc), True
     except qt_binding.QtBindingNotFoundError as exc:
-        return 'PyQt5/PyQt6', str(exc), False
+        return 'PyQt', str(exc), False
     except ImportError as exc:  # Installed, but broken
-        return 'PyQt5/PyQt6', f'installed, but broken. {exc}', True
+        return 'PyQt', f'installed, but broken. {exc}', True
     if importlib.util.find_spec('pytestqt') is None:
         return PYTEST_QT, '', False
     requested = os.environ.get(PYTEST_QT_API_ENV, '').strip().lower()

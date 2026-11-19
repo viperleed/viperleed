@@ -39,7 +39,7 @@ def fixture_import_with_qt(missing_dependency):
         except QtApiError:  # QT_API is wrong: fail, rather than skip
             raise
         except QtBindingNotFoundError as exc:
-            missing_dependency('PyQt5/PyQt6', str(exc))
+            missing_dependency('PyQt', str(exc))
             raise  # Unreachable, as missing_dependency raises
     return _import
 

@@ -1,10 +1,10 @@
 """Skip tests on missing optional dependencies, or fail on request.
 
-Tests that need an optional dependency (e.g., mpifort/gfortran,
-PyQt5/PyQt6, pytest-qt) skip, with a reason naming the dependency,
-when it is missing. With the command-line option --require-all, those
-skips become failures, so that a run on a complete environment cannot
-silently skip tests.
+Tests that need an optional dependency (e.g., mpifort/gfortran, PyQt
+for PyQt5 or PyQt6, pytest-qt) skip, with a reason naming the
+dependency, when it is missing. With the command-line option
+--require-all, those skips become failures, so that a run on a
+complete environment cannot silently skip tests.
 
 Call the `missing_dependency` fixture where a test finds that a
 dependency is missing:
@@ -48,7 +48,7 @@ def pytest_addoption(parser):
         default=False,
         help=('Fail, rather than skip, tests that need a missing '
               'optional dependency (e.g., mpifort/gfortran, '
-              'PyQt5/PyQt6, pytest-qt).'),
+              'PyQt, pytest-qt).'),
         )
 
 
