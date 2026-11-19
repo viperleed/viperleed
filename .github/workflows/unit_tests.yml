@@ -3,21 +3,29 @@
 # on every push to master. The TensErLEED-dependent tests run in
 # tensorleed_tests.yml instead.
 #
-# - The tests run with pytest-xdist and --require-all: gfortran and
-#   mpifort are installed, and a test that would skip for lack of one
-#   fails instead. PyQt5 is installed too, but no test needs it.
-# - Python versions: the oldest offered by actions/setup-python on
-#   ubuntu-latest, and the newest on which the default tier passes.
-#   Python 3.13 and later still fail some tests.
-# - Coverage is uploaded to Codecov from the newest-Python job. This
-#   needs the Codecov app and the CODECOV_TOKEN secret. A failed upload
-#   does not fail the job.
+# - Three jobs: Linux with the newest Python on which the default tier
+#   passes (Python 3.13 and later still fail some tests), Windows with
+#   Python 3.7 (the oldest supported; actions/setup-python has no 3.7
+#   for ubuntu-latest), and Windows with the same Python as Linux.
+# - The tests run with pytest-xdist and --require-all, so a test that
+#   would skip for lack of an optional dependency fails instead. On
+#   Linux, gfortran and mpifort are installed. The Windows jobs do
+#   not install them: they exempt exactly these two dependencies with
+#   --allow-missing=mpifort,gfortran, so the tests that need them are
+#   sure to run on Linux only, and any other missing dependency still
+#   fails.
+#   PyQt5 is installed too, but no test needs it.
+# - Coverage is uploaded to Codecov from the Linux job. This needs the
+#   Codecov app and the CODECOV_TOKEN secret. A failed upload does not
+#   fail the job.
 # - Require the check "Tests" (job all-tests) in the
 #   rulesets: it fails unless every job of the matrix succeeded, and
-#   its name does not change with the Python versions.
+#   its name does not change with the operating systems or the Python
+#   versions.
 # - On push to master, the job "Tests (serial)" also runs the
-#   default tier without pytest-xdist, for tests that fail only when
-#   run serially. It is not part of the check on pull requests.
+#   default tier without pytest-xdist (Linux), for tests that fail
+#   only when run serially. It is not part of the check on pull
+#   requests.
 
 name: Tests
 
@@ -41,18 +49,32 @@ env:
   # PyQt5 without a display
   QT_QPA_PLATFORM: offscreen
 
+defaults:
+  run:
+    # Also on Windows (Git Bash), so the steps share their syntax
+    shell: bash
+
 jobs:
   pytest:
-    name: Tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: Tests (${{ matrix.platform }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.12']
         include:
-          - python-version: '3.12'
+          - platform: Linux
+            os: ubuntu-latest
+            python-version: '3.12'
             coverage: true
+          - platform: Windows
+            os: windows-latest
+            python-version: '3.7'
+            allow-missing: mpifort,gfortran
+          - platform: Windows
+            os: windows-latest
+            python-version: '3.12'
+            allow-missing: mpifort,gfortran
     steps:
       - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
@@ -64,6 +86,7 @@ jobs:
             pyproject.toml
             requirements/tests.txt
       - name: Install compilers, MPI, and the libraries of PyQt5/mplcairo
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin \
@@ -77,7 +100,11 @@ jobs:
         env:
           # Coverage only where it is uploaded
           COVERAGE_OPTIONS: ${{ matrix.coverage && '--cov-report=xml' || '--no-cov' }}
-        run: pytest tests -n auto --require-all -rfEs $COVERAGE_OPTIONS
+          # Optional dependencies that this job does not install
+          ALLOW_MISSING_OPTION: ${{ matrix.allow-missing && format('--allow-missing={0}', matrix.allow-missing) || '' }}
+        run: >-
+          pytest tests -n auto --require-all $ALLOW_MISSING_OPTION -rfEs
+          $COVERAGE_OPTIONS
       - name: Upload coverage to Codecov
         if: ${{ matrix.coverage }}
         continue-on-error: true
