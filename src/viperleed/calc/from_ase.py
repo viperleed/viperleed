@@ -14,9 +14,10 @@ from dataclasses import FrozenInstanceError, dataclass
 from io import StringIO
 import logging
 from numbers import Real
+import os
 from pathlib import Path
 import shutil
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -675,59 +676,91 @@ def rfactor_from_csv(
 
     return scan.best_r, scan.best_v0r, r_beams
 
+def _as_file_sequence(beam_file, beam_file_is_content):
+    """Return tuples of files and of content flags, of equal length."""
+    if isinstance(beam_file, (str, bytes, os.PathLike)):
+        if not isinstance(beam_file_is_content, bool):
+            raise TypeError('beam_file_is_content must be a bool for a '
+                            'single beam_file')
+        return (beam_file,), (beam_file_is_content,)
+    files = tuple(beam_file)
+    if isinstance(beam_file_is_content, bool):
+        return files, (beam_file_is_content,) * len(files)
+    is_content = tuple(beam_file_is_content)
+    if len(is_content) != len(files):
+        msg = (f'beam_file_is_content has {len(is_content)} entries, but '
+               f'there are {len(files)} files in beam_file')
+        raise ValueError(msg)
+    return files, is_content
+
+
 def plot_iv_from_csv(
     beam_file,
     output_file=None,
     beam_file_is_content=False,
-    which_beams=[],
+    which_beams=None,
     legends=None
 ):
-    """Plots LEED-I(V) spectra directly from a CSV file.
+    """Plot LEED-I(V) spectra directly from a CSV file.
 
     This function can be used to plot LEED-I(V) spectra directly from
     a CSV file without running any other calculations.
     It is assumed that the CSV file uses the format used by ViPErLEED.
-    Returns nothing but writes the pdf file.
-
 
     Parameters
     ----------
-    beam_file : string
-        If beam_file_is_content is set as True, the string is expected
-        to contain the contents of the CSV file, otherwise it should be
-        a path to the file.
-    beam_file_is_content : bool, default = False
-        If set to True, it is assumed that the beam_file
-        contains a string with the CSV contents rather than a path to
-        the file. For reading, a StringIO will be used internally.
-    output_pdf : pathlib Path, string or None; default = None
-        Path to the PDF file where the plot will be saved, if Path or string.
-        (File is created.) If None, returns list of matplotlib figures.
-    which_beams : range or Sequence of int or strings
-        Indices specifying which beams to plot. Order is the same as in the csv.
-    legends : None or list of strings, default = None
+    beam_file : str, Path, or Sequence of str or Path
+        The CSV file(s) to be plotted. A single str or Path is
+        treated as one file. If beam_file_is_content is True, a str
+        is expected to contain the contents of the CSV file,
+        otherwise it should be a path to the file.
+    output_file : Path, str or None, default=None
+        Path to the PDF file where the plot will be saved. (File is
+        created.) If None, no file is written, and the matplotlib
+        figures are returned.
+    beam_file_is_content : bool or Sequence of bool, default=False
+        If True, it is assumed that the beam_file contains a string
+        with the CSV contents rather than a path to the file. For
+        reading, a StringIO will be used internally. A single bool
+        applies to all files in beam_file. A sequence must have
+        one entry per file, and requires beam_file to be a sequence.
+    which_beams : None, 'all', range or Sequence of int or str, optional
+        Indices or labels specifying which beams to plot. Order is the
+        same as in the csv. None, an empty sequence, or 'all' select all
+        beams. Default is None.
+    legends : None or list of str, default=None
         Legends to be used for the various files.
+
+    Returns
+    -------
+    figures : list of matplotlib.figure.Figure or None
+        Whatever plot_iv returns: the figures if output_file is
+        None, otherwise nothing.
 
     Raises
     ------
+    TypeError
+        If beam_file is a single file and beam_file_is_content is
+        not a bool.
+    ValueError
+        If beam_file_is_content is a sequence with a different length
+        than beam_file, or if there are no beams to plot.
     RuntimeError
-        If which_beams is not Sequence containing just integers or
-        strings.
+        If which_beams is not a Sequence containing just integers
+        or strings.
     """
-    if isinstance(beam_file, Sequence):
-        assert len(beam_file_is_content) == len(beam_file)
-    else:
-        assert type(beam_file_is_content) is bool
+    beam_files, is_content_flags = _as_file_sequence(beam_file,
+                                                     beam_file_is_content)
 
     all_beam_data = []
     labels = []
-    for file, is_content in zip(beam_file, beam_file_is_content):
+    for file, is_content in zip(beam_files, is_content_flags):
         tmp_file = StringIO(file) if is_content else file
         beam_list = readOUTBEAMS(filename=tmp_file, sep=",")
         if not beam_list:
             continue
 
-        if which_beams == [] or which_beams == "all" or which_beams is None:
+        if which_beams is None or which_beams == "all" or not len(which_beams):
             pass
         elif isinstance(which_beams, range) or all(
             [type(label) is int for label in which_beams]
