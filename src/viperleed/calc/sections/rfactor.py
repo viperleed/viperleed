@@ -192,6 +192,11 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
         theo_range,
     )
     rp.best_v0r = scan.best_v0r
+    logger.info(
+        'Best inner potential shift: %.2f eV with R = %.4f',
+        scan.best_v0r,
+        scan.best_r,
+    )
 
     # calculate R-factors at best shift
     logger.debug('Calculating R-factors...')

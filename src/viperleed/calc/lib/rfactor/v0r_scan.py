@@ -118,8 +118,8 @@ def _find_best_shift(result, iv_shift):
     best_index = np.argmin(r_values)
     best_shift = shifts[best_index]
     best_r = r_values[best_index]
-    logger.info(f'Best inner potential shift: {best_shift:.2f} eV '
-                f'with R = {best_r:.4f}')
+    logger.debug('Best inner potential shift: %.2f eV with R = %.4f',
+                 best_shift, best_r)
     return best_shift, best_r
 
 
