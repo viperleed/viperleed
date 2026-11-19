@@ -43,6 +43,7 @@ from viperleed.calc.run import run_calc
 _LOGGER = logging.getLogger(__name__)
 # The R factors for which an analysis PDF can be written
 _ANALYSIS_R_FACTORS = RFactorType.PENDRY, RFactorType.SMOOTH
+_ALL_BEAMS = "all"
 _INPUT_FILES = (
     "PARAMETERS",
     "VIBROCC",
@@ -464,7 +465,7 @@ def _write_poscar(slab, exec_path):                                             
 
 
 def _read_beams(file, is_content):
-    """Return the beams in a CSV file, or in a string with its contents."""
+    """Return the beams from a CSV file or from a CSV string."""
     if not is_content:
         return readOUTBEAMS(filename=file, sep=",")
     with StringIO(file) as fproxy:
@@ -617,8 +618,6 @@ def rfactor_from_csv(
     # Select R-factor function
     r_func = select_rfactor_by_name(which_r)
 
-    # Check if file is supposed to be read from disk or from memory and pass
-    # it to readOUTBEMS accordingly.
     # Beams are named expbeams and theobeams for convenience, as
     # this is assumed if they are to be averaged. However, they
     # could also be two sets of theoretical or experimental beams.
@@ -629,10 +628,11 @@ def rfactor_from_csv(
 
     for i, beams in enumerate((expbeams, theobeams)):
         if len({beam.hkfrac for beam in beams}) != len(beams):
-            raise ValueError(
-                f"Multiple beams sharing the same index encountered"
+            msg = (
+                "Multiple beams sharing the same index encountered"
                 f" in input beamset {i}!"
             )
+            raise ValueError(msg)
 
     if beam_correspondence is None:
         expbeams, theobeams = _match_beams_by_label(expbeams, theobeams)
@@ -676,14 +676,14 @@ def rfactor_from_csv(
     if plot_iv is not None:
         # The PDF writer reads its settings from the Rparams object
         rpars.PLOT_IV.update(plot_iv)
-        analysis_file = ''
+        analysis_file = ""
         try:
             rpars.R_FACTOR_TYPE = RFactorType(which_r)
         except ValueError:
             pass  # R1: not an R_FACTOR_TYPE, no analysis available
         else:
             if rpars.R_FACTOR_TYPE in _ANALYSIS_R_FACTORS:
-                analysis_file = 'Rfactor_analysis_from_ase.pdf'
+                analysis_file = "Rfactor_analysis_from_ase.pdf"
         rf_io.write_Rfactorpdf_from_splines(
             rpars,
             scan.theo_spline,
@@ -695,6 +695,7 @@ def rfactor_from_csv(
         )
 
     return scan.best_r, scan.best_v0r, r_beams
+
 
 def _as_file_sequence(beam_file, beam_file_is_content):
     """Return tuples of files and of content flags, of equal length."""
@@ -774,7 +775,7 @@ def plot_iv_from_csv(
         if not beam_list:
             continue
 
-        if which_beams is None or which_beams == "all" or not len(which_beams):
+        if which_beams is None or which_beams == _ALL_BEAMS or not which_beams:
             pass
         elif isinstance(which_beams, range) or all(
             [type(label) is int for label in which_beams]
@@ -788,8 +789,8 @@ def plot_iv_from_csv(
             beam_list = new_beam_list
         else:
             raise ValueError(
-                'which_beams must be None, \'all\', or a sequence of '
-                'only integers or only strings'
+                "which_beams must be None, 'all', or a sequence of "
+                "only integers or only strings"
             )
 
         # normalize each beam by the max intensity

@@ -15,7 +15,7 @@ __created__ = '2026-11-19'
 __license__ = 'GPLv3+'
 
 from dataclasses import dataclass
-from dataclasses import replace
+import functools
 import logging
 from typing import Any
 from typing import Callable
@@ -61,8 +61,8 @@ class V0rScanResult:
     out_grid: Any
     exp_spline: Any
     theo_spline: Any
-    best_v0r: float = None
-    best_r: float = None
+    best_v0r: float
+    best_r: float
 
     def r_factor(self, groups=None, **kwargs):
         """Return the R factor between the stored splines.
@@ -97,12 +97,12 @@ def _make_spline(grid, intensities):
     spline = spline_interpolation.interpolate_ragged_array(
         x=grid,
         y=intensities,
-        bc_type='not-a-knot',  # TODO: from Rfactor parameter?
+        bc_type='not-a-knot',  # Cubic only
     )
     return spline_interpolation.CachedSpline(spline)
 
 
-def _find_best_shift(result, iv_shift):
+def _find_best_shift(r_at_shift, iv_shift):
     """Return the shift in iv_shift with the lowest R, and that R."""
     logger.debug('Sweeping V0r...')
     # sweep V0r shifts - TODO: continuous shifts?
@@ -112,7 +112,7 @@ def _find_best_shift(result, iv_shift):
         iv_shift.step,
     )
     r_values = np.array([
-        result.r_factor(shift_2nd_spline=shift)
+        r_at_shift(shift_2nd_spline=shift)
         for shift in shifts
     ])
     best_index = np.argmin(r_values)
@@ -156,7 +156,9 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
     """
     intpol_step = iv_shift.step
     out_grid = np.arange(
-        theo_range.min, theo_range.max + 0.1 * intpol_step, intpol_step
+        theo_range.min,
+        theo_range.max + 0.1 * intpol_step,
+        intpol_step,
     )
 
     logger.debug('Constructing splines from data...')
@@ -166,19 +168,29 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
     theo_grid, _, _, theo_intensities = beamlist_to_array(theo_beams)
     theo_intensities = average_beam_array(theo_intensities,
                                           beam_correspondence)
-    result = V0rScanResult(
+    theo_spline = _make_spline(theo_grid, theo_intensities)
+
+    best_shift, best_r = _find_best_shift(
+        functools.partial(
+            r_func,
+            v0_imag,
+            intpol_step,
+            out_grid,
+            data_spline_1=exp_spline,
+            data_spline_2=theo_spline,
+            groups=None,
+        ),
+        iv_shift,
+    )
+    if best_shift:
+        theo_spline = _make_spline(theo_grid + best_shift, theo_intensities)
+    return V0rScanResult(
         r_func,
         v0_imag,
         intpol_step,
         out_grid,
         exp_spline,
-        _make_spline(theo_grid, theo_intensities),
+        theo_spline,
+        best_shift,
+        best_r,
     )
-
-    best_shift, best_r = _find_best_shift(result, iv_shift)
-    theo_spline = result.theo_spline
-    if best_shift != 0:
-        # re-build theoretical splines one more time on the shifted grid
-        theo_spline = _make_spline(theo_grid + best_shift, theo_intensities)
-    return replace(result, theo_spline=theo_spline,
-                   best_v0r=best_shift, best_r=best_r)
