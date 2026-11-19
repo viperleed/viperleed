@@ -314,6 +314,13 @@ class TestCheckBinding:
             mocker.call(_DISPLAY_TIMEOUT),
             ]
 
+    def test_not_installed_real(self):
+        """Check the result of a real subprocess for a missing binding."""
+        missing = 'PyQt7'
+        # pylint: disable-next=protected-access
+        result = PyQtSanityChecker._check_binding(missing)
+        assert result == BindingCheck(missing, PyQtSanity.NOT_FOUND)
+
     def test_unresponsive(self, mock_multiprocessing):
         """Check the result when importing does not finish in time."""
         mocks = mock_multiprocessing(ready='none', alive=True)

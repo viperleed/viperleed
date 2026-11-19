@@ -102,6 +102,8 @@ class TestQtDependencyFinder:
         """Check the plugins path of the installed binding."""
         # pylint: disable-next=protected-access
         path = QtDependencyFinder(get_binding())._get_platforms_path()
+        if path is None:
+            pytest.skip('Binding uses the Qt libraries of the system')
         # pylint: disable-next=magic-value-comparison
         assert path.name == 'platforms'
         assert path.is_dir()

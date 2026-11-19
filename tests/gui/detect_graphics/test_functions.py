@@ -146,6 +146,7 @@ class TestSuppressFilePermissionWarnings:
 
         mocker.patch(f'{MODULE}._UNIX_RUNTIME_DIR', str(tmp_path))
         mocker.patch('pathlib.Path.mkdir', mock_mkdir)
+        mocker.patch.dict('os.environ')  # Restore it after the test
         expect_path = (tmp_path / 'viperleed-gui').resolve()
         assert not expect_path.exists()
 
@@ -163,6 +164,7 @@ class TestSuppressFilePermissionWarnings:
         expect_path = fallback/'viperleed-gui'
 
         mocker.patch(f'{MODULE}._UNIX_RUNTIME_DIR', str(fails))
+        mocker.patch.dict('os.environ')  # Restore it after the test
 
         mkdir = Path.mkdir
         def mkdir_raises(path, *args, **kwargs):
