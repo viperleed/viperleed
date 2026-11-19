@@ -574,6 +574,15 @@ def rfactor_from_csv(
         The V0r shift in eV corresponding to best_r.
     r_beams : np.ndarray
         Per-beam R-factors at best_v0r.
+
+    Raises
+    ------
+    ValueError
+        If either file contains multiple beams with the same
+        indices, if there are no beams in common between the two
+        files (when beam_correspondence is not given), or if
+        beam_correspondence is not a 1D sequence with one entry per
+        theoretical beam.
     """
     if intpol_deg is not None:
         _LOGGER.warning(
@@ -603,7 +612,7 @@ def rfactor_from_csv(
 
     for i, beams in enumerate((expbeams, theobeams)):
         if len({beam.hkfrac for beam in beams}) != len(beams):
-            raise RuntimeError(
+            raise ValueError(
                 f"Multiple beams sharing the same index encountered"
                 f" in input beamset {i}!"
             )
