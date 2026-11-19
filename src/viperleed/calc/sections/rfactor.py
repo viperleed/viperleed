@@ -18,6 +18,10 @@ import subprocess
 from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
+from viperleed.calc.files.parameters.checker import (
+    PYTHON_RFACTOR_INTPOL_DEG,
+    )
+from viperleed.calc.files.parameters.errors import ParameterConflictError
 from viperleed.calc.lib import fs_utils, leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.rfactor import v0r_scan
@@ -146,7 +150,24 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     -------
     r_fac_per_beam : numpy.ndarray
         R factor of each experimental beam at the best V0r shift.
+
+    Raises
+    ------
+    ParameterConflictError
+        If rp.INTPOL_DEG is not 3, which the Python R factor requires.
+        Normally rejected earlier, when PARAMETERS are interpreted.
     """
+    if rp.INTPOL_DEG != PYTHON_RFACTOR_INTPOL_DEG:
+        raise ParameterConflictError(
+            'INTPOL_DEG',
+            'R_FACTOR_LEGACY',
+            message=(
+                'The Python R factor supports only cubic interpolation '
+                f'(INTPOL_DEG = {PYTHON_RFACTOR_INTPOL_DEG}), but '
+                f'INTPOL_DEG is {rp.INTPOL_DEG}. Use R_FACTOR_LEGACY = '
+                'True to use the TensErLEED R factor.'
+                ),
+            )
     logger.warning(
         'Using new R-factor calculation. This is still experimental!'
     )

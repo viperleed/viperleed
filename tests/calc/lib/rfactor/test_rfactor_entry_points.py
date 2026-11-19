@@ -19,6 +19,7 @@ from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files.iorfactor import beamlist_to_array
+from viperleed.calc.files.parameters.errors import ParameterConflictError
 from viperleed.calc.sections import rfactor as rfactor_section
 
 from .conftest import BEAM_DATA_DIR
@@ -286,3 +287,19 @@ def test_pdf_inputs(entry_point, fe2o3_012_1x1_dataset, monkeypatch):
     actual = _run_pdf(entry_point, fe2o3_012_1x1_dataset, monkeypatch)
     expected = _load_expected(entry_point, 'pendry', 'pdf')
     np.testing.assert_equal(actual, expected)
+
+
+def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
+    """Check that a code-built Rparams with INTPOL_DEG != 3 is refused."""
+    expbeams = readOUTBEAMS(fe2o3_012_1x1_dataset['exp_file'])
+    theobeams = readOUTBEAMS(fe2o3_012_1x1_dataset['theo_file'])
+    rpars = _make_rparams(fe2o3_012_1x1_dataset, 'pendry',
+                          expbeams, theobeams)
+    rpars.INTPOL_DEG = 5
+    with pytest.raises(ParameterConflictError, match='R_FACTOR_LEGACY'):
+        rfactor_section.run_new_rfactor(None,
+                                        rpars,
+                                        for_error=False,
+                                        name='refcalc',
+                                        theobeams=theobeams,
+                                        expbeams=expbeams)

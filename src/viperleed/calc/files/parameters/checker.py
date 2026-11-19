@@ -21,7 +21,7 @@ from .errors import ParameterConflictError
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
-_PYTHON_RFACTOR_INTPOL_DEG = 3
+PYTHON_RFACTOR_INTPOL_DEG = 3
 
 
 # About the disable: ParametersChecker has only one single job:
@@ -91,12 +91,12 @@ class ParametersChecker:
             return
         intpol_deg, legacy = self._get_attribute_values('INTPOL_DEG',
                                                         'R_FACTOR_LEGACY')
-        if legacy or intpol_deg == _PYTHON_RFACTOR_INTPOL_DEG:
+        if legacy or intpol_deg == PYTHON_RFACTOR_INTPOL_DEG:
             return
         message = (
             'The Python R factor supports only cubic interpolation '
-            f'(INTPOL_DEG = {_PYTHON_RFACTOR_INTPOL_DEG}). Set INTPOL_DEG '
-            f'= {_PYTHON_RFACTOR_INTPOL_DEG}, or set R_FACTOR_LEGACY = True '
+            f'(INTPOL_DEG = {PYTHON_RFACTOR_INTPOL_DEG}). Set INTPOL_DEG '
+            f'= {PYTHON_RFACTOR_INTPOL_DEG}, or set R_FACTOR_LEGACY = True '
             'to use the TensErLEED R factor.'
             )
         raise ParameterConflictError('INTPOL_DEG', 'R_FACTOR_LEGACY',
