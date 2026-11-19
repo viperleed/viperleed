@@ -12,6 +12,7 @@ from dataclasses import InitVar
 from dataclasses import dataclass
 from dataclasses import field as data_field
 from dataclasses import fields as data_fields
+import sys
 from typing import Any
 from typing import ClassVar
 from typing import Dict
@@ -104,6 +105,14 @@ class TestFindTypeOrigin:
         """Check correct outcome of finding the origin of a type hint."""
         origin = tuple(_find_type_origin(hint))
         assert origin == expect
+
+    @pytest.mark.skipif(sys.version_info < (3, 10),
+                        reason='X | Y hints need Python >= 3.10')
+    def test_from_union_operator(self):
+        """Check the origins of an X | Y type hint."""
+        hint = int | None  # pylint: disable=unsupported-binary-operation
+        origin = tuple(_find_type_origin(hint))
+        assert origin == (int, type(None))
 
     @parametrize('hint,expect', _type_origins_str.items())
     @pytest.mark.xfail(reason='string annotations are still unsupported')
