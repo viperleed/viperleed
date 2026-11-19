@@ -55,11 +55,10 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):                    
     if _need_spectra:
         _fetch_and_check_spectra(rp, index, name)
     theobeams = rp.theobeams[name]
-    expbeams = rp.expbeams
 
     # Branch off for new R factor calculation
     if not rp.R_FACTOR_LEGACY:
-        return run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams)
+        return run_new_rfactor(sl, rp, for_error, name, theobeams)
     return run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary)
 
 
@@ -117,7 +116,7 @@ def _fetch_and_check_spectra(rp, index, name):
         raise ValueError("Contradiction in beam sets")
 
 
-def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
+def run_new_rfactor(sl, rp, for_error, name, theobeams):
     """Run the spline-based (Python) R-factor calculation.
 
     The V0r shift in rp.IV_SHIFT_RANGE that minimizes the overall R
@@ -142,9 +141,6 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         are stored in rp.stored_R, and part of the PDF file names.
     theobeams : Sequence
         Theoretical Beam objects to compare to experiment.
-    expbeams : Sequence
-        Experimental Beam objects. Currently unused: rp.expbeams
-        is used instead.
 
     Returns
     -------

@@ -127,15 +127,13 @@ def _run_section(dataset, r_type, monkeypatch, **options):
                                         rpars,
                                         for_error=False,
                                         name=name,
-                                        theobeams=theobeams,
-                                        expbeams=expbeams)
+                                        theobeams=theobeams)
         name = 'superpos'
     r_beams = rfactor_section.run_new_rfactor(None,
                                               rpars,
                                               for_error=for_error,
                                               name=name,
-                                              theobeams=theobeams,
-                                              expbeams=expbeams)
+                                              theobeams=theobeams)
     overall, integer, r_fractional = rpars.stored_R[name]
     return {
         'best_v0r': float(rpars.best_v0r),
@@ -301,8 +299,7 @@ def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
                                         rpars,
                                         for_error=False,
                                         name='refcalc',
-                                        theobeams=theobeams,
-                                        expbeams=expbeams)
+                                        theobeams=theobeams)
 
 
 _PDF_R_TYPES = {
