@@ -61,18 +61,18 @@ def fixture_fake_bindings(mocker):
     """
     def _fake(available, imported=(), broken=None, too_old=()):
         broken = broken or {}
+        modules = {f'{b}.QtCore': None for b in imported}
         def _import(name):
             package = name.split('.')[0]
-            if package in too_old:
-                return _fake_qt_core(mocker, package, _TOO_OLD[package])
-            if package in available:
-                return _fake_qt_core(mocker, package, _NEW_ENOUGH[package])
             if package in broken:
                 raise broken[package]
-            raise ModuleNotFoundError(f'No module named {package!r}',
-                                      name=package)
-        mocker.patch(f'{_MODULE}.sys',
-                     modules={f'{b}.QtCore': None for b in imported})
+            if package not in (*available, *too_old):
+                raise ModuleNotFoundError(f'No module named {package!r}',
+                                          name=package)
+            version = (_TOO_OLD if package in too_old else _NEW_ENOUGH)
+            modules[name] = _fake_qt_core(mocker, package, version[package])
+            return modules[name]
+        mocker.patch(f'{_MODULE}.sys', modules=modules)
         mock_importlib = mocker.patch(f'{_MODULE}.importlib')
         mock_importlib.import_module.side_effect = _import
         return mock_importlib.import_module
@@ -176,6 +176,14 @@ class TestDefaultSelection:
         with pytest.raises(ImportError, match='too old') as exc_info:
             get_binding()
         assert not isinstance(exc_info.value, QtBindingNotFoundError)
+
+    def test_too_old_forgotten(self, fake_bindings):
+        """Check that a too-old binding is not taken as in use."""
+        fake_bindings((PYQT5,), too_old=(PYQT6,))
+        get_binding()
+        assert not any(name.startswith(PYQT6)
+                       for name in binding.sys.modules)
+        assert binding.get_candidates() == (PYQT5,)
 
     def test_too_old_skipped(self, fake_bindings):
         """Check that another binding is used if one is too old."""

@@ -251,6 +251,20 @@ def set_binding(binding):
     _SELECTED_BINDING = binding
 
 
+def _forget_binding(binding):
+    """Remove the modules of `binding` from sys.modules.
+
+    The modules stay loaded (e.g., QtCore of a binding that is too
+    old), but nothing takes `binding` as in use any longer: neither
+    get_candidates, nor matplotlib, which both prefer a binding whose
+    QtCore was imported.
+    """
+    prefix = f'{binding}.'
+    for name in [name for name in sys.modules
+                 if name == binding or name.startswith(prefix)]:
+        del sys.modules[name]
+
+
 def _get_requested_binding():
     """Return the binding requested via QT_API, or None."""
     requested = os.environ.get(QT_API_ENV, '').strip()
@@ -277,7 +291,11 @@ def _select_binding():
             import_binding(binding)
         except QtBindingNotFoundError as exc:
             errors.append(f'{binding}: {exc}')
-        except ImportError as exc:  # Installed, but broken or too old
+        except QtBindingTooOldError as exc:
+            errors.append(f'{binding}: {exc}')
+            broken = True
+            _forget_binding(binding)  # Its QtCore was imported
+        except ImportError as exc:  # Installed, but broken
             errors.append(f'{binding}: {exc}')
             broken = True
         else:
