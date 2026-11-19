@@ -49,6 +49,11 @@ def fixture_selector(import_with_qt, show):
 @parametrize(plugin=_collect_plugins())
 def test_open_plugin(plugin, selector, qtbot, qtc):
     """Check that the plug-in selector opens and closes a plug-in."""
+    if plugin == _PLACEHOLDER:
+        # Qt is available, but the selector failed to import when
+        # collecting. test_smoke.py::test_import gives the reason.
+        pytest.fail('No plug-in was collected: the plug-in selector '
+                    'could not be imported when collecting the tests')
     # pylint: disable=protected-access
     qtbot.mouseClick(selector._btns[plugin], qtc.Qt.MouseButton.LeftButton)
     module = selector._open_modules[plugin]
