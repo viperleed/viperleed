@@ -522,7 +522,7 @@ def rfactor_from_csv(
 
     Parameters
     ----------
-    beams_files : tuple of two string
+    beams_files : Sequence of two str or Path
         The two CSV files to be read in for R-factor calculation.
         These can contain either theoretical or experimental beams.
         If beams_file_is_content is set as True, the string is expected
@@ -531,15 +531,19 @@ def rfactor_from_csv(
         first file should be experimental, the second theoretical data.
     v0i : float
         Imaginary part of the inner potential in eV.
-    beams_file_is_content : tuple of two bool, default=(False, False)
+    beams_file_is_content : Sequence of two bool, default=(False, False)
         If either value is set to True, it is assumed that the
         corresponding element of beams_file contains a string with
         the CSV contents rather than a path to the file. For reading,
         a StringIO will be used internally.
-    v0r_shift_range : tuple of two float, default=(-3, 3)
+    v0r_shift_range : Sequence of two float, default=(-3, 3)
         During R-factor calculation, the two beam sets can be shifted
         in energy relative to one another. v0r_shift_range determines
-        the minimum and maximum shifts (given in eV).
+        the minimum and maximum shifts (given in eV). The bounds
+        should be integer multiples of intpol_step. Otherwise, they
+        are expanded outwards to the next multiples. Equal bounds
+        (a single, fixed shift) that are not a multiple of
+        intpol_step raise a RuntimeError.
     intpol_step : float, default: 0.5
         Energy step for the interpolation/output grid.
     which_r : str, default: 'pendry'
@@ -583,6 +587,9 @@ def rfactor_from_csv(
         files (when beam_correspondence is not given), or if
         beam_correspondence is not a 1D sequence with one entry per
         theoretical beam.
+    RuntimeError
+        If v0r_shift_range has equal bounds that are not an integer
+        multiple of intpol_step.
     """
     if intpol_deg is not None:
         _LOGGER.warning(

@@ -61,3 +61,25 @@ def test_rfactor_from_csv_duplicate_labels(
             beams_file_is_content=(True, True),
             beam_correspondence=correspondence,
         )
+
+
+def test_rfactor_from_csv_accepts_lists(fe2o3_012_1x1_dataset):
+    """Check that lists work in place of tuples, with identical results."""
+    kwargs = {
+        'beam_correspondence': fe2o3_012_1x1_dataset['beam_correspondence'],
+        'v0r_shift_range': (-2.0, 2.0),
+    }
+    files = (fe2o3_012_1x1_dataset['exp_file'],
+             fe2o3_012_1x1_dataset['theo_file'])
+    v0i = fe2o3_012_1x1_dataset['v0i']
+    from_tuples = from_ase.rfactor_from_csv(files, v0i, **kwargs)
+    kwargs['v0r_shift_range'] = list(kwargs['v0r_shift_range'])
+    from_lists = from_ase.rfactor_from_csv(
+        list(files),
+        v0i,
+        beams_file_is_content=[False, False],
+        **kwargs,
+    )
+    assert from_lists[0] == from_tuples[0]
+    assert from_lists[1] == from_tuples[1]
+    assert np.array_equal(from_lists[2], from_tuples[2])
