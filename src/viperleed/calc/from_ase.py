@@ -593,6 +593,10 @@ def rfactor_from_csv(
         files (when beam_correspondence is not given), or if
         beam_correspondence is not a 1D sequence with one entry per
         theoretical beam.
+
+        .. versionchanged:: 0.15.0
+            Repeated beam labels in a file raise ValueError (was
+            RuntimeError).
     RuntimeError
         If v0r_shift_range has equal bounds that are not an integer
         multiple of intpol_step.
@@ -754,6 +758,11 @@ def plot_iv_from_csv(
         than beam_file, if which_beams is not a sequence containing
         just integers or just strings, or if there are no beams to
         plot.
+
+        .. versionchanged:: 0.15.0
+            An invalid which_beams raises ValueError (was
+            RuntimeError). A single str or Path is one file.
+            which_beams defaults to None.
     """
     beam_files, is_content_flags = _as_file_sequence(beam_file,
                                                      beam_file_is_content)
