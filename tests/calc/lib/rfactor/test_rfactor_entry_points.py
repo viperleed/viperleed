@@ -364,3 +364,15 @@ def test_rfactor_from_csv_rejects_disjoint_energies():
         from_ase.rfactor_from_csv(contents,
                                   1.0,
                                   beams_file_is_content=(True, True))
+
+
+def test_rfactor_from_csv_auto_step():
+    """Check that intpol_step=None uses the finer step of the data."""
+    contents = _csv_beams(range(30, 50, 2)), _GOOD_CSV
+    kwargs = {'beams_file_is_content': (True, True)}
+    auto = from_ase.rfactor_from_csv(contents, 1.0, intpol_step=None,
+                                     **kwargs)
+    explicit = from_ase.rfactor_from_csv(contents, 1.0, intpol_step=1.0,
+                                         **kwargs)
+    assert auto[:2] == explicit[:2]
+    np.testing.assert_array_equal(auto[2], explicit[2])
