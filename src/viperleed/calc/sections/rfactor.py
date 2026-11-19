@@ -155,13 +155,13 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     """
     if rp.INTPOL_DEG != PYTHON_RFACTOR_INTPOL_DEG:
         raise ParameterConflictError(
-            'INTPOL_DEG',
-            'R_FACTOR_LEGACY',
+            "INTPOL_DEG",
+            "R_FACTOR_LEGACY",
             message=(
-                'The Python R factor supports only cubic interpolation '
-                f'(INTPOL_DEG = {PYTHON_RFACTOR_INTPOL_DEG}), but '
-                f'INTPOL_DEG is {rp.INTPOL_DEG}. Use R_FACTOR_LEGACY = '
-                'True to use the TensErLEED R factor.'
+                "The Python R factor supports only cubic interpolation "
+                f"(INTPOL_DEG = {PYTHON_RFACTOR_INTPOL_DEG}), but "
+                f"INTPOL_DEG is {rp.INTPOL_DEG}. Use R_FACTOR_LEGACY = "
+                "True to use the TensErLEED R factor."
                 ),
             )
     logger.warning(
@@ -193,7 +193,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     )
     rp.best_v0r = scan.best_v0r
     logger.info(
-        'Best inner potential shift: %.2f eV with R = %.4f',
+        "Best inner potential shift: %.2f eV with R = %.4f",
         scan.best_v0r,
         scan.best_r,
     )
@@ -207,7 +207,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
         groups=integer_fractional_mask,
         num_groups=2,
     )
-    r_fac_per_beam = scan.r_factor(groups='beam')
+    r_fac_per_beam = scan.r_factor(groups="beam")
 
     # plotting
     if rp.PLOT_IV['plot']:
