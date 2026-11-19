@@ -3,10 +3,9 @@
 # on every push to master. The TensErLEED-dependent tests run in
 # tensorleed_tests.yml instead.
 #
-# - Three jobs: Linux with the newest Python on which the default tier
-#   passes (Python 3.13 and later still fail some tests), Windows with
-#   Python 3.7 (the oldest supported; actions/setup-python has no 3.7
-#   for ubuntu-latest), and Windows with the same Python as Linux.
+# - Three jobs: Linux with the newest Python, Windows with Python 3.7
+#   (the oldest supported; actions/setup-python has no 3.7 for
+#   ubuntu-latest), and Windows with the same Python as Linux.
 # - The tests run with pytest-xdist and --require-all, so a test that
 #   would skip for lack of an optional dependency fails instead. On
 #   Linux, gfortran and mpifort are installed. The Windows jobs do
@@ -66,7 +65,7 @@ jobs:
         include:
           - platform: Linux
             os: ubuntu-latest
-            python-version: '3.12'
+            python-version: '3.15'
             coverage: true
           - platform: Windows
             os: windows-latest
@@ -74,7 +73,7 @@ jobs:
             allow-missing: mpifort,gfortran
           - platform: Windows
             os: windows-latest
-            python-version: '3.12'
+            python-version: '3.15'
             allow-missing: mpifort,gfortran
     steps:
       - uses: actions/checkout@v7
@@ -125,7 +124,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.15'
           cache: pip
           cache-dependency-path: |
             pyproject.toml
