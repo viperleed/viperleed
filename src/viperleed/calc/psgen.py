@@ -77,22 +77,6 @@ class PSFile:
             os.remove(self.file)
 
 
-def _shortest_path(path):
-    """Return the shorter of the absolute and relative forms of `path`.
-
-    Use os.path.relpath and not Path.relative_to, as the latter does
-    not produce './' and '../' shorthands. On Windows, relpath raises
-    ValueError when `path` and the current directory are on different
-    drives: then the absolute form is the only one.
-    """
-    shortpath = str(path)
-    try:
-        relative = os.path.relpath(path)
-    except ValueError:  # Different drives on Windows
-        return shortpath
-    return relative if len(relative) < len(shortpath) else shortpath
-
-
 def runPhaseshiftGen_old(sl, rp,
                      psgensource='eeasisss',
                      excosource='seSernelius',
@@ -1219,3 +1203,22 @@ def compare_atoms(types_dict1, types_dict2):
     only2 = [atom for atom in atoms_list2 if atom not in atoms_list1]
 
     return only1, only2
+
+
+def _shortest_path(path):
+    """Return the shorter of the absolute and relative forms of `path`.
+
+    `path` is expected to be absolute: otherwise its string form is
+    not the absolute form, and the result may be neither.
+
+    Use os.path.relpath and not Path.relative_to, as the latter does
+    not produce './' and '../' shorthands. On Windows, relpath raises
+    ValueError when `path` and the current directory are on different
+    drives: then the absolute form is the only one.
+    """
+    shortpath = str(path)
+    try:
+        relative = os.path.relpath(path)
+    except ValueError:  # Different drives on Windows
+        return shortpath
+    return relative if len(relative) < len(shortpath) else shortpath
