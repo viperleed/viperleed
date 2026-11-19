@@ -9,8 +9,15 @@
 #   job: a required check must never pass by being skipped. Require
 #   the check "TensErLEED tests" in the ruleset of master only. On
 #   pull requests into other branches the workflow does not start.
+# - Release runs (pull requests into master, and runs by hand with
+#   "release" checked) also run the job "TensErLEED tests (Windows)":
+#   the same tests, with --release, on windows-latest with gcc,
+#   gfortran and LAPACK from MSYS2 (UCRT64). It takes about 45 min.
+#   It has no MPI (MSYS2's mpifort fails when started from Python),
+#   so the searches there run as a single process. As it runs on
+#   every pull request into master, it can be a required check too.
 # - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
-#   and cached. The cache key holds the hashes of the script and of
+#   and cached (Linux only; on Windows it takes about 15 s). The cache key holds the hashes of the script and of
 #   the random_.c it compiles, and the versions of the compilers it
 #   uses, as the tree contains objects compiled on the runner.
 
@@ -82,3 +89,50 @@ jobs:
         env:
           RELEASE_OPTION: ${{ (github.event_name == 'pull_request' || inputs.release) && '--release' || '' }}
         run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs $RELEASE_OPTION
+
+  pytest-tensorleed-windows:
+    name: TensErLEED tests (Windows)
+    if: ${{ github.event_name == 'pull_request' || inputs.release }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        # Git Bash, so the steps share their syntax with the Linux job
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set the location of the TensErLEED tree
+        run: echo "VIPERLEED_TENSORLEED=$RUNNER_TEMP/tensorleed" >> "$GITHUB_ENV"
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/tests.txt
+      - name: Install compilers and LAPACK (MSYS2, UCRT64)
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          path-type: inherit
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-gcc-fortran
+            mingw-w64-ucrt-x86_64-lapack
+      - name: Put the UCRT64 compilers first on PATH
+        # Ahead of the other gcc/gfortran of the runner image
+        run: echo '${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin' >> "$GITHUB_PATH"
+      - name: Show the compiler versions
+        run: |
+          which gcc gfortran
+          echo "gcc$(gcc -dumpfullversion)-gfortran$(gfortran -dumpfullversion)"
+      - name: Assemble the TensErLEED tree
+        run: python build/scripts/assemble_tensorleed_tree.py "$VIPERLEED_TENSORLEED"
+      - name: Install viperleed and the test requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/tests.txt -e .
+      - name: Run the TensErLEED tests
+        run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs --release
