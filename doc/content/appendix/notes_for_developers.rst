@@ -40,9 +40,11 @@ compiler (:program:`gcc` and :program:`gfortran` by default), and
 :file:`make.bat` file shipped with :program:`eeasisss` is used instead).
 The script has been tested on Linux, and on Windows with :program:`gcc`
 and :program:`gfortran` of MSYS2 (UCRT64). The tests also need LAPACK
-and BLAS, which :term:`TensErLEED` links with ``-llapack -lblas``: in
-MSYS2, install them with
-``pacman -S mingw-w64-ucrt-x86_64-lapack``. For the Intel compilers, add
+and BLAS, which :term:`TensErLEED` links with ``-llapack -lblas``. See
+:ref:`install_gcc` (tab "Windows (64 bit), native" on Windows) for how to
+install the compilers and these libraries. Continuous integration uses
+MSYS2 UCRT64 with the prebuilt ``mingw-w64-ucrt-x86_64-lapack`` package
+instead of building LAPACK and BLAS. For the Intel compilers, add
 ``--compilers intel`` (:program:`icx` and the ``intel`` target of
 :program:`eeasisss`); ``--cc`` and ``--fc`` choose other C and Fortran
 compilers (``--fc`` not on Windows). See
