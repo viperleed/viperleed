@@ -22,6 +22,13 @@ according to these rules:
   than a QtBindingNotFoundError, as the installation needs fixing
   rather than completing.
 
+Selecting a binding imports only its QtCore. Its other modules (e.g.,
+QtWidgets) are not imported, as code that uses only QtCore (e.g.,
+viperleed.calc) should not load the graphical ones. A binding that
+lacks, e.g., QtWidgets is thus selected, and fails when QtWidgets is
+imported. Use viperleed.gui.detect_graphics to check all the modules
+needed by the GUI (in a subprocess) before selecting a binding.
+
 Which bindings would be tried, in which order, is returned by
 get_candidates, which imports none of them. This allows checking the
 candidates in a subprocess first (see viperleed.gui.detect_graphics),

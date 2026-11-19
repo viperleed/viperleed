@@ -47,6 +47,10 @@ leedsim
     The LEED Pattern Simulator plugin.
 measure
     The LEED-IV measurement plugin.
+qt_compat
+    Compatibility layer that selects the Qt binding (PyQt5 or PyQt6)
+    and exposes its modules. All Qt modules should be imported from
+    there.
 widgets
     Custom widgets and widget-related functionality. Requires Qt.
 
