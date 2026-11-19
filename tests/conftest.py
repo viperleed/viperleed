@@ -4,8 +4,9 @@ Defines fixtures and fixture factories used in multiple tests, and
 loads the plugins with the options and hooks of the test suite:
 check_slow.py (--check-slow), quick_option.py (--quick),
 reference_files.py (--rewrite-references, check_reference),
-release_option.py (--release), rng_seed.py (--rng-seed) and
-slow_marks.py (slow, release and tensorleed marks, stale-entry guard).
+release_option.py (--release), rng_seed.py (--rng-seed),
+slow_marks.py (slow, release and tensorleed marks, stale-entry guard)
+and qt_plugin.py (pytest-qt, if Qt is available).
 
 Random-input tests (those requesting `draws`) check N_DRAWS draws
 seeded from the test id, so that outcomes are reproducible and known
@@ -59,12 +60,22 @@ from .helpers import TEST_DATA
 pytest_plugins = (
     'pytester',  # For testing the options themselves
     'tests.check_slow',
+    'tests.qt_plugin',
     'tests.quick_option',
     'tests.reference_files',
     'tests.release_option',
     'tests.rng_seed',
     'tests.slow_marks',
     )
+
+# Options for nested pytest runs (via pytester) that test the plugins
+# of this suite. Always load this conftest, which loads all plugins.
+# This includes qt_plugin, without which pytest-qt is loaded anyway,
+# and aborts the run if no Qt binding is available. Do not use the
+# cache, unless a test needs it (e.g., for --last-failed).
+PYTESTER_NO_CACHE = ('-p', 'no:cacheprovider')
+PYTESTER_PLUGINS = ('-p', __name__)
+PYTESTER_OPTIONS = PYTESTER_NO_CACHE + PYTESTER_PLUGINS
 
 # Fixture of optional_dependencies that needs no wrapping
 fixture_missing_dependency = optional_dependencies.fixture_missing_dependency

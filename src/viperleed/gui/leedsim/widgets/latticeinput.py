@@ -14,8 +14,8 @@ __license__ = 'GPLv3+'
 import re
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.classes.lattice2d import Lattice2D
 from viperleed.gui.classes.planegroup import PlaneGroup
@@ -53,7 +53,7 @@ class LatticeInput(qtw.QWidget):
 
         Parameters
         ----------
-        parent : PyQt5.QtWidgets.QWidget or None, optional
+        parent : QWidget or None, optional
             Parent widget that 'contains' this instance.
             Default is None.
         lattice : Lattice2D or None, optional
@@ -380,14 +380,18 @@ class LatticeInput(qtw.QWidget):
         layout = qtw.QGridLayout()
         layout.setSpacing(5)
         layout.setContentsMargins(5, 5, 5, 5)  # L, T, R, B
-        layout.setSizeConstraint(qtw.QLayout.SetFixedSize)
+        layout.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
 
         # (ii) Title and labels
         layout.addWidget(title, 0, 1, 1, 2)  # Row, col, n_rows, n_cols
-        layout.setAlignment(title, qtc.Qt.AlignCenter)
+        layout.setAlignment(title, qtc.Qt.AlignmentFlag.AlignCenter)
         for i, label in enumerate(labels):
             layout.addWidget(label, i + 1, 0, 1, 1)
-            layout.setAlignment(label, qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+            layout.setAlignment(
+                label,
+                qtc.Qt.AlignmentFlag.AlignRight
+                | qtc.Qt.AlignmentFlag.AlignVCenter
+                )
 
         # (iii) Controls
         ctrl_column = 1 if with_labels else 0
@@ -405,8 +409,8 @@ class LatticeInput(qtw.QWidget):
         """Set up controls of lattice parameters."""
         for key in ('a', 'b', 'alpha'):
             self._ctrls[key].setFont(AllGUIFonts().labelFont)
-            self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                           qtw.QSizePolicy.Fixed)
+            self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                           qtw.QSizePolicy.Policy.Fixed)
             self._ctrls[key].setMaximumWidth(self._ctrls['shape'].width())
             self._ctrls[key].ensurePolished()
             self._ctrls[key].adjustSize()
@@ -417,7 +421,8 @@ class LatticeInput(qtw.QWidget):
         ctrl = self._ctrls['group']
 
         ctrl.setFont(AllGUIFonts().smallTextFont)
-        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                           qtw.QSizePolicy.Policy.Preferred)
         ctrl.setMinimumWidth(self._ctrls['a'].width())
         ctrl.ensurePolished()
 
@@ -427,12 +432,13 @@ class LatticeInput(qtw.QWidget):
 
         ctrl.setText('Make high\nsymmetry')
         ctrl.setFont(AllGUIFonts().buttonFont)
-        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                           qtw.QSizePolicy.Policy.Preferred)
         ctrl.setMinimumWidth(self._ctrls['shape'].width())
         ctrl.ensurePolished()
         ctrl.setAutoDefault(False)
         ctrl.hide()
-        change_control_text_color(ctrl, qtc.Qt.red)
+        change_control_text_color(ctrl, qtc.Qt.GlobalColor.red)
 
     def _compose_ctrl_shape(self):
         """Set up 'shape' control."""
@@ -450,7 +456,8 @@ class LatticeInput(qtw.QWidget):
             ctrl.addItem('_None')
             ctrl.setCurrentText('_None')
         ctrl.setCurrentText('')
-        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                           qtw.QSizePolicy.Policy.Preferred)
         ctrl.ensurePolished()
         ctrl.adjustSize()
         ctrl.setEnabled(self.edit_enabled)

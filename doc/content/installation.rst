@@ -82,6 +82,20 @@ in your terminal.
 
 .. note::
 
+    ``viperleed[GUI]`` installs the PyQt5 bindings for Qt 5. The graphical
+    user interface also works with PyQt6 (version 6.1 or later), which it
+    prefers if both are installed. To use it, install it with
+
+    .. code-block:: console
+
+        python -m pip install "PyQt6>=6.1"
+
+    PyQt6 needs Qt 6, which does not run on Windows 7 and older systems.
+    To use PyQt5 even if PyQt6 is installed, set the ``QT_API``
+    :term:`environment variable` to ``pyqt5``.
+
+.. note::
+
     On Unix and macOS, installation of the ``mplcairo`` package and its
     ``pycairo`` dependency may fail if either ``pkg-config`` or ``cairo``
     are not available on the system. If this is the case, you should

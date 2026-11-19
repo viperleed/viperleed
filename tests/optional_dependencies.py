@@ -32,7 +32,8 @@ __license__ = 'GPLv3+'
 import pytest
 
 ALLOW_MISSING_OPTION = '--allow-missing'
-KNOWN_DEPENDENCIES = ('gfortran', 'mpifort')  # Add new names here
+# Add new names here. 'PyQt' is either PyQt5 or PyQt6
+KNOWN_DEPENDENCIES = ('gfortran', 'mpifort', 'PyQt', 'pytest-qt')
 REQUIRE_ALL_OPTION = '--require-all'
 
 

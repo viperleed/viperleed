@@ -6,14 +6,14 @@ Defines the HoverAnnot widget used to mark selected LEED spots.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 import numpy as np
-import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
-import PyQt5.QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.base import check_type
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -29,7 +29,7 @@ class HoverAnnot(qtw.QWidget):
     framePad = (5, 3)  # amount of space added around the text
 
     # Painting styles and colors:
-    bgColor = qtg.QColor(qtc.Qt.white)
+    bgColor = qtg.QColor(qtc.Qt.GlobalColor.white)
     bgColor.setAlphaF(0.8)
     lineColor = qtg.QColor.fromHsvF(0, 0, 0.15)  # somewhat gray
     lineWidth = 1.5
@@ -38,23 +38,23 @@ class HoverAnnot(qtw.QWidget):
     paintPen = qtg.QPen()
     paintPen.setWidthF(lineWidth)
     paintPen.setBrush(lineColor)
-    paintPen.setCapStyle(qtc.Qt.RoundCap)
-    paintPen.setJoinStyle(qtc.Qt.RoundJoin)
+    paintPen.setCapStyle(qtc.Qt.PenCapStyle.RoundCap)
+    paintPen.setJoinStyle(qtc.Qt.PenJoinStyle.RoundJoin)
 
     def __init__(self, parent=None, text='Test some longer text', center=(500, 500)):
         super().__init__()
 
-        self.setAttribute(qtc.Qt.WA_ShowWithoutActivating)
-        self.setAttribute(qtc.Qt.WA_TranslucentBackground)
+        self.setAttribute(qtc.Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setAttribute(qtc.Qt.WidgetAttribute.WA_TranslucentBackground)
         # With the next attribute, even if the widget is too large mouse
         # events will be passed on to the widgets directly below it (spatially)
-        self.setAttribute(qtc.Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(qtc.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setParent(parent)
 
-        self.setWindowFlags(qtc.Qt.Tool
-                            | qtc.Qt.CustomizeWindowHint
-                            | qtc.Qt.FramelessWindowHint
-                            | qtc.Qt.WindowDoesNotAcceptFocus)
+        self.setWindowFlags(qtc.Qt.WindowType.Tool
+                            | qtc.Qt.WindowType.CustomizeWindowHint
+                            | qtc.Qt.WindowType.FramelessWindowHint
+                            | qtc.Qt.WindowType.WindowDoesNotAcceptFocus)
 
         self.setFont(AllGUIFonts().labelFont)
 
@@ -197,7 +197,7 @@ class HoverAnnot(qtw.QWidget):
         h = np.round(rect_size.height())
         # notice that the return value is slightly over-sized even in the worst
         # case scenario, as one would strictly need to add only w/2 and h/2
-        return qtc.QSize(w + delta, h + delta)
+        return qtc.QSize(int(w + delta), int(h + delta))
 
     def minimumSizeHint(self):
         return self.sizeHint()
@@ -275,7 +275,7 @@ class HoverAnnot(qtw.QWidget):
 
         painter.begin(self)
 
-        painter.setRenderHint(qtg.QPainter.Antialiasing)
+        painter.setRenderHint(qtg.QPainter.RenderHint.Antialiasing)
         painter.setFont(self.font())
         painter.setPen(self.paintPen)
 
@@ -310,8 +310,8 @@ class HoverAnnot(qtw.QWidget):
         the annotation to make sure its position on the screen is correct
         """
         tip = self.tip_pos  # local position
-        tip_global = self.mapToGlobal(qtc.QPoint(tip.x(), tip.y()))
+        tip_global = self.mapToGlobal(tip.toPoint())
         new_pos = self.pos()
-        delta = qtc.QPoint(*self.head_pos.round()) - tip_global
+        delta = qtc.QPoint(*self.head_pos.round().astype(int)) - tip_global
         new_pos += delta
         self.move(new_pos)

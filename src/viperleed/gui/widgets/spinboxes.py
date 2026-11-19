@@ -3,16 +3,17 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 import os
 
 import numpy as np
-from PyQt5 import QtCore as qtc
-from PyQt5 import QtGui as qtg
-from PyQt5 import QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
+from viperleed.gui.qt_compat.events import is_wheel_from_touchpad
 
 from viperleed.gui.widgets.decorators import receive_mouse_broadcast
 from viperleed.gui.widgets.lib import AllGUIFonts
@@ -122,12 +123,12 @@ class TextBox(qtw.QLineEdit):
     # user or if the user simply clicked away without modifying the text. In
     # the latter case no signal is emitted.
     def focusInEvent(self, event):
-        if event.reason() != qtc.Qt.PopupFocusReason:
+        if event.reason() != qtc.Qt.FocusReason.PopupFocusReason:
             self._before = self.text()
         super().focusInEvent(event)
 
     def focusOutEvent(self, event):
-        if event.reason() != qtc.Qt.PopupFocusReason:
+        if event.reason() != qtc.Qt.FocusReason.PopupFocusReason:
             self.checkText()
         super().focusOutEvent(event)
 
@@ -139,7 +140,7 @@ class TextBox(qtw.QLineEdit):
             super().mousePressEvent(event)  # call normal implementation
 
     def keyPressEvent(self, event):
-        if event.key() in [qtc.Qt.Key_Up, qtc.Qt.Key_Down]:
+        if event.key() in [qtc.Qt.Key.Key_Up, qtc.Qt.Key.Key_Down]:
             self.upDownPressed.emit(event)
         super().keyPressEvent(event)
 
@@ -147,8 +148,9 @@ class TextBox(qtw.QLineEdit):
         """Extend event implementation to catch Ctrl+E key press in Linux."""
         if (isinstance(event, qtg.QKeyEvent)
             and os.name == 'posix'
-            and event.key() == qtc.Qt.Key_E
-                and event.modifiers() == qtc.Qt.ControlModifier):
+            and event.key() == qtc.Qt.Key.Key_E
+            and event.modifiers()
+                == qtc.Qt.KeyboardModifier.ControlModifier):
             # Returning False causes the event to be propagated to
             # the parent, de facto disabling the 'go to end of line'
             # behavior it would normally have on Linux.
@@ -163,8 +165,7 @@ class TextBox(qtw.QLineEdit):
             # multiples of 1/8 of a degree; for trackpad, the number
             # returned corresponds to the number of pixels of scrolling
             movement = event.angleDelta().y()/8
-            if event.source() == qtc.Qt.MouseEventSynthesizedBySystem:
-                # track-pad
+            if is_wheel_from_touchpad(event):
                 movement /= 1  # fractional movement
             else:  # true mouse wheel
                 movement /= 20
@@ -173,7 +174,7 @@ class TextBox(qtw.QLineEdit):
             # make steps smaller if Ctrl is held down during wheelEvent
             # --> one could use bitwise & to do the following in case any
             # combination of modifiers is pressed that includes the Ctrl button
-            if event.modifiers() == qtc.Qt.ControlModifier:
+            if event.modifiers() == qtc.Qt.KeyboardModifier.ControlModifier:
                 step = self.smallStep
 
             new = self.getFloatText()
@@ -248,12 +249,13 @@ class TextBoxWithButtons(qtw.QWidget):
     def compose(self):
         #----- Set the sizes and policies before setting up the layout ----#
         # Allow the text box to expand vertically
-        self.text.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                qtw.QSizePolicy.Expanding)
-        self.bottomWidget.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                        qtw.QSizePolicy.Expanding)
+        self.text.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                qtw.QSizePolicy.Policy.Expanding)
+        self.bottomWidget.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                                        qtw.QSizePolicy.Policy.Expanding)
         for but in [self.topBut, self.botBut]:
-            but.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+            but.setSizePolicy(qtw.QSizePolicy.Policy.Fixed,
+                              qtw.QSizePolicy.Policy.Fixed)
 
         self.text.setMinimumHeight(2*self.smallButtonDims)
         self.text.setMaximumWidth(self.textBoxWidth)
@@ -301,7 +303,7 @@ class TextBoxWithButtons(qtw.QWidget):
         lay.setRowMinimumHeight(3, self.smallButtonDims)
         lay.setRowMinimumHeight(4, 3)
 
-        lay.setSizeConstraint(qtw.QLayout.SetFixedSize)
+        lay.setSizeConstraint(qtw.QLayout.SizeConstraint.SetFixedSize)
 
         self.setLayout(lay)
         self.adjustSize()
@@ -314,7 +316,7 @@ class TextBoxWithButtons(qtw.QWidget):
         pass
 
     def on_upDown(self, event):
-        if event.key() == qtc.Qt.Key_Up:
+        if event.key() == qtc.Qt.Key.Key_Up:
             self.topBut.click()
         else:
             self.botBut.click()
@@ -339,7 +341,9 @@ class TextBoxWithButtons(qtw.QWidget):
     def on_buttonPressed(self, pressed):
         if pressed in [self.topBut, self.botBut]:
             step = self.text.baseStep
-            if qtw.qApp.keyboardModifiers() == qtc.Qt.ControlModifier:
+            app = qtw.QApplication.instance()
+            if (app.keyboardModifiers()
+                    == qtc.Qt.KeyboardModifier.ControlModifier):
                 step = self.text.smallStep
             if self.text.stepType == 'scale':
                 step -= 1

@@ -8,6 +8,8 @@ pytest-cases>=3.8.5,<3.9; python_version<"3.9"
 pytest-cases>=3.10; python_version>="3.9"
 pytest-cov>=2.5
 pytest-mock>=3
+# pytest-qt: used by tests/qt_plugin.py only if Qt is available
+pytest-qt
 # pytest-subtests: built into pytest since 9.0
 pytest-subtests
 pytest-timeout
