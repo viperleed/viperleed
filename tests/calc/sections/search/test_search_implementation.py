@@ -171,6 +171,30 @@ def fixture_mock_stuff_to_vary(rpars):
     rpars.indyPars = 5
 
 
+def _skip_on_missing_compiler(rpars, mocker, missing_dependency):
+    """Skip (or fail) the test if search finds no Fortran compiler."""
+    compilers = {  # Method of rpars: name of the dependency
+        'getFortranComp': 'gfortran',
+        'getFortranMpiComp': 'mpifort',
+        }
+    for method_name, dependency in compilers.items():
+        find_or_skip = _find_compiler_or_skip(getattr(rpars, method_name),
+                                              dependency,
+                                              missing_dependency)
+        mocker.patch.object(rpars, method_name, side_effect=find_or_skip)
+
+
+def _find_compiler_or_skip(find_compiler, dependency, missing_dependency):
+    """Return a wrapper of find_compiler that skips if none is found."""
+    def _find_or_skip(*args, **kwargs):
+        try:
+            return find_compiler(*args, **kwargs)
+        except FileNotFoundError:
+            missing_dependency(dependency, 'compiler not found')
+        return None  # Unreachable: missing_dependency raises
+    return _find_or_skip
+
+
 class TestSearch:
     """Collection of tests for the search function."""
 
@@ -198,9 +222,11 @@ class TestSearch:
          'tl_version',
          'mock_src_files',
          'mpirun_available')
-    def test_compile_and_run(self, rpars, mock_run, tmp_path, mocker):
+    def test_compile_and_run(self, rpars, mock_run, tmp_path, mocker,
+                             missing_dependency):
         """Check that nothing is executed when execution is suppressed."""
         rpars.SUPPRESS_EXECUTION = False
+        _skip_on_missing_compiler(rpars, mocker, missing_dependency)
         called_more_than_once = (
             # The following mocks are called multiple times,
             # while test_no_displacements uses assert_called_once.
