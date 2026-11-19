@@ -353,5 +353,9 @@ def _close_pdf(pdf, filename):
     """Close `pdf`, logging (not raising) any error while closing it."""
     try:
         pdf.close()
-    except Exception:  # Same as when writing pages, see plot_iv
+    # Closing also writes the rest of the PDF, so anything matplotlib
+    # raises can end up here. Plots are optional: don't abort the run.
+    # Same as the savefig handler in plot_iv.
+    # pylint: disable-next=broad-exception-caught
+    except Exception:
         logger.exception('plot_iv: Error while writing %s: ', filename)
