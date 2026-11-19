@@ -559,8 +559,6 @@ def rfactor_from_csv(
 
         .. versionchanged:: 0.15.0
             Accept all the names of the R_FACTOR_TYPE parameter.
-            The analysis PDF is written for the R factor selected,
-            and only for the Pendry and smooth R factors.
     beam_correspondence : sequence, optional
         If given, use this correspondence directly in `average_beam_array`
         format. In that case, all experimental beams are kept as read from the
@@ -571,6 +569,12 @@ def rfactor_from_csv(
         If given, create a dummy Rparams object, update its PLOT_IV dict with
         contents of plot_iv, and call `write_Rfactorpdf_from_splines(...)`.
         To use defaults, pass: plot_iv={'plot': True}
+
+        .. versionchanged:: 0.15.0
+            The analysis PDF (Y functions) is written only for the
+            Pendry and smooth R factors, and uses the one selected
+            by which_r. Before, it was written with Pendry Y
+            functions for any which_r.
     intpol_deg : ignored, deprecated
         Deprecated compatibility shim. Only cubic spline interpolation is used.
     return_beam_arrays : ignored, deprecated
