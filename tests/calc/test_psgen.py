@@ -69,6 +69,31 @@ class TestPhaseshiftsGen:
         assert firstline
 
 
+class TestShortestPath:
+    """Tests for the _shortest_path helper of runPhaseshiftGen_old."""
+
+    def test_relative_shorter(self, tmp_path):
+        """Check that a shorter relative path is preferred."""
+        path = tmp_path / 'tensorleed'
+        with execute_in_dir(tmp_path):
+            assert psgen._shortest_path(path) == 'tensorleed'
+
+    _cross_drive = ValueError("path is on mount 'D:', start on mount 'C:'")
+
+    @parametrize(
+        relpath_mock=(
+            {'return_value': 'x' * 4096},
+            {'side_effect': _cross_drive},
+            ),
+        ids=('relpath_longer', 'different_drives'),
+        )
+    def test_absolute(self, relpath_mock, tmp_path, mocker):
+        """Check that the absolute path is used if shorter or needed."""
+        path = tmp_path / 'tensorleed'
+        mocker.patch('os.path.relpath', **relpath_mock)
+        assert psgen._shortest_path(path) == str(path)
+
+
 class TestAdjustPhaseshifts:
     """"Tests for the adjust_phaseshifts function."""
 

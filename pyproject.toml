@@ -22,7 +22,12 @@ dependencies = [
     'matplotlib>=3.5',  # Maybe even lower, but had problems installing
     'numpy',
     'psutil',
-    'quicktions',
+    # quicktions 1.20+ ship no Python 3.7 wheels and do not declare
+    # Requires-Python; their sdist needs Cython>=3.2.4 (Python 3.8+).
+    # The markers must exclude each other: pip builds the newest sdist
+    # for an unpinned requirement before it applies the pin.
+    'quicktions; python_version>="3.8"',
+    'quicktions<1.20; python_version<"3.8"',
     'scipy',
     'scikit-learn',
     'typing-extensions; python_version<"3.12"',

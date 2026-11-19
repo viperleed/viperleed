@@ -100,6 +100,14 @@ The TensErLEED tier requires ``VIPERLEED_TENSORLEED``: its tests fail (rather
 than being skipped) when :term:`TensErLEED` or one of the versions they need
 is missing. Optional dependencies that are not installed make some tests skip.
 To turn those skips into failures, add the option ``--require-all``.
+On a machine that lacks some of them on purpose, ``--allow-missing`` exempts
+the dependencies it names (comma separated) from ``--require-all``: their
+tests are skipped, all others still fail. For example, on a machine without
+Fortran compilers:
+
+.. code-block:: bash
+
+    python -m pytest tests --require-all --allow-missing=mpifort,gfortran
 
 A few TensErLEED tests are in a fourth tier, the *release* tier (marker
 ``release``). They are deselected by default, also under ``-m tensorleed``,

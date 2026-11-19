@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-24'
 __license__ = 'GPLv3+'
 
@@ -193,7 +193,10 @@ class TestManifestFileReadWrite:
                 pass  # Handled below
             else:     # Nothing to do, it's relative
                 continue
-            abs_path_str = str(path.resolve().as_posix())
+            # Resolve from root, as ManifestFile does: on Windows,
+            # a path without a drive is on the drive of the cwd.
+            with execute_in_dir(root):
+                abs_path_str = str(path.resolve().as_posix())
             lines = headers_and_lines.pop(header)
             header = header.replace(path_str, abs_path_str)
             headers_and_lines[header] = {
