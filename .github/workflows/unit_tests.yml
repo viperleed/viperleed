@@ -6,6 +6,10 @@
 # - Three jobs: Linux with the newest Python, Windows with Python 3.7
 #   (the oldest supported; actions/setup-python has no 3.7 for
 #   ubuntu-latest), and Windows with the same Python as Linux.
+#   "Newest" is python-version '3.x': the newest stable Python 3
+#   (check-latest: true, not the newest in the runner image), also in
+#   "Tests (serial)" and in tensorleed_tests.yml. A new Python release
+#   can therefore turn these jobs red until viperleed is fixed for it.
 # - The tests run with pytest-xdist and --require-all, so a test that
 #   would skip for lack of an optional dependency fails instead. On
 #   Linux, gfortran and mpifort are installed. The Windows jobs do
@@ -65,7 +69,7 @@ jobs:
         include:
           - platform: Linux
             os: ubuntu-latest
-            python-version: '3.15'
+            python-version: '3.x'
             coverage: true
           - platform: Windows
             os: windows-latest
@@ -73,7 +77,7 @@ jobs:
             allow-missing: mpifort,gfortran
           - platform: Windows
             os: windows-latest
-            python-version: '3.15'
+            python-version: '3.x'
             allow-missing: mpifort,gfortran
     steps:
       - uses: actions/checkout@v7
@@ -81,6 +85,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+          # Newest release, not the newest in the runner image's cache
+          check-latest: true
           cache: pip
           cache-dependency-path: |
             pyproject.toml
@@ -123,7 +129,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.15'
+          python-version: '3.x'
+          check-latest: true
           cache: pip
           cache-dependency-path: |
             pyproject.toml

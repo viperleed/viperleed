@@ -223,13 +223,13 @@ The tests also run on GitHub Actions:
 
 - The workflow ``Tests`` (:file:`.github/workflows/unit_tests.yml`) runs the
   default tier with ``-n auto`` and ``--require-all`` on every pull request
-  and on every push to the ``master`` branch, in three jobs: on Linux with a
-  recent Python, and on Windows with Python 3.7 and with the same Python as
-  on Linux (see the workflow file). The Windows jobs install no Fortran
-  compilers and add ``--allow-missing=mpifort,gfortran``, so the tests that
-  need a compiler run on Linux in any case, and on Windows only where the
-  runner image has the compiler (at present :program:`gfortran`, but not
-  :program:`mpifort`). The check ``Tests`` fails unless all
+  and on every push to the ``master`` branch, in three jobs: on Linux with the
+  newest stable Python 3, and on Windows with Python 3.7 and with the same
+  Python as on Linux (see the workflow file). The Windows jobs install no
+  Fortran compilers and add ``--allow-missing=mpifort,gfortran``, so the
+  tests that need a compiler run on Linux in any case, and on Windows only
+  where the runner image has the compiler (at present :program:`gfortran`,
+  but not :program:`mpifort`). The check ``Tests`` fails unless all
   three jobs succeed. The coverage of the Linux job is uploaded to
   `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
   to ``master``, the job ``Tests (serial)`` also runs the default tier
@@ -253,6 +253,11 @@ The tests also run on GitHub Actions:
   is cached, but a cache made for a pull request is visible only to that
   pull request: the tree is assembled on the first run of each pull
   request, and later runs reuse it.
+
+All jobs except the Python 3.7 one use the newest stable Python 3
+(``python-version: '3.x'``). A new Python release can therefore make the
+checks fail on every pull request until :program:`viperleed` (or one of its
+dependencies) is fixed for it.
 
 Whether a pull request can be merged with a failing check depends on the
 rulesets of the |repo|, which the administrators of the repository set up.

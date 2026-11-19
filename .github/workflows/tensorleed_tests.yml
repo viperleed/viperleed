@@ -23,6 +23,9 @@
 #   and passes without running any test (a job skipped as a whole
 #   would report under its name expression, unevaluated). On a pull
 #   request into master, both jobs always run under the required names.
+# - Both jobs use the newest stable Python 3 (python-version '3.x',
+#   check-latest: true), like unit_tests.yml: a new Python release can
+#   turn them red until viperleed is fixed for it.
 # - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
 #   and cached on Linux (on Windows, assembling it takes about 15 s).
 #   The cache key holds the hashes of the script and of the random_.c
@@ -67,7 +70,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.15'
+          python-version: '3.x'
+          check-latest: true
           cache: pip
           cache-dependency-path: |
             pyproject.toml
@@ -125,7 +129,8 @@ jobs:
         if: ${{ env.RELEASE == 'true' }}
         uses: actions/setup-python@v7
         with:
-          python-version: '3.15'
+          python-version: '3.x'
+          check-latest: true
           cache: pip
           cache-dependency-path: |
             pyproject.toml
