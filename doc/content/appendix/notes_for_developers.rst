@@ -243,15 +243,16 @@ The tests also run on GitHub Actions:
   above), and a second job, ``TensErLEED tests (Windows)``, runs the same
   tests on Windows, with :program:`gcc`, :program:`gfortran` and LAPACK of
   MSYS2 (UCRT64), but without MPI (the searches run as a single process).
-  The Windows job takes about 35 minutes.
+  The Windows job takes 35--40 minutes.
   Their results are the checks ``TensErLEED tests`` and
   ``TensErLEED tests (Windows)``. The workflow does not run
   on pull requests into other branches. It starts when a pull request into
   ``master`` is opened or receives new commits: if the base of a pull
   request is changed to ``master`` later, push a commit or start the
-  workflow by hand (see below). On Linux, the tree is cached, but a cache
-  made for a pull request is visible only to that pull request: the tree is
-  assembled on the first run of each pull request, and later runs reuse it.
+  workflow by hand with ``release`` checked (see below). On Linux, the tree
+  is cached, but a cache made for a pull request is visible only to that
+  pull request: the tree is assembled on the first run of each pull
+  request, and later runs reuse it.
 
 Whether a pull request can be merged with a failing check depends on the
 rulesets of the |repo|, which the administrators of the repository set up.
