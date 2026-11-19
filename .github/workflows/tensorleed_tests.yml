@@ -5,17 +5,23 @@
 # - Pull requests into master also run the release tests (--release),
 #   as master is the release branch. Runs by hand do so only with the
 #   input "release" checked.
-# - The workflow is selected by its trigger, not by a condition on the
-#   job: a required check must never pass by being skipped. Require
-#   the check "TensErLEED tests" in the ruleset of master only. On
-#   pull requests into other branches the workflow does not start.
+# - The workflow is selected by its trigger: on pull requests into
+#   other branches it does not start. Require the checks "TensErLEED
+#   tests" and "TensErLEED tests (Windows)" in the ruleset of master
+#   only.
 # - Release runs (pull requests into master, and runs by hand with
 #   "release" checked) also run the job "TensErLEED tests (Windows)":
 #   the same tests, with --release, on windows-latest with gcc,
 #   gfortran and LAPACK from MSYS2 (UCRT64). It takes about 35 min.
 #   It has no MPI (MSYS2's mpifort fails when started from Python),
-#   so the searches there run as a single process. As it runs on
-#   every pull request into master, it can be a required check too.
+#   so the searches there run as a single process.
+# - A required check must never pass by being skipped, nor by a run
+#   without the release tests. In runs without them (by hand, without
+#   "release"), the Linux job is therefore named "TensErLEED tests (no
+#   release)". The Windows job is skipped there, and GitHub reports a
+#   skipped job under its name unevaluated, expression included: not
+#   a required name either. On a pull request into master, both jobs
+#   always run under the required names.
 # - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
 #   and cached on Linux (on Windows, assembling it takes about 15 s).
 #   The cache key holds the hashes of the script and of the random_.c
@@ -47,7 +53,8 @@ concurrency:
 
 jobs:
   pytest-tensorleed:
-    name: TensErLEED tests
+    # Runs without the release tests get a name no ruleset requires
+    name: TensErLEED tests${{ !(github.event_name == 'pull_request' || inputs.release) && ' (no release)' || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -92,7 +99,9 @@ jobs:
         run: pytest tests -m tensorleed -n auto --require-all --no-cov -rfEs $RELEASE_OPTION
 
   pytest-tensorleed-windows:
-    name: TensErLEED tests (Windows)
+    # Skipped, the job reports under this name unevaluated: keep the
+    # expression, so that it never reports under the required name
+    name: TensErLEED tests (Windows${{ !(github.event_name == 'pull_request' || inputs.release) && ', no release' || '' }})
     if: ${{ github.event_name == 'pull_request' || inputs.release }}
     runs-on: windows-latest
     timeout-minutes: 120

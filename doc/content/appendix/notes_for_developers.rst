@@ -268,6 +268,11 @@ on the *Actions* page of the |repo|, select ``TensErLEED tests``, click
 
 Runs started by hand skip the release tests and the Windows job unless the
 input ``release`` is checked (with the GitHub CLI, add ``-f release=true``).
+Without ``release``, the Linux check is named
+``TensErLEED tests (no release)``, and the skipped Windows job reports under
+a name that still contains the expression for its name. Such a run on the
+head of a pull request into ``master`` thus cannot satisfy the required
+checks ``TensErLEED tests`` and ``TensErLEED tests (Windows)``.
 
 
 .. _editable_install:
