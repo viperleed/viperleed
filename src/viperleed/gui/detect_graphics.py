@@ -205,7 +205,10 @@ class PyQtSanityChecker:
             The status of `binding`, and its Qt version if known.
         """
         imports_done, child_end = Pipe(duplex=False)
-        proc = Process(target=_QtProbe(binding), args=(child_end,))
+        # A daemon, so that it does not outlive us if stopping fails
+        proc = Process(target=_QtProbe(binding),
+                       args=(child_end,),
+                       daemon=True)
         proc.start()
         # Close our copy of the child's end, so that imports_done
         # becomes ready (end of file) also if the subprocess dies
@@ -269,6 +272,9 @@ class PyQtSanityChecker:
         proc.terminate()
         # Do not leave a zombie process behind on UNIX
         proc.join(_DISPLAY_TIMEOUT)
+        if proc.is_alive():  # E.g., it ignores SIGTERM
+            proc.kill()
+            proc.join(_DISPLAY_TIMEOUT)
 
     @staticmethod
     def _summarize(results):

@@ -57,13 +57,21 @@ def fixture_mock_multiprocessing(mocker):
         time limit, i.e., whether creating the QApplication hangs.
     exitcode : object
         The exit code of the subprocess.
+    survives_terminate : bool
+        Whether the subprocess is still alive after terminating it.
     """
-    def _mock(ready='imports', alive=False, exitcode=_EXIT_CODE_OFFSET):
+    def _mock(ready='imports', alive=False, exitcode=_EXIT_CODE_OFFSET,
+              survives_terminate=False):
         imports_done = mocker.MagicMock(name='imports_done')
         imports_done.recv.return_value = _QT_VERSION
         child_end = mocker.MagicMock(name='child_end')
         process = mocker.MagicMock(name='process', exitcode=exitcode)
-        process.is_alive.return_value = alive
+        is_alive = [alive]
+
+        def _terminate():
+            is_alive[0] = survives_terminate
+        process.is_alive.side_effect = lambda: is_alive[0]
+        process.terminate.side_effect = _terminate
         ready_objects = {
             'imports': [imports_done],
             'exited': [process.sentinel],
@@ -232,7 +240,8 @@ class TestCheckBinding:
         """Check the calls made whatever the outcome of the check."""
         mocks.pipe.assert_called_once_with(duplex=False)
         mocks.process_cls.assert_called_once_with(target=ANY,
-                                                  args=(mocks.child_end,))
+                                                  args=(mocks.child_end,),
+                                                  daemon=True)
         probe = mocks.process_cls.call_args[1]['target']
         assert isinstance(probe, _QtProbe)
         assert probe._binding == binding  # pylint: disable=W0212
@@ -272,6 +281,23 @@ class TestCheckBinding:
         result = PyQtSanityChecker._check_binding(PYQT6)
         assert result == BindingCheck(PYQT6, PyQtSanity.RUNTIME_CRASH)
 
+    @parametrize(ready=('imports', 'none'))
+    def test_kill_after_terminate(self, ready, mock_multiprocessing,
+                                  mocker):
+        """Check that a subprocess that survives terminate is killed."""
+        mocks = mock_multiprocessing(ready=ready,
+                                     alive=True,
+                                     survives_terminate=True)
+        # pylint: disable-next=protected-access
+        PyQtSanityChecker._check_binding(PYQT6)
+        self.check_common_calls(mocks, PYQT6)
+        mocks.process.terminate.assert_called_once_with()
+        mocks.process.kill.assert_called_once_with()
+        assert mocks.process.join.mock_calls[-2:] == [
+            mocker.call(_DISPLAY_TIMEOUT),  # After terminate
+            mocker.call(_DISPLAY_TIMEOUT),  # After kill
+            ]
+
     def test_no_display(self, mock_multiprocessing, mocker):
         """Check the result when creating a QApplication hangs."""
         mocks = mock_multiprocessing(alive=True)
@@ -281,6 +307,7 @@ class TestCheckBinding:
                                       _QT_VERSION)
         self.check_common_calls(mocks, PYQT6)
         mocks.process.terminate.assert_called_once_with()
+        mocks.process.kill.assert_not_called()
         # Once for the QApplication, once after terminating it
         assert mocks.process.join.mock_calls == [
             mocker.call(_DISPLAY_TIMEOUT),
@@ -295,6 +322,7 @@ class TestCheckBinding:
         assert result == BindingCheck(PYQT6, PyQtSanity.UNRESPONSIVE)
         self.check_common_calls(mocks, PYQT6)
         mocks.process.terminate.assert_called_once_with()
+        mocks.process.kill.assert_not_called()
         # Only after terminating, not to leave a zombie behind
         mocks.process.join.assert_called_once_with(_DISPLAY_TIMEOUT)
 
