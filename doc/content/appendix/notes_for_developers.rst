@@ -223,26 +223,33 @@ The tests also run on GitHub Actions:
 
 - The workflow ``Tests`` (:file:`.github/workflows/unit_tests.yml`) runs the
   default tier with ``-n auto`` and ``--require-all`` on every pull request
-  and on every push to the ``master`` branch, on two Python versions (see the
-  workflow file). Its result is the check ``Tests``. The coverage of the run
-  with the newer Python is uploaded to
+  and on every push to the ``master`` branch, in three jobs: on Linux with a
+  recent Python, and on Windows with Python 3.7 and with the same Python as
+  on Linux (see the workflow file). The Windows jobs install no Fortran
+  compilers and add ``--allow-missing=mpifort,gfortran``, so the tests that
+  need a compiler run on Linux only. The check ``Tests`` fails unless all
+  three jobs succeed. The coverage of the Linux job is uploaded to
   `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
   to ``master``, the job ``Tests (serial)`` also runs the default tier
-  without :program:`pytest-xdist`, to catch tests that fail only when run
-  serially. It is not part of the check ``Tests``: a pull request that
-  breaks the serial run is noticed only after it is merged.
+  without :program:`pytest-xdist` (on Linux), to catch tests that fail only
+  when run serially. It is not part of the check ``Tests``: a pull request
+  that breaks the serial run is noticed only after it is merged.
 - The *TensErLEED tests* (:file:`.github/workflows/tensorleed_tests.yml`)
   run the TensErLEED tier on every pull request into ``master``, against a
   tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.
   On pull requests, they include the release tests (``--release``, see
-  above).
-  Their result is the check ``TensErLEED tests``. The workflow does not run
+  above), and a second job, ``TensErLEED tests (Windows)``, runs the same
+  tests on Windows, with :program:`gcc`, :program:`gfortran` and LAPACK of
+  MSYS2 (UCRT64), but without MPI (the searches run as a single process).
+  The Windows job takes about 45 minutes.
+  Their results are the checks ``TensErLEED tests`` and
+  ``TensErLEED tests (Windows)``. The workflow does not run
   on pull requests into other branches. It starts when a pull request into
   ``master`` is opened or receives new commits: if the base of a pull
   request is changed to ``master`` later, push a commit or start the
-  workflow by hand (see below). The tree is cached, but a cache made for a
-  pull request is visible only to that pull request: the tree is assembled
-  on the first run of each pull request, and later runs reuse it.
+  workflow by hand (see below). On Linux, the tree is cached, but a cache
+  made for a pull request is visible only to that pull request: the tree is
+  assembled on the first run of each pull request, and later runs reuse it.
 
 Whether a pull request can be merged with a failing check depends on the
 rulesets of the |repo|, which the administrators of the repository set up.
@@ -257,8 +264,8 @@ on the *Actions* page of the |repo|, select ``TensErLEED tests``, click
 
     gh workflow run tensorleed_tests.yml --ref <branch>
 
-Runs started by hand skip the release tests unless the input ``release`` is
-checked (with the GitHub CLI, add ``-f release=true``).
+Runs started by hand skip the release tests and the Windows job unless the
+input ``release`` is checked (with the GitHub CLI, add ``-f release=true``).
 
 
 .. _editable_install:
