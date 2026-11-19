@@ -25,6 +25,7 @@ from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import iorfactor as rf_io
@@ -40,6 +41,8 @@ from viperleed.calc.run import run_calc
 
 
 _LOGGER = logging.getLogger(__name__)
+# The R factors for which an analysis PDF can be written
+_ANALYSIS_R_FACTORS = RFactorType.PENDRY, RFactorType.SMOOTH
 _INPUT_FILES = (
     "PARAMETERS",
     "VIBROCC",
@@ -555,6 +558,8 @@ def rfactor_from_csv(
 
         .. versionchanged:: 0.15.0
             Accept all the names of the R_FACTOR_TYPE parameter.
+            The analysis PDF is written for the R factor selected,
+            and only for the Pendry and smooth R factors.
     beam_correspondence : sequence, optional
         If given, use this correspondence directly in `average_beam_array`
         format. In that case, all experimental beams are kept as read from the
@@ -664,6 +669,14 @@ def rfactor_from_csv(
         rpars.expbeams = expbeams
         rpars.V0_IMAG = v0i
         rpars.PLOT_IV.update(plot_iv)
+        analysis_file = ''
+        try:
+            rpars.R_FACTOR_TYPE = RFactorType(which_r)
+        except ValueError:
+            pass  # R1: not an R_FACTOR_TYPE, no analysis available
+        else:
+            if rpars.R_FACTOR_TYPE in _ANALYSIS_R_FACTORS:
+                analysis_file = 'Rfactor_analysis_from_ase.pdf'
         rf_io.write_Rfactorpdf_from_splines(
             rpars,
             scan.theo_spline,
@@ -671,7 +684,7 @@ def rfactor_from_csv(
             scan.out_grid,
             r_beams,
             outname="Rfactor_plots_from_ase.pdf",
-            analysis_file="Rfactor_analysis_from_ase.pdf",
+            analysis_file=analysis_file,
         )
 
     return scan.best_r, scan.best_v0r, r_beams

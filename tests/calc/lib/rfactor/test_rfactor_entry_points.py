@@ -303,3 +303,25 @@ def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
                                         name='refcalc',
                                         theobeams=theobeams,
                                         expbeams=expbeams)
+
+
+_PDF_R_TYPES = {
+    'smooth': ('SMOOTH', True),
+    'pendry': ('PENDRY', True),
+    'r2': ('R2', False),
+    'zj': ('ZJ', False),
+    'r1': ('PENDRY', False),
+    }
+
+
+@pytest.mark.parametrize('which_r,expected', _PDF_R_TYPES.items(),
+                         ids=_PDF_R_TYPES)
+def test_rfactor_from_csv_pdf_r_type(which_r, expected,
+                                     fe2o3_012_1x1_dataset, monkeypatch):
+    """Check that the analysis PDF is for the R factor in `which_r`."""
+    r_type_name, has_analysis = expected
+    calls = _capture_pdf_writer(monkeypatch)
+    _run_from_csv(fe2o3_012_1x1_dataset, which_r, plot_iv={'plot': True})
+    assert len(calls) == 1
+    assert calls[0]['r_factor_type'] == r_type_name
+    assert bool(calls[0]['kwargs']['analysis_file']) is has_analysis
