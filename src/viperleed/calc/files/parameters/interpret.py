@@ -132,7 +132,7 @@ _SIMPLE_NUMERICAL_PARAMS = {
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
 
-def interpret(rpars, slab=None, silent=False):
+def interpret(rpars, slab=None, silent=False, check_rfactor=True):
     """Interpret rpars.readParams to actual values.
 
     Parameters
@@ -145,6 +145,11 @@ def interpret(rpars, slab=None, silent=False):
         passed, some parameters will not be interpreted.
     silent : bool, optional
         If True, less output will be printed. The default is False.
+    check_rfactor : bool, optional
+        Whether to reject parameters that are incompatible with the
+        Python R factor (e.g., INTPOL_DEG other than 3 without
+        R_FACTOR_LEGACY). Should be False for PARAMETERS files that
+        are not the main one (old Tensors, domains). Default is True.
 
     Raises
     ------
@@ -152,7 +157,11 @@ def interpret(rpars, slab=None, silent=False):
         If any parameter interpretation fails.
     """
     interpreter = ParameterInterpreter(rpars)
-    interpreter.interpret(slab=slab, silent=silent)
+    interpreter.interpret(
+        slab=slab,
+        silent=silent,
+        check_rfactor=check_rfactor,
+        )
 
 
 def _with_dynamic_methods(cls):
@@ -221,7 +230,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         # Some flags
         self._search_conv_read = False
 
-    def interpret(self, slab, silent=False):
+    def interpret(self, slab, silent=False, check_rfactor=True):
         """Interpret all known parameters using slab."""
         self.slab = slab
         self._search_conv_read = False
@@ -239,7 +248,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 )
 
             # Make sure there is no inconsistent combination of parameters
-            checker = ParametersChecker()
+            checker = ParametersChecker(python_rfactor_checks=check_rfactor)
             checker.check_parameter_conflicts(self.rpars)
 
     # ----------------  Helper methods for interpret() ----------------

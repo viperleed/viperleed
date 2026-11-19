@@ -163,6 +163,13 @@ def test_intpol_deg_python_rfactor(intpol_deg, legacy, rejected,
         checker.check_parameter_conflicts(rpars)
 
 
+def test_intpol_deg_python_rfactor_skipped(rpars_with_attrs):
+    """Check that the INTPOL_DEG check can be switched off."""
+    rpars = rpars_with_attrs(INTPOL_DEG=5, R_FACTOR_LEGACY=False)
+    checker = ParametersChecker(python_rfactor_checks=False)
+    with not_raises(ParameterConflictError):
+        checker.check_parameter_conflicts(rpars)
+
 
 _SMOOTHING_CASES = {
     'python': (2, False, True),

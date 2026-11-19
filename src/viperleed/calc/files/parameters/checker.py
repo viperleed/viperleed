@@ -36,9 +36,19 @@ class ParametersChecker:
     self._rpars object to access parameter values.
     """
 
-    def __init__(self):
-        """Initialize instance."""
+    def __init__(self, python_rfactor_checks=True):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        python_rfactor_checks : bool, optional
+            Whether parameters should be checked for compatibility
+            with the Python R factor (e.g., INTPOL_DEG). Pass False
+            for PARAMETERS files that are not used for an R-factor
+            calculation (e.g., from old Tensors). Default is True.
+        """
         self._rpars = None
+        self._python_rfactor_checks = python_rfactor_checks
 
     def check_parameter_conflicts(self, rpars):
         """Make sure the parameters in `rpars` are consistent."""
@@ -77,6 +87,8 @@ class ParametersChecker:
 
     def _check_intpol_deg_python_rfactor(self):
         """Make sure INTPOL_DEG is cubic if using the Python R factor."""
+        if not self._python_rfactor_checks:
+            return
         intpol_deg, legacy = self._get_attribute_values('INTPOL_DEG',
                                                         'R_FACTOR_LEGACY')
         if legacy or intpol_deg == _PYTHON_RFACTOR_INTPOL_DEG:

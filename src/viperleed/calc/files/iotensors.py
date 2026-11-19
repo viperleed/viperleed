@@ -105,7 +105,12 @@ def getTensorOriStates(sl, path):
     try:
         tsl = poscar.read(path / "POSCAR")
         trp = parameters.read(filename=path/"PARAMETERS")
-        parameters.interpret(trp, slab=tsl, silent=True)
+        parameters.interpret(
+            trp,
+            slab=tsl,
+            silent=True,
+            check_rfactor=False,
+            )
         tsl.full_update(trp)
         vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
         tsl.full_update(trp)
