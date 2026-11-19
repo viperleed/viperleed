@@ -6,15 +6,16 @@ __created__ = '2026-11-19'
 __license__ = 'GPLv3+'
 
 import inspect
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from viperleed.calc import from_ase
+from viperleed.calc.files.beams import readOUTBEAMS
 
-BEAMS_FILE = (Path(__file__).resolve().parents[1] / '_test_data'
-              / 'beam-data' / 'EXPBEAMS-fe2o3-012-1x1.csv')
+from ..helpers import TEST_DATA
+
+BEAMS_FILE = TEST_DATA / 'beam-data' / 'EXPBEAMS-fe2o3-012-1x1.csv'
 
 
 @pytest.fixture(name='mock_plot')
@@ -32,37 +33,40 @@ def test_which_beams_default_is_immutable():
     assert default is None or isinstance(default, (str, tuple))
 
 
-@pytest.mark.parametrize('beam_file', (BEAMS_FILE, str(BEAMS_FILE)))
-def test_single_path_is_one_file(beam_file, mock_plot):
-    """Check that a lone path is a single file, not a sequence of files."""
-    from_ase.plot_iv_from_csv(beam_file)
+_SINGLE_FILES = {
+    'Path': (BEAMS_FILE, False),
+    'str path': (str(BEAMS_FILE), False),
+    'content': (BEAMS_FILE.read_text(), True),
+    }
+
+
+@pytest.mark.parametrize(
+    ('beam_file', 'is_content'),
+    _SINGLE_FILES.values(),
+    ids=_SINGLE_FILES,
+)
+def test_single_file(beam_file, is_content, mock_plot):
+    """Check that a lone path or string is one file, not a sequence."""
+    from_ase.plot_iv_from_csv(beam_file, beam_file_is_content=is_content)
     all_beam_data = mock_plot.call_args[0][0]
     assert len(all_beam_data) == 1
 
 
-def test_single_content_string_is_one_file(mock_plot):
-    """Check that a lone string with CSV contents is a single file."""
-    from_ase.plot_iv_from_csv(BEAMS_FILE.read_text(),
-                              beam_file_is_content=True)
-    all_beam_data = mock_plot.call_args[0][0]
-    assert len(all_beam_data) == 1
-
-
-@pytest.mark.parametrize('is_content', ((True,), [True, False, True]))
+@pytest.mark.parametrize('is_content', [(True,), [True, False, True]])
 def test_mismatched_lengths(is_content, mock_plot):
-    """Check complaints if beam_file_is_content does not fit beam_file."""
+    """Check complaints if beam_file_is_content mismatches beam_file."""
     files = (BEAMS_FILE.read_text(), BEAMS_FILE)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match='beam_file_is_content'):
         from_ase.plot_iv_from_csv(files, beam_file_is_content=is_content)
     mock_plot.assert_not_called()
 
 
-@pytest.mark.parametrize('which_beams', (None, [], 'all'))
+@pytest.mark.parametrize('which_beams', [None, [], 'all'])
 def test_all_beams(which_beams, mock_plot):
-    """Check that None, an empty list, and 'all' select all beams."""
+    """Check that None, [], and 'all' select all beams."""
     from_ase.plot_iv_from_csv(BEAMS_FILE, which_beams=which_beams)
     all_beam_data = mock_plot.call_args[0][0]
-    assert len(all_beam_data[0]) > 2
+    assert len(all_beam_data[0]) == len(readOUTBEAMS(BEAMS_FILE, sep=','))
 
 
 def _plotted_labels(mock_plot):
@@ -87,7 +91,7 @@ def test_which_beams_labels(mock_plot):
     assert _plotted_labels(mock_plot) == [all_labels[1], all_labels[3]]
 
 
-@pytest.mark.parametrize('which_beams', ([0, 'a'], [1.5]))
+@pytest.mark.parametrize('which_beams', [[0, 'a'], [1.5]])
 def test_which_beams_invalid(which_beams, mock_plot):
     """Check complaints for an invalid which_beams."""
     with pytest.raises(ValueError, match='which_beams'):

@@ -153,7 +153,7 @@ _INTPOL_CASES = {
              _INTPOL_CASES.values(), ids=_INTPOL_CASES)
 def test_intpol_deg_python_rfactor(intpol_deg, legacy, rejected,
                                    checker, rpars_with_attrs):
-    """Check that only cubic interpolation works with the Python R factor."""
+    """Check that the Python R factor needs cubic interpolation."""
     rpars = rpars_with_attrs(INTPOL_DEG=intpol_deg, R_FACTOR_LEGACY=legacy)
     if not rejected:
         with not_raises(Exception):
@@ -173,6 +173,8 @@ def test_intpol_deg_python_rfactor_skipped(rpars_with_attrs):
 
 _SMOOTHING_CASES = {
     'python': (2, False, True),
+    'python, one': (1, False, True),
+    'python, below one': (0.5, False, True),
     'legacy': (2, True, False),
     'python, no smoothing': (0, False, False),
     'legacy, no smoothing': (0, True, False),
@@ -181,9 +183,16 @@ _SMOOTHING_CASES = {
 
 @parametrize('smoothing,legacy,warns',
              _SMOOTHING_CASES.values(), ids=_SMOOTHING_CASES)
-def test_smoothing_ignored_python_rfactor(smoothing, legacy, warns,
-                                          checker, rpars_with_attrs, caplog):
-    """Check the warning for R_FACTOR_SMOOTHING with the Python R factor."""
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def test_smoothing_ignored_python_rfactor(  # noqa: PLR0913, PLR0917
+    smoothing,
+    legacy,
+    warns,
+    checker,
+    rpars_with_attrs,
+    caplog,
+):
+    """Check the R_FACTOR_SMOOTHING warning with the Python R factor."""
     rpars = rpars_with_attrs(R_FACTOR_SMOOTHING=smoothing,
                              R_FACTOR_LEGACY=legacy)
     checker.check_parameter_conflicts(rpars)

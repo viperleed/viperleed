@@ -11,6 +11,8 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files import beams
@@ -40,6 +42,35 @@ class TestCheckTheoBeamsEnergies:
         rpars.THEO_ENERGIES = TheoEnergies(300, 800, 0.5)
         with pytest.raises(ValueError):
             iorfactor.check_theobeams_energies(rpars, ag100_expbeams)
+
+
+_COARSE_STEP_CASES = {
+    'range': (-2, 2, 2, True),
+    'fixed': (2, 2, 2, False),
+    'range, fine step': (-1, 1, 1, False),
+    }
+
+
+@parametrize('start,stop,step,warns',
+             _COARSE_STEP_CASES.values(), ids=_COARSE_STEP_CASES)
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def test_find_theory_range_coarse_step(  # noqa: PLR0913, PLR0917
+    start,
+    stop,
+    step,
+    warns,
+    caplog,
+):
+    """Check the warning for a step coarser than experiment and theory."""
+    exp_range = EnergyRange.from_sorted_grid(np.arange(50, 100, 1.0))
+    iv_shift = IVShiftRange(start, stop, step)
+    iorfactor.find_theory_range(
+        TheoEnergies(40, 110, 1.0),
+        exp_range,
+        iv_shift,
+        n_expand=1,
+    )
+    assert ('coarser than the smallest step' in caplog.text) is warns
 
 
 class TestWriteRfactorPdf:

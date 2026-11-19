@@ -37,14 +37,14 @@ def _with_duplicated_beam(csv_file):
     )
 
 
-@pytest.mark.parametrize('duplicated', (0, 1))
-@pytest.mark.parametrize('with_correspondence', (False, True))
+@pytest.mark.parametrize('duplicated', [0, 1])
+@pytest.mark.parametrize('with_correspondence', [False, True])
 def test_rfactor_from_csv_duplicate_labels(
     fe2o3_012_1x1_dataset,
     duplicated,
     with_correspondence,
 ):
-    """Check that repeated beam labels in either file raise ValueError."""
+    """Check that repeated beam labels in a file raise ValueError."""
     files = [fe2o3_012_1x1_dataset['exp_file'],
              fe2o3_012_1x1_dataset['theo_file']]
     contents = [f.read_text() for f in files]
@@ -64,7 +64,7 @@ def test_rfactor_from_csv_duplicate_labels(
 
 
 def test_rfactor_from_csv_accepts_lists(fe2o3_012_1x1_dataset):
-    """Check that lists work in place of tuples, with identical results."""
+    """Check that lists work in place of tuples."""
     kwargs = {
         'beam_correspondence': fe2o3_012_1x1_dataset['beam_correspondence'],
         'v0r_shift_range': (-2.0, 2.0),

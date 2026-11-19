@@ -26,9 +26,9 @@ from viperleed.calc.sections import rfactor as rfactor_section
 from .conftest import BEAM_DATA_DIR
 
 
-# Values of R, best V0r and per-beam R at the commit before the
-# shared R-factor core was introduced (plan 03). Both entry points
-# must keep producing them bit for bit.
+# Values of R, best V0r and per-beam R recorded before the R-factor
+# core was shared between the entry points. Both entry points must
+# keep producing them bit for bit.
 _EXPECTED_FILE = (BEAM_DATA_DIR
                   / 'rfactor-entry-points-fe2o3-012-1x1.expected.json')
 _SHIFT_RANGE = (-3.0, 3.0)
@@ -289,7 +289,7 @@ def test_pdf_inputs(entry_point, fe2o3_012_1x1_dataset, monkeypatch):
 
 
 def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
-    """Check that a code-built Rparams with INTPOL_DEG != 3 is refused."""
+    """Check that INTPOL_DEG != 3 set in code is refused."""
     expbeams = readOUTBEAMS(fe2o3_012_1x1_dataset['exp_file'])
     theobeams = readOUTBEAMS(fe2o3_012_1x1_dataset['theo_file'])
     rpars = _make_rparams(fe2o3_012_1x1_dataset, 'pendry',
@@ -312,8 +312,11 @@ _PDF_R_TYPES = {
     }
 
 
-@pytest.mark.parametrize('which_r,expected', _PDF_R_TYPES.items(),
-                         ids=_PDF_R_TYPES)
+@pytest.mark.parametrize(
+    ('which_r', 'expected'),
+    _PDF_R_TYPES.items(),
+    ids=_PDF_R_TYPES,
+)
 def test_rfactor_from_csv_pdf_r_type(which_r, expected,
                                      fe2o3_012_1x1_dataset, monkeypatch):
     """Check that the analysis PDF is for the R factor in `which_r`."""
@@ -348,7 +351,7 @@ _BAD_CSV_INPUTS = {
                          ids=_BAD_CSV_INPUTS)
 def test_rfactor_from_csv_rejects_bad_input(contents):
     """Check that empty or single-energy beams are refused."""
-    with pytest.raises(ValueError, match='at least 2|is empty'):
+    with pytest.raises(ValueError, match=r'at least 2|is empty'):
         from_ase.rfactor_from_csv(contents,
                                   1.0,
                                   beams_file_is_content=(True, True))
