@@ -161,3 +161,23 @@ def test_intpol_deg_python_rfactor(intpol_deg, legacy, rejected,
         return
     with pytest.raises(ParameterConflictError, match='R_FACTOR_LEGACY'):
         checker.check_parameter_conflicts(rpars)
+
+
+
+_SMOOTHING_CASES = {
+    'python': (2, False, True),
+    'legacy': (2, True, False),
+    'python, no smoothing': (0, False, False),
+    'legacy, no smoothing': (0, True, False),
+    }
+
+
+@parametrize('smoothing,legacy,warns',
+             _SMOOTHING_CASES.values(), ids=_SMOOTHING_CASES)
+def test_smoothing_ignored_python_rfactor(smoothing, legacy, warns,
+                                          checker, rpars_with_attrs, caplog):
+    """Check the warning for R_FACTOR_SMOOTHING with the Python R factor."""
+    rpars = rpars_with_attrs(R_FACTOR_SMOOTHING=smoothing,
+                             R_FACTOR_LEGACY=legacy)
+    checker.check_parameter_conflicts(rpars)
+    assert ('R_FACTOR_SMOOTHING' in caplog.text) is warns

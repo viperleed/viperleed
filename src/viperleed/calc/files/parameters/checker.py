@@ -90,6 +90,18 @@ class ParametersChecker:
         raise ParameterConflictError('INTPOL_DEG', 'R_FACTOR_LEGACY',
                                      message=message)
 
+    def _check_smoothing_ignored_python_rfactor(self):
+        """Warn if R_FACTOR_SMOOTHING is set but the R factor is Python."""
+        smoothing, legacy = self._get_attribute_values('R_FACTOR_SMOOTHING',
+                                                       'R_FACTOR_LEGACY')
+        if smoothing and not legacy:
+            _LOGGER.warning(
+                f'R_FACTOR_SMOOTHING is set to {smoothing}, but it is '
+                'ignored by the Python R factor. Set R_FACTOR_LEGACY = '
+                'True to smooth the experimental curves with the '
+                'TensErLEED R factor.'
+                )
+
     def _check_n_cores(self):
         """Warn if N_CORES is larger than the number of available CPUs."""
         n_cores = self._rpars.N_CORES
