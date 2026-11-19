@@ -278,13 +278,17 @@ def prepare_rfactor_energy_ranges(rpars, theobeams=None, for_error=False,
     # sets the step to the one of IV_SHIFT_RANGE to ensure consistency
     iv_shift = _prepare_iv_shift_range(rpars, exp_range, for_error)
 
-    theo_range = find_theory_range(rpars.THEO_ENERGIES, exp_range,
-                                   iv_shift, n_expand)
+    theo_range = find_theory_range(
+        rpars.THEO_ENERGIES,
+        exp_range,
+        iv_shift,
+        n_expand,
+    )
     return exp_range, theo_range, iv_shift, iv_shift.step
 
 
 def experiment_energy_range(expbeams):
-    """Return the EnergyRange covered by a collection of Beam objects."""
+    """Return the EnergyRange covered by a collection of Beams."""
     return EnergyRange.from_sorted_grid(sorted_energies_from_beams(expbeams))
 
 
@@ -323,13 +327,21 @@ def find_theory_range(theo_energies, exp_range, iv_shift, n_expand):
         # that the user gave us this specific step value because
         # it is exactly an integer multiple of the fixed value
         # they desired
-        logger.warning(f'Using interpolation step {iv_shift.step} eV, which '
-                       'is coarser than the smallest step between experiment '
-                       f'and theory ({small_step} eV). Consider using '
-                       f'{small_step} or not defining a step for the '
-                       'IV_SHIFT_RANGE parameter')
-    return _find_common_theory_experiment_range(theo_energies, exp_range,
-                                                iv_shift, n_expand)
+        logger.warning(
+            'Using interpolation step %s eV, which is coarser than the '
+            'smallest step between experiment and theory (%s eV). '
+            'Consider using %s or not defining a step for the '
+            'IV_SHIFT_RANGE parameter',
+            iv_shift.step,
+            small_step,
+            small_step,
+        )
+    return _find_common_theory_experiment_range(
+        theo_energies,
+        exp_range,
+        iv_shift,
+        n_expand,
+    )
 
 
 def _prepare_iv_shift_range(rpars, experiment, for_error):
