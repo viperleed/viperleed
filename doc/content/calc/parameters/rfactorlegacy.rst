@@ -16,6 +16,14 @@ ViPErLEED. The new implementation uses spline interpolation, which yields
 more stable (second) derivatives. However, this may result in slightly different
 |R factor| values even when using the same :ref:`rfactortype`.
 
+The new implementation supports only cubic interpolation. Combining
+R_FACTOR_LEGACY = ``False`` with an INTPOL_DEG other than 3 is rejected
+when the parameters are read. Set R_FACTOR_LEGACY to ``True`` to use other
+interpolation degrees.
+
+.. versionadded:: 0.15.0
+   INTPOL_DEG other than 3 is rejected if R_FACTOR_LEGACY is ``False``.
+
 **Default:** False
 
 **Allowed values:** True (old TensErLEED), False (new)

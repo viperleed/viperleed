@@ -13,6 +13,9 @@ Note that var(R) in :ref:`error calculations<error_calculation>` is only support
 for Pendry and Smooth |R-factor|, and Zanazzi-Jona is not supported in the
 TensErLEED :ref:`structure search<sec_search>`.
 
+Whether the |R factor| is calculated by the python-native implementation or
+by TensErLEED is chosen via :ref:`R_FACTOR_LEGACY<rfactorlegacy>`.
+
 **Default:** pendry
 
 **Allowed values:** Pendry (1), R2 (2), Zanazzi-Jona (zj, 3), Smooth (4)
