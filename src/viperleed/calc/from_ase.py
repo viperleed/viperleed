@@ -30,8 +30,6 @@ from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
-from viperleed.calc.files.iorfactor import beamlist_to_array
-from viperleed.calc.files.iorfactor import write_Rfactorpdf_from_splines
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.matrix import rotation_matrix
@@ -628,7 +626,7 @@ def rfactor_from_csv(
     # Treat first beam as 'experiment' and second as 'theory'.
     iv_shift = IVShiftRange(*v0r_shift_range, intpol_step)
     theo_range = rf_io.find_theory_range(
-        TheoEnergies.from_sorted_grid(beamlist_to_array(theobeams)[0]),
+        TheoEnergies.from_sorted_grid(rf_io.beamlist_to_array(theobeams)[0]),
         rf_io.experiment_energy_range(expbeams),
         iv_shift,
         n_expand=1,   # cubic only
@@ -650,7 +648,7 @@ def rfactor_from_csv(
         rpars.expbeams = expbeams
         rpars.V0_IMAG = v0i
         rpars.PLOT_IV.update(plot_iv)
-        write_Rfactorpdf_from_splines(
+        rf_io.write_Rfactorpdf_from_splines(
             rpars,
             scan.theo_spline,
             scan.exp_spline,
