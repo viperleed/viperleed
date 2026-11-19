@@ -9,6 +9,7 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import shutil
+import sys
 
 import pytest
 from pytest_cases import parametrize
@@ -18,6 +19,11 @@ from viperleed.calc.lib.fs_utils import move
 
 from ...helpers import filesystem_from_dict
 from ...helpers import filesystem_to_dict
+
+_NEEDS_PY38 = pytest.mark.skipif(
+    sys.version_info < (3, 8),
+    reason='shutil.copytree has no dirs_exist_ok before Python 3.8',
+    )
 
 
 class TestCopytreeExistsOk:
@@ -72,7 +78,7 @@ class TestCopytreeExistsOk:
         after = filesystem_to_dict(tmp_path)
         assert after == expect
 
-    @parametrize(py_version=((3, 7), (3, 8)))
+    @parametrize(py_version=((3, 7), pytest.param((3, 8), marks=_NEEDS_PY38)))
     def test_ignore(self, py_version, mocker, tmp_path):
         """Check that files and directories are skipped if ignored."""
         mocker.patch('sys.version_info', py_version)
