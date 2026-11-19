@@ -227,7 +227,9 @@ The tests also run on GitHub Actions:
   recent Python, and on Windows with Python 3.7 and with the same Python as
   on Linux (see the workflow file). The Windows jobs install no Fortran
   compilers and add ``--allow-missing=mpifort,gfortran``, so the tests that
-  need a compiler run on Linux only. The check ``Tests`` fails unless all
+  need a compiler run on Linux in any case, and on Windows only where the
+  runner image has the compiler (at present :program:`gfortran`, but not
+  :program:`mpifort`). The check ``Tests`` fails unless all
   three jobs succeed. The coverage of the Linux job is uploaded to
   `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
   to ``master``, the job ``Tests (serial)`` also runs the default tier
@@ -241,7 +243,7 @@ The tests also run on GitHub Actions:
   above), and a second job, ``TensErLEED tests (Windows)``, runs the same
   tests on Windows, with :program:`gcc`, :program:`gfortran` and LAPACK of
   MSYS2 (UCRT64), but without MPI (the searches run as a single process).
-  The Windows job takes about 45 minutes.
+  The Windows job takes about 35 minutes.
   Their results are the checks ``TensErLEED tests`` and
   ``TensErLEED tests (Windows)``. The workflow does not run
   on pull requests into other branches. It starts when a pull request into

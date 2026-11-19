@@ -11,9 +11,10 @@
 #   would skip for lack of an optional dependency fails instead. On
 #   Linux, gfortran and mpifort are installed. The Windows jobs do
 #   not install them: they exempt exactly these two dependencies with
-#   --allow-missing=mpifort,gfortran, so the tests that need them are
-#   sure to run on Linux only, and any other missing dependency still
-#   fails.
+#   --allow-missing=mpifort,gfortran, so the tests that need them run
+#   on Linux in any case, and on Windows where the runner image has
+#   the compiler (today gfortran, not mpifort). Any other missing
+#   dependency still fails.
 #   PyQt5 is installed too, but no test needs it.
 # - Coverage is uploaded to Codecov from the Linux job. This needs the
 #   Codecov app and the CODECOV_TOKEN secret. A failed upload does not

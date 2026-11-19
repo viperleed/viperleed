@@ -12,14 +12,15 @@
 # - Release runs (pull requests into master, and runs by hand with
 #   "release" checked) also run the job "TensErLEED tests (Windows)":
 #   the same tests, with --release, on windows-latest with gcc,
-#   gfortran and LAPACK from MSYS2 (UCRT64). It takes about 45 min.
+#   gfortran and LAPACK from MSYS2 (UCRT64). It takes about 35 min.
 #   It has no MPI (MSYS2's mpifort fails when started from Python),
 #   so the searches there run as a single process. As it runs on
 #   every pull request into master, it can be a required check too.
 # - The tree is assembled by build/scripts/assemble_tensorleed_tree.py
-#   and cached (Linux only; on Windows it takes about 15 s). The cache key holds the hashes of the script and of
-#   the random_.c it compiles, and the versions of the compilers it
-#   uses, as the tree contains objects compiled on the runner.
+#   and cached on Linux (on Windows, assembling it takes about 15 s).
+#   The cache key holds the hashes of the script and of the random_.c
+#   it compiles, and the versions of the compilers it uses, as the
+#   tree contains objects compiled on the runner.
 
 name: TensErLEED tests
 
