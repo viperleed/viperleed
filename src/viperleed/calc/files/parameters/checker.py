@@ -21,6 +21,7 @@ from .errors import ParameterConflictError
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
+_PYTHON_RFACTOR_INTPOL_DEG = 3
 
 
 # About the disable: ParametersChecker has only one single job:
@@ -73,6 +74,21 @@ class ParametersChecker:
         pre, post = self._rpars.FORTRAN_COMP_MPI
         if not post and pre in {'mpifort', 'mpiifort'}:
             self._rpars.getFortranMpiComp(comp=pre)
+
+    def _check_intpol_deg_python_rfactor(self):
+        """Make sure INTPOL_DEG is cubic if using the Python R factor."""
+        intpol_deg, legacy = self._get_attribute_values('INTPOL_DEG',
+                                                        'R_FACTOR_LEGACY')
+        if legacy or intpol_deg == _PYTHON_RFACTOR_INTPOL_DEG:
+            return
+        message = (
+            'The Python R factor supports only cubic interpolation '
+            f'(INTPOL_DEG = {_PYTHON_RFACTOR_INTPOL_DEG}). Set INTPOL_DEG '
+            f'= {_PYTHON_RFACTOR_INTPOL_DEG}, or set R_FACTOR_LEGACY = True '
+            'to use the TensErLEED R factor.'
+            )
+        raise ParameterConflictError('INTPOL_DEG', 'R_FACTOR_LEGACY',
+                                     message=message)
 
     def _check_n_cores(self):
         """Warn if N_CORES is larger than the number of available CPUs."""

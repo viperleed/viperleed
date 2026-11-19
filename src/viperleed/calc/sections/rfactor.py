@@ -146,7 +146,6 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     -------
     r_fac_per_beam : numpy.ndarray
         R factor of each experimental beam at the best V0r shift.
-        An empty list if rp.INTPOL_DEG is not 3.
     """
     logger.warning(
         'Using new R-factor calculation. This is still experimental!'
@@ -160,13 +159,6 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     _, theo_range, _, _ = iorfactor.prepare_rfactor_energy_ranges(
         rp, theobeams, for_error, n_expand=(rp.INTPOL_DEG - 1) // 2
     )
-    if rp.INTPOL_DEG != 3:
-        logger.error(
-            'New R-factor calculation only supports cubic '
-            'interpolation (INTPOL_DEG=3).'
-        )
-        rp.setHaltingLevel(1)
-        return []
 
     # find correspondence experimental to theoretical beams:
     beam_correspondence = leedbase.getBeamCorrespondence(sl, rp)

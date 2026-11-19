@@ -139,3 +139,25 @@ class TestNCoresChecked:
         checker.check_parameter_conflicts(rpars)
         msg = 'Consider reducing N_CORES'
         assert msg in caplog.text
+
+
+_INTPOL_CASES = {
+    'cubic, python': (3, False, False),
+    'quintic, python': (5, False, True),
+    'quintic, legacy': (5, True, False),
+    'cubic, legacy': (3, True, False),
+    }
+
+
+@parametrize('intpol_deg,legacy,rejected',
+             _INTPOL_CASES.values(), ids=_INTPOL_CASES)
+def test_intpol_deg_python_rfactor(intpol_deg, legacy, rejected,
+                                   checker, rpars_with_attrs):
+    """Check that only cubic interpolation works with the Python R factor."""
+    rpars = rpars_with_attrs(INTPOL_DEG=intpol_deg, R_FACTOR_LEGACY=legacy)
+    if not rejected:
+        with not_raises(Exception):
+            checker.check_parameter_conflicts(rpars)
+        return
+    with pytest.raises(ParameterConflictError, match='R_FACTOR_LEGACY'):
+        checker.check_parameter_conflicts(rpars)
