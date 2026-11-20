@@ -1,0 +1,233 @@
+# Prepare the next patch version whenever a release is published from
+# master. For tag vX.Y.Z:
+#   1. create branch X.Y.(Z+1) at the tagged commit;
+#   2. push branch dev/bump-version-X.Y.(Z+1), with one commit that
+#      bumps viperleed.__version__, and open a pull request from it
+#      into X.Y.(Z+1) (the ruleset of version branches requires one);
+#   3. lock branch X.Y.Z, by adding it to the patterns of the ruleset
+#      'lock-released-branches' (build/scripts/lock_released_branch.py
+#      keeps the patterns compact).
+# Each step does nothing if already done, so a failed run can be
+# repeated by hand ("Run workflow", from master) for the same tag.
+#
+# - Only final releases are considered: the trigger 'released' fires
+#   when a release is published, or a pre-release is turned into a
+#   release, but not for pre-releases. Tags that are not exactly vX.Y.Z
+#   (e.g., v0.15.0rc1) are skipped.
+# - The tagged commit must be on master; other releases are skipped
+#   (e.g., a patch released from a version branch).
+# - Tokens come from a GitHub App, so that the pull request starts the
+#   usual checks (the GITHUB_TOKEN would not), and as the GITHUB_TOKEN
+#   cannot edit rulesets. The App needs the repository permissions
+#   Administration, Contents and Pull requests (read and write); it
+#   needs no bypass of any ruleset. Each step gets a token with only
+#   the permissions it needs. Its client ID (variable
+#   RELEASE_APP_CLIENT_ID) and private key (secret
+#   RELEASE_APP_PRIVATE_KEY) live in the environment
+#   'version-branches', whose deployment rules should allow only
+#   master and tags v*: the key can edit repository settings.
+# - The bump commit also updates the copyright end year of the file,
+#   via build/scripts/update_copyright_year.py, if the tag has it.
+# - The script that locks the branch is taken from the commit this
+#   workflow runs from (the tagged commit for a release, master for a
+#   manual run), as older tags given to a manual run do not have it.
+
+name: Create next version branch
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag on master (e.g., v0.15.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  LOCK_RULESET: lock-released-branches
+
+jobs:
+  create-branch:
+    name: Create next version branch
+    runs-on: ubuntu-latest
+    environment: version-branches
+    steps:
+      - name: Compute the next version from the tag
+        id: version
+        env:
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::notice::Tag '$TAG' is not vX.Y.Z, so nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          current="${TAG#v}"
+          next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          echo "Released $current, next version $next"
+          {
+            echo "skip=false"
+            echo "tag=$TAG"
+            echo "current=$current"
+            echo "next=$next"
+            echo "bump-branch=dev/bump-version-$next"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        if: steps.version.outputs.skip == 'false'
+        with:
+          ref: refs/tags/${{ steps.version.outputs.tag }}
+          fetch-depth: 0  # For the master check and the previous tag
+          persist-credentials: false
+      - name: Check the tag
+        id: check
+        if: steps.version.outputs.skip == 'false'
+        env:
+          CURRENT: ${{ steps.version.outputs.current }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! git merge-base --is-ancestor "$TAG^{commit}" origin/master; then
+            echo "::notice::$TAG is not on master, so nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          init=src/viperleed/__init__.py
+          if ! grep -qxF "__version__ = '$CURRENT'" "$init"; then
+            echo "::error::$init at $TAG does not have __version__ = '$CURRENT'"
+            exit 1
+          fi
+          echo "sha=$(git rev-parse "$TAG^{commit}")" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      # 1. and 2.: branch and bump pull request
+      - name: Get a token for the branches and the pull request
+        id: branch-token
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Create the next version branch
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ steps.branch-token.outputs.token }}
+          NEXT: ${{ steps.version.outputs.next }}
+          SHA: ${{ steps.check.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # ls-remote also lists refs that only end with the pattern
+          if git ls-remote origin "refs/heads/$NEXT" \
+               | awk -v ref="refs/heads/$NEXT" '$2 == ref {f = 1} END {exit !f}'; then
+            echo "Branch $NEXT already exists"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/heads/$NEXT" -f "sha=$SHA" > /dev/null
+          echo "::notice::Created branch $NEXT"
+      - name: Set up Python
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+      - name: Push the version bump
+        if: steps.check.outputs.skip == 'false'
+        env:
+          APP_SLUG: ${{ steps.branch-token.outputs.app-slug }}
+          BUMP_BRANCH: ${{ steps.version.outputs.bump-branch }}
+          CURRENT: ${{ steps.version.outputs.current }}
+          GH_TOKEN: ${{ steps.branch-token.outputs.token }}
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          set -euo pipefail
+          # Also after merging, when the branch may have been deleted
+          existing=$(gh pr list --repo "$GITHUB_REPOSITORY" \
+                       --head "$BUMP_BRANCH" --base "$NEXT" \
+                       --state all --json url --jq '.[0].url // ""')
+          if [[ -n "$existing" ]]; then
+            echo "Pull request already exists: $existing"
+            exit 0
+          fi
+          if git ls-remote origin "refs/heads/$BUMP_BRANCH" \
+               | awk -v ref="refs/heads/$BUMP_BRANCH" '$2 == ref {f = 1} END {exit !f}'; then
+            echo "Branch $BUMP_BRANCH already exists"
+            exit 0
+          fi
+          init=src/viperleed/__init__.py
+          git switch -c "$BUMP_BRANCH"
+          sed -i "s/^__version__ = '$CURRENT'\$/__version__ = '$NEXT'/" "$init"
+          git add "$init"
+          # Older tags do not have the script. It exits non-zero if it
+          # changed the file, which is fine here
+          copyright=build/scripts/update_copyright_year.py
+          if [[ -f "$copyright" ]]; then
+            python "$copyright" "$init" || true
+            git add "$init"
+          fi
+          git diff --cached
+          bot="$APP_SLUG[bot]"
+          bot_id=$(gh api "users/$bot" --jq .id)
+          git config user.name "$bot"
+          git config user.email "$bot_id+$bot@users.noreply.github.com"
+          git commit -m "feat: bump version to $NEXT"
+          git push \
+            "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" \
+            "HEAD:refs/heads/$BUMP_BRANCH"
+          echo "::notice::Pushed $BUMP_BRANCH"
+      - name: Open the version-bump pull request
+        if: steps.check.outputs.skip == 'false'
+        env:
+          BUMP_BRANCH: ${{ steps.version.outputs.bump-branch }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ steps.branch-token.outputs.token }}
+          NEXT: ${{ steps.version.outputs.next }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          existing=$(gh pr list --head "$BUMP_BRANCH" --base "$NEXT" \
+                       --state all --json url --jq '.[0].url // ""')
+          if [[ -n "$existing" ]]; then
+            echo "Pull request already exists: $existing"
+            exit 0
+          fi
+          url=$(gh pr create --head "$BUMP_BRANCH" --base "$NEXT" \
+                  --title "Bump version to $NEXT" \
+                  --body "Opened automatically after the release of $TAG.")
+          echo "::notice::Opened $url"
+
+      # 3.: lock the released branch
+      - name: Get the lock script from the workflow's commit
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-scripts
+          sparse-checkout: build/scripts/lock_released_branch.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Get a token for the rulesets
+        id: ruleset-token
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-administration: write
+      - name: Lock the released branch
+        if: steps.check.outputs.skip == 'false'
+        env:
+          CURRENT: ${{ steps.version.outputs.current }}
+          GH_TOKEN: ${{ steps.ruleset-token.outputs.token }}
+        run: >-
+          python workflow-scripts/build/scripts/lock_released_branch.py
+          --repo "$GITHUB_REPOSITORY" --ruleset "$LOCK_RULESET" "$CURRENT"
