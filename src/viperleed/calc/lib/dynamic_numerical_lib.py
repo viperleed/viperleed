@@ -84,6 +84,14 @@ def bincount(x, weights, length):
     numpy.ndarray
         Sum of `weights` for each value in `x`, of length
         max(`length`, max(`x`) + 1).
+
+    Raises
+    ------
+    ValueError
+        If `x` has negative values or is not 1-D, or if `weights`
+        has a different length than `x`.
+    TypeError
+        If `x` is not of integer type.
     """
     return _np.bincount(x, weights=weights, minlength=length)
 
@@ -95,8 +103,11 @@ def vmap(func, in_axes=0, out_axes=0):
     Python loop, and the outputs are stacked. Deviations from jax.vmap:
     - An int `in_axes` maps only the first positional argument; the
       others are passed unchanged. (JAX maps all arguments.)
-    - Only a tuple, an int or None is accepted as `in_axes`: no lists
-      or nested containers (pytrees) of axes.
+    - Only a tuple or an int is accepted as `in_axes`: no lists or
+      nested containers (pytrees) of axes. A bare None maps nothing,
+      so calling the wrapped function raises ValueError.
+    - A mapped axis of length zero raises ValueError (from
+      numpy.stack) instead of returning an empty array.
     - Keyword arguments are never mapped: they are passed unchanged
       to each call. (JAX maps them along their first axis.)
     - `out_axes` must be an int. The outputs of `func` are stacked
@@ -109,7 +120,7 @@ def vmap(func, in_axes=0, out_axes=0):
     ----------
     func : callable
         Function to map.
-    in_axes : int or None or tuple, optional
+    in_axes : int or tuple, optional
         Axis or axes to map over. If an int, the axis of the first
         positional argument; the others are not mapped. If a tuple,
         one entry per positional argument: the axis to map over, or
@@ -125,8 +136,9 @@ def vmap(func, in_axes=0, out_axes=0):
     callable
         Wrapped function that maps `func` over the specified axes.
         Calling it raises ValueError if `in_axes` does not match the
-        positional arguments, if no argument is mapped, or if the
-        mapped axes have different lengths.
+        positional arguments, if no argument is mapped, if the
+        mapped axes have different lengths, or if they have length
+        zero.
     """
 
     def wrapped(*args, **kwargs):
@@ -182,14 +194,16 @@ def segment_sum(values, segment_ids, num_segments):
     - Segment ids outside [-`num_segments`, `num_segments`) raise
       IndexError, and negative ones count from the end, instead of
       being dropped.
+    - Non-integer `segment_ids` are silently truncated to integers.
 
     Parameters
     ----------
     values : array_like, shape (N,)
         Values to sum.
     segment_ids : array_like of int, shape (N,)
-        Segment index for each value. Must satisfy
-        0 <= segment_ids[i] < num_segments.
+        Segment index for each value, in the range
+        [-`num_segments`, `num_segments`). Negative ids count from
+        the end.
     num_segments : int
         Total number of segments.
 
@@ -204,6 +218,8 @@ def segment_sum(values, segment_ids, num_segments):
     ValueError
         If `values` is not 1-D, or if `segment_ids` has a different
         shape.
+    IndexError
+        If a segment id is outside [-`num_segments`, `num_segments`).
     """
     values = _np.asarray(values)
     segment_ids = _np.asarray(segment_ids, dtype=_np.int64)
