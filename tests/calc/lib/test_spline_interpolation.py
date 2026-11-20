@@ -91,3 +91,28 @@ class TestInterpolateRaggedArray:
                 assert np.isnan(deriv(np.array([below, above]))[:, col]).all()
                 inside = deriv(np.array([energies[0], energies[-1]]))
                 assert np.isfinite(inside[:, col]).all()
+
+
+_ENERGY_TOL = 1e-6
+
+
+@pytest.mark.parametrize('step', [0.1, 0.2, 1/3])
+@pytest.mark.parametrize('shift', [0, 0.3, -1.7])
+def test_computed_energies_keep_beam_ends(step, shift):
+    """Check beam ends are kept for computed (rounded) energies."""
+    knots = np.round(27.3 + np.arange(400) * step, 10)
+    beams = np.full((len(knots), 2), np.nan)
+    beams[:, 0] = np.sin(knots / 20)
+    beams[5:-7, 1] = np.cos(knots[5:-7] / 20)
+    spline = interpolate_ragged_array(knots, beams)
+    # Energies computed as in the V0r scan: arange grid, minus a shift
+    grid = np.arange(knots[0] + shift - 1, knots[-1] + shift + 1, step)
+    energies = grid - shift
+    for col, (first, last) in enumerate(((0, -1), (5, -8))):
+        for knot in (first, last):
+            idx = np.argmin(np.abs(energies - knots[knot]))
+            assert abs(energies[idx] - knots[knot]) < _ENERGY_TOL
+            value = spline(energies[idx:idx + 1])[0, col]
+            assert value == pytest.approx(beams[knot, col])
+            deriv = spline.derivative(nu=1)(energies[idx:idx + 1])[0, col]
+            assert np.isfinite(deriv)

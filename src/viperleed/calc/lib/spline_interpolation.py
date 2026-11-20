@@ -54,12 +54,25 @@ class CachedSpline:
         return getattr(self._spline, name)
 
 
+# Energies closer than this fraction of the smallest knot spacing to a
+# knot are taken to be at the knot. Energies are usually computed (e.g.,
+# with np.arange, or by subtracting a shift), so they miss a knot by a
+# few ulps (~1e-11 eV after a few thousand additions at a few hundred
+# eV) unless the step is exactly representable. 1e-6 of the spacing
+# (1e-7 eV for 0.1 eV data) is far above this noise and far below
+# anything physically relevant.
+_KNOT_TOLERANCE = 1e-6
+
+
 class RaggedSpline:
     """Piecewise polynomial of ragged beams, valid only inside each beam.
 
     Evaluates like the underlying piecewise polynomial, but returns NaN
     for each beam at energies outside the range of its own data (limits
-    included in the range).
+    included in the range). Energies within a tiny tolerance of a knot
+    are moved onto the knot before evaluating, so that the first and
+    last data point of each beam are kept despite rounding errors in
+    computed energies.
 
     Parameters
     ----------
@@ -80,11 +93,20 @@ class RaggedSpline:
 
     def __call__(self, x):
         """Evaluate at the energies `x`, with NaN outside each beam."""
-        x = dnl.xp.asarray(x)[..., None]
+        x = dnl.xp.expand_dims(self._snap_to_knots(dnl.xp.asarray(x)), -1)
         inside = (x >= dnl.xp.asarray(self._first)) & (
             x <= dnl.xp.asarray(self._last)
         )
         return dnl.xp.where(inside, self._ppoly(x[..., 0]), dnl.xp.nan)
+
+    def _snap_to_knots(self, x):
+        """Return `x`, with values within tolerance of a knot on it."""
+        knots = dnl.xp.asarray(self._ppoly.x)
+        tol = _KNOT_TOLERANCE * dnl.xp.min(dnl.xp.diff(knots))
+        above = dnl.xp.clip(dnl.xp.searchsorted(knots, x), 1, len(knots) - 1)
+        below, above = knots[above - 1], knots[above]
+        nearest = dnl.xp.where(x - below <= above - x, below, above)
+        return dnl.xp.where(dnl.xp.abs(x - nearest) <= tol, nearest, x)
 
     # `nu` is the keyword used by scipy's PPoly.derivative
     def derivative(self, nu=1):  # pylint: disable=invalid-name
