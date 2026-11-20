@@ -329,6 +329,8 @@ def test_rfactor_from_csv_pdf_r_type(which_r, expected,
 
 
 _CSV_HEADER = 'E, ( 1| 0), ( 0| 1)\n'
+_FIRST_ENERGY = 30
+_N_BEAMS = 3
 
 
 def _csv_beams(energies):
@@ -353,6 +355,38 @@ def test_rfactor_from_csv_rejects_bad_input(contents):
     """Check that empty or single-energy beams are refused."""
     with pytest.raises(ValueError, match=r'at least 2|is empty'):
         from_ase.rfactor_from_csv(contents,
+                                  1.0,
+                                  beams_file_is_content=(True, True))
+
+
+def test_rfactor_from_csv_single_point_beam_is_skipped():
+    """Check that a one-point beam does not affect the overall R."""
+    header = 'E, ( 1| 0), ( 0| 1), ( 1| 1)\n'
+    rows = [(f'{energy:.2f}, {1 + i % 3}.0, {2 + i % 2}.0, '
+             f'{3 - i % 4}.0\n') for i, energy in enumerate(range(30, 50))]
+    two_beams = _csv_beams(range(30, 50))
+    # The third beam has data only at the first energy
+    one_point = header + rows[0] + ''.join(
+        row.rsplit(',', 1)[0] + ',\n' for row in rows[1:]
+    )
+    kwargs = {'beams_file_is_content': (True, True), 'which_r': 'pendry'}
+    r_two, *_ = from_ase.rfactor_from_csv((two_beams, two_beams), 1.0,
+                                          **kwargs)
+    r_three, _, r_beams = from_ase.rfactor_from_csv((one_point, one_point),
+                                                    1.0, **kwargs)
+    assert r_three == pytest.approx(r_two)
+    assert len(r_beams) == _N_BEAMS
+    assert np.isnan(r_beams[2])
+
+
+def test_rfactor_from_csv_rejects_only_single_point_beams():
+    """Check that a file without any interpolable beam is refused."""
+    rows = [f'{energy:.2f}, 1.0,\n' if energy == _FIRST_ENERGY
+            else f'{energy:.2f}, , 2.0\n'
+            for energy in range(_FIRST_ENERGY, 40)]
+    only_single = _CSV_HEADER + ''.join(rows[:1] + rows[-1:])
+    with pytest.raises(RfactorError, match='No experimental beam has'):
+        from_ase.rfactor_from_csv((only_single, _GOOD_CSV),
                                   1.0,
                                   beams_file_is_content=(True, True))
 

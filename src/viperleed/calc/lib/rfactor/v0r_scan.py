@@ -22,11 +22,15 @@ from typing import Callable
 
 import numpy as np
 
+from viperleed.calc.files.iorfactor import RfactorError
 from viperleed.calc.files.iorfactor import beamlist_to_array
 from viperleed.calc.lib import spline_interpolation
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 logger = logging.getLogger(__name__)
+
+# Fewest energies a beam needs for a cubic spline
+_MIN_POINTS = 2
 
 
 @dataclass(frozen=True)
@@ -92,8 +96,25 @@ class V0rScanResult:
         )
 
 
-def _make_spline(grid, intensities):
-    """Return a cached not-a-knot spline of ragged beam data."""
+def _make_spline(grid, intensities, what):
+    """Return a cached not-a-knot spline of ragged beam data.
+
+    Beams with fewer than two points cannot be interpolated. They
+    are turned into all-NaN beams, i.e., beams without overlap.
+
+    Raises
+    ------
+    RfactorError
+        If no beam has at least two points.
+    """
+    n_points = np.count_nonzero(~np.isnan(intensities), axis=0)
+    if not np.any(n_points >= _MIN_POINTS):
+        msg = (
+            f'No {what} beam has at least {_MIN_POINTS} energies. '
+            'Cannot interpolate.'
+        )
+        raise RfactorError(msg)
+    intensities = np.where(n_points >= _MIN_POINTS, intensities, np.nan)
     spline = spline_interpolation.interpolate_ragged_array(
         x=grid,
         y=intensities,
@@ -163,12 +184,12 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
 
     logger.debug('Constructing splines from data...')
     exp_energies, _, _, exp_intensities = beamlist_to_array(exp_beams)
-    exp_spline = _make_spline(exp_energies, exp_intensities)
+    exp_spline = _make_spline(exp_energies, exp_intensities, 'experimental')
 
     theo_grid, _, _, theo_intensities = beamlist_to_array(theo_beams)
     theo_intensities = average_beam_array(theo_intensities,
                                           beam_correspondence)
-    theo_spline = _make_spline(theo_grid, theo_intensities)
+    theo_spline = _make_spline(theo_grid, theo_intensities, 'theoretical')
 
     best_shift, best_r = _find_best_shift(
         functools.partial(
@@ -183,7 +204,8 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
         iv_shift,
     )
     if best_shift:
-        theo_spline = _make_spline(theo_grid + best_shift, theo_intensities)
+        theo_spline = _make_spline(theo_grid + best_shift, theo_intensities,
+                                'theoretical')
     return V0rScanResult(
         r_func,
         v0_imag,
