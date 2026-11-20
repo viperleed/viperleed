@@ -214,7 +214,9 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
     intpol_step = iv_shift.step
 
     logger.debug('Constructing splines from data...')
-    exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(exp_beams)
+    exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(
+        exp_beams
+    )
     exp_spline = _make_spline(exp_energies, exp_intensities, 'experimental')
     theo_grid, _, _, theo_intensities = iorfactor.beamlist_to_array(theo_beams)
     theo_intensities = average_beam_array(theo_intensities,
@@ -235,8 +237,11 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
         iv_shift,
     )
     if best_shift:
-        theo_spline = _make_spline(theo_grid + best_shift, theo_intensities,
-                                'theoretical')
+        theo_spline = _make_spline(
+            theo_grid + best_shift,
+            theo_intensities,
+            'theoretical',
+        )
     return V0rScanResult(
         r_func,
         v0_imag,
