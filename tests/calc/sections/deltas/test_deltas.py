@@ -7,7 +7,7 @@ of a delta-amplitudes calculation.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-07-04'
 __license__ = 'GPLv3+'
 
@@ -143,7 +143,7 @@ class TestDeltasCalls:
     @use('mock_atoms_need_deltas')
     def test_compile_and_run(self, rpars, mocks, call_in_tmp, caplog):
         """Check a full, clean execution for a single domain."""
-        caplog.set_level(logging.INFO)
+        caplog.set_level(logging.DEBUG)
         call_in_tmp()
         rpars.updateCores.assert_called_once()
         assert DEFAULT_DELTAS in rpars.manifest
@@ -156,6 +156,7 @@ class TestDeltasCalls:
             r'Delta log will be written to local subfolders, and collected in',
             r'Compiling fortran files\.\.\.',
             r'Running delta calculations\.\.\.',
+            r'BLAS thread limit for delta calculations: ',
             r'Delta calculations finished\.',
             )
         log = caplog.text
