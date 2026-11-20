@@ -81,3 +81,25 @@ def test_scan_covers_overlap_at_large_shift(sign, r_name):
     r_plain = _scan_fixed_shift(sign, 1.0, r_name).best_r
     r_modified = _scan_fixed_shift(sign, 1.5, r_name).best_r
     assert r_modified > r_plain + 0.01
+
+
+def test_find_best_shift_ignores_nan():
+    """Check that shifts with an undefined R are not selected."""
+    iv_shift = IVShiftRange(-2, 2, 1)
+    r_values = {-2: np.nan, -1: np.nan, 0: 0.5, 1: 0.2, 2: np.nan}
+    best_shift, best_r = v0r_scan._find_best_shift(  # pylint: disable=protected-access
+        lambda shift_2nd_spline: r_values[shift_2nd_spline],
+        iv_shift,
+    )
+    assert best_shift == pytest.approx(1)
+    assert best_r == pytest.approx(0.2)
+
+
+def test_find_best_shift_rejects_all_nan():
+    """Check that an error is raised if R is NaN at every shift."""
+    iv_shift = IVShiftRange(-2, 2, 1)
+    with pytest.raises(iorfactor.RfactorError, match='undefined'):
+        v0r_scan._find_best_shift(  # pylint: disable=protected-access
+            lambda **_: np.nan,
+            iv_shift,
+        )

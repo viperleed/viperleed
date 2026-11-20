@@ -449,6 +449,38 @@ def test_rfactor_from_csv_uses_short_beams(n_points):
     assert r_with != pytest.approx(r_without)
 
 
+def _smooth_csv(energies, phase):
+    """Return the content of a CSV file with one smooth beam."""
+    rows = (f'{energy:.2f}, {2 + np.sin((energy + phase) / 4):.6f}\n'
+            for energy in energies)
+    return 'E, ( 1| 0)\n' + ''.join(rows)
+
+
+@pytest.mark.parametrize('which_r', ['pendry', 'r2'])
+def test_rfactor_from_csv_large_v0r_range_is_not_nan(which_r):
+    """Check that large shifts, with no overlap, do not give NaN."""
+    # With a range of +-25 eV on 20 eV of data, the most extreme shifts
+    # leave no overlap between experiment and theory.
+    contents = (
+        _smooth_csv(np.arange(40, 60.1, 1.0), 0.0),
+        _smooth_csv(np.arange(40, 60.1, 0.5), 1.0),
+    )
+    results = [
+        from_ase.rfactor_from_csv(
+            contents,
+            4.0,
+            beams_file_is_content=(True, True),
+            which_r=which_r,
+            v0r_shift_range=shift_range,
+        )
+        for shift_range in ((-10, 10), (-25, 25))
+    ]
+    (r_small, v0r_small, *_), (r_large, v0r_large, *_) = results
+    assert np.isfinite(r_large)
+    assert r_large == pytest.approx(r_small)
+    assert v0r_large == pytest.approx(v0r_small)
+
+
 def test_rfactor_from_csv_rejects_only_single_point_beams():
     """Check that a file without any interpolable beam is refused."""
     rows = [f'{energy:.2f}, 1.0,\n' if energy == _FIRST_ENERGY

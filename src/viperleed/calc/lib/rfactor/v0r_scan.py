@@ -22,8 +22,7 @@ from typing import Callable
 
 import numpy as np
 
-from viperleed.calc.files.iorfactor import RfactorError
-from viperleed.calc.files.iorfactor import beamlist_to_array
+from viperleed.calc.files import iorfactor
 from viperleed.calc.lib import spline_interpolation
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 
@@ -113,7 +112,7 @@ def _make_spline(grid, intensities, what):
             f'No {what} beam has at least {_MIN_POINTS} energies. '
             'Cannot interpolate.'
         )
-        raise RfactorError(msg)
+        raise iorfactor.RfactorError(msg)
     intensities = np.where(n_points >= _MIN_POINTS, intensities, np.nan)
     spline = spline_interpolation.interpolate_ragged_array(
         x=grid,
@@ -143,7 +142,16 @@ def _experimental_axis(exp_energies, theo_range, iv_shift):
 
 
 def _find_best_shift(r_at_shift, iv_shift):
-    """Return the shift in iv_shift with the lowest R, and that R."""
+    """Return the shift in iv_shift with the lowest R, and that R.
+
+    Shifts at which R is NaN (e.g., because experiment and theory do
+    not overlap there) are ignored.
+
+    Raises
+    ------
+    RfactorError
+        If R is NaN at all shifts.
+    """
     logger.debug('Sweeping V0r...')
     # sweep V0r shifts - TODO: continuous shifts?
     shifts = np.arange(
@@ -151,11 +159,20 @@ def _find_best_shift(r_at_shift, iv_shift):
         iv_shift.stop + iv_shift.step,
         iv_shift.step,
     )
-    r_values = np.array([
-        r_at_shift(shift_2nd_spline=shift)
-        for shift in shifts
-    ])
-    best_index = np.argmin(r_values)
+    # Shifts without overlap give 0/0, i.e., NaN: this is expected
+    with np.errstate(invalid='ignore'):
+        r_values = np.array([
+            r_at_shift(shift_2nd_spline=shift)
+            for shift in shifts
+        ])
+    if np.all(np.isnan(r_values)):
+        msg = (
+            'The R factor is undefined (NaN) at all V0r shifts in '
+            f'[{iv_shift.start}, {iv_shift.stop}] eV. Experiment and '
+            'theory may have no energies in common at any of them.'
+        )
+        raise iorfactor.RfactorError(msg)
+    best_index = np.nanargmin(r_values)
     best_shift = shifts[best_index]
     best_r = r_values[best_index]
     logger.debug('Best inner potential shift: %.2f eV with R = %.4f',
@@ -197,9 +214,9 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
     intpol_step = iv_shift.step
 
     logger.debug('Constructing splines from data...')
-    exp_energies, _, _, exp_intensities = beamlist_to_array(exp_beams)
+    exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(exp_beams)
     exp_spline = _make_spline(exp_energies, exp_intensities, 'experimental')
-    theo_grid, _, _, theo_intensities = beamlist_to_array(theo_beams)
+    theo_grid, _, _, theo_intensities = iorfactor.beamlist_to_array(theo_beams)
     theo_intensities = average_beam_array(theo_intensities,
                                           beam_correspondence)
     theo_spline = _make_spline(theo_grid, theo_intensities, 'theoretical')
