@@ -8,7 +8,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
-from .groups import group_rfactors, overlap_length_terms
+from .groups import group_beam_rfactors
 from .utils import (
     coerce_to_energy_grid,
     nonzero_or_nan,
@@ -153,10 +153,8 @@ def r_zjj(
     overlap = overlap_mask(data_1[0], data_2[0])
     beam_rfactors = _zj_beam_rfactors(data_1, data_2, overlap, energy_step)
 
-    # Per-beam values are the numerators; groups and the overall
-    # value are the means over beams weighted by the length of the
-    # overlap.
-    return group_rfactors(
-        *overlap_length_terms(beam_rfactors, overlap, energy_step),
-        **kwargs,
+    # Groups and the overall value are the means over beams weighted
+    # by the length of the overlap.
+    return group_beam_rfactors(
+        beam_rfactors, overlap, energy_step, **kwargs
     )

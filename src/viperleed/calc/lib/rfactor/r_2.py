@@ -6,7 +6,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
-from .groups import group_rfactors, overlap_length_terms
+from .groups import group_beam_rfactors
 from .utils import (
     coerce_to_energy_grid,
     nonzero_or_nan,
@@ -114,12 +114,11 @@ def r_2(
         axis=0,
     )
 
-    # Per-beam values are num / den; groups and the overall value are
-    # the means over beams weighted by the length of the overlap.
+    # Groups and the overall value are the means over beams weighted
+    # by the length of the overlap.
     beam_rfactors = numerators / nonzero_or_nan(
         overlap_trapezoid(data_1_intensity**2, energy_step, overlap, axis=0)
     )
-    return group_rfactors(
-        *overlap_length_terms(beam_rfactors, overlap, energy_step),
-        **kwargs,
+    return group_beam_rfactors(
+        beam_rfactors, overlap, energy_step, **kwargs
     )

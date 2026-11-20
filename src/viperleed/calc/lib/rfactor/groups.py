@@ -93,16 +93,19 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
     )
 
 
-def overlap_length_terms(beam_rfactors, overlap, energy_step):
-    r"""Return numerators and denominators for length weighting.
+def group_beam_rfactors(
+    beam_rfactors, overlap, energy_step, groups=None, num_groups=None
+):
+    r"""Group per-beam R-factors, weighting beams by overlap length.
 
     Averaging the per-beam R-factors $`R_b`$ with the lengths $`L_b =
     (n_b - 1) \, \Delta E`$ of the energy ranges over which they were
     evaluated ($`n_b`$ is the number of overlapping points) gives
-    $`\sum_b R_b L_b / \sum_b L_b`$. This is what
-    :func:`group_rfactors` computes from the returned arrays, while
-    the per-beam values are still $`R_b`$. Beams without overlap
-    (or with undefined R-factor) do not contribute to any group.
+    $`\sum_b R_b L_b / \sum_b L_b`$. The grouping follows
+    :func:`group_rfactors`, except that for `groups` == "beam" the
+    $`R_b`$ are returned as they are. Beams without overlap (or with
+    undefined R-factor) do not contribute to any group, and have nan
+    as their own value.
 
     Parameters
     ----------
@@ -114,16 +117,21 @@ def overlap_length_terms(beam_rfactors, overlap, energy_step):
         both data sets have data.
     energy_step : float
         The spacing of the energy grid.
+    groups, num_groups : optional
+        Passed to :func:`group_rfactors`.
 
     Returns
     -------
-    numerators, denominators : dnl.xp.ndarray
-        Arrays of shape (n_beams,) to be passed to
-        :func:`group_rfactors`.
+    dnl.xp.ndarray
+        As :func:`group_rfactors`.
     """
     lengths = dnl.xp.clip(overlap.sum(axis=0) - 1, 0, None) * energy_step
     valid = dnl.xp.logical_and(lengths > 0, dnl.xp.isfinite(beam_rfactors))
-    return (
+    if isinstance(groups, str) and groups == 'beam':
+        return dnl.xp.where(valid, beam_rfactors, dnl.xp.nan)
+    return group_rfactors(
         dnl.xp.where(valid, beam_rfactors, 0.0) * lengths,
         dnl.xp.where(valid, lengths, 0.0),
+        groups=groups,
+        num_groups=num_groups,
     )
