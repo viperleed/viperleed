@@ -78,6 +78,18 @@ def _relabel_as_fractional(beams):
         beam.hk = (beam.hk[0] + Fraction(1, 2), beam.hk[1])
 
 
+# Energy offset (eV) applied to the experimental beams in a calculation
+# for error curves, so the best V0r would differ from the fixed one.
+_FOR_ERROR_DATA_SHIFT = 2.0
+
+
+def _shift_beams(beams, delta):
+    """Add `delta` (eV) to all energies of `beams`."""
+    for beam in beams:
+        beam.intens = {energy + delta: intensity
+                       for energy, intensity in beam.intens.items()}
+
+
 def _run_section(dataset, r_type, monkeypatch, **options):
     """Return the results of run_new_rfactor for `dataset`.
 
@@ -123,12 +135,15 @@ def _run_section(dataset, r_type, monkeypatch, **options):
     shift = shift_range if step is None else (*shift_range, step)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*shift)
     name = 'refcalc'
+    normal_pass = None
     if for_error:
         rfactor_section.run_new_rfactor(None,
                                         rpars,
                                         for_error=False,
                                         name=name,
                                         theobeams=theobeams)
+        normal_pass = rpars.best_v0r
+        _shift_beams(rpars.expbeams, _FOR_ERROR_DATA_SHIFT)
         name = 'superpos'
     r_beams = rfactor_section.run_new_rfactor(None,
                                               rpars,
@@ -136,6 +151,22 @@ def _run_section(dataset, r_type, monkeypatch, **options):
                                               name=name,
                                               theobeams=theobeams)
     overall, integer, r_fractional = rpars.stored_R[name]
+    if normal_pass is not None:
+        # The data changed such that the optimum would move. Instead,
+        # R is evaluated at the fixed V0r of the normal pass.
+        assert rpars.best_v0r == normal_pass
+        reference = _make_rparams(dataset, r_type, expbeams, theobeams)
+        reference.IV_SHIFT_RANGE = IVShiftRange(normal_pass,
+                                                normal_pass,
+                                                rpars.IV_SHIFT_RANGE.step)
+        rfactor_section.run_new_rfactor(None,
+                                        reference,
+                                        for_error=False,
+                                        name=name,
+                                        theobeams=theobeams)
+        np.testing.assert_allclose(rpars.stored_R[name],
+                                   reference.stored_R[name],
+                                   rtol=1e-12)
     return {
         'best_v0r': float(rpars.best_v0r),
         'r_overall': float(overall),

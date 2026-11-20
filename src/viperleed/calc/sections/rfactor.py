@@ -120,8 +120,10 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     """Run the spline-based (Python) R-factor calculation.
 
     The V0r shift in rp.IV_SHIFT_RANGE that minimizes the overall R
-    factor is found, and R factors are evaluated at that shift. If
-    rp.PLOT_IV['plot'], PDF files with the R-factor plots are written.
+    factor is found, and R factors are evaluated at that shift. For
+    error curves, R factors are instead evaluated at the fixed shift
+    rp.best_v0r, which is left unchanged. If rp.PLOT_IV['plot'], PDF
+    files with the R-factor plots are written.
 
     Parameters
     ----------
@@ -131,11 +133,12 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     rp : Rparams
         The PARAMETERS. Attributes read include THEO_ENERGIES,
         expbeams, IV_SHIFT_RANGE, V0_IMAG, R_FACTOR_TYPE, INTPOL_DEG,
-        and PLOT_IV. Attributes set: best_v0r, last_R, stored_R[name].
+        and PLOT_IV (and best_v0r if for_error). Attributes set:
+        best_v0r (unless for_error), last_R, stored_R[name].
         IV_SHIFT_RANGE may get its step set.
     for_error : bool
-        Whether the calculation is meant for error curves. Used to
-        determine the energy ranges.
+        Whether the calculation is meant for error curves. If so,
+        rp.best_v0r must be set, and is used as the only shift.
     name : str
         Either 'refcalc' or 'superpos'. Key under which the R factors
         are stored in rp.stored_R, and part of the PDF file names.
@@ -173,7 +176,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     logger.info('Calculating R-factor type %s.',
                 rp.R_FACTOR_TYPE.name.lower())
 
-    _, theo_range, _, _ = iorfactor.prepare_rfactor_energy_ranges(
+    _, theo_range, iv_shift, _ = iorfactor.prepare_rfactor_energy_ranges(
         rp, theobeams, for_error, n_expand=(rp.INTPOL_DEG - 1) // 2
     )
 
@@ -188,10 +191,11 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
         rp.expbeams,
         theobeams,
         beam_correspondence,
-        rp.IV_SHIFT_RANGE,
+        iv_shift,
         theo_range,
     )
-    rp.best_v0r = scan.best_v0r
+    if not for_error:
+        rp.best_v0r = scan.best_v0r
     logger.info(
         "Best inner potential shift: %.2f eV with R = %.4f",
         scan.best_v0r,
