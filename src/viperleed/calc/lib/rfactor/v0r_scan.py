@@ -123,6 +123,25 @@ def _make_spline(grid, intensities, what):
     return spline_interpolation.CachedSpline(spline)
 
 
+def _experimental_axis(exp_energies, theo_range, iv_shift):
+    """Return the energies at which experiment and theory are compared.
+
+    The theory is evaluated at these energies minus the shift. The grid
+    thus covers theo_range moved by every shift in iv_shift, i.e., the
+    whole overlap with experiment for each shift, restricted to the
+    energies of the experiment.
+    """
+    step = iv_shift.step
+    axis = np.arange(
+        theo_range.min + iv_shift.start,
+        theo_range.max + iv_shift.stop + 0.1 * step,
+        step,
+    )
+    tolerance = 0.1 * step
+    return axis[(axis >= exp_energies[0] - tolerance)
+                & (axis <= exp_energies[-1] + tolerance)]
+
+
 def _find_best_shift(r_at_shift, iv_shift):
     """Return the shift in iv_shift with the lowest R, and that R."""
     logger.debug('Sweeping V0r...')
@@ -176,21 +195,16 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
         best shift, from which further R factors can be evaluated.
     """
     intpol_step = iv_shift.step
-    out_grid = np.arange(
-        theo_range.min,
-        theo_range.max + 0.1 * intpol_step,
-        intpol_step,
-    )
 
     logger.debug('Constructing splines from data...')
     exp_energies, _, _, exp_intensities = beamlist_to_array(exp_beams)
     exp_spline = _make_spline(exp_energies, exp_intensities, 'experimental')
-
     theo_grid, _, _, theo_intensities = beamlist_to_array(theo_beams)
     theo_intensities = average_beam_array(theo_intensities,
                                           beam_correspondence)
     theo_spline = _make_spline(theo_grid, theo_intensities, 'theoretical')
 
+    out_grid = _experimental_axis(exp_energies, theo_range, iv_shift)
     best_shift, best_r = _find_best_shift(
         functools.partial(
             r_func,
