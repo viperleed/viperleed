@@ -150,3 +150,26 @@ def test_r1_r2_vanish_for_scaled_copy_on_overlap(func):
         data_and_derivatives_2=(theo, None, None),
     )
     assert result == pytest.approx(0.0, abs=1e-12)
+
+
+def test_zj_epsilon_uses_largest_derivative_magnitude():
+    """Check that ZJ's epsilon is the largest experimental |dI/dE|."""
+    # Same data as the edge-weight test, but the experimental derivative
+    # of largest magnitude (-4) is negative. epsilon is its modulus, so
+    # the denominators are [5, 8, 6].
+    exp = (
+        np.array([NAN, 2, 2, 2, NAN])[:, None],
+        np.array([NAN, 1, -4, 2, NAN])[:, None],
+        np.array([NAN, 1, 1, 1, NAN])[:, None],
+    )
+    theo = (
+        np.array([NAN, 1, 1, 1, NAN])[:, None],
+        np.array([NAN, 0.5, -2, 0, NAN])[:, None],
+        np.array([NAN, 0.5, 1, 2, NAN])[:, None],
+    )
+    result = zannazi_jona.r_zjj(
+        0.0, 1.0, np.arange(5.0),
+        data_and_derivatives_1=exp,
+        data_and_derivatives_2=theo,
+    )
+    assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)

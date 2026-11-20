@@ -110,8 +110,10 @@ def r_zjj(
     ) * abs(beam_normalization * data_2_derivative_1 - data_1_derivative_1)
     numerators = dnl.xp.where(no_overlap_mask, 0.0, numerators)
 
-    denominators = abs(data_1_derivative_1) + dnl.xp.nanmax(
-        data_1_derivative_1, axis=0
+    # epsilon: largest experimental |I'| in the overlap
+    # (data_1_derivative_1 is zero outside it)
+    denominators = abs(data_1_derivative_1) + dnl.xp.max(
+        abs(data_1_derivative_1), axis=0
     )
     denominators = dnl.xp.clip(denominators, 1e-12, None)
     denominators = dnl.xp.where(no_overlap_mask, 1.0, denominators)
