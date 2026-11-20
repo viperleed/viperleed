@@ -17,11 +17,11 @@ _RUNNERS = {
     'run_legacy_rfactor': 'legacy',
     'run_new_rfactor': 'python',
     }
-_LEGACY_CASES = {
-    'not given': ('', 'legacy'),
-    'true': ('R_FACTOR_LEGACY = True\n', 'legacy'),
-    'false': ('R_FACTOR_LEGACY = False\n', 'python'),
-    }
+_LEGACY_CASES = (
+    pytest.param('', 'legacy', id='not given'),
+    pytest.param('R_FACTOR_LEGACY = True\n', 'legacy', id='true'),
+    pytest.param('R_FACTOR_LEGACY = False\n', 'python', id='false'),
+    )
 
 
 def test_r_factor_legacy_default():
@@ -29,20 +29,14 @@ def test_r_factor_legacy_default():
     assert Rparams().R_FACTOR_LEGACY is True
 
 
-@pytest.fixture(name='called_runners')
-def fixture_called_runners(monkeypatch):
-    """Replace the R-factor runners with ones recording their call."""
-    called = []
+@parametrize('line,expected', _LEGACY_CASES)
+def test_rfactor_dispatch(line, expected, monkeypatch, tmp_path):
+    """Check which R factor is run for PARAMETERS with `line`."""
+    called_runners = []
     for runner, label in _RUNNERS.items():
         def _record(*_, label=label, **__):
-            called.append(label)
+            called_runners.append(label)
         monkeypatch.setattr(rfactor_section, runner, _record)
-    return called
-
-
-@parametrize('line,expected', _LEGACY_CASES.values(), ids=_LEGACY_CASES)
-def test_rfactor_dispatch(line, expected, called_runners, tmp_path):
-    """Check which R factor is run for PARAMETERS with `line`."""
     parameters_file = tmp_path / 'PARAMETERS'
     parameters_file.write_text(f'RUN = 0 1\n{line}', encoding='utf-8')
     rpars = parameters.read(parameters_file)
