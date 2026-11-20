@@ -113,19 +113,21 @@ def test_pendry_from_y_weighs_overlap_edges_by_half():
     assert result == pytest.approx(numerator / denominator, rel=1e-12)
 
 
-def test_zj_weighs_overlap_edges_by_half():
-    """Check trapezoid weights of ZJ's R at the overlap edges."""
+@pytest.mark.parametrize("peak_sign", [1, -1])
+def test_zj_weighs_overlap_edges_by_half(peak_sign):
+    """Check trapezoid weights and epsilon of ZJ's R at the edges."""
     # Overlap is the three middle points. With I_e = 2, I_t = 1 there,
     # the scale factor is 2. Weighted quotients are [0, 0, 1], so the
-    # integral is 1/2; the largest |I'_e| is 4, and int I_e = 4.
+    # integral is 1/2; the largest |I'_e| is 4 (also if its sign is
+    # negative, as epsilon is its modulus), and int I_e = 4.
     exp = (
         np.array([NAN, 2, 2, 2, NAN])[:, None],
-        np.array([NAN, 1, 4, 2, NAN])[:, None],
+        np.array([NAN, 1, 4 * peak_sign, 2, NAN])[:, None],
         np.array([NAN, 1, 1, 1, NAN])[:, None],
     )
     theo = (
         np.array([NAN, 1, 1, 1, NAN])[:, None],
-        np.array([NAN, 0.5, 2, 0, NAN])[:, None],
+        np.array([NAN, 0.5, 2 * peak_sign, 0, NAN])[:, None],
         np.array([NAN, 0.5, 1, 2, NAN])[:, None],
     )
     result = zannazi_jona.r_zjj(
@@ -219,29 +221,6 @@ def test_zj_ignores_experiment_outside_theory_range():
     assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
 
 
-def test_zj_epsilon_uses_largest_derivative_magnitude():
-    """Check that ZJ's epsilon is the largest experimental |dI/dE|."""
-    # Same data as the edge-weight test, but the experimental derivative
-    # of largest magnitude (-4) is negative. epsilon is its modulus, so
-    # the denominators are [5, 8, 6].
-    exp = (
-        np.array([NAN, 2, 2, 2, NAN])[:, None],
-        np.array([NAN, 1, -4, 2, NAN])[:, None],
-        np.array([NAN, 1, 1, 1, NAN])[:, None],
-    )
-    theo = (
-        np.array([NAN, 1, 1, 1, NAN])[:, None],
-        np.array([NAN, 0.5, -2, 0, NAN])[:, None],
-        np.array([NAN, 0.5, 1, 2, NAN])[:, None],
-    )
-    result = zannazi_jona.r_zjj(
-        0.0, 1.0, np.arange(5.0),
-        data_and_derivatives_1=exp,
-        data_and_derivatives_2=theo,
-    )
-    assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
-
-
 STEP = 0.5
 # Three beams on a 6-point grid, overlapping on 6, 3 and 5 points.
 OVERLAPS = ((0, 6), (1, 4), (0, 5))
@@ -315,12 +294,17 @@ def _nan_outside_overlap(rows):
     return data
 
 
-def _call_with_ragged_beams(func, **kwargs):
-    """Return func evaluated on the ragged test beams."""
+def _call_with_ragged_beams(func, empty_beams=(), **kwargs):
+    """Return func evaluated on the ragged test beams.
+
+    The beams listed in `empty_beams` have no data at all.
+    """
     exp = tuple(_nan_outside_overlap(rows)
                 for rows in (EXP_I, EXP_D1, EXP_D2))
     theo = tuple(_nan_outside_overlap(rows)
                  for rows in (THEO_I, THEO_D1, THEO_D2))
+    for arr in (*exp, *theo):
+        arr[:, list(empty_beams)] = np.nan
     return func(
         0.0, STEP, np.arange(6) * STEP,
         data_and_derivatives_1=exp,
@@ -360,21 +344,11 @@ class TestBeamAveraging:
 
     def test_beam_without_overlap_does_not_contribute(self, func, per_beam):
         """Check that a beam without overlap is left out."""
-        exp = tuple(_nan_outside_overlap(rows)
-                    for rows in (EXP_I, EXP_D1, EXP_D2))
-        theo = tuple(_nan_outside_overlap(rows)
-                     for rows in (THEO_I, THEO_D1, THEO_D2))
-        for arr in (*exp, *theo):
-            arr[:, 1] = np.nan
-        result = func(
-            0.0, STEP, np.arange(6) * STEP,
-            data_and_derivatives_1=exp,
-            data_and_derivatives_2=theo,
-        )
+        result = _call_with_ragged_beams(func, empty_beams=(1,))
         expected = _weighted_mean([per_beam(0), per_beam(2)], (0, 2))
         assert result == pytest.approx(expected, rel=1e-12)
 
-    @pytest.mark.parametrize('groups', [None, 'beam'])
+    @pytest.mark.parametrize("groups", [None, "beam"])
     def test_beam_with_zero_experimental_intensity_is_excluded(
         self, func, per_beam, groups
     ):
