@@ -334,6 +334,88 @@ def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
                                         theobeams=theobeams)
 
 
+# A V0r (eV) inside _SHIFT_RANGE, but away from the best V0r of every
+# R factor for the fe2o3-012-1x1 data (0.5 or 1.5 eV).
+_FIXED_V0R = -2.0
+
+
+def _run_section_at(dataset, r_type, monkeypatch, shift_range, **kwargs):
+    """Return the Rparams after run_new_rfactor and the scan it made.
+
+    Parameters
+    ----------
+    dataset : dict
+        The beam data.
+    r_type : str
+        Name of the R factor.
+    monkeypatch : pytest.MonkeyPatch
+        Used to fix the beam correspondence and to capture the scan.
+    shift_range : tuple of two float
+        Start and stop of the V0r shifts, with step _STEP.
+    **kwargs
+        best_v0r : float, optional
+            Value of best_v0r before the calculation.
+        for_error : bool, optional
+            Passed on to run_new_rfactor. Default is False.
+
+    Returns
+    -------
+    rpars : Rparams
+        The parameters after the calculation.
+    scan : V0rScanResult
+        The result of the only call to scan_v0r.
+    """
+    monkeypatch.setattr(rfactor_section.leedbase,
+                        'getBeamCorrespondence',
+                        lambda *_: dataset['beam_correspondence'])
+    scans = []
+    scan_v0r = rfactor_section.v0r_scan.scan_v0r
+
+    def _record_scan(*args, **scan_kwargs):
+        scans.append(scan_v0r(*args, **scan_kwargs))
+        return scans[-1]
+
+    monkeypatch.setattr(rfactor_section.v0r_scan, 'scan_v0r', _record_scan)
+    theobeams = readOUTBEAMS(dataset['theo_file'])
+    rpars = _make_rparams(dataset,
+                          r_type,
+                          readOUTBEAMS(dataset['exp_file']),
+                          theobeams)
+    rpars.IV_SHIFT_RANGE = IVShiftRange(*shift_range, _STEP)
+    rpars.best_v0r = kwargs.get('best_v0r')
+    rfactor_section.run_new_rfactor(None,
+                                    rpars,
+                                    for_error=kwargs.get('for_error', False),
+                                    name='refcalc',
+                                    theobeams=theobeams)
+    assert len(scans) == 1
+    return rpars, scans[0]
+
+
+@pytest.mark.parametrize('r_type', _TYPES)
+def test_run_new_rfactor_for_error_uses_best_v0r(r_type,
+                                                 fe2o3_012_1x1_dataset,
+                                                 monkeypatch):
+    """Check that R for error curves is that at the fixed best V0r."""
+    dataset = fe2o3_012_1x1_dataset
+    rpars, scan = _run_section_at(dataset,
+                                  r_type,
+                                  monkeypatch,
+                                  _SHIFT_RANGE,
+                                  best_v0r=_FIXED_V0R,
+                                  for_error=True)
+    fixed, _ = _run_section_at(dataset,
+                               r_type,
+                               monkeypatch,
+                               (_FIXED_V0R, _FIXED_V0R))
+    best, _ = _run_section_at(dataset, r_type, monkeypatch, _SHIFT_RANGE)
+    assert best.best_v0r != _FIXED_V0R  # Otherwise the test is moot
+    assert rpars.best_v0r == _FIXED_V0R
+    assert scan.best_v0r == _FIXED_V0R
+    assert rpars.last_R == fixed.last_R
+    assert rpars.last_R > best.last_R
+
+
 _PDF_R_TYPES = {
     'smooth': ('SMOOTH', True),
     'pendry': ('PENDRY', True),
