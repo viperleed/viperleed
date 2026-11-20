@@ -410,6 +410,45 @@ def test_rfactor_from_csv_single_point_beam_is_skipped():
     assert np.isnan(r_beams[2])
 
 
+def _csv_with_short_beam(phase, n_points):
+    """Return CSV content with a third beam of n_points energies.
+
+    The third beam is left out if n_points is 0.
+    """
+    header = 'E, ( 1| 0), ( 0| 1)' + (', ( 1| 1)\n' if n_points else '\n')
+    rows = []
+    for i, energy in enumerate(range(_FIRST_ENERGY, 50)):
+        row = (f'{energy:.2f}, {1 + (i + phase) % 4}.0, '
+               f'{2 + (i * phase) % 3}.0')
+        if n_points:
+            row += f', {1 + (i + phase) % 3}.0' if i < n_points else ','
+        rows.append(row + '\n')
+    return header + ''.join(rows)
+
+
+@pytest.mark.parametrize('n_points', [2, 3])
+def test_rfactor_from_csv_uses_short_beams(n_points):
+    """Check that beams with two or three points are not dropped."""
+    # No shift, so that the overlap of a short beam cannot vanish
+    kwargs = {
+        'beams_file_is_content': (True, True),
+        'which_r': 'pendry',
+        'v0r_shift_range': (0, 0),
+    }
+    r_without, *_ = from_ase.rfactor_from_csv(
+        (_csv_with_short_beam(0, 0), _csv_with_short_beam(1, 0)),
+        1.0,
+        **kwargs,
+    )
+    r_with, _, r_beams = from_ase.rfactor_from_csv(
+        (_csv_with_short_beam(0, n_points), _csv_with_short_beam(1, n_points)),
+        1.0,
+        **kwargs,
+    )
+    assert np.isfinite(r_beams[2])
+    assert r_with != pytest.approx(r_without)
+
+
 def test_rfactor_from_csv_rejects_only_single_point_beams():
     """Check that a file without any interpolable beam is refused."""
     rows = [f'{energy:.2f}, 1.0,\n' if energy == _FIRST_ENERGY

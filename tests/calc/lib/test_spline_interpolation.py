@@ -92,6 +92,20 @@ class TestInterpolateRaggedArray:
                 inside = deriv(np.array([energies[0], energies[-1]]))
                 assert np.isfinite(inside[:, col]).all()
 
+    @pytest.mark.parametrize('order', [1, 2])
+    def test_derivatives_at_last_knot(self, ragged_data, order):
+        """Check derivatives at the last knot match a single spline."""
+        grid, beams = ragged_data
+        spline = interpolate_ragged_array(grid, beams)
+        derivatives = spline.derivative(nu=order)
+        for col in range(beams.shape[1]):
+            has_data = ~np.isnan(beams[:, col])
+            single = CubicSpline(grid[has_data], beams[has_data, col],
+                                 bc_type='not-a-knot')
+            last = grid[has_data][-1:]
+            expected = single(last, nu=order)[0]
+            assert derivatives(last)[0, col] == pytest.approx(expected)
+
 
 _ENERGY_TOL = 1e-6
 
