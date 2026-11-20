@@ -26,8 +26,24 @@ def r_2(
     """
     Calculate the R2 R factor.
 
-    This uses R2 R factor as defined by Van Hove et al. in
-    https://doi.org/10.1007/978-3-642-82721-1.
+    For each beam, with experimental intensity I_e and theoretical
+    intensity I_t,
+
+        R2 = int (I_e - c * I_t)^2 dE / int I_e^2 dE ,
+
+    where c = int I_e dE / int I_t dE is the scale factor of the beam.
+    All integrals (trapezoidal rule) run over the energy range in which
+    both datasets are defined. This is the definition of Van Hove,
+    Weinberg and Chan, "Low-Energy Electron Diffraction" (Springer,
+    1986), https://doi.org/10.1007/978-3-642-82721-1, also used in
+    Imre et al., arXiv:2511.05448 (Eq. 1). The R2 of TensErLEED
+    (legacy code) includes an additional factor 1/2, i.e., it is half
+    of the value calculated here.
+
+    The overall R2 value, and the value of each group of beams, is the
+    mean of the per-beam R2 weighted with the length (n - 1) * step of
+    the overlap of the beam, where n is the number of overlapping
+    points. Beams without overlap do not contribute.
 
     Uses two sets of beam data, either passed as splines or as
     already calculated arrays of intensities.
