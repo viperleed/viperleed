@@ -8,13 +8,8 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
+from . import utils
 from .groups import group_rfactors
-from .utils import (
-    coerce_to_energy_grid,
-    overlap_mask,
-    overlap_trapezoid,
-    shift_theo_intensity_non_negative,
-)
 
 
 def r_pendry(
@@ -74,12 +69,12 @@ def r_pendry(
         either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    data_1_intensity, data_1_derivative = coerce_to_energy_grid(
+    data_1_intensity, data_1_derivative = utils.coerce_to_energy_grid(
         data_and_derivatives_1, data_spline_1, energy_grid, derivs=1
     )
 
     # 2nd data uses shifted grid if spline
-    data_2_intensity, data_2_derivative = coerce_to_energy_grid(
+    data_2_intensity, data_2_derivative = utils.coerce_to_energy_grid(
         data_and_derivatives_2,
         data_spline_2,
         energy_grid - shift_2nd_spline,
@@ -87,7 +82,7 @@ def r_pendry(
     )
     # shift data_2 to be non-negative in overlapping regions. This should fix
     #  any potential issues cause by undershooting splines.
-    data_2_intensity = shift_theo_intensity_non_negative(
+    data_2_intensity = utils.shift_theo_intensity_non_negative(
         data_2_intensity, data_1_intensity
     )
 
@@ -120,16 +115,16 @@ def r_pendry_from_y(y_1, y_2, energy_step, **kwargs):
         requested.
     """
     # mask out NaNs for this calculation
-    overlap = overlap_mask(y_1, y_2)
+    overlap = utils.overlap_mask(y_1, y_2)
     no_overlap = dnl.xp.logical_not(overlap)
 
     y_1 = dnl.xp.where(no_overlap, 0, y_1)
     y_2 = dnl.xp.where(no_overlap, 0, y_2)
 
-    numerators = overlap_trapezoid(
+    numerators = utils.overlap_trapezoid(
         (y_1 - y_2) ** 2, energy_step, overlap, axis=0
     )
-    denominators = overlap_trapezoid(
+    denominators = utils.overlap_trapezoid(
         y_1**2 + y_2**2, energy_step, overlap, axis=0
     )
 

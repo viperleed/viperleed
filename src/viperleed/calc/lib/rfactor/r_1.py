@@ -6,12 +6,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
+from . import utils
 from .groups import group_rfactors
-from .utils import (
-    coerce_to_energy_grid,
-    overlap_mask,
-    overlap_trapezoid,
-)
 
 
 def r_1(
@@ -69,11 +65,11 @@ def r_1(
         either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    data_1_intensity, *_ = coerce_to_energy_grid(
+    data_1_intensity, *_ = utils.coerce_to_energy_grid(
         data_and_derivatives_1, data_spline_1, energy_grid, derivs=0
     )
     # 2nd data also shifted grid if spline
-    data_2_intensity, *_ = coerce_to_energy_grid(
+    data_2_intensity, *_ = utils.coerce_to_energy_grid(
         data_and_derivatives_2,
         data_spline_2,
         energy_grid - shift_2nd_spline,
@@ -81,22 +77,22 @@ def r_1(
     )
 
     # all integrals are restricted to the overlap of the two datasets
-    overlap = overlap_mask(data_1_intensity, data_2_intensity)
+    overlap = utils.overlap_mask(data_1_intensity, data_2_intensity)
 
     # calculate normalization for each beam
-    beam_normalization = overlap_trapezoid(
+    beam_normalization = utils.overlap_trapezoid(
         data_1_intensity, energy_step, overlap, axis=0
-    ) / overlap_trapezoid(
+    ) / utils.overlap_trapezoid(
         data_2_intensity, energy_step, overlap, axis=0
     )
 
-    numerators = overlap_trapezoid(
+    numerators = utils.overlap_trapezoid(
         abs(data_1_intensity - beam_normalization * data_2_intensity),
         energy_step,
         overlap,
         axis=0,
     )
-    denominators = overlap_trapezoid(
+    denominators = utils.overlap_trapezoid(
         data_1_intensity**2, energy_step, overlap, axis=0
     )
 

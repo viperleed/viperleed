@@ -11,10 +11,7 @@ import numpy as np
 import pytest
 
 from viperleed.calc.classes.beam import Beam
-from viperleed.calc.classes.rparams.special.energy_range import (
-    IVShiftRange,
-    TheoEnergies,
-)
+from viperleed.calc.classes.rparams.special import energy_range
 from viperleed.calc.files import iorfactor
 from viperleed.calc.lib.rfactor import v0r_scan
 from viperleed.calc.lib.rfactor.selection import select_rfactor_by_name
@@ -56,9 +53,9 @@ def _scan_fixed_shift(sign, tail_factor, r_name):
     theo_beams = [_make_beam(theo_energies, _intensity(theo_energies))]
     exp_beams = [_make_beam(exp_energies, exp_intensity)]
 
-    iv_shift = IVShiftRange(shift, shift, _STEP)
+    iv_shift = energy_range.IVShiftRange(shift, shift, _STEP)
     theo_range = iorfactor.find_theory_range(
-        TheoEnergies.from_sorted_grid(theo_energies),
+        energy_range.TheoEnergies.from_sorted_grid(theo_energies),
         iorfactor.experiment_energy_range(exp_beams),
         iv_shift,
         n_expand=1,
@@ -85,7 +82,7 @@ def test_scan_covers_overlap_at_large_shift(sign, r_name):
 
 def test_find_best_shift_ignores_nan():
     """Check that shifts with an undefined R are not selected."""
-    iv_shift = IVShiftRange(-2, 2, 1)
+    iv_shift = energy_range.IVShiftRange(-2, 2, 1)
     r_values = {-2: np.nan, -1: np.nan, 0: 0.5, 1: 0.2, 2: np.nan}
     best_shift, best_r = v0r_scan._find_best_shift(  # pylint: disable=protected-access
         lambda shift_2nd_spline: r_values[shift_2nd_spline],
@@ -97,7 +94,7 @@ def test_find_best_shift_ignores_nan():
 
 def test_find_best_shift_rejects_all_nan():
     """Check that an error is raised if R is NaN at every shift."""
-    iv_shift = IVShiftRange(-2, 2, 1)
+    iv_shift = energy_range.IVShiftRange(-2, 2, 1)
     with pytest.raises(iorfactor.RfactorError, match='undefined'):
         v0r_scan._find_best_shift(  # pylint: disable=protected-access
             lambda **_: np.nan,

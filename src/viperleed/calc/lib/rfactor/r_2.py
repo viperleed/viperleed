@@ -6,13 +6,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
+from . import utils
 from .groups import group_beam_rfactors
-from .utils import (
-    coerce_to_energy_grid,
-    nonzero_or_nan,
-    overlap_mask,
-    overlap_trapezoid,
-)
 
 
 def r_2(
@@ -88,11 +83,11 @@ def r_2(
         either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    data_1_intensity, *_ = coerce_to_energy_grid(
+    data_1_intensity, *_ = utils.coerce_to_energy_grid(
         data_and_derivatives_1, data_spline_1, energy_grid, derivs=0
     )
     # 2nd data uses shifted grid if spline
-    data_2_intensity, *_ = coerce_to_energy_grid(
+    data_2_intensity, *_ = utils.coerce_to_energy_grid(
         data_and_derivatives_2,
         data_spline_2,
         energy_grid - shift_2nd_spline,
@@ -100,16 +95,16 @@ def r_2(
     )
 
     # all integrals are restricted to the overlap of the two datasets
-    overlap = overlap_mask(data_1_intensity, data_2_intensity)
+    overlap = utils.overlap_mask(data_1_intensity, data_2_intensity)
 
     # calculate normalization for each beam (nan without overlap)
-    beam_normalization = overlap_trapezoid(
+    beam_normalization = utils.overlap_trapezoid(
         data_1_intensity, energy_step, overlap, axis=0
-    ) / nonzero_or_nan(
-        overlap_trapezoid(data_2_intensity, energy_step, overlap, axis=0)
+    ) / utils.nonzero_or_nan(
+        utils.overlap_trapezoid(data_2_intensity, energy_step, overlap, axis=0)
     )
 
-    numerators = overlap_trapezoid(
+    numerators = utils.overlap_trapezoid(
         (data_1_intensity - beam_normalization * data_2_intensity) ** 2,
         energy_step,
         overlap,
@@ -118,8 +113,10 @@ def r_2(
 
     # Groups and the overall value are the means over beams weighted
     # by the length of the overlap.
-    beam_rfactors = numerators / nonzero_or_nan(
-        overlap_trapezoid(data_1_intensity**2, energy_step, overlap, axis=0)
+    beam_rfactors = numerators / utils.nonzero_or_nan(
+        utils.overlap_trapezoid(
+            data_1_intensity**2, energy_step, overlap, axis=0
+        )
     )
     return group_beam_rfactors(
         beam_rfactors, overlap, energy_step, **kwargs
