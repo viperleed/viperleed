@@ -372,6 +372,7 @@ def run_refcalc(runtask):
                                    stdout=log,
                                    stderr=log,
                                    stdin=fin_file,
+                                   env=parallelization.blas_thread_env(),
                                    check=False)
                 except Exception:
                     logger.error('Error while executing reference calculation '
@@ -613,6 +614,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                                 logger, 'reference calculation',
                                 rp.TL_VERSION)
 
+    if not subdomain:  # Logged once in refcalc_domains
+        parallelization.log_blas_thread_env('reference calculations')
     if single_threaded:
         logger.info('Compiling fortran files...')
         try:
@@ -867,6 +870,7 @@ def refcalc_domains(rp):
     rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     logger.info('Running reference calculations in subfolders for domains: '
                 + ', '.join([d.name for d in rr]))
+    parallelization.log_blas_thread_env('reference calculations')
 
     for dp in rr:
         logger.info(f'Starting reference calculation for {dp}')

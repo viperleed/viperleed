@@ -6,7 +6,7 @@ This module collects tests for the run_delta function.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -85,6 +85,7 @@ class TestRunDelta:
     # only because of slight differences in the error messages
     # returned/logged (typically 'delta' and variations instead
     # of 'refcalc' and such).
+    test_blas_thread_env = _TestRefcalc.test_blas_thread_env
     test_fails_to_mkdir = _TestRefcalc.test_fails_to_mkdir
     test_fails_to_cleanup = _TestRefcalc.test_fails_to_cleanup
     test_success = _TestRefcalc.test_success

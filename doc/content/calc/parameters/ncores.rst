@@ -17,25 +17,42 @@ N_CORES defines the number of cores available for TensErLEED execution.
 
    N_CORES = 16
 
-.. warning::
+.. note::
 
-      Some :term:`BLAS` and :term:`LAPACK` libraries (e.g. Intel MKL, which is
-      used by default with ifort) support use of multiple threads.
-      This can conflict with the parallelization used by ViPErLEED and
-      **massively** reduce performance (we have observed a factor of **up to
-      50**).
+      Some :term:`BLAS` and :term:`LAPACK` libraries (e.g., OpenBLAS, or
+      Intel MKL, which is used by default with ifort) support use of
+      multiple threads. This can conflict with the parallelization used
+      by ViPErLEED and **massively** reduce performance (we have observed
+      a factor of **up to 50**).
 
-      To avoid this, restrict the number of multithreading threads by setting
-      the corresponding environment variable (e.g. ``$MKL_NUM_THREADS`` for
-      Intel MKL):
+      For this reason, |calc| runs each reference- and delta-amplitude
+      calculation with the environment variables ``OPENBLAS_NUM_THREADS``,
+      ``OMP_NUM_THREADS``, and ``MKL_NUM_THREADS`` set to 1.
+
+      You can control threading manually (e.g., on a computing cluster)
+      by setting ``OMP_NUM_THREADS``, ``OPENBLAS_NUM_THREADS``,
+      ``GOTO_NUM_THREADS``, or ``MKL_NUM_THREADS`` in your environment
+      to a non-empty value. If you set ``OMP_NUM_THREADS``, which all
+      libraries read, |calc| leaves all of these variables as they are.
+      A variable of a specific library (``OPENBLAS_NUM_THREADS`` or
+      ``GOTO_NUM_THREADS`` for OpenBLAS, ``MKL_NUM_THREADS`` for Intel
+      MKL) applies only to that library: |calc| keeps your value, and
+      sets the variable of the other library and ``OMP_NUM_THREADS``
+      to 1. In both cases, the log file says which variables you set.
+      For example, to use two OpenBLAS threads:
 
       .. code-block:: bash
 
-         export MKL_NUM_THREADS=2
+         export OPENBLAS_NUM_THREADS=2
 
-      Ideally, :math:`{\mathrm{N\_CORES} \times \mathrm{THREADS}}` should be
-      set to the number of available hyperthreading cores on the system with
-      the N_CORES as high as possible without running into memory limitations.
+      If you do so, :math:`{\mathrm{N\_CORES} \times \mathrm{THREADS}}`
+      should not exceed the number of available hyperthreading cores on
+      the system.
+
+.. versionchanged:: 0.15.0
+   |calc| sets the number of BLAS threads for reference- and
+   delta-amplitude calculations to 1, unless you set it yourself.
+   Previously, the number of threads had to be restricted by hand.
 
 
 The TensErLEED search program is executed using ``mpirun``, with the number
