@@ -115,10 +115,6 @@ class RaggedSpline:
             self._ppoly.derivative(nu), self._first, self._last
         )
 
-    def __getattr__(self, name):
-        """Delegate other attributes (e.g., c, x) to the polynomial."""
-        return getattr(self._ppoly, name)
-
 
 def make_1d_ragged_cubic_spline(
     x,  # pylint: disable=invalid-name  # as in scipy
