@@ -65,7 +65,7 @@ _KNOT_TOLERANCE = 1e-6
 
 
 class RaggedSpline:
-    """Piecewise polynomial of ragged beams, valid only inside each beam.
+    """Piecewise polynomial of ragged beams, NaN outside each beam.
 
     Evaluates like the underlying piecewise polynomial, but returns NaN
     for each beam at energies outside the range of its own data (limits

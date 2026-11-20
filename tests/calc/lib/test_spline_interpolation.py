@@ -9,10 +9,11 @@ import numpy as np
 import pytest
 from scipy.interpolate import CubicSpline
 
-from viperleed.calc.lib.spline_interpolation import (
-    CachedSpline,
-    interpolate_ragged_array,
-)
+from viperleed.calc.lib import spline_interpolation
+
+# Indexing the results of calls to the spline with numpy integers or
+# arrays is flagged: pylint cannot infer what the spline returns
+# pylint: disable=invalid-sequence-index
 
 
 class TestCachedSpline:
@@ -27,7 +28,7 @@ class TestCachedSpline:
     @pytest.fixture(name='spline')
     def fixture_spline(self, mock_spline):
         """Return a CachedSpline wrapping `mock_spline`."""
-        return CachedSpline(mock_spline)
+        return spline_interpolation.CachedSpline(mock_spline)
 
     def test_same_array_cached(self, spline, mock_spline):
         """Check that evaluating the same array twice is cached."""
@@ -73,7 +74,7 @@ class TestInterpolateRaggedArray:
     def test_last_knot_is_data_point(self, ragged_data):
         """Check that each beam's last data point is not lost."""
         grid, beams = ragged_data
-        spline = interpolate_ragged_array(grid, beams)
+        spline = spline_interpolation.interpolate_ragged_array(grid, beams)
         values = spline(grid)
         for col in range(beams.shape[1]):
             last = np.flatnonzero(~np.isnan(beams[:, col]))[-1]
@@ -82,7 +83,7 @@ class TestInterpolateRaggedArray:
     def test_nan_outside_beam_range(self, ragged_data):
         """Check that beams are NaN outside their own data range."""
         grid, beams = ragged_data
-        spline = interpolate_ragged_array(grid, beams)
+        spline = spline_interpolation.interpolate_ragged_array(grid, beams)
         eps = 0.01
         for col in range(beams.shape[1]):
             energies = grid[~np.isnan(beams[:, col])]
@@ -96,7 +97,7 @@ class TestInterpolateRaggedArray:
     def test_derivatives_at_last_knot(self, ragged_data, order):
         """Check derivatives at the last knot match a single spline."""
         grid, beams = ragged_data
-        spline = interpolate_ragged_array(grid, beams)
+        spline = spline_interpolation.interpolate_ragged_array(grid, beams)
         derivatives = spline.derivative(nu=order)
         for col in range(beams.shape[1]):
             has_data = ~np.isnan(beams[:, col])
@@ -118,7 +119,7 @@ def test_computed_energies_keep_beam_ends(step, shift):
     beams = np.full((len(knots), 2), np.nan)
     beams[:, 0] = np.sin(knots / 20)
     beams[5:-7, 1] = np.cos(knots[5:-7] / 20)
-    spline = interpolate_ragged_array(knots, beams)
+    spline = spline_interpolation.interpolate_ragged_array(knots, beams)
     # Energies computed as in the V0r scan: arange grid, minus a shift
     grid = np.arange(knots[0] + shift - 1, knots[-1] + shift + 1, step)
     energies = grid - shift
