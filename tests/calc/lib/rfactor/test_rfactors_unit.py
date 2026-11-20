@@ -373,3 +373,28 @@ class TestBeamAveraging:
         )
         expected = _weighted_mean([per_beam(0), per_beam(2)], (0, 2))
         assert result == pytest.approx(expected, rel=1e-12)
+
+    @pytest.mark.parametrize('groups', [None, 'beam'])
+    def test_beam_with_zero_experimental_intensity_is_excluded(
+        self, func, per_beam, groups
+    ):
+        """Check that a beam with undefined R (zero I_e) is left out."""
+        exp, theo = (
+            tuple(
+                np.column_stack([_nan_outside_overlap(rows)[:, 0]] * 2)
+                for rows in beams
+            )
+            for beams in ((EXP_I, EXP_D1, EXP_D2), (THEO_I, THEO_D1, THEO_D2))
+        )
+        exp[0][:, 1] = 0.0  # I_e = 0 on the whole overlap of beam 1
+        result = func(
+            0.0, STEP, np.arange(6) * STEP,
+            data_and_derivatives_1=exp,
+            data_and_derivatives_2=theo,
+            groups=groups,
+        )
+        if groups is None:
+            assert result == pytest.approx(per_beam(0), rel=1e-12)
+        else:
+            assert result[0] == pytest.approx(per_beam(0), rel=1e-12)
+            assert np.isnan(result[1])

@@ -114,6 +114,12 @@ def r_zjj(
     Uses two sets of beam data, either passed as splines or as already
     calculated arrays of intensities and derivatives.
 
+    The overall value, and the value of each group of beams, is the
+    mean of the per-beam values weighted with the length of their
+    overlap. Beams without overlap, and beams whose R is undefined
+    (zero denominator, e.g., I_e = 0 on the overlap), are excluded
+    from the overall and group values.
+
     For each dataset, pass either data_spline or data_and_derivatives, but not
     both. Using splines for one and pre-computed data for the other is allowed.
 

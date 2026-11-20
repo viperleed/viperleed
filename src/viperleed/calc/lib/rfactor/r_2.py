@@ -46,7 +46,9 @@ def r_2(
     The overall R2 value, and the value of each group of beams, is the
     mean of the per-beam R2 weighted with the length (n - 1) * step of
     the overlap of the beam, where n is the number of overlapping
-    points. Beams without overlap do not contribute.
+    points. Beams without overlap, and beams whose R2 is undefined
+    (zero denominator, e.g., I_e = 0 on the overlap), are excluded
+    from the overall and group values.
 
     Uses two sets of beam data, either passed as splines or as
     already calculated arrays of intensities.
