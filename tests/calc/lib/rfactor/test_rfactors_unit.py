@@ -97,3 +97,40 @@ def test_pendry_matches_existing_reference_value(sin_spline, cos_spline):
         data_spline_2=cos_spline,
     )
     assert calc_r == pytest.approx(1.904792, rel=1e-6)
+
+
+NAN = np.nan
+
+
+def test_pendry_from_y_weighs_overlap_edges_by_half():
+    """Check trapezoid weights of Pendry's R at the overlap edges."""
+    # Overlap is the three middle points; trapezoid weights 1/2, 1, 1/2.
+    y_1 = np.array([NAN, 1.0, 2.0, 3.0, NAN])[:, None]
+    y_2 = np.array([0.5, 0.5, 1.0, 1.0, 1.0])[:, None]
+    numerator = 0.5 * 0.25 + 1.0 + 0.5 * 4.0
+    denominator = 0.5 * 1.25 + 5.0 + 0.5 * 10.0
+    result = pendry.r_pendry_from_y(y_1, y_2, 1.0)
+    assert result == pytest.approx(numerator / denominator, rel=1e-12)
+
+
+def test_zj_weighs_overlap_edges_by_half():
+    """Check trapezoid weights of ZJ's R at the overlap edges."""
+    # Overlap is the three middle points. With I_e = 2, I_t = 1 there,
+    # the scale factor is 2. Weighted quotients are [0, 0, 1], so the
+    # integral is 1/2; the largest |I'_e| is 4, and int I_e = 4.
+    exp = (
+        np.array([NAN, 2, 2, 2, NAN])[:, None],
+        np.array([NAN, 1, 4, 2, NAN])[:, None],
+        np.array([NAN, 1, 1, 1, NAN])[:, None],
+    )
+    theo = (
+        np.array([NAN, 1, 1, 1, NAN])[:, None],
+        np.array([NAN, 0.5, 2, 0, NAN])[:, None],
+        np.array([NAN, 0.5, 1, 2, NAN])[:, None],
+    )
+    result = zannazi_jona.r_zjj(
+        0.0, 1.0, np.arange(5.0),
+        data_and_derivatives_1=exp,
+        data_and_derivatives_2=theo,
+    )
+    assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)

@@ -11,7 +11,7 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 from .groups import group_rfactors
 from .utils import (
     coerce_to_energy_grid,
-    nansum_trapezoid,
+    overlap_trapezoid,
     shift_theo_intensity_non_negative,
 )
 
@@ -119,13 +119,18 @@ def r_pendry_from_y(y_1, y_2, energy_step, **kwargs):
     # mask out NaNs for this calculation
     y_1_mask = dnl.xp.isnan(y_1)
     y_2_mask = dnl.xp.isnan(y_2)
-    mask = dnl.xp.logical_or(y_1_mask, y_2_mask)
+    no_overlap = dnl.xp.logical_or(y_1_mask, y_2_mask)
+    overlap = dnl.xp.logical_not(no_overlap)
 
-    y_1 = dnl.xp.where(mask, 0, y_1)
-    y_2 = dnl.xp.where(mask, 0, y_2)
+    y_1 = dnl.xp.where(no_overlap, 0, y_1)
+    y_2 = dnl.xp.where(no_overlap, 0, y_2)
 
-    numerators = nansum_trapezoid((y_1 - y_2) ** 2, dx=energy_step, axis=0)
-    denominators = nansum_trapezoid((y_1**2 + y_2**2), dx=energy_step, axis=0)
+    numerators = overlap_trapezoid(
+        (y_1 - y_2) ** 2, energy_step, overlap, axis=0
+    )
+    denominators = overlap_trapezoid(
+        y_1**2 + y_2**2, energy_step, overlap, axis=0
+    )
 
     # calculate R-factor with requested grouping
     return group_rfactors(numerators, denominators, **kwargs)

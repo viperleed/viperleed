@@ -17,6 +17,40 @@ def nansum_trapezoid(y, dx, axis=-1):
     return dnl.xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
 
 
+def overlap_trapezoid(y, dx, mask, axis=0):
+    """Integrate y by the trapezoidal rule over masked points.
+
+    Only intervals with both end points inside the mask contribute, so
+    the first and last masked points of each run carry a weight of 1/2
+    and a run of a single point integrates to zero. Values of y
+    outside the mask are ignored (they may be NaN). The shape of the
+    arrays is static, which keeps this usable under JIT compilation.
+
+    Parameters
+    ----------
+    y : dnl.xp.ndarray
+        Values to integrate.
+    dx : float
+        Spacing of the points along axis.
+    mask : dnl.xp.ndarray
+        Boolean array with the shape of y, True for the points to use.
+    axis : int, optional
+        Axis along which to integrate. Default is 0.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        The integral, with the integration axis removed.
+    """
+    y = dnl.xp.moveaxis(y, axis, -1)
+    mask = dnl.xp.moveaxis(mask, axis, -1)
+    interval_in_overlap = dnl.xp.logical_and(mask[..., 1:], mask[..., :-1])
+    pair_sums = dnl.xp.where(
+        interval_in_overlap, y[..., 1:] + y[..., :-1], 0.0
+    )
+    return dnl.xp.sum(pair_sums, axis=-1) * dx * 0.5
+
+
 def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     """Shift the theoretical intensity so that it is non-negative.
 

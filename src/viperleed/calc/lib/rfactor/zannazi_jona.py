@@ -8,7 +8,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
-from .utils import coerce_to_energy_grid, nansum_trapezoid
+from .utils import coerce_to_energy_grid, overlap_trapezoid
 from .groups import group_rfactors
 
 
@@ -89,20 +89,21 @@ def r_zjj(
         no_overlap_mask, 0.0, data_2_derivative_2
     )
 
+    overlap_mask = dnl.xp.logical_not(no_overlap_mask)
+
     # calculate experimental energy ranges (without NaNs)
-    exp_energy_ranges = (
-        dnl.xp.logical_not(no_overlap_mask).sum(axis=0) * energy_step
-    )
+    exp_energy_ranges = overlap_mask.sum(axis=0) * energy_step
 
     # Factor 0.027 for random correlation, Zannazi & Jona 1977
-    prefactors = (
-        1 / nansum_trapezoid(data_1_intensity, energy_step, axis=0) / 0.027
+    exp_integral = overlap_trapezoid(
+        data_1_intensity, energy_step, overlap_mask, axis=0
     )
+    prefactors = 1 / exp_integral / 0.027
 
     # calculate normalization for each beam
-    beam_normalization = nansum_trapezoid(
-        data_1_intensity, dx=energy_step, axis=0
-    ) / nansum_trapezoid(data_2_intensity, dx=energy_step, axis=0)
+    beam_normalization = exp_integral / overlap_trapezoid(
+        data_2_intensity, energy_step, overlap_mask, axis=0
+    )
 
     numerators = abs(
         beam_normalization * data_2_derivative_2 - data_1_derivative_2
@@ -120,7 +121,7 @@ def r_zjj(
     # calculate R-factor with requested grouping
     return group_rfactors(
         prefactors
-        * nansum_trapezoid(quotient, axis=0, dx=energy_step)
+        * overlap_trapezoid(quotient, energy_step, overlap_mask, axis=0)
         * exp_energy_ranges,
         exp_energy_ranges,
         **kwargs,
