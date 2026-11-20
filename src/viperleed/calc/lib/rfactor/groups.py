@@ -65,10 +65,14 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
             'Numerators and denominators must have the same shape.'
         )
 
+    # Array comparisons: bool(array) would be ambiguous
+    # pylint: disable=compare-to-zero
     if groups is None:
         return dnl.xp.sum(numerators) / dnl.xp.sum(denominators)
     if isinstance(groups, str) and groups == 'beam':
-        return numerators / denominators
+        mask = denominators != 0
+        safe_denominators = dnl.xp.where(mask, denominators, 1.0)
+        return dnl.xp.where(mask, numerators / safe_denominators, dnl.xp.nan)
 
     # otherwise, assume groups is array-like of integers
     _groups = dnl.xp.asarray(groups, dtype=int)

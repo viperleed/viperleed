@@ -44,14 +44,14 @@ def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     valid_theo_mask = ~dnl.xp.isnan(theo_intensity)
     overlap_mask = dnl.xp.logical_and(valid_exp_mask, valid_theo_mask)
 
-    # Calculate the minimum theoretical intensity in the valid regions
-    masked_theo_intensity = dnl.xp.where(
-        overlap_mask, theo_intensity, dnl.xp.nan
+    # Calculate the minimum theoretical intensity in the valid regions.
+    # Beams without overlap have no minimum (inf here): do not shift.
+    # Not using nanmin to avoid warnings for all-NaN beams.
+    masked_theo_mins = dnl.xp.min(
+        dnl.xp.where(overlap_mask, theo_intensity, dnl.xp.inf), axis=0
     )
-    masked_theo_mins = dnl.xp.nanmin(masked_theo_intensity, axis=0)
-    # Ensure that we do not consider NaNs in the minimum calculation
     min_theo_intensity = dnl.xp.where(
-        dnl.xp.isnan(masked_theo_mins), 0.0, masked_theo_mins
+        dnl.xp.isinf(masked_theo_mins), 0.0, masked_theo_mins
     )
     # only shift if minimum is negative
     shifts = dnl.xp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
