@@ -9,7 +9,92 @@ __license__ = 'GPLv3+'
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 from .groups import group_rfactors, overlap_length_terms
-from .utils import coerce_to_energy_grid, overlap_trapezoid
+from .utils import (
+    coerce_to_energy_grid,
+    nonzero_or_nan,
+    overlap_mask,
+    overlap_trapezoid,
+)
+
+
+def _zj_quotient(beam_normalization, exp_derivs, theo_derivs, ignore):
+    """Return the ZJ integrand |num| / eps at each point.
+
+    Parameters
+    ----------
+    beam_normalization : dnl.xp.ndarray
+        Factor scaling the theoretical to the experimental intensity,
+        one value per beam.
+    exp_derivs, theo_derivs : tuple of dnl.xp.ndarray
+        First and second derivatives of the experimental and
+        theoretical intensities. Must be zero outside the overlap.
+    ignore : dnl.xp.ndarray
+        Boolean array, True for the points outside the overlap.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        The integrand, zero outside the overlap.
+    """
+    exp_1, exp_2 = exp_derivs
+    theo_1, theo_2 = theo_derivs
+    numerators = abs(beam_normalization * theo_2 - exp_2) * abs(
+        beam_normalization * theo_1 - exp_1
+    )
+    numerators = dnl.xp.where(ignore, 0.0, numerators)
+
+    # epsilon: largest experimental |I'| in the overlap
+    epsilon = abs(exp_1) + dnl.xp.max(abs(exp_1), axis=0)
+    epsilon = dnl.xp.clip(epsilon, 1e-12, None)
+    epsilon = dnl.xp.where(ignore, 1.0, epsilon)
+    return numerators / epsilon
+
+
+def _zj_beam_rfactors(data_1, data_2, overlap, energy_step):
+    """Return the ZJ R factor of each beam.
+
+    Parameters
+    ----------
+    data_1, data_2 : tuple of dnl.xp.ndarray
+        Intensity, first and second derivative of the experimental and
+        theoretical data, with shape (n_energies, n_beams). May be NaN
+        outside the overlap.
+    overlap : dnl.xp.ndarray
+        Boolean array, True where neither dataset is NaN.
+    energy_step : float
+        The energy step of the data grid.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        One value per beam. NaN for beams without overlap or with
+        vanishing integrated intensity.
+    """
+    # set all values to 0 in regions where either dataset is nan
+    # to avoid issues in the calculation
+    no_overlap = dnl.xp.logical_not(overlap)
+    exp_intensity, *exp_derivs = (
+        dnl.xp.where(no_overlap, 0.0, data) for data in data_1
+    )
+    theo_intensity, *theo_derivs = (
+        dnl.xp.where(no_overlap, 0.0, data) for data in data_2
+    )
+
+    # Factor 0.027 for random correlation, Zannazi & Jona 1977
+    exp_integral = overlap_trapezoid(
+        exp_intensity, energy_step, overlap, axis=0
+    )
+    # calculate normalization for each beam (nan without overlap)
+    beam_normalization = exp_integral / nonzero_or_nan(
+        overlap_trapezoid(theo_intensity, energy_step, overlap, axis=0)
+    )
+    quotient = _zj_quotient(
+        beam_normalization, exp_derivs, theo_derivs, no_overlap
+    )
+    prefactors = 1 / nonzero_or_nan(exp_integral) / 0.027
+    return prefactors * overlap_trapezoid(
+        quotient, energy_step, overlap, axis=0
+    )
 
 
 def r_zjj(
@@ -55,83 +140,23 @@ def r_zjj(
         dataset is passed as data_and_derivatives.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    data_1_intensity, data_1_derivative_1, data_1_derivative_2 = (
-        coerce_to_energy_grid(
-            data_and_derivatives_1, data_spline_1, energy_grid, derivs=2
-        )
+    data_1 = coerce_to_energy_grid(
+        data_and_derivatives_1, data_spline_1, energy_grid, derivs=2
     )
     # 2nd data also uses shifted grid if spline
-    shifted_grid = energy_grid - shift_2nd_spline
-    data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
-        coerce_to_energy_grid(
-            data_and_derivatives_2, data_spline_2, shifted_grid, derivs=2
-        )
+    data_2 = coerce_to_energy_grid(
+        data_and_derivatives_2,
+        data_spline_2,
+        energy_grid - shift_2nd_spline,
+        derivs=2,
     )
-    nan_mask_data_1 = dnl.xp.isnan(data_1_intensity)
-    nan_mask_data_2 = dnl.xp.isnan(data_2_intensity)
-    no_overlap_mask = dnl.xp.logical_or(nan_mask_data_1, nan_mask_data_2)
-
-    # set all values to 0 in regions where either dataset is nan
-    # to avoid issues in the calculation
-
-    data_1_intensity = dnl.xp.where(no_overlap_mask, 0.0, data_1_intensity)
-    data_1_derivative_1 = dnl.xp.where(
-        no_overlap_mask, 0.0, data_1_derivative_1
-    )
-    data_1_derivative_2 = dnl.xp.where(
-        no_overlap_mask, 0.0, data_1_derivative_2
-    )
-    data_2_intensity = dnl.xp.where(no_overlap_mask, 0.0, data_2_intensity)
-    data_2_derivative_1 = dnl.xp.where(
-        no_overlap_mask, 0.0, data_2_derivative_1
-    )
-    data_2_derivative_2 = dnl.xp.where(
-        no_overlap_mask, 0.0, data_2_derivative_2
-    )
-
-    overlap_mask = dnl.xp.logical_not(no_overlap_mask)
-
-    # Factor 0.027 for random correlation, Zannazi & Jona 1977
-    exp_integral = overlap_trapezoid(
-        data_1_intensity, energy_step, overlap_mask, axis=0
-    )
-    # Array comparisons: bool(array) would be ambiguous
-    # pylint: disable=compare-to-zero
-    # (nan for beams without overlap)
-    prefactors = 1 / dnl.xp.where(
-        exp_integral != 0, exp_integral, dnl.xp.nan
-    ) / 0.027
-
-    # calculate normalization for each beam
-    theo_integral = overlap_trapezoid(
-        data_2_intensity, energy_step, overlap_mask, axis=0
-    )
-    beam_normalization = exp_integral / dnl.xp.where(
-        theo_integral != 0, theo_integral, dnl.xp.nan
-    )
-
-    numerators = abs(
-        beam_normalization * data_2_derivative_2 - data_1_derivative_2
-    ) * abs(beam_normalization * data_2_derivative_1 - data_1_derivative_1)
-    numerators = dnl.xp.where(no_overlap_mask, 0.0, numerators)
-
-    # epsilon: largest experimental |I'| in the overlap
-    # (data_1_derivative_1 is zero outside it)
-    denominators = abs(data_1_derivative_1) + dnl.xp.max(
-        abs(data_1_derivative_1), axis=0
-    )
-    denominators = dnl.xp.clip(denominators, 1e-12, None)
-    denominators = dnl.xp.where(no_overlap_mask, 1.0, denominators)
-
-    quotient = numerators / denominators
+    overlap = overlap_mask(data_1[0], data_2[0])
+    beam_rfactors = _zj_beam_rfactors(data_1, data_2, overlap, energy_step)
 
     # Per-beam values are the numerators; groups and the overall
     # value are the means over beams weighted by the length of the
     # overlap.
-    beam_rfactors = prefactors * overlap_trapezoid(
-        quotient, energy_step, overlap_mask, axis=0
+    return group_rfactors(
+        *overlap_length_terms(beam_rfactors, overlap, energy_step),
+        **kwargs,
     )
-    numerators, denominators = overlap_length_terms(
-        beam_rfactors, overlap_mask, energy_step
-    )
-    return group_rfactors(numerators, denominators, **kwargs)

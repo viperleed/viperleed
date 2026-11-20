@@ -6,10 +6,13 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
-from viperleed.calc.lib import dynamic_numerical_lib as dnl
-
 from .groups import group_rfactors, overlap_length_terms
-from .utils import coerce_to_energy_grid, overlap_trapezoid
+from .utils import (
+    coerce_to_energy_grid,
+    nonzero_or_nan,
+    overlap_mask,
+    overlap_trapezoid,
+)
 
 
 def r_2(
@@ -87,29 +90,21 @@ def r_2(
         data_and_derivatives_1, data_spline_1, energy_grid, derivs=0
     )
     # 2nd data uses shifted grid if spline
-    shifted_grid = energy_grid - shift_2nd_spline
     data_2_intensity, *_ = coerce_to_energy_grid(
-        data_and_derivatives_2, data_spline_2, shifted_grid, derivs=0
+        data_and_derivatives_2,
+        data_spline_2,
+        energy_grid - shift_2nd_spline,
+        derivs=0,
     )
 
     # all integrals are restricted to the overlap of the two datasets
-    overlap = dnl.xp.logical_not(
-        dnl.xp.logical_or(
-            dnl.xp.isnan(data_1_intensity), dnl.xp.isnan(data_2_intensity)
-        )
-    )
+    overlap = overlap_mask(data_1_intensity, data_2_intensity)
 
     # calculate normalization for each beam (nan without overlap)
-    exp_integral = overlap_trapezoid(
+    beam_normalization = overlap_trapezoid(
         data_1_intensity, energy_step, overlap, axis=0
-    )
-    theo_integral = overlap_trapezoid(
-        data_2_intensity, energy_step, overlap, axis=0
-    )
-    # Array comparisons: bool(array) would be ambiguous
-    # pylint: disable=compare-to-zero
-    beam_normalization = exp_integral / dnl.xp.where(
-        theo_integral != 0, theo_integral, dnl.xp.nan
+    ) / nonzero_or_nan(
+        overlap_trapezoid(data_2_intensity, energy_step, overlap, axis=0)
     )
 
     numerators = overlap_trapezoid(
@@ -118,14 +113,11 @@ def r_2(
         overlap,
         axis=0,
     )
-    denominators = overlap_trapezoid(
-        data_1_intensity**2, energy_step, overlap, axis=0
-    )
 
     # Per-beam values are num / den; groups and the overall value are
     # the means over beams weighted by the length of the overlap.
-    beam_rfactors = numerators / dnl.xp.where(
-        denominators != 0, denominators, dnl.xp.nan
+    beam_rfactors = numerators / nonzero_or_nan(
+        overlap_trapezoid(data_1_intensity**2, energy_step, overlap, axis=0)
     )
     return group_rfactors(
         *overlap_length_terms(beam_rfactors, overlap, energy_step),

@@ -11,6 +11,7 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 from .groups import group_rfactors
 from .utils import (
     coerce_to_energy_grid,
+    overlap_mask,
     overlap_trapezoid,
     shift_theo_intensity_non_negative,
 )
@@ -78,9 +79,11 @@ def r_pendry(
     )
 
     # 2nd data uses shifted grid if spline
-    shifted_grid = energy_grid - shift_2nd_spline
     data_2_intensity, data_2_derivative = coerce_to_energy_grid(
-        data_and_derivatives_2, data_spline_2, shifted_grid, derivs=1
+        data_and_derivatives_2,
+        data_spline_2,
+        energy_grid - shift_2nd_spline,
+        derivs=1,
     )
     # shift data_2 to be non-negative in overlapping regions. This should fix
     #  any potential issues cause by undershooting splines.
@@ -117,10 +120,8 @@ def r_pendry_from_y(y_1, y_2, energy_step, **kwargs):
         requested.
     """
     # mask out NaNs for this calculation
-    y_1_mask = dnl.xp.isnan(y_1)
-    y_2_mask = dnl.xp.isnan(y_2)
-    no_overlap = dnl.xp.logical_or(y_1_mask, y_2_mask)
-    overlap = dnl.xp.logical_not(no_overlap)
+    overlap = overlap_mask(y_1, y_2)
+    no_overlap = dnl.xp.logical_not(overlap)
 
     y_1 = dnl.xp.where(no_overlap, 0, y_1)
     y_2 = dnl.xp.where(no_overlap, 0, y_2)

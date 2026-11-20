@@ -31,10 +31,10 @@ class CachedSpline:
         self._last_x = None
         self._last_y = None
 
-    def __call__(self, x):
+    def __call__(self, x):  # pylint: disable=invalid-name
         if x is self._last_x:
             return self._last_y
-        y = self._spline(x)
+        y = self._spline(x)  # pylint: disable=invalid-name
         self._last_x = x
         self._last_y = y
         return y
@@ -91,7 +91,7 @@ class RaggedSpline:
         self._first = first
         self._last = last
 
-    def __call__(self, x):
+    def __call__(self, x):  # pylint: disable=invalid-name
         """Evaluate at the energies `x`, with NaN outside each beam."""
         x = dnl.xp.expand_dims(self._snap_to_knots(dnl.xp.asarray(x)), -1)
         inside = (x >= dnl.xp.asarray(self._first)) & (
@@ -99,7 +99,7 @@ class RaggedSpline:
         )
         return dnl.xp.where(inside, self._ppoly(x[..., 0]), dnl.xp.nan)
 
-    def _snap_to_knots(self, x):
+    def _snap_to_knots(self, x):  # pylint: disable=invalid-name
         """Return `x`, with values within tolerance of a knot on it."""
         knots = dnl.xp.asarray(self._ppoly.x)
         tol = _KNOT_TOLERANCE * dnl.xp.min(dnl.xp.diff(knots))
@@ -121,7 +121,11 @@ class RaggedSpline:
 
 
 def make_1d_ragged_cubic_spline(
-    x, y, axis=0, bc_type='not-a-knot', extrapolate=False
+    x,  # pylint: disable=invalid-name  # as in scipy
+    y,  # pylint: disable=invalid-name  # as in scipy
+    axis=0,
+    bc_type='not-a-knot',
+    extrapolate=False,
 ):
     """Construct a piecewise cubic spline with ragged edges.
 
@@ -188,7 +192,11 @@ def _shift_cubic(coeffs, shift):
 
 
 def interpolate_ragged_array(
-    x, y, axis=0, bc_type='not-a-knot', extrapolate=False
+    x,  # pylint: disable=invalid-name  # as in scipy
+    y,  # pylint: disable=invalid-name  # as in scipy
+    axis=0,
+    bc_type='not-a-knot',
+    extrapolate=False,
 ):
     """Interpolate a ragged array along a specified axis.
 

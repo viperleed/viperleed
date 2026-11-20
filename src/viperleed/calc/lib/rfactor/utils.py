@@ -10,7 +10,46 @@ import numpy as np
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
-def overlap_trapezoid(y, dx, mask, axis=0):
+def overlap_mask(data_1, data_2):
+    """Return where neither of two arrays is NaN.
+
+    Parameters
+    ----------
+    data_1, data_2 : dnl.xp.ndarray
+        Arrays of the same shape. NaN marks points to be ignored.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        Boolean array, True where both data_1 and data_2 are defined.
+    """
+    return dnl.xp.logical_not(
+        dnl.xp.logical_or(dnl.xp.isnan(data_1), dnl.xp.isnan(data_2))
+    )
+
+
+def nonzero_or_nan(values):
+    """Return values with zeros replaced by NaN.
+
+    Dividing by the result gives NaN rather than inf or a warning.
+
+    Parameters
+    ----------
+    values : dnl.xp.ndarray
+        Divisors to be guarded.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        Copy of values, with NaN in place of zeros.
+    """
+    # Array comparison: bool(array) would be ambiguous
+    # pylint: disable-next=compare-to-zero
+    return dnl.xp.where(values != 0, values, dnl.xp.nan)
+
+
+# `y` and `dx` follow the naming of scipy.integrate.trapezoid
+def overlap_trapezoid(y, dx, mask, axis=0):  # pylint: disable=invalid-name
     """Integrate y by the trapezoidal rule over masked points.
 
     Only intervals with both end points inside the mask contribute, so
@@ -66,16 +105,13 @@ def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     dnl.xp.ndarray
         Shifted theoretical intensity array of shape (n_energies, n_beams)
     """
-    # Determine the mask for valid (non-NaN) intensities
-    valid_exp_mask = ~dnl.xp.isnan(exp_intensity)
-    valid_theo_mask = ~dnl.xp.isnan(theo_intensity)
-    overlap_mask = dnl.xp.logical_and(valid_exp_mask, valid_theo_mask)
+    overlap = overlap_mask(exp_intensity, theo_intensity)
 
     # Calculate the minimum theoretical intensity in the valid regions.
     # Beams without overlap have no minimum (inf here): do not shift.
     # Not using nanmin to avoid warnings for all-NaN beams.
     masked_theo_mins = dnl.xp.min(
-        dnl.xp.where(overlap_mask, theo_intensity, dnl.xp.inf), axis=0
+        dnl.xp.where(overlap, theo_intensity, dnl.xp.inf), axis=0
     )
     min_theo_intensity = dnl.xp.where(
         dnl.xp.isinf(masked_theo_mins), 0.0, masked_theo_mins
