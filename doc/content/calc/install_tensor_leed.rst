@@ -1,6 +1,7 @@
 .. include:: /substitutions.rst
 
 .. |oneAPI| replace:: Intel oneAPI®
+.. |viperleed-tensorleed| replace:: `viperleed-tensorleed <https://github.com/viperleed/viperleed-tensorleed>`__
 
 
 .. _install_tensor_leed_deps:
@@ -17,8 +18,7 @@ Tensor-LEED source code
 The |calc| package acts as a wrapper and feature extension to the
 :term:`TensErLEED` package. It requires TensErLEED source files to be present
 on your machine. You can obtain all the necessary source code from the
-`viperleed-tensorleed <https://github.com/viperleed/viperleed-tensorleed>`__
-GitHub repository. We suggest downloading the most recent
+|viperleed-tensorleed| GitHub repository. We suggest downloading the most recent
 `release <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
 into a local directory of your choice.
 Note that you may need to decompress the TensErLEED source files after
@@ -28,7 +28,7 @@ folder structure.
 If you want to use older version of TensErLEED, you can also download older
 releases from the
 `releases tab <https://github.com/viperleed/viperleed-tensorleed/releases>`__
-of the ``viperleed-tensorleed`` repository. You can have multiple versions of
+of the |viperleed-tensorleed| repository. You can have multiple versions of
 TensErLEED on your system at the same time. |calc| will use the most recent one
 by default. To select a different version you can use the :ref:`TL_VERSION`
 parameter.
@@ -133,7 +133,7 @@ can use to locate the :ref:`tensor-LEED code<install_tensorleed>`.
         click :guilabel:`New...`. Use ``VIPERLEED_TENSORLEED`` as
         the :guilabel:`Variable name`. For :guilabel:`Variable value`
         use the full path to the folder containing the archives you
-        have downloaded from the ``viperleed-tensorleed`` GitHub page.
+        have downloaded from the |viperleed-tensorleed| GitHub page.
         You may need to reboot your system.
 
 
@@ -671,10 +671,8 @@ EEASiSSS
 This is the "Elastic Electron–Atom Scattering in Solids and Surface Slabs"
 (\ :program:`EEASiSSS`) program by
 :cite:t:`rundgrenElasticElectronatomScattering2007`.
-Its source code is distributed by the ViPErLEED developers
-in the ``viperleed-tensorleed`` GitHub
-`repository <https://github.com/viperleed/viperleed-tensorleed>`__
-with permission from the author.
+Its source code is distributed by the ViPErLEED developers in the
+|viperleed-tensorleed| GitHub repository with permission from the author.
 See also :ref:`this section<install_tensorleed>` for more information
 on how to obtain the source code.
 
@@ -691,7 +689,7 @@ compilation from source as described in the following.
 
         :program:`EEASiSSS` can be compiled automatically using
         the provided ``Makefile``. Navigate to your local version
-        of the ``viperleed-tensorleed`` repository using
+        of the |viperleed-tensorleed| repository using
 
         .. code-block:: bash
 
@@ -703,7 +701,7 @@ compilation from source as described in the following.
     .. tab-item:: Native Windows
 
         EEASiSSS can be compiled automatically using the provided ``make.bat``.
-        Navigate to your local version of the ``viperleed-tensorleed``
+        Navigate to your local version of the |viperleed-tensorleed|
         repository using
 
         .. code-block:: bat
@@ -715,8 +713,7 @@ compilation from source as described in the following.
 
         An alternative to compilation from source is using the precompiled
         ``eeasisss_windows.exe`` executable available in the
-        ``viperleed-tensorleed``
-        `repository <https://github.com/viperleed/viperleed-tensorleed>`__.
+        |viperleed-tensorleed| repository.
         It should be renamed to ``eeasisss.exe`` after download.
 
         .. warning::
@@ -759,24 +756,89 @@ which is installed by default with NumPy.
 Random numbers library for TensErLEED < v1.7.4
 ----------------------------------------------
 
-.. note::
-    Users wishing to run natively on Windows can skip this step,
-    as the random numbers are only used in legacy versions of TensErLEED
-    (< 1.7.3) where the structure-optimization :ref:`section<sec_search>`
-    is unsupported on Windows.
-
-TensErLEED versions up to v1.7.3 need the :term:`C`-object files called
-``random_.o`` and ``MPIrandom_.o``. These files must be precompiled with C and
-C MPI compilers, respectively. A ``Makefile`` is also provided for them. If you
-followed the :ref:`instructions<install_fortran_comp>` for obtaining the
-Fortran compilers, you should already have the necessary C compilers installed
+TensErLEED versions up to v1.7.3 need the :term:`C`-object file called
+:file:`random_.o`, used during the :ref:`structure-optimization section<sec_search>`.
+It must be precompiled from its source :file:`random_.c` with a C compiler.
+If you followed the :ref:`instructions<install_fortran_comp>` for obtaining the
+Fortran compilers, you should already have the necessary C compiler installed
 (from either GCC or Intel).
 
-To compile the random-number generation library for a certain TensErLEED
-version, navigate in your terminal to the respective
-:ref:`directory containing the TensErLEED source files<install_tensorleed>`
-and call either ``make intel`` or ``make gcc`` to compile
-them using the Intel or GCC :term:`C` compilers, respectively.
+.. versionchanged:: 0.15.0
+    Earlier |calc| versions would also look for an :file:`MPIrandom_.o` file
+    when running the structure optimization in a parallelized manner. However,
+    this file is identical to :file:`random_.o`. If you need to use an earlier
+    |calc| version, you can duplicate file :file:`random_.o` (compiled as
+    described below) and rename it to :file:`MPIrandom_.o`.
+
+.. note::
+    Make sure to compile ``random_.o`` with the same compiler
+    (i.e., GNU, Intel, etc.) as the one used during the structure-optimization
+    :ref:`section<sec_search>`. See also :ref:`FORTRAN_COMP`. Changing the
+    compiler—e.g., from Intel to GNU—in :ref:`FORTRAN_COMP` requires
+    recompiling the random-number generation library as described below.
+
+.. warning::
+    The releases in the |viperleed-tensorleed| repository up to v1.7.3 already
+    contain some ``random_.o``/``MPIrandom_.o`` files. These were included by
+    mistake and should be deleted. Make sure to recompile :file:`random_.o` on
+    your machine following the instructions below.
+
+.. tab-set::
+
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+
+        To compile the random-number generation library for a certain
+        TensErLEED version, navigate in your terminal to the :file:`lib`
+        subfolder of the respective
+        :ref:`directory containing the TensErLEED source files<install_tensorleed>`
+        and compile :file:`random_.c` with the C compiler matching your
+        Fortran compiler, i.e., either
+
+        .. code-block:: bash
+
+            gcc -O3 -c random_.c -o random_.o
+
+        for GCC, or
+
+        .. code-block:: bash
+
+            icx -O3 -c random_.c -o random_.o
+
+        for Intel. For earlier versions of |oneAPI| that do not include
+        ``icx``, use ``icc`` instead.
+
+    .. tab-item:: Windows, native
+
+        .. versionchanged:: 0.14.1
+            The structure-optimization :ref:`section<sec_search>` in |calc|
+            versions earlier than 0.14.1 contains Python code that is
+            incompatible with Windows.
+
+        .. versionchanged:: 0.15.0
+            |calc| versions starting at 0.14.1 and earlier than 0.15.0 do not support
+            executing the structure-optimization :ref:`section<sec_search>`
+            with TensErLEED < v1.7.0 natively on Windows.
+
+        To compile the random-number generation library for a certain
+        TensErLEED version, navigate to the respective
+        :ref:`directory containing the TensErLEED source files<install_tensorleed>`,
+        then into its :file:`lib` subfolder. The source code to be compiled
+        is contained in :file:`random_.c`. The version of :file:`random_.c`
+        released with TensErLEED in the |viperleed-tensorleed| repository is
+        only compatible with UNIX. Therefore, the :file:`random_.c` file
+        should be replaced with
+        :download:`this Windows-compatible version</_static/tenserleed_windows/random_.c>`.
+
+        After replacing :file:`random_.c`, navigate to its containing folder
+        in your terminal. Then compile it with
+
+        .. code-block:: bat
+
+            icx /c random_.c /Fo:random_.o /O3
+
+        .. note::
+            For earlier versions of |oneAPI| that do not include the ``icx``
+            compiler, replace ``icx`` above with ``icc``.
 
 
 .. [#]  For other distributions have a look, for example, at this tutorial

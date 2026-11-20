@@ -5,11 +5,16 @@
 SUPPRESS_EXECUTION
 ==================
 
-If SUPPRESS_EXECUTION is on, input files for TensErLEED will be written, but 
-|calc| will not attempt to compile the TensErLEED code or execute any part of 
+If SUPPRESS_EXECUTION is on, input files for TensErLEED will be written, but
+|calc| will not attempt to compile the TensErLEED code or execute any part of
 TensErLEED.
 
-**Default**: SUPPRESS_EXECUTION = False (Compile and execute TensErLEED 
+.. versionchanged:: 0.15.0
+   The input files of the reference calculation include
+   :ref:`refcalc-PARAM<refcalc-param>`, which was previously written
+   only when TensErLEED was executed.
+
+**Default**: SUPPRESS_EXECUTION = False (Compile and execute TensErLEED
 automatically)
 
 **Syntax**:
@@ -20,7 +25,7 @@ automatically)
 
 **Acceptable values**: True, False, T, F (not case sensitive)
 
-Note that SUPPRESS_EXECUTION will force the program to stop after each segment 
-(e.g., after starting the reference calculation). This also means that output 
-will be present in the form that TensErLEED outputs, and not automatically 
+Note that SUPPRESS_EXECUTION will force the program to stop after each segment
+(e.g., after starting the reference calculation). This also means that output
+will be present in the form that TensErLEED outputs, and not automatically
 processed for easy analysis.

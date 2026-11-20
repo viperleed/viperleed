@@ -3,17 +3,13 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-09-15'
 __license__ = 'GPLv3+'
 
 from dataclasses import dataclass
 
-try:
-    import ase.build
-except ModuleNotFoundError:
-    # All tests relying on this should check that ASE is available
-    pass
+import ase.build
 
 from ..helpers import InfoBase
 

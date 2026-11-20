@@ -4,7 +4,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
@@ -21,10 +21,6 @@ from viperleed.calc.lib.fortran_utils import get_mpifort_version
 from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 
 from ...helpers import not_raises
-
-
-with_mpifort = pytest.mark.skipif(not shutil.which('mpifort'),
-                                  reason='no mpifort installed')
 
 
 class TestGetMpifortVersion:
@@ -66,9 +62,10 @@ class TestGetMpifortVersion:
         version = get_mpifort_version()
         assert version == self.mock_version
 
-    @with_mpifort
-    def test_success_dont_mock(self):
+    def test_success_dont_mock(self, missing_dependency):
         """Run a realistic version check when mpifort exists."""
+        if not shutil.which('mpifort'):
+            missing_dependency('mpifort')
         with not_raises(NoCompilerVersionFoundError):
             version = get_mpifort_version()
         assert any(part > 0 for part in version)

@@ -112,5 +112,3 @@ def expand_params(real_params, params_relation, offsets):
     all_pars = np.dot(real_params, params_relation) + offsets
 
     return all_pars
-
-

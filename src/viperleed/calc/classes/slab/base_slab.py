@@ -14,7 +14,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-02-21'
 __license__ = 'GPLv3+'
 
@@ -887,6 +887,14 @@ class BaseSlab(AtomContainer):
         eps : float
             Linear Cartesian tolerance to discern whether areas
             differ from one another. Its square is used for areas.
+            Also used for the tolerance on the area ratio (see Notes).
+
+            .. versionchanged:: 0.15.0
+                The ratio between the area of `ab_cell` and that of a
+                candidate cell must be an integer within a tolerance
+                derived from `eps` and `n_atoms` (see Notes), rather
+                than within a fixed 1e-6. Small errors in the atom
+                positions no longer prevent reduction.
 
         Returns
         -------
@@ -894,13 +902,54 @@ class BaseSlab(AtomContainer):
             Whether ab_cell could be reduced.
         mincell : numpy.ndarray
             The reduced unit cell.
+
+        Notes
+        -----
+        A candidate cell (a', b') of area A' is accepted if the area
+        ratio r = A / A' (A is the area of `ab_cell`) rounds to an
+        integer between 2 and `n_atoms`, and if r is within
+        ``min(r * (eps * (|a'| + |b'|) + eps**2) / A',
+        r / (2 * n_atoms))`` of an integer. The first term is the
+        largest change of r when a' and b' are each off by up to
+        `eps`, e.g., because of errors in atom positions. As each
+        candidate vector is the difference between the positions
+        of two atoms, only the errors of these atoms enter the area
+        ratio. Whether the slab is periodic with a candidate vector
+        is decided elsewhere (by the translation-symmetry check,
+        also within `eps`). The second term keeps integer and
+        non-integer ratios apart: for vectors of the true lattice,
+        r = N / m, with N <= `n_atoms` the number of minimal cells
+        in `ab_cell`, and 1 <= m < N. A non-integer r is then at
+        least 1 / m away from any integer, while r / (2 * n_atoms)
+        is at most 1 / (2 * m). Hence, a candidate with an integer
+        exact ratio is accepted if its vectors are off by at most
+        `eps` and this changes r by at most r / (2 * n_atoms). A
+        candidate with a non-integer exact ratio is rejected as
+        long as errors change r by less than 1 / (2 * m). Of the
+        accepted candidates, the one with the largest (rounded) r
+        is kept and, among these, the one with r closest to an
+        integer.
+
+        Errors in atom positions are tolerated only as long as the
+        translation-symmetry check finds the candidate vectors.
+        As it compares the positions of pairs of atoms, this holds
+        reliably for errors up to about eps / 4. Larger errors may
+        give a cell that is smaller than `ab_cell` but not minimal.
+        The same may happen for smaller errors if `n_atoms` is much
+        larger than the number N of minimal cells (i.e., with many
+        atoms per minimal cell): r / (2 * n_atoms) then limits the
+        tolerance first.
         """
         # Try to reduce the cell by using a pair of vectors from
         # [a, b, *candidate_unit_vectors]. Keep in mind that with
         # n_atoms, we cannot reduce the area by more than a factor
-        # 1 / n_atoms (which would give one atom per reduced cell)
+        # 1 / n_atoms (which would give one atom per reduced cell).
+        # Keep only cells whose area ratio rounds to an integer
+        # between 2 and n_atoms: the area of a cell with vectors
+        # off by up to eps may be slightly below ab_cell_area/n_atoms
         ab_cell_area = abs(np.linalg.det(ab_cell))
-        smallest_area = ab_cell_area / n_atoms
+        smallest_area = ab_cell_area / (n_atoms + 0.5)
+        largest_area = ab_cell_area / 1.5
 
         candidate_unit_vectors = itertools.chain(ab_cell,
                                                  candidate_unit_vectors)
@@ -909,24 +958,39 @@ class BaseSlab(AtomContainer):
                                         for ab in candidate_ab_cells)
         candidate_ab_cells_and_areas = (
             (ab, area) for ab, area in candidate_ab_cells_and_areas
-            if smallest_area < area + eps**2 < ab_cell_area
+            if smallest_area < area <= largest_area
             )
 
-        # Finally, consider that the new unit cell area
-        # must be an integer divisor of the current one
+        # Finally, consider that the new unit cell area must be an
+        # integer divisor of the current one. The tolerance accounts
+        # for errors (up to eps) in the candidate vectors, but keeps
+        # non-integer ratios out (see Notes)
+        def _ratio_tolerance(ab, ratio):
+            sum_of_lengths = sum(np.linalg.norm(vec) for vec in ab)
+            area_tolerance = eps * sum_of_lengths + eps**2
+            # ratio * area_tolerance / area, with area = A / ratio
+            tolerance = ratio**2 * area_tolerance / ab_cell_area
+            return min(tolerance, ratio / (2 * n_atoms))
+
         candidate_ab_cells_and_area_ratios = (
             (ab, ab_cell_area / area)
             for ab, area in candidate_ab_cells_and_areas
             )
         acceptable_ab_cells_and_ratios = (
-            (ab, round(ratio))
+            (ab, ratio)
             for ab, ratio in candidate_ab_cells_and_area_ratios
-            if abs(round(ratio) - ratio) < 1e-6
+            if abs(round(ratio) - ratio) <= _ratio_tolerance(ab, ratio)
             )
 
+        def _reduction_and_mismatch(ab_and_ratio):
+            _, ratio = ab_and_ratio
+            return round(ratio), -abs(round(ratio) - ratio)
+
         try:
-            # Pick the one that realizes the largest area reduction
-            mincell, _ = max(acceptable_ab_cells_and_ratios, key=itemgetter(1))
+            # Pick the one that realizes the largest area reduction.
+            # Among those, the one whose ratio is closest to integer
+            mincell, _ = max(acceptable_ab_cells_and_ratios,
+                             key=_reduction_and_mismatch)
         except ValueError:  # No smaller cell
             return False, ab_cell
         return True, mincell

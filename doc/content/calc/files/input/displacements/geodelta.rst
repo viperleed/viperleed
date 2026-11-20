@@ -34,7 +34,7 @@ one wants to move during the search.
 
 The values on the right are interpreted as range of displacements in Ångström.
 How atoms are addressed on the left is described on the main
-:ref:`DISPLACEMENTS` page. However, The GEO_DELTA block contains 
+:ref:`DISPLACEMENTS` page. However, The GEO_DELTA block contains
 one additional value on the left, which defines the *direction*
 of the displacement, as described below.
 
@@ -180,7 +180,7 @@ and the other one is out-of-plane:
       find which displacement directions conserve the symmetry of your
       structure input in the comments added to the :ref:`POSCAR`
       file. Refer to the relation between plane groups in the
-      :ref:`ISYM`  page in case you required a lowering of the 
+      :ref:`ISYM`  page in case you required a lowering of the
       symmetry of your slab via :ref:`ISYM` or :ref:`SYMDELTA`.
    -  During one optimization run, an atom can only be displaced along
       **one** axis (so, for example, **not** sampling all in-plane directions
@@ -190,5 +190,5 @@ and the other one is out-of-plane:
       out-of-plane geometry of your sample (small :math:`k_{\textrm{par}}`),
       it is a good idea to *first* run a few optimization runs on the |z|
       positions only, and treat in-plane displacements later as a refinement
-      (unless your :ref:`POSCAR` model is *very far off* from the real 
+      (unless your :ref:`POSCAR` model is *very far off* from the real
       structure).

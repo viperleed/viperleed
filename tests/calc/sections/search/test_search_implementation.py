@@ -8,7 +8,7 @@ parts of the function that actually do execute a search.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-06-06'
 __license__ = 'GPLv3+'
 
@@ -130,7 +130,16 @@ def fixture_mock_glob_src_files(tmp_path, mocker):
 @parametrize(available=(True, False))
 def fixture_mock_mpirun_available(available, mocker):
     """Fake the presence of mpirun on the system."""
-    mocker.patch('shutil.which', return_value=available)
+    aliases = {'mpirun'}
+    if IS_WINDOWS:
+        aliases.add('mpiexec')
+
+    def _mock_which(cmd, *others, **kwargs):
+        if cmd in aliases:
+            return 'path/to/mpirun' if available else None
+        return sh_which(cmd, *others, **kwargs)
+
+    mocker.patch('shutil.which', side_effect=_mock_which)
     return available
 
 
@@ -162,6 +171,30 @@ def fixture_mock_stuff_to_vary(rpars):
     rpars.indyPars = 5
 
 
+def _skip_on_missing_compiler(rpars, mocker, missing_dependency):
+    """Skip (or fail) the test if search finds no Fortran compiler."""
+    compilers = {  # Method of rpars: name of the dependency
+        'getFortranComp': 'gfortran',
+        'getFortranMpiComp': 'mpifort',
+        }
+    for method_name, dependency in compilers.items():
+        find_or_skip = _find_compiler_or_skip(getattr(rpars, method_name),
+                                              dependency,
+                                              missing_dependency)
+        mocker.patch.object(rpars, method_name, side_effect=find_or_skip)
+
+
+def _find_compiler_or_skip(find_compiler, dependency, missing_dependency):
+    """Return a wrapper of find_compiler that skips if none is found."""
+    def _find_or_skip(*args, **kwargs):
+        try:
+            return find_compiler(*args, **kwargs)
+        except FileNotFoundError:
+            missing_dependency(dependency, 'compiler not found')
+        return None  # Unreachable: missing_dependency raises
+    return _find_or_skip
+
+
 class TestSearch:
     """Collection of tests for the search function."""
 
@@ -187,11 +220,13 @@ class TestSearch:
     @use('n_cores',
          'vary',
          'tl_version',
-         'mock_src_files')
-    def test_compile_and_run(self, rpars, mpirun_available, mock_run,
-                             tmp_path, mocker):
+         'mock_src_files',
+         'mpirun_available')
+    def test_compile_and_run(self, rpars, mock_run, tmp_path, mocker,
+                             missing_dependency):
         """Check that nothing is executed when execution is suppressed."""
         rpars.SUPPRESS_EXECUTION = False
+        _skip_on_missing_compiler(rpars, mocker, missing_dependency)
         called_more_than_once = (
             # The following mocks are called multiple times,
             # while test_no_displacements uses assert_called_once.
@@ -199,29 +234,7 @@ class TestSearch:
             )
         mocks_called_multiple_times = [mock_run.pop(n)
                                        for n in called_more_than_once]
-        not_called = []
-        stops_early = (
-            rpars.TL_VERSION < '1.7'
-            and IS_WINDOWS
-            and sh_which('ifort')
-            )
-        if stops_early:
-            # Early TensErLEED versions are not supported on Windows
-            # with ifort as they need rf.info to be piped. They
-            # terminate before compilation, but after collecting
-            # the source files.
-            not_called.extend((
-                'compile',
-                'sleep',
-                'results',
-                'update_rpars',
-                'eval_timer',
-                'search_job',
-                ))
-        mocks_not_called = [mock_run.pop(n) for n in not_called]
         self.test_no_displacements(rpars, mock_run, tmp_path, mocker)
         for mock in mocks_called_multiple_times:
             mock.assert_called()
-        for mock in mocks_not_called:
-            mock.assert_not_called()
         # TODO: check relevant calls

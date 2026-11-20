@@ -21,7 +21,7 @@ sensitive)
 
 SYMMETRIZE_INPUT might be used when a system does not entirely fulfil a given
 symmetry (and should not be "corrected" to that symmetry), but the user still
-wants to use symmetry detection with a large :ref:`SYM_EPS` in order to 
+wants to use symmetry detection with a large :ref:`SYM_EPS` in order to
 automatically move almost-symmetry-equivalent atoms in concert.
 Similarly, SYMMETRIZE_INPUT could be used to avoid atoms snapping to a nearby
 rotation axis or mirror plane. **Use of SYMMETRIZE_INPUT is discouraged,**

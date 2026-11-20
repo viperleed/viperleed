@@ -6,7 +6,7 @@ Contains definition of pytest cases generated from POSCAR files.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-09-05'
 __license__ = 'GPLv3+'
 
@@ -14,6 +14,7 @@ import copy
 import inspect
 
 import numpy as np
+import pytest
 from pytest_cases import case
 from pytest_cases import lazy_value
 from pytest_cases import parametrize
@@ -132,7 +133,6 @@ _PRESETS = {
 # IMPORTANT: when adding a POSCAR file to this tuple, also add:
 # - corresponding BEAMLIST files in the 'BEAMLISTs' directory
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
@@ -167,24 +167,6 @@ def _add_known_bulk_properties(info, bulk_info):
     return info
 
 
-def _add_known_layer_properties(info, layer_info):
-    """Add layer properties to a TestInfo object."""
-    info.layer_properties = layer_info
-    return info
-
-
-def _add_nearest_neighbor_info(info, nn_info):
-    """Add nearest-neighbour information to a TestInfo object."""
-    info.nearest_neighbors = nn_info
-    return info
-
-
-def _add_surface_atom_info(info, surface_atom_info):
-    """Add info about surface atoms to a TestInfo object."""
-    info.surface_atoms = surface_atom_info
-    return info
-
-
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
         _get_poscar_info('POSCAR_Cu2O_111', 22+43),
@@ -200,9 +182,19 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             ),
         ),
     )
-POSCAR_WITH_LAYER_INFO = ()
-POSCAR_WITH_NEAREST_NEIGHBOR_INFO = ()
-POSCAR_WITH_SURFACE_ATOM_INFO = ()
+
+# No POSCAR with known layer properties yet. A single skipped
+# placeholder keeps the case visible in -rs. Its TestInfo is made up
+# (and never read), as @parametrize(info=...) rejects pytest.param(id=).
+POSCAR_WITH_LAYER_INFO = (
+    pytest.param(
+        _get_poscar_info('POSCAR_no_poscar_with_layer_info'),
+        marks=pytest.mark.skip(
+            reason='No POSCAR with layer info yet. Ag(100) is tested '
+                   'with default Rparams in case_poscar_ag100'
+            ),
+        ),
+    )
 
 SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
@@ -254,19 +246,6 @@ class CasePOSCARSlabs:
         rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         slab.create_layers(rpars)
         return slab, rpars, info
-
-    @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO,
-                 idgen=make_poscar_ids())
-    @case(tags=Tag.NEAREST_NEIGHBOURS)
-    def case_nearest_neighbors_poscar(self, info):
-        """Return a slab, an Rparams and info on expected nearest neighbors."""
-        return self.case_poscar(info)
-
-    @parametrize(info=POSCAR_WITH_SURFACE_ATOM_INFO, idgen=make_poscar_ids())
-    @case(tags=Tag.SURFACE_ATOMS)
-    def case_surface_atom_poscar(self, info):
-        """Return a slab, an Rparams and info on expected surface atoms."""
-        return self.case_poscar(info)
 
     @case(tags=(Tag.BULK_PROPERTIES,
                 Tag.LAYER_INFO,
@@ -376,6 +355,19 @@ class CasePOSCARSlabs:
             )
         return self.case_poscar(info)
 
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_ir111_2rt3(self):
+        """Return a non-minimal (2sqrt3 x 2sqrt3)R30 slab of fcc(111)."""
+        info = _get_poscar_info('POSCAR_Ir(111)_2rt3', {'Ir': 72}, 'p31m')
+        info.poscar.n_cells = 12
+        layer_dist = 2.7 * np.sqrt(2/3)  # In-plane NN distance 2.7 A
+        info.param_presets = {
+            'LAYER_CUTS': LayerCuts.from_string('dz(0.5)'),
+            'N_BULK_LAYERS': 3,
+            'BULK_REPEAT': 3 * layer_dist,
+            }
+        return self.case_poscar(info)
+
     @case(tags=(Tag.NON_MINIMAL_CELL, Tag.SURFACE_ATOMS))
     def case_poscar_lsmo_001_rt2(self):
         """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
@@ -434,9 +426,9 @@ class CasePOSCARSlabs:
     def case_poscar_sb_si_111(self):
         """Return a non-minimal, rectangular slab of Sb/Si(111)."""
         info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 72+12, 'pm')
-        # While it looks like there are 4 cells (rt3 of Si), some
-        # of the Sb atoms are not quite in the right position
-        info.poscar.n_cells = 2
+        # 4 cells (rt3 of Si), though some of the Sb atoms
+        # are not quite in the right position (~0.04 A off)
+        info.poscar.n_cells = 4
         return self.case_poscar(info)
 
     @case(tags=Tag.VACUUM_GAP_MIDDLE)
@@ -466,6 +458,15 @@ class CasePOSCARSlabs:
         rpars.N_BULK_LAYERS = 2
         slab.full_update(rpars)
         return slab, rpars, info
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_tio2_supercell(self):
+        """Return a non-minimal, 9x2 supercell of rutile TiO2(110)."""
+        info = _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm',
+                                (540, False))
+        # Atom positions deviate from ideal ones by ~1e-5 A
+        info.poscar.n_cells = 18
+        return self.case_poscar(info)
 
 
 class CaseBulkSlabs:

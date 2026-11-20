@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-03-06'
 __license__ = 'GPLv3+'
 
@@ -15,9 +15,12 @@ from pytest_cases import parametrize
 
 from viperleed.cli import ViPErLEEDMain
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.gui.detect_graphics import has_pyqt
+from viperleed.gui.detect_graphics import PyQtSanity
 
 from .helpers import CustomTestException
+
+
+_MODULE = 'viperleed.gui.cli'
 
 
 def _collect_cli_names(cli_cls):
@@ -62,16 +65,22 @@ def fixture_mock_stdin(tmp_path, mocker):
 
 @fixture(name='mock_gui')
 def fixture_mock_gui(mocker):
-    """Prevent the GUI from opening up."""
-    if not has_pyqt():
-        return  # Nothing to do here
+    """Prevent the GUI from opening up, whatever the system has."""
+    # The GUI branch always runs, with all of Qt mocked, whether or
+    # not PyQt5 or a display is available.
+    mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                 return_value=PyQtSanity.OK)
+    mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                 return_value={})
+    mocker.patch(f'{_MODULE}.catch_gui_crash')
+    mocker.patch(f'{_MODULE}.suppress_file_permission_warnings')
     mock_graphics_modules = {
         'qtc': mocker.MagicMock(),
         'qtg': mocker.MagicMock(),
         'qtw': mocker.MagicMock(),
         'ViPErLEEDSelectPlugin': mocker.MagicMock(),
         }
-    mocker.patch('viperleed.gui.cli.import_graphics_modules',
+    mocker.patch(f'{_MODULE}.import_graphics_modules',
                  return_value=mock_graphics_modules.values())
     qtw = mock_graphics_modules['qtw']
     qtw.QApplication.exec_.return_value = 0

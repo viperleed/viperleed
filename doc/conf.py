@@ -8,7 +8,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2022-10-17'
 __license__ = 'GPLv3+'
 
@@ -37,9 +37,9 @@ extensions = [
     'sphinx_rtd_theme',        # HTML theme
     'sphinx.ext.autodoc',      # for API documentation from docstrings
     'sphinx.ext.autosummary',  # for API documentation from docstrings
-    'sphinx.ext.extlinks',     
+    'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',  # For linking to other docs
-    'sphinx.ext.mathjax',      
+    'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',     # For Numpy-style docstrings
     'sphinx.ext.todo',         # For TODOs
     'sphinx.ext.viewcode',
@@ -95,7 +95,7 @@ html_css_files = [
 
 # -- Options for jupyter notebook execution ---------------------------
 # See https://myst-nb.readthedocs.io/en/latest/index.html
-# Use a specific kernel instead of the one stored in the notebook 
+# Use a specific kernel instead of the one stored in the notebook
 # metadata. This allows building the documentation on multiple OSes
 nb_kernel_rgx_aliases = {'.+': 'python3'}
 nb_execution_mode = "off"  # use cached version for now
