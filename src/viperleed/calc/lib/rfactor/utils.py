@@ -10,13 +10,6 @@ import numpy as np
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
-def nansum_trapezoid(y, dx, axis=-1):
-    """Calculate the trapezoidal integral, ignoring NaNs."""
-    y_arr = dnl.xp.moveaxis(y, axis, -1)
-    # select the axis to integrate over
-    return dnl.xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
-
-
 def overlap_trapezoid(y, dx, mask, axis=0):
     """Integrate y by the trapezoidal rule over masked points.
 

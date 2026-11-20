@@ -6,8 +6,10 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
+from viperleed.calc.lib import dynamic_numerical_lib as dnl
+
 from .groups import group_rfactors
-from .utils import coerce_to_energy_grid, nansum_trapezoid
+from .utils import coerce_to_energy_grid, overlap_trapezoid
 
 
 def r_2(
@@ -74,17 +76,30 @@ def r_2(
         data_and_derivatives_2, data_spline_2, shifted_grid, derivs=0
     )
 
-    # calculate normalization for each beam
-    beam_normalization = nansum_trapezoid(
-        data_1_intensity, energy_step, axis=0
-    ) / nansum_trapezoid(data_2_intensity, energy_step, axis=0)
+    # all integrals are restricted to the overlap of the two datasets
+    overlap = dnl.xp.logical_not(
+        dnl.xp.logical_or(
+            dnl.xp.isnan(data_1_intensity), dnl.xp.isnan(data_2_intensity)
+        )
+    )
 
-    numerators = nansum_trapezoid(
+    # calculate normalization for each beam
+    exp_integral = overlap_trapezoid(
+        data_1_intensity, energy_step, overlap, axis=0
+    )
+    beam_normalization = exp_integral / overlap_trapezoid(
+        data_2_intensity, energy_step, overlap, axis=0
+    )
+
+    numerators = overlap_trapezoid(
         (data_1_intensity - beam_normalization * data_2_intensity) ** 2,
         energy_step,
+        overlap,
         axis=0,
     )
-    denominators = nansum_trapezoid(data_1_intensity**2, energy_step, axis=0)
+    denominators = overlap_trapezoid(
+        data_1_intensity**2, energy_step, overlap, axis=0
+    )
 
     # calculate R-factor with requested grouping
     return group_rfactors(numerators, denominators, **kwargs)

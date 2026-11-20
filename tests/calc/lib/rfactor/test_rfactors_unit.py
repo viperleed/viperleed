@@ -134,3 +134,19 @@ def test_zj_weighs_overlap_edges_by_half():
         data_and_derivatives_2=theo,
     )
     assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
+
+
+@pytest.mark.parametrize("func", [r_1.r_1, r_2.r_2])
+def test_r1_r2_vanish_for_scaled_copy_on_overlap(func):
+    """Check R1 and R2 ignore theory outside the experimental range."""
+    # The experiment covers only the middle of the theory range. On the
+    # overlap, theory is exactly 3 times the experiment; outside it the
+    # theory is arbitrary and must not affect scale factor or R.
+    exp = np.array([NAN, 1.0, 2.0, 3.0, 1.5, NAN])[:, None]
+    theo = np.array([9.0, 3.0, 6.0, 9.0, 4.5, 20.0])[:, None]
+    result = func(
+        0.0, 1.0, np.arange(6.0),
+        data_and_derivatives_1=(exp, None, None),
+        data_and_derivatives_2=(theo, None, None),
+    )
+    assert result == pytest.approx(0.0, abs=1e-12)
