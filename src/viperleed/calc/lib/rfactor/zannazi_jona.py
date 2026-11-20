@@ -8,8 +8,8 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
+from .groups import group_rfactors, overlap_length_terms
 from .utils import coerce_to_energy_grid, overlap_trapezoid
-from .groups import group_rfactors
 
 
 def r_zjj(
@@ -91,18 +91,23 @@ def r_zjj(
 
     overlap_mask = dnl.xp.logical_not(no_overlap_mask)
 
-    # calculate experimental energy ranges (without NaNs)
-    exp_energy_ranges = overlap_mask.sum(axis=0) * energy_step
-
     # Factor 0.027 for random correlation, Zannazi & Jona 1977
     exp_integral = overlap_trapezoid(
         data_1_intensity, energy_step, overlap_mask, axis=0
     )
-    prefactors = 1 / exp_integral / 0.027
+    # Array comparisons: bool(array) would be ambiguous
+    # pylint: disable=compare-to-zero
+    # (nan for beams without overlap)
+    prefactors = 1 / dnl.xp.where(
+        exp_integral != 0, exp_integral, dnl.xp.nan
+    ) / 0.027
 
     # calculate normalization for each beam
-    beam_normalization = exp_integral / overlap_trapezoid(
+    theo_integral = overlap_trapezoid(
         data_2_intensity, energy_step, overlap_mask, axis=0
+    )
+    beam_normalization = exp_integral / dnl.xp.where(
+        theo_integral != 0, theo_integral, dnl.xp.nan
     )
 
     numerators = abs(
@@ -120,11 +125,13 @@ def r_zjj(
 
     quotient = numerators / denominators
 
-    # calculate R-factor with requested grouping
-    return group_rfactors(
-        prefactors
-        * overlap_trapezoid(quotient, energy_step, overlap_mask, axis=0)
-        * exp_energy_ranges,
-        exp_energy_ranges,
-        **kwargs,
+    # Per-beam values are the numerators; groups and the overall
+    # value are the means over beams weighted by the length of the
+    # overlap.
+    beam_rfactors = prefactors * overlap_trapezoid(
+        quotient, energy_step, overlap_mask, axis=0
     )
+    numerators, denominators = overlap_length_terms(
+        beam_rfactors, overlap_mask, energy_step
+    )
+    return group_rfactors(numerators, denominators, **kwargs)

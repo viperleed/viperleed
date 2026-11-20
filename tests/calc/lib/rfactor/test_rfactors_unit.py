@@ -173,3 +173,136 @@ def test_zj_epsilon_uses_largest_derivative_magnitude():
         data_and_derivatives_2=theo,
     )
     assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
+
+
+STEP = 0.5
+# Three beams on a 6-point grid, overlapping on 6, 3 and 5 points.
+OVERLAPS = ((0, 6), (1, 4), (0, 5))
+EXP_I = ((1.0, 2.0, 3.0, 2.0, 1.0, 2.0),
+         (9.9, 1.0, 3.0, 2.0, 9.9, 9.9),
+         (2.0, 1.0, 1.5, 3.0, 2.5, 9.9))
+EXP_D1 = ((1.0, 1.0, -1.0, -1.0, 0.5, 2.0),
+          (9.9, 2.0, 0.0, -2.0, 9.9, 9.9),
+          (0.5, 1.0, 1.5, -1.0, -3.0, 9.9))
+EXP_D2 = ((0.5, -1.0, 1.0, 2.0, -2.0, 1.0),
+          (9.9, 1.0, -1.0, 0.5, 9.9, 9.9),
+          (1.0, 0.5, -1.0, 1.0, 2.0, 9.9))
+THEO_I = ((1.5, 1.0, 2.0, 3.0, 1.0, 1.0),
+          (9.9, 2.0, 2.0, 1.0, 9.9, 9.9),
+          (1.0, 2.0, 1.0, 2.0, 3.0, 9.9))
+THEO_D1 = ((0.5, 0.5, 1.0, 0.0, -1.0, 1.0),
+           (9.9, 1.0, 0.5, -1.0, 9.9, 9.9),
+           (1.0, 0.5, -0.5, 1.5, -1.0, 9.9))
+THEO_D2 = ((1.0, 0.5, -1.0, 1.0, -0.5, 2.0),
+           (9.9, 0.5, 0.5, -1.0, 9.9, 9.9),
+           (-1.0, 1.0, 0.5, 0.5, 1.0, 9.9))
+GROUPS = [0, 0, 1]
+
+
+def _integral(values):
+    """Return the trapezoidal integral of values on the test grid."""
+    values = np.asarray(values)
+    return STEP * np.sum(values[1:] + values[:-1]) / 2
+
+
+def _beam_slices(beam):
+    """Return intensities and derivatives of beam within its overlap."""
+    first, last = OVERLAPS[beam]
+    return [np.array(arr[beam][first:last], dtype=float)
+            for arr in (EXP_I, EXP_D1, EXP_D2, THEO_I, THEO_D1, THEO_D2)]
+
+
+def _r2_of_beam(beam):
+    """Return the R2 of a single beam from first principles."""
+    exp, _, _, theo, _, _ = _beam_slices(beam)
+    scale = _integral(exp) / _integral(theo)
+    return _integral((exp - scale*theo)**2) / _integral(exp**2)
+
+
+def _zj_of_beam(beam):
+    """Return the ZJ R factor of a single beam from first principles."""
+    exp, exp_1, exp_2, theo, theo_1, theo_2 = _beam_slices(beam)
+    scale = _integral(exp) / _integral(theo)
+    quotient = (abs(scale*theo_2 - exp_2) * abs(scale*theo_1 - exp_1)
+                / (abs(exp_1) + np.max(abs(exp_1))))
+    return _integral(quotient) / _integral(exp) / 0.027
+
+
+def _overlap_length(beam):
+    """Return the energy length of the overlap of beam."""
+    first, last = OVERLAPS[beam]
+    return (last - first - 1) * STEP
+
+
+def _weighted_mean(values, beams):
+    """Return the mean of values weighted by overlap length of beams."""
+    lengths = [_overlap_length(b) for b in beams]
+    return sum(v*w for v, w in zip(values, lengths)) / sum(lengths)
+
+
+def _nan_outside_overlap(rows):
+    """Return rows as a (6, 3) array, NaN outside the overlaps."""
+    data = np.full((6, 3), np.nan)
+    for beam, (first, last) in enumerate(OVERLAPS):
+        data[first:last, beam] = rows[beam][first:last]
+    return data
+
+
+def _call_with_ragged_beams(func, **kwargs):
+    """Return func evaluated on the ragged test beams."""
+    exp = tuple(_nan_outside_overlap(rows)
+                for rows in (EXP_I, EXP_D1, EXP_D2))
+    theo = tuple(_nan_outside_overlap(rows)
+                 for rows in (THEO_I, THEO_D1, THEO_D2))
+    return func(
+        0.0, STEP, np.arange(6) * STEP,
+        data_and_derivatives_1=exp,
+        data_and_derivatives_2=theo,
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    ("func", "per_beam"),
+    [(r_2.r_2, _r2_of_beam), (zannazi_jona.r_zjj, _zj_of_beam)],
+    ids=["r2", "zj"],
+)
+class TestBeamAveraging:
+    """Tests for averaging of R2 and ZJ over beams."""
+    def test_per_beam_values(self, func, per_beam):
+        """Check per-beam values."""
+        result = _call_with_ragged_beams(func, groups="beam")
+        expected = [per_beam(b) for b in range(3)]
+        assert result == pytest.approx(expected, rel=1e-12)
+
+    def test_overall_is_overlap_length_weighted_mean(self, func, per_beam):
+        """Check the overall value is weighted by overlap length."""
+        result = _call_with_ragged_beams(func)
+        expected = _weighted_mean([per_beam(b) for b in range(3)],
+                                  range(3))
+        assert result == pytest.approx(expected, rel=1e-12)
+
+    def test_groups_are_overlap_length_weighted_means(self, func, per_beam):
+        """Check group values are means weighted by overlap length."""
+        result = _call_with_ragged_beams(func, groups=GROUPS)
+        expected = [
+            _weighted_mean([per_beam(0), per_beam(1)], (0, 1)),
+            per_beam(2),
+        ]
+        assert result == pytest.approx(expected, rel=1e-12)
+
+    def test_beam_without_overlap_does_not_contribute(self, func, per_beam):
+        """Check that a beam without overlap is left out."""
+        exp = tuple(_nan_outside_overlap(rows)
+                    for rows in (EXP_I, EXP_D1, EXP_D2))
+        theo = tuple(_nan_outside_overlap(rows)
+                     for rows in (THEO_I, THEO_D1, THEO_D2))
+        for arr in (*exp, *theo):
+            arr[:, 1] = np.nan
+        result = func(
+            0.0, STEP, np.arange(6) * STEP,
+            data_and_derivatives_1=exp,
+            data_and_derivatives_2=theo,
+        )
+        expected = _weighted_mean([per_beam(0), per_beam(2)], (0, 2))
+        assert result == pytest.approx(expected, rel=1e-12)

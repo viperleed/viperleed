@@ -91,3 +91,39 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
     return dnl.xp.where(
         mask, grouped_numerators / safe_denominators, dnl.xp.nan
     )
+
+
+def overlap_length_terms(beam_rfactors, overlap, energy_step):
+    r"""Return numerators and denominators for length weighting.
+
+    Averaging the per-beam R-factors $`R_b`$ with the lengths $`L_b =
+    (n_b - 1) \, \Delta E`$ of the energy ranges over which they were
+    evaluated ($`n_b`$ is the number of overlapping points) gives
+    $`\sum_b R_b L_b / \sum_b L_b`$. This is what
+    :func:`group_rfactors` computes from the returned arrays, while
+    the per-beam values are still $`R_b`$. Beams without overlap
+    (or with undefined R-factor) do not contribute to any group.
+
+    Parameters
+    ----------
+    beam_rfactors : dnl.xp.ndarray
+        Per-beam R-factors of shape (n_beams,). Entries of beams
+        without overlap may be nan or inf.
+    overlap : dnl.xp.ndarray
+        Boolean array of shape (n_energies, n_beams), True where
+        both data sets have data.
+    energy_step : float
+        The spacing of the energy grid.
+
+    Returns
+    -------
+    numerators, denominators : dnl.xp.ndarray
+        Arrays of shape (n_beams,) to be passed to
+        :func:`group_rfactors`.
+    """
+    lengths = dnl.xp.clip(overlap.sum(axis=0) - 1, 0, None) * energy_step
+    valid = dnl.xp.logical_and(lengths > 0, dnl.xp.isfinite(beam_rfactors))
+    return (
+        dnl.xp.where(valid, beam_rfactors, 0.0) * lengths,
+        dnl.xp.where(valid, lengths, 0.0),
+    )

@@ -8,7 +8,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
-from .groups import group_rfactors
+from .groups import group_rfactors, overlap_length_terms
 from .utils import coerce_to_energy_grid, overlap_trapezoid
 
 
@@ -83,12 +83,17 @@ def r_2(
         )
     )
 
-    # calculate normalization for each beam
+    # calculate normalization for each beam (nan without overlap)
     exp_integral = overlap_trapezoid(
         data_1_intensity, energy_step, overlap, axis=0
     )
-    beam_normalization = exp_integral / overlap_trapezoid(
+    theo_integral = overlap_trapezoid(
         data_2_intensity, energy_step, overlap, axis=0
+    )
+    # Array comparisons: bool(array) would be ambiguous
+    # pylint: disable=compare-to-zero
+    beam_normalization = exp_integral / dnl.xp.where(
+        theo_integral != 0, theo_integral, dnl.xp.nan
     )
 
     numerators = overlap_trapezoid(
@@ -101,5 +106,12 @@ def r_2(
         data_1_intensity**2, energy_step, overlap, axis=0
     )
 
-    # calculate R-factor with requested grouping
-    return group_rfactors(numerators, denominators, **kwargs)
+    # Per-beam values are num / den; groups and the overall value are
+    # the means over beams weighted by the length of the overlap.
+    beam_rfactors = numerators / dnl.xp.where(
+        denominators != 0, denominators, dnl.xp.nan
+    )
+    return group_rfactors(
+        *overlap_length_terms(beam_rfactors, overlap, energy_step),
+        **kwargs,
+    )
