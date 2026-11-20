@@ -8,13 +8,8 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
+from . import utils
 from .groups import group_beam_rfactors
-from .utils import (
-    coerce_to_energy_grid,
-    nonzero_or_nan,
-    overlap_mask,
-    overlap_trapezoid,
-)
 
 
 def _zj_quotient(beam_normalization, exp_derivs, theo_derivs, ignore):
@@ -80,19 +75,19 @@ def _zj_beam_rfactors(data_1, data_2, overlap, energy_step):
         dnl.xp.where(no_overlap, 0.0, data) for data in data_2
     )
 
-    # Factor 0.027 for random correlation, Zannazi & Jona 1977
-    exp_integral = overlap_trapezoid(
+    exp_integral = utils.overlap_trapezoid(
         exp_intensity, energy_step, overlap, axis=0
     )
     # calculate normalization for each beam (nan without overlap)
-    beam_normalization = exp_integral / nonzero_or_nan(
-        overlap_trapezoid(theo_intensity, energy_step, overlap, axis=0)
+    beam_normalization = exp_integral / utils.nonzero_or_nan(
+        utils.overlap_trapezoid(theo_intensity, energy_step, overlap, axis=0)
     )
     quotient = _zj_quotient(
         beam_normalization, exp_derivs, theo_derivs, no_overlap
     )
-    prefactors = 1 / nonzero_or_nan(exp_integral) / 0.027
-    return prefactors * overlap_trapezoid(
+    # Factor 0.027 for random correlation, Zannazi & Jona 1977
+    prefactors = 1 / utils.nonzero_or_nan(exp_integral) / 0.027
+    return prefactors * utils.overlap_trapezoid(
         quotient, energy_step, overlap, axis=0
     )
 
@@ -146,17 +141,17 @@ def r_zjj(
         dataset is passed as data_and_derivatives.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    data_1 = coerce_to_energy_grid(
+    data_1 = utils.coerce_to_energy_grid(
         data_and_derivatives_1, data_spline_1, energy_grid, derivs=2
     )
     # 2nd data also uses shifted grid if spline
-    data_2 = coerce_to_energy_grid(
+    data_2 = utils.coerce_to_energy_grid(
         data_and_derivatives_2,
         data_spline_2,
         energy_grid - shift_2nd_spline,
         derivs=2,
     )
-    overlap = overlap_mask(data_1[0], data_2[0])
+    overlap = utils.overlap_mask(data_1[0], data_2[0])
     beam_rfactors = _zj_beam_rfactors(data_1, data_2, overlap, energy_step)
 
     # Groups and the overall value are the means over beams weighted
