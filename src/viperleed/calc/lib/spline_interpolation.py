@@ -54,6 +54,50 @@ class CachedSpline:
         return getattr(self._spline, name)
 
 
+class RaggedSpline:
+    """Piecewise polynomial of ragged beams, valid only inside each beam.
+
+    Evaluates like the underlying piecewise polynomial, but returns NaN
+    for each beam at energies outside the range of its own data (limits
+    included in the range).
+
+    Parameters
+    ----------
+    ppoly : dnl.PPoly
+        The piecewise polynomial of all beams, one beam per column.
+    first, last : numpy.ndarray
+        First and last energy with data, for each beam. NaN for beams
+        without data.
+    """
+
+    __slots__ = ('_first', '_last', '_ppoly')
+
+    def __init__(self, ppoly, first, last):
+        """Store the polynomial and the data range of each beam."""
+        self._ppoly = ppoly
+        self._first = first
+        self._last = last
+
+    def __call__(self, x):
+        """Evaluate at the energies `x`, with NaN outside each beam."""
+        x = dnl.xp.asarray(x)[..., None]
+        inside = (x >= dnl.xp.asarray(self._first)) & (
+            x <= dnl.xp.asarray(self._last)
+        )
+        return dnl.xp.where(inside, self._ppoly(x[..., 0]), dnl.xp.nan)
+
+    # `nu` is the keyword used by scipy's PPoly.derivative
+    def derivative(self, nu=1):  # pylint: disable=invalid-name
+        """Return the `nu`-th derivative, masked like the spline."""
+        return RaggedSpline(
+            self._ppoly.derivative(nu), self._first, self._last
+        )
+
+    def __getattr__(self, name):
+        """Delegate other attributes (e.g., c, x) to the polynomial."""
+        return getattr(self._ppoly, name)
+
+
 def make_1d_ragged_cubic_spline(
     x, y, axis=0, bc_type='not-a-knot', extrapolate=False
 ):
@@ -153,13 +197,14 @@ def interpolate_ragged_array(
 
     Returns
     -------
-    dnl.PPoly
-        A piecewise polynomial object from the selected numerical
-        library that can be evaluated on a 1D array of x values
-        to return the interpolated y values.
+    RaggedSpline
+        A piecewise polynomial object that can be evaluated on a 1D
+        array of x values to return the interpolated y values. The
+        values of each beam are NaN outside the range of its data.
     """
     # NB: this is intentionally using a Numpy array, even if the backend is
     # swapped out
+    first_last = np.full((2, y.shape[1]), np.nan)
     all_coeffs = np.full(
         (4, y.shape[0] - 1, y.shape[1]), fill_value=dnl.xp.nan
     )
@@ -174,6 +219,7 @@ def interpolate_ragged_array(
         n_intervals = spline.c.shape[1]
         end_id = start_id + n_intervals  # Index of the last knot of the beam
         all_coeffs[:, start_id:end_id, dim] = spline.c
+        first_last[:, dim] = x[start_id], x[end_id]
         if end_id < len(x) - 1:
             # The interval starting at the last knot has no data of its
             # own. Continue the last cubic there, so that the beam's
@@ -181,4 +227,5 @@ def interpolate_ragged_array(
             all_coeffs[:, end_id, dim] = _shift_cubic(
                 np.asarray(spline.c[:, -1]), x[end_id] - x[end_id - 1]
             )
-    return dnl.PPoly.construct_fast(all_coeffs, x)
+    return RaggedSpline(dnl.PPoly.construct_fast(all_coeffs, x),
+                        *first_last)

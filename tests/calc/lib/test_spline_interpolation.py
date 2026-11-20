@@ -78,3 +78,16 @@ class TestInterpolateRaggedArray:
         for col in range(beams.shape[1]):
             last = np.flatnonzero(~np.isnan(beams[:, col]))[-1]
             assert values[last, col] == pytest.approx(beams[last, col])
+
+    def test_nan_outside_beam_range(self, ragged_data):
+        """Check that beams are NaN outside their own data range."""
+        grid, beams = ragged_data
+        spline = interpolate_ragged_array(grid, beams)
+        eps = 0.01
+        for col in range(beams.shape[1]):
+            energies = grid[~np.isnan(beams[:, col])]
+            below, above = energies[0] - eps, energies[-1] + eps
+            for deriv in (spline, spline.derivative(nu=1)):
+                assert np.isnan(deriv(np.array([below, above]))[:, col]).all()
+                inside = deriv(np.array([energies[0], energies[-1]]))
+                assert np.isfinite(inside[:, col]).all()
