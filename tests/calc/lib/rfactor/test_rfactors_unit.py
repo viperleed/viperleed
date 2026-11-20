@@ -152,6 +152,73 @@ def test_r1_r2_vanish_for_scaled_copy_on_overlap(func):
     assert result == pytest.approx(0.0, abs=1e-12)
 
 
+@pytest.mark.parametrize('func', [r_1.r_1, r_2.r_2])
+def test_r1_r2_vanish_for_scaled_copy_in_wide_experiment(func):
+    """Check R1 and R2 ignore experiment outside the theory range."""
+    # Mirror of the test above: the theory covers only the middle of
+    # the experimental range. On the overlap, theory is exactly 3 times
+    # the experiment; outside it the experiment is arbitrary and must
+    # not affect scale factor or R.
+    exp = np.array([9.0, 1.0, 2.0, 3.0, 1.5, 20.0])[:, None]
+    theo = np.array([NAN, 3.0, 6.0, 9.0, 4.5, NAN])[:, None]
+    result = func(
+        0.0, 1.0, np.arange(6.0),
+        data_and_derivatives_1=(exp, None, None),
+        data_and_derivatives_2=(theo, None, None),
+    )
+    assert result == pytest.approx(0.0, abs=1e-12)
+
+
+def test_r2_normalizes_by_experiment_on_overlap_only():
+    """Check R2's denominator excludes experiment outside the theory."""
+    # Overlap is the three middle points, with weights 1/2, 1, 1/2.
+    # I_e = [1, 2, 3] and I_t = [2, 2, 2] have the same integral (4),
+    # so the scale factor is 1. The numerator is 0.5 + 0 + 0.5 = 1 and
+    # the denominator is 0.5 + 4 + 4.5 = 9.
+    exp = np.array([9.0, 1.0, 2.0, 3.0, 20.0])[:, None]
+    theo = np.array([NAN, 2.0, 2.0, 2.0, NAN])[:, None]
+    result = r_2.r_2(
+        0.0, 1.0, np.arange(5.0),
+        data_and_derivatives_1=(exp, None, None),
+        data_and_derivatives_2=(theo, None, None),
+    )
+    assert result == pytest.approx(1 / 9, rel=1e-12)
+
+
+def test_pendry_from_y_ignores_nan_in_second_dataset():
+    """Check that points where only y_2 is NaN leave the overlap."""
+    # Overlap is the three middle points; trapezoid weights 1/2, 1, 1/2.
+    y_1 = np.array([1.0, 2.0, 3.0, 4.0, 5.0])[:, None]
+    y_2 = np.array([NAN, 0.5, 1.0, 1.0, NAN])[:, None]
+    numerator = 0.5 * 1.5**2 + 2.0**2 + 0.5 * 3.0**2
+    denominator = 0.5 * 4.25 + 10.0 + 0.5 * 17.0
+    result = pendry.r_pendry_from_y(y_1, y_2, 1.0)
+    assert result == pytest.approx(numerator / denominator, rel=1e-12)
+
+
+def test_zj_ignores_experiment_outside_theory_range():
+    """Check ZJ uses only the overlap when only the theory has NaN."""
+    # Same data as the edge-weight test, but the experiment is finite
+    # (and large) outside the overlap. Neither the scale factor, nor
+    # epsilon (largest |I'_e| = 4), nor the integrals may change.
+    exp = (
+        np.array([9, 2, 2, 2, 9])[:, None],
+        np.array([7, 1, 4, 2, 7])[:, None],
+        np.array([7, 1, 1, 1, 7])[:, None],
+    )
+    theo = (
+        np.array([NAN, 1, 1, 1, NAN])[:, None],
+        np.array([NAN, 0.5, 2, 0, NAN])[:, None],
+        np.array([NAN, 0.5, 1, 2, NAN])[:, None],
+    )
+    result = zannazi_jona.r_zjj(
+        0.0, 1.0, np.arange(5.0),
+        data_and_derivatives_1=exp,
+        data_and_derivatives_2=theo,
+    )
+    assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
+
+
 def test_zj_epsilon_uses_largest_derivative_magnitude():
     """Check that ZJ's epsilon is the largest experimental |dI/dE|."""
     # Same data as the edge-weight test, but the experimental derivative
