@@ -9,7 +9,10 @@ import numpy as np
 import pytest
 from scipy.interpolate import CubicSpline
 
-from viperleed.calc.lib.spline_interpolation import CachedSpline
+from viperleed.calc.lib.spline_interpolation import (
+    CachedSpline,
+    interpolate_ragged_array,
+)
 
 
 class TestCachedSpline:
@@ -51,3 +54,27 @@ class TestCachedSpline:
         """Check that derivatives are created only once per order."""
         assert spline.derivative(nu=1) is spline.derivative(nu=1)
         assert spline.derivative(nu=1) is not spline.derivative(nu=2)
+
+
+@pytest.fixture(name='ragged_data')
+def fixture_ragged_data():
+    """Return a grid and beams that start/end at different energies."""
+    grid = np.arange(10.0, 20.0)
+    beams = np.full((len(grid), 3), np.nan)
+    first_last = ((0, 9), (0, 5), (3, 7))  # Inclusive indices of the data
+    for col, (first, last) in enumerate(first_last):
+        beams[first:last + 1, col] = np.sin(grid[first:last + 1] / 3 + col)
+    return grid, beams
+
+
+class TestInterpolateRaggedArray:
+    """Tests for interpolate_ragged_array."""
+
+    def test_last_knot_is_data_point(self, ragged_data):
+        """Check that each beam's last data point is not lost."""
+        grid, beams = ragged_data
+        spline = interpolate_ragged_array(grid, beams)
+        values = spline(grid)
+        for col in range(beams.shape[1]):
+            last = np.flatnonzero(~np.isnan(beams[:, col]))[-1]
+            assert values[last, col] == pytest.approx(beams[last, col])

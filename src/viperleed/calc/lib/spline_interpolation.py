@@ -57,7 +57,7 @@ class CachedSpline:
 def make_1d_ragged_cubic_spline(
     x, y, axis=0, bc_type='not-a-knot', extrapolate=False
 ):
-    """Construct a piecewise cubic spline interpolator with ragged edges.
+    """Construct a piecewise cubic spline with ragged edges.
 
     The interpolator uses a cubic spline to interpolate data.
 
@@ -94,6 +94,31 @@ def make_1d_ragged_cubic_spline(
     )
 
     return subarray_spline, start_index
+
+
+def _shift_cubic(coeffs, shift):
+    """Return the coefficients of a cubic re-expanded around x0 + shift.
+
+    Parameters
+    ----------
+    coeffs : numpy.ndarray
+        Coefficients (c3, c2, c1, c0) of a cubic in powers of (x - x0),
+        in the order used by scipy.interpolate.PPoly.
+    shift : float
+        Displacement of the new expansion point from x0.
+
+    Returns
+    -------
+    numpy.ndarray
+        Coefficients of the same cubic in powers of (x - x0 - shift).
+    """
+    c_3, c_2, c_1, c_0 = coeffs
+    return np.array([
+        c_3,
+        c_2 + 3 * c_3 * shift,
+        c_1 + 2 * c_2 * shift + 3 * c_3 * shift**2,
+        c_0 + c_1 * shift + c_2 * shift**2 + c_3 * shift**3,
+    ])
 
 
 def interpolate_ragged_array(
@@ -146,5 +171,14 @@ def interpolate_ragged_array(
         spline, start_id = make_1d_ragged_cubic_spline(
             x, _y, axis=axis, bc_type=bc_type, extrapolate=extrapolate
         )
-        all_coeffs[:, start_id : start_id + spline.c.shape[1], dim] = spline.c
+        n_intervals = spline.c.shape[1]
+        end_id = start_id + n_intervals  # Index of the last knot of the beam
+        all_coeffs[:, start_id:end_id, dim] = spline.c
+        if end_id < len(x) - 1:
+            # The interval starting at the last knot has no data of its
+            # own. Continue the last cubic there, so that the beam's
+            # last data point is not lost when evaluating at the knot.
+            all_coeffs[:, end_id, dim] = _shift_cubic(
+                np.asarray(spline.c[:, -1]), x[end_id] - x[end_id - 1]
+            )
     return dnl.PPoly.construct_fast(all_coeffs, x)
