@@ -8,6 +8,8 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
+_PER_BEAM = 'beam'  # Value of `groups` to get one value per beam
+
 
 def group_rfactors(numerators, denominators, groups=None, num_groups=None):
     r"""Calculate grouped R-factor from numerators and denominators.
@@ -69,7 +71,7 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
     # pylint: disable=compare-to-zero
     if groups is None:
         return dnl.xp.sum(numerators) / dnl.xp.sum(denominators)
-    if isinstance(groups, str) and groups == 'beam':
+    if isinstance(groups, str) and groups == _PER_BEAM:
         mask = denominators != 0
         safe_denominators = dnl.xp.where(mask, denominators, 1.0)
         return dnl.xp.where(mask, numerators / safe_denominators, dnl.xp.nan)
@@ -127,7 +129,7 @@ def group_beam_rfactors(
     """
     lengths = dnl.xp.clip(overlap.sum(axis=0) - 1, 0, None) * energy_step
     valid = dnl.xp.logical_and(lengths > 0, dnl.xp.isfinite(beam_rfactors))
-    if isinstance(groups, str) and groups == 'beam':
+    if isinstance(groups, str) and groups == _PER_BEAM:
         return dnl.xp.where(valid, beam_rfactors, dnl.xp.nan)
     return group_rfactors(
         dnl.xp.where(valid, beam_rfactors, 0.0) * lengths,

@@ -154,7 +154,7 @@ def test_r1_r2_vanish_for_scaled_copy_on_overlap(func):
     assert result == pytest.approx(0.0, abs=1e-12)
 
 
-@pytest.mark.parametrize('func', [r_1.r_1, r_2.r_2])
+@pytest.mark.parametrize("func", [r_1.r_1, r_2.r_2])
 def test_r1_r2_vanish_for_scaled_copy_in_wide_experiment(func):
     """Check R1 and R2 ignore experiment outside the theory range."""
     # Mirror of the test above: the theory covers only the middle of
