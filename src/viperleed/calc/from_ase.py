@@ -41,8 +41,6 @@ from viperleed.calc.run import run_calc
 
 
 _LOGGER = logging.getLogger(__name__)
-# The R factors for which an analysis PDF can be written
-_ANALYSIS_R_FACTORS = RFactorType.PENDRY, RFactorType.SMOOTH
 _ALL_BEAMS = "all"
 _INPUT_FILES = (
     "PARAMETERS",
@@ -690,7 +688,7 @@ def rfactor_from_csv(
         except ValueError:
             pass  # R1: not an R_FACTOR_TYPE, no analysis available
         else:
-            if rpars.R_FACTOR_TYPE in _ANALYSIS_R_FACTORS:
+            if rpars.R_FACTOR_TYPE in rf_io.ANALYSIS_R_FACTORS:
                 analysis_file = "Rfactor_analysis_from_ase.pdf"
         rf_io.write_Rfactorpdf_from_splines(
             rpars,

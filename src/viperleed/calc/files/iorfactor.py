@@ -56,6 +56,10 @@ logger = logging.getLogger(__name__)
 # other purposes.
 _N_EXPAND_THEO = 2
 
+# The R factors for which an R-factor analysis PDF can be written,
+# i.e., those that compare Y functions
+ANALYSIS_R_FACTORS = (RFactorType.PENDRY, RFactorType.SMOOTH)
+
 # Weights of the R2, Zanazzi-Jona and Pendry R factors in the WR line
 # of WEXPEL. Since TensErLEED 2.1, rfactor.f uses the smooth R factor
 # when all three weights are zero (it sets a fourth weight to one).
@@ -798,7 +802,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     if not analysisFile:
         return
-    if which_r not in (RFactorType.PENDRY, RFactorType.SMOOTH):
+    if which_r not in ANALYSIS_R_FACTORS:
         logger.info('Rfactor_analysis.pdf is only available for Pendry and '
                     'Smooth R-factors.')
         return

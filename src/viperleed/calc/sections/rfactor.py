@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -216,7 +216,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     # plotting
     if rp.PLOT_IV['plot']:
         outname = f'Rfactor_plots_{name}.pdf'
-        aname = f'Rfactor_analysis_{name}.pdf'
+        aname = ''  # Only R factors with Y functions have an analysis
+        if rp.R_FACTOR_TYPE in iorfactor.ANALYSIS_R_FACTORS:
+            aname = f'Rfactor_analysis_{name}.pdf'
         iorfactor.write_Rfactorpdf_from_splines(
             rp,
             scan.theo_spline,

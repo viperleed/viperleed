@@ -17,6 +17,7 @@ from viperleed.calc.files import iorfactor
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.iorfactor import RfactorError
 from viperleed.calc.files.parameters.errors import ParameterConflictError
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.sections import rfactor as rfactor_section
 
 from .conftest import make_rparams
@@ -413,6 +414,30 @@ def test_run_new_rfactor_for_error_uses_best_v0r(r_type,
     assert scan.best_v0r == _FIXED_V0R
     assert rpars.last_R == fixed.last_R
     assert rpars.last_R > best.last_R
+
+
+@pytest.mark.skipif(not CAN_PLOT, reason='Needs matplotlib')
+@pytest.mark.parametrize('r_type', _TYPES)
+def test_run_new_rfactor_writes_pdfs(r_type,
+                                     fe2o3_012_1x1_dataset,
+                                     monkeypatch,
+                                     tmp_path):
+    """Check the PDFs written by run_new_rfactor with plotting on."""
+    monkeypatch.chdir(tmp_path)
+    results = _run_section(fe2o3_012_1x1_dataset,
+                           r_type,
+                           monkeypatch,
+                           plot=True)
+    assert results['r_overall'] == pytest.approx(
+        _load_expected(fe2o3_012_1x1_dataset,
+                       'run_new_rfactor',
+                       r_type)['r_overall'],
+        )
+    assert (tmp_path / 'Rfactor_plots_refcalc.pdf').is_file()
+    has_analysis = RFactorType[r_type.upper()] in (RFactorType.PENDRY,
+                                                   RFactorType.SMOOTH)
+    analysis_file = tmp_path / 'Rfactor_analysis_refcalc.pdf'
+    assert analysis_file.is_file() == has_analysis
 
 
 _PDF_R_TYPES = {
