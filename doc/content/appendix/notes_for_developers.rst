@@ -122,7 +122,7 @@ and only run with the option ``--release``:
 Tests go in the release tier if they take very long and add little over the
 other TensErLEED tests (currently, the calculation of the phase shifts of the
 :math:`\mathrm{Al_2O_3}/\mathrm{NiAl}(111)` slab with a core hole). The cases
-are listed in :file:`tests/tiers.py` (``RELEASE_CASES``) by fixture
+are listed in :file:`tests/harness/tiers.py` (``RELEASE_CASES``) by fixture
 (``run_phaseshift``) and case id, so that every test that uses the fixture
 for that slab is a release test. Entries that match no case of a collected
 test are reported as stale, like those of ``SLOW_CASES``. Naming a release
@@ -192,7 +192,7 @@ is especially worthwhile for quick runs:
 
 Slow tests are kept up to date with the option ``--check-slow``. The slow
 tests that are individual cases of a parametrized test (as opposed to whole
-tests or classes marked ``slow``) are listed in :file:`tests/tiers.py`
+tests or classes marked ``slow``) are listed in :file:`tests/harness/tiers.py`
 (``SLOW_CASES``): it maps each test to the parts of the case ids that make it
 slow. At collection, an entry that matches no test or case (e.g., after
 renaming a test or changing its parameters) is an error naming it; update the
@@ -210,8 +210,8 @@ durations, so ``--check-slow`` needs ``--no-cov``:
 
 At the end of the run, the option lists the tests that are not marked
 ``slow`` but whose call took 1.2 times the threshold (``SLOW_THRESHOLD`` in
-:file:`tests/tiers.py`) or more, and those marked ``slow`` whose call took
-less than 0.8 times the threshold. The band around the threshold (the
+:file:`tests/harness/tiers.py`) or more, and those marked ``slow`` whose call
+took less than 0.8 times the threshold. The band around the threshold (the
 ``SLOW_BAND`` constant in the same module) is there because the time of a
 test depends on the cases that ran before it; tests in the band keep their
 marking. It only reports: it changes neither the selection nor the exit

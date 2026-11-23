@@ -1,19 +1,19 @@
-"""Tests for module optional_dependencies of viperleed.tests."""
+"""Tests for module optional_dependencies of tests.harness."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-21'
 __license__ = 'GPLv3+'
 
-import os
-from pathlib import Path
-
 import pytest
 from pytest_cases import parametrize
 
-from . import optional_dependencies
+from .. import optional_dependencies
+from .conftest import XDIST_ARGS
+from .conftest import run_pytest
 
 _ALLOW = optional_dependencies.ALLOW_MISSING_OPTION
 _REQUIRE = optional_dependencies.REQUIRE_ALL_OPTION
@@ -31,24 +31,7 @@ def test_unaffected():
 def _run(pytester, *args, source=_TEST_FILE):
     """Run pytest on a test file with the plugin."""
     pytester.makepyfile(source)
-    return pytester.runpytest_inprocess(
-        *args,
-        '-p', 'no:cacheprovider',
-        plugins=[optional_dependencies],
-        )
-
-
-def _run_xdist(pytester, mocker, *args):
-    """Run pytest with pytest-xdist on the test file with the plugin."""
-    root = Path(__file__).resolve().parent.parent
-    mocker.patch.dict(os.environ, {'PYTHONPATH': str(root)})
-    pytester.makepyfile(_TEST_FILE)
-    return pytester.runpytest_subprocess(
-        *args,
-        '-n', '2',
-        '-p', 'no:cacheprovider',
-        '-p', optional_dependencies.__name__,
-        )
+    return run_pytest(pytester, *args, plugin=optional_dependencies)
 
 
 _UNREGISTERED = 'not-a-dependency'
@@ -138,9 +121,9 @@ def test_allow_missing_alone(pytester):
     ((), {'failed': 1}),
     ((f'{_ALLOW}=gfortran',), {'skipped': 1}),
     ))
-def test_allow_missing_xdist(pytester, mocker, allow, outcome):
+def test_allow_missing_xdist(pytester, allow, outcome):
     """Check --require-all and --allow-missing with pytest-xdist."""
-    result = _run_xdist(pytester, mocker, _REQUIRE, *allow)
+    result = _run(pytester, _REQUIRE, *allow, *XDIST_ARGS)
     result.assert_outcomes(passed=1, **outcome)
 
 
@@ -163,8 +146,8 @@ def test_allow_missing_unknown(pytester, allow):
 
 
 @pytest.mark.slow  # About 1 s (pytester, subprocess)
-def test_allow_missing_unknown_xdist(pytester, mocker):
+def test_allow_missing_unknown_xdist(pytester):
     """Check that unknown names are an error with pytest-xdist."""
-    result = _run_xdist(pytester, mocker, _REQUIRE, f'{_ALLOW}=gfortan')
+    result = _run(pytester, _REQUIRE, f'{_ALLOW}=gfortan', *XDIST_ARGS)
     assert result.ret == pytest.ExitCode.USAGE_ERROR
     result.stderr.fnmatch_lines(['*unknown optional dependencies gfortan.*'])

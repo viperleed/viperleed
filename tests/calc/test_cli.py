@@ -12,7 +12,6 @@ import ast
 import inspect
 import logging
 import os
-from pathlib import Path
 import subprocess
 import sys
 from unittest.mock import patch
@@ -48,13 +47,12 @@ _UNUSED_LEVEL = logging.WARNING + 1
 
 
 @pytest.mark.slow
-def test_calc_never_loads_graphics():
+def test_calc_never_loads_graphics(repo_root):
     """Ensure that 'viperleed calc' does not load graphics modules.
 
     The check runs in a fresh process: in this one, other tests may
     have loaded graphics modules already.
     """
-    repo_root = Path(__file__).resolve().parents[2]
     check = ('from tests.calc.test_cli import _find_graphics_modules; '
              'print(repr(_find_graphics_modules()))')
     result = subprocess.run((sys.executable, '-c', check),  # noqa: S603
