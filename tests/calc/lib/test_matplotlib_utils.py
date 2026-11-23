@@ -4,12 +4,13 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-07-10'
 __license__ = 'GPLv+3'
 
 import logging
 
+import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize
 
@@ -18,6 +19,7 @@ from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import _LOGGER
 from viperleed.calc.lib.matplotlib_utils import HasNoMatplotlibError
 from viperleed.calc.lib.matplotlib_utils import close_figures
+from viperleed.calc.lib.matplotlib_utils import get_colormap
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 from viperleed.calc.lib.matplotlib_utils import raise_without_matplotlib
@@ -26,6 +28,8 @@ from viperleed.calc.lib.matplotlib_utils import use_calc_style
 
 
 MOCK_RETURN = 'Function called'
+_N_COLORS = (1, 2, 7, 300)
+_RGB = ('red', 'green', 'blue')
 
 
 @fixture(name='mock_logger')
@@ -98,6 +102,11 @@ class TestCannotPlot:
         with pytest.raises(HasNoMatplotlibError):
             func()
 
+    def test_raises_get_colormap(self):
+        """Check that get_colormap complains without matplotlib."""
+        with pytest.raises(HasNoMatplotlibError):
+            get_colormap('viridis')
+
 
 class TestCanPlot:
     """Collection of tests for when matplotlib is available."""
@@ -157,3 +166,44 @@ class TestCanPlot:
         mock_mpl_style = mocker.patch.object(matplotlib_utils, 'mpl_style')
         use_calc_style()
         mock_mpl_style.use.assert_called_once()
+
+
+class TestGetColormap:
+    """Tests for the get_colormap function."""
+
+    @fixture(name='mpl', autouse=True)
+    def fixture_mpl(self):
+        """Return matplotlib, or skip if it is not available."""
+        return pytest.importorskip('matplotlib')
+
+    @parametrize(n_colors=(None, 5))
+    def test_colormap(self, n_colors, mpl):
+        """Check that a Colormap is returned as is, as by get_cmap."""
+        cmap = mpl.colors.ListedColormap(_RGB)
+        assert get_colormap(cmap, n_colors) is cmap
+
+    _invalid = {
+        'unknown name': 'not-a-colormap',
+        'unhashable': ['viridis'],
+        }
+
+    @parametrize(cmap=_invalid.values(), ids=_invalid)
+    @parametrize(n_colors=(None, 5))
+    def test_invalid(self, cmap, n_colors):
+        """Check complaints for an invalid colormap."""
+        with pytest.raises(ValueError):
+            get_colormap(cmap, n_colors)
+
+    def test_name(self, mpl):
+        """Check that a colormap is found from its name."""
+        cmap = get_colormap('viridis')
+        assert cmap.name == 'viridis'
+        assert np.array_equal(cmap.colors, mpl.colormaps['viridis'].colors)
+
+    @parametrize(n_colors=_N_COLORS)
+    def test_resampled(self, n_colors, mpl):
+        """Check resampling of a named colormap to n_colors."""
+        resampled = get_colormap('viridis', n_colors)
+        expect = mpl.colormaps['viridis'](np.linspace(0, 1, n_colors))
+        assert resampled.N == n_colors
+        assert np.allclose(resampled.colors, expect)
