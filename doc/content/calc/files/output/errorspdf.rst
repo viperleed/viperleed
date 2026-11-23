@@ -86,5 +86,4 @@ separate single plots for each parameter. The axis labels name the
 |R-factor| type selected by :ref:`RFACTORTYPE`.
 
 .. versionchanged:: 0.15.0
-   The axis labels of ``Errors.pdf`` name the |R-factor| type in use.
    Earlier versions always labeled the axis as Pendry |R factor|.

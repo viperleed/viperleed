@@ -30,10 +30,8 @@ The Rfactor_analysis files are written only for Pendry's and the smooth
 Y functions of |RS| are plotted.
 
 .. versionchanged:: 0.15.0
-   For the smooth |R factor|, the Y functions of |RS| are plotted. No
-   Rfactor_analysis file is written for :math:`R_2` and the Zanazzi-Jona
-   |R factor|. Earlier versions plotted the Pendry Y functions also for
-   :math:`R_2`.
+   Earlier versions also wrote Rfactor_analysis files for :math:`R_2`,
+   with the Y functions of the Pendry |R factor|.
 
 
 .. figure:: /_static/output_examples/Rfactor_analysis_refcalc_example.svg

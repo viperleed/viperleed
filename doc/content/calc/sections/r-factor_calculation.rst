@@ -128,10 +128,9 @@ For each beam, :math:`R_2` is defined as
 
 where the integrals run over the energy range in which both curves are
 defined. The scaling factor :math:`c` removes the difference in the
-absolute intensities of the two curves. Note that the :math:`R_2` calculated
-by the TensErLEED |R-factor| program (used with
-:ref:`R_FACTOR_LEGACY<rfactorlegacy>` = ``True``) is half of the value of
-Eq. :eq:`eq_R2_def`.
+absolute intensities of the two curves. For how the :math:`R_2` of the
+TensErLEED |R-factor| program differs from Eq. :eq:`eq_R2_def`, see
+:ref:`R_FACTOR_LEGACY<rfactorlegacy>`.
 
 :math:`R_\mathrm{ZJ}` compares the first and second derivatives of the
 scaled curves, which makes it sensitive mostly to the positions and shapes
