@@ -8,10 +8,11 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -20,6 +21,8 @@ from viperleed.calc.lib.version import Version
 
 _FORTRAN_LINE_LENGTH = 72  # FORTRAN line-length limit
 _F77_CONTINUATION_POS = 6  # Column of the continuation character
+_OPENBLAS_IMPORT_LIB = 'libopenblas.dll.a'  # As installed by MSYS2
+_PROBE_TIMEOUT = 30  # Seconds to wait for gfortran to answer a probe
 
 
 class FortranCompilerError(Exception):
@@ -61,6 +64,33 @@ def get_mpifort_version():
         raise NoCompilerVersionFoundError('Could not determine version '
                                           f'from\n{output}')
     return Version(match_['version'])
+
+
+def gfortran_finds_openblas():
+    """Return whether gfortran finds the OpenBLAS import library.
+
+    Ask gfortran for the location of libopenblas.dll.a, the import
+    library that MSYS2's OpenBLAS package installs on Windows. When
+    gfortran finds a library, it prints its absolute path, otherwise
+    it echoes the bare file name.
+
+    Returns
+    -------
+    found : bool
+        Whether gfortran reported an existing absolute path to the
+        OpenBLAS import library. False, without raising, if gfortran
+        is missing, fails, or does not answer in time.
+    """
+    probe = 'gfortran', f'-print-file-name={_OPENBLAS_IMPORT_LIB}'
+    try:
+        result = subprocess.run(probe,
+                                capture_output=True,
+                                check=True,
+                                timeout=_PROBE_TIMEOUT)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    lib_path = Path(result.stdout.decode(errors='replace').strip())
+    return lib_path.is_absolute() and lib_path.is_file()
 
 
 def wrap_fortran_line(string):
