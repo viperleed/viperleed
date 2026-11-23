@@ -37,8 +37,8 @@ SLOW_THRESHOLD = 0.5
 SLOW_BAND = 0.2
 
 TENSORLEED_FIXTURES = frozenset((
-    'tensorleed_path',
     'run_from_ase_refcalc',
+    'tensorleed_path',
     ))
 
 # Cases that take about SLOW_THRESHOLD or more (call phase, serial
@@ -54,10 +54,11 @@ TENSORLEED_FIXTURES = frozenset((
 # between unrelated cases whenever the code changes: a case that is
 # not marked is listed from 1.2 times SLOW_THRESHOLD, a listed one is
 # dropped below 0.8 times; in between it keeps its marking.
-# Only these cases are marked 'slow'.
-_SYMMETRY_TESTS = 'tests/calc/symmetry/test_symmetry.py::'
-_SLAB_TESTS = 'tests/calc/classes/test_slab.py::'
-_POSCAR_WRITE = 'tests/calc/files/test_poscar.py::TestPOSCARWrite::'
+# Only these cases are marked 'slow'. Keep one case per line, and the
+# tests and their cases sorted alphabetically (tests as written, i.e.,
+# by prefix constant first), so that adding or removing a case
+# changes one line. Use a prefix constant only for prefixes that more
+# than one test shares, or that would not fit on one line otherwise.
 _DELETE = 'tests/calc/utilities/poscar/test_delete.py::'
 _FIND_SYMMETRY = (
     'tests/calc/utilities/poscar/test_find_symmetry.py::TestFindSymmetry::'
@@ -65,14 +66,158 @@ _FIND_SYMMETRY = (
 _MODIFY_VACUUM = (
     'tests/calc/utilities/poscar/test_modify_vacuum.py::TestModifyVacuum::'
     )
-_SORT_BY_Z = 'tests/calc/utilities/poscar/test_sort_by_z.py::'
+_SLAB_TESTS = 'tests/calc/classes/test_slab.py::'
+_SYMMETRY_TESTS = 'tests/calc/symmetry/test_symmetry.py::'
 _WOODS_TESTS = 'tests/gui/leedsim/classes/woods/test_woods.py::'
-_SUPERCELL_TESTS = _SLAB_TESTS + 'TestSuperAndSubCell::'
-_PLANE_GROUP = _SYMMETRY_TESTS + 'TestPlaneGroupFinding::'
 _CONSTRAINTS = _SYMMETRY_TESTS + 'TestSymmetryConstraints::'
+_PLANE_GROUP = _SYMMETRY_TESTS + 'TestPlaneGroupFinding::'
 _REDUCTION = _SYMMETRY_TESTS + 'TestSymmetryReduction::'
-_SYMMETRIZATION = _SYMMETRY_TESTS + 'TestSlabSymmetrization::'
+_SUPERCELL_TESTS = _SLAB_TESTS + 'TestSuperAndSubCell::'
 SLOW_CASES = {
+    _CONSTRAINTS + 'test_correct_atom_linking': (
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-36C_p6m',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-Fe3O4_(001)_cod1010369',
+        'infoless_poscar-In2O3_(111)',
+        'infoless_poscar-Ir(111)_2rt3',
+        'infoless_poscar-STO(110)-4x1',
+        'infoless_poscar-Sb_Si(111)_rect',
+        'infoless_poscar-TiO2_supercell',
+        'infoless_poscar-diamond',
+        'infoless_poscar-graphene',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar-Fe3O4_SCV',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_diamond',
+        'poscar_fe3o4_001_cod',
+        'poscar_ir111_2rt3',
+        'poscar_mgo',
+        'poscar_sb_si_111',
+        'poscar_tio2_supercell',
+        'rcmm',
+        ),
+    _CONSTRAINTS + 'test_correct_free_directions': (
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-TiO2_supercell',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        'poscar_fe3o4_001_cod',
+        'poscar_tio2_supercell',
+        ),
+    _CONSTRAINTS + 'test_correct_group_after_constraint': (
+        'double_bulk-fe3o4',
+        'hex_cm_11',
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-Fe3O4_(001)_cod1010369',
+        'infoless_poscar-TiO2_supercell',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar-Cu2O(111)_1x1_surplus_oxygen',
+        'poscar-Fe3O4_SCV',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_diamond',
+        'poscar_fe3o4_001_cod',
+        'poscar_ir111_2rt3',
+        'poscar_sb_si_111',
+        'poscar_sto110_4x1',
+        'poscar_tio2_supercell',
+        ),
+    _CONSTRAINTS + 'test_preserve_displaced_symmetry': (
+        'displacement=([0.2, 0, 0],)-poscar_lsmo_001_rt2',
+        'hex_cm_01',
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-36C_p6m',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-Cu2O_111',
+        'infoless_poscar-LSMO_001_A_site',
+        'infoless_poscar-TiO2_supercell',
+        'infoless_poscar-graphene',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_tio2_supercell',
+        ),
+    _DELETE + 'TestDeleteBetween::test_delete_between_cli': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        ),
+    _FIND_SYMMETRY + 'test_pipe_poscar': (
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_tio2_supercell',
+        ),
+    _FIND_SYMMETRY + 'test_plane_group_to_outfile': (
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_tio2_supercell',
+        ),
+    _FIND_SYMMETRY + 'test_plane_group_to_stdout': (
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_tio2_supercell',
+        ),
+    _MODIFY_VACUUM + 'test_gap_relative': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-TiO2_supercell-vacuum_gap_size=-1.0',
+        ),
+    _MODIFY_VACUUM + 'test_not_enough_vacuum_error': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        ),
+    _MODIFY_VACUUM + 'test_shifted_slab_down': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-In2O3_(111)-vacuum_gap_size=15.0',
+        ),
+    _PLANE_GROUP + 'test_any_plane_group_found': (
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-36C_p6m',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-Cu2O_111',
+        'infoless_poscar-In2O3_(111)',
+        'infoless_poscar-TiO2_supercell',
+        'infoless_poscar-graphene',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_sb_si_111',
+        'poscar_tio2_supercell',
+        ),
+    _PLANE_GROUP + 'test_correct_plane_group': (
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_ir111_2rt3',
+        'poscar_sb_si_111',
+        'poscar_tio2_supercell',
+        ),
+    _REDUCTION + 'test_invalid_group': (
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-graphene',
+        'poscar_36carbon_atoms_cm',
+        ),
+    _REDUCTION + 'test_invalid_subgroup': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        ),
+    _REDUCTION + 'test_missing_direction': (
+        'infoless_poscar-36C_cm',
+        'infoless_poscar-36C_p6m',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'infoless_poscar-Cu2O(111)_1x1_surplus_oxygen',
+        'infoless_poscar-In2O3_(111)',
+        'infoless_poscar-TiO2_supercell',
+        'infoless_poscar-graphene',
+        'p3m1',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_lsmo_001_rt2',
+        'poscar_tio2_supercell',
+        ),
+    _SLAB_TESTS + 'TestEquivalence::test_slab_translated_not_equivalent': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
+        ),
     _SUPERCELL_TESTS + 'test_subcell_reverses_supercell': (
         '2x1-infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
         '2x2-infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
@@ -86,126 +231,33 @@ SLOW_CASES = {
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
         'infoless_poscar-TiO2_supercell',
         ),
-    _SLAB_TESTS + 'TestEquivalence::test_slab_translated_not_equivalent': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        ),
-    _POSCAR_WRITE + 'test_group_conserved': (
+    _SYMMETRY_TESTS + 'TestSlabSymmetrization::test_rattled_group': (
         'infoless_poscar-36C_cm',
+        'infoless_poscar-36C_p6m',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-TiO2_supercell', 'poscar_36carbon_atoms_cm',
+        'infoless_poscar-STO(110)-4x1',
+        'infoless_poscar-Sb_Si(111)_rect',
+        'infoless_poscar-TiO2_supercell',
+        'infoless_poscar-graphene',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_36carbon_atoms_cm',
+        'poscar_36carbon_atoms_p6m',
+        'poscar_fe2o3_012_1x1',
+        'poscar_sb_si_111',
         'poscar_tio2_supercell',
-        ),
-    _DELETE + 'TestDeleteBetween::test_delete_between_cli': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        ),
-    _FIND_SYMMETRY + 'test_pipe_poscar': (
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_tio2_supercell',
-        ),
-    _FIND_SYMMETRY + 'test_plane_group_to_outfile': (
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_tio2_supercell',
-        ),
-    _FIND_SYMMETRY + 'test_plane_group_to_stdout': (
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_tio2_supercell',
-        ),
-    _MODIFY_VACUUM + 'test_gap_relative': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-TiO2_supercell-vacuum_gap_size=-1.0',
-        ),
-    _MODIFY_VACUUM + 'test_not_enough_vacuum_error': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        ),
-    _MODIFY_VACUUM + 'test_shifted_slab_down': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-In2O3_(111)-vacuum_gap_size=15.0',
-        ),
-    _SORT_BY_Z + 'test_overwrite_file': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
         ),
     _WOODS_TESTS + 'TestRaises::test_invalid_init_args': (
         'gamma too complex',
         ),
-    _PLANE_GROUP + 'test_any_plane_group_found': (
-        'infoless_poscar-36C_cm', 'infoless_poscar-36C_p6m',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-Cu2O_111', 'infoless_poscar-In2O3_(111)',
-        'infoless_poscar-TiO2_supercell', 'infoless_poscar-graphene',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_36carbon_atoms_cm',
-        'poscar_36carbon_atoms_p6m', 'poscar_sb_si_111',
-        'poscar_tio2_supercell',
-        ),
-    _PLANE_GROUP + 'test_correct_plane_group': (
-        'infoless_poscar-36C_cm',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_36carbon_atoms_cm',
-        'poscar_36carbon_atoms_p6m', 'poscar_ir111_2rt3', 'poscar_sb_si_111',
-        'poscar_tio2_supercell',
-        ),
-    _SYMMETRIZATION + 'test_rattled_group': (
-        'infoless_poscar-36C_cm', 'infoless_poscar-36C_p6m',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-STO(110)-4x1', 'infoless_poscar-Sb_Si(111)_rect',
-        'infoless_poscar-TiO2_supercell', 'infoless_poscar-graphene',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_36carbon_atoms_cm',
-        'poscar_36carbon_atoms_p6m', 'poscar_fe2o3_012_1x1',
-        'poscar_sb_si_111', 'poscar_tio2_supercell',
-        ),
-    _CONSTRAINTS + 'test_correct_atom_linking': (
-        'infoless_poscar-36C_cm', 'infoless_poscar-36C_p6m',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-Fe3O4_(001)_cod1010369',
-        'infoless_poscar-In2O3_(111)', 'infoless_poscar-Ir(111)_2rt3',
-        'infoless_poscar-STO(110)-4x1', 'infoless_poscar-Sb_Si(111)_rect',
-        'infoless_poscar-TiO2_supercell', 'infoless_poscar-diamond',
-        'infoless_poscar-graphene', 'poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'poscar-Fe3O4_SCV', 'poscar_36carbon_atoms_cm',
-        'poscar_36carbon_atoms_p6m', 'poscar_diamond', 'poscar_fe3o4_001_cod',
-        'poscar_ir111_2rt3', 'poscar_mgo', 'poscar_sb_si_111',
-        'poscar_tio2_supercell', 'rcmm',
-        ),
-    _CONSTRAINTS + 'test_correct_free_directions': (
+    'tests/calc/files/test_poscar.py::TestPOSCARWrite::test_group_conserved': (
         'infoless_poscar-36C_cm',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
         'infoless_poscar-TiO2_supercell',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_36carbon_atoms_cm',
-        'poscar_fe3o4_001_cod', 'poscar_tio2_supercell',
-        ),
-    _CONSTRAINTS + 'test_correct_group_after_constraint': (
-        'double_bulk-fe3o4', 'hex_cm_11', 'infoless_poscar-36C_cm',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-Fe3O4_(001)_cod1010369',
-        'infoless_poscar-TiO2_supercell',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'poscar-Cu2O(111)_1x1_surplus_oxygen', 'poscar-Fe3O4_SCV',
-        'poscar_36carbon_atoms_cm', 'poscar_36carbon_atoms_p6m',
-        'poscar_diamond', 'poscar_fe3o4_001_cod', 'poscar_ir111_2rt3',
-        'poscar_sb_si_111', 'poscar_sto110_4x1', 'poscar_tio2_supercell',
-        ),
-    _CONSTRAINTS + 'test_preserve_displaced_symmetry': (
-        'displacement=([0.2, 0, 0],)-poscar_lsmo_001_rt2', 'hex_cm_01',
-        'infoless_poscar-36C_cm', 'infoless_poscar-36C_p6m',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-Cu2O_111', 'infoless_poscar-LSMO_001_A_site',
-        'infoless_poscar-TiO2_supercell', 'infoless_poscar-graphene',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_36carbon_atoms_cm',
-        'poscar_36carbon_atoms_p6m', 'poscar_tio2_supercell',
-        ),
-    _REDUCTION + 'test_invalid_group': (
-        'infoless_poscar-36C_cm', 'infoless_poscar-graphene',
         'poscar_36carbon_atoms_cm',
-        ),
-    _REDUCTION + 'test_invalid_subgroup': (
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'poscar_36carbon_atoms_cm',
-        ),
-    _REDUCTION + 'test_missing_direction': (
-        'infoless_poscar-36C_cm', 'infoless_poscar-36C_p6m',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
-        'infoless_poscar-Cu2O(111)_1x1_surplus_oxygen',
-        'infoless_poscar-In2O3_(111)', 'infoless_poscar-TiO2_supercell',
-        'infoless_poscar-graphene', 'p3m1',
-        'poscar-Al2O3_NiAl(111)_cHole_20061025', 'poscar_36carbon_atoms_cm',
-        'poscar_36carbon_atoms_p6m', 'poscar_lsmo_001_rt2',
         'poscar_tio2_supercell',
+        ),
+    'tests/calc/utilities/poscar/test_sort_by_z.py::test_overwrite_file': (
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025',
         ),
     }
 
@@ -215,7 +267,8 @@ SLOW_CASES = {
 # case id has one of the parts. This makes any consumer of the
 # run_phaseshift fixture for the Al2O3 slab a release case: its
 # PHASESHIFTS calculation is by far the longest one of the tier.
-_AL2O3_CHOLE = 'poscar-Al2O3_NiAl(111)_cHole_20061025'
 RELEASE_CASES = {
-    'run_phaseshift': (_AL2O3_CHOLE,),
+    'run_phaseshift': (
+        'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        ),
     }
