@@ -2,7 +2,7 @@
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
@@ -69,6 +69,8 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
 
     # Array comparisons: bool(array) would be ambiguous
     # pylint: disable=compare-to-zero
+    # Divide via where, not utils.nonzero_or_nan: the JAX gradient
+    # w.r.t. the numerator stays 0, not NaN, where the denominator is 0
     if groups is None:
         return dnl.xp.sum(numerators) / dnl.xp.sum(denominators)
     if isinstance(groups, str) and groups == _PER_BEAM:

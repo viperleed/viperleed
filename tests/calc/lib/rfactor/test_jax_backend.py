@@ -1,7 +1,7 @@
-"""Tests for the R-factor functions running with JAX under jax.jit."""
+"""Tests for the R-factor functions running with JAX."""
 
 __authors__ = ('Florian Kraushofer (@fkraushofer)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-08'
 __license__ = 'GPLv3+'
 
@@ -16,6 +16,7 @@ from viperleed.calc.lib.rfactor import r_1
 from viperleed.calc.lib.rfactor import r_2
 from viperleed.calc.lib.rfactor import smooth
 from viperleed.calc.lib.rfactor import zannazi_jona
+from viperleed.calc.lib.rfactor.groups import group_rfactors
 
 jax = pytest.importorskip('jax')
 interpax = pytest.importorskip('interpax')
@@ -37,7 +38,7 @@ _NUM_GROUPS = 3
 _RTOL = 1e-12
 
 
-# A fixture, though used once, as the test must request it only after
+# A fixture, as test_jit_matches_numpy must request it only after
 # computing its NumPy reference, and x64 must be reset on teardown.
 @pytest.fixture(name='jax_backend')
 def fixture_jax_backend(monkeypatch):
@@ -136,3 +137,22 @@ def test_jit_matches_numpy(rfactor_func,
                                             **group_kwargs)
     assert isinstance(result, jax.Array)
     np.testing.assert_allclose(np.asarray(result), expected, rtol=_RTOL)
+
+
+@pytest.mark.usefixtures('jax_backend')
+@pytest.mark.parametrize(('group_kwargs', 'expected'), [
+    ({'groups': 'beam'}, (0.5, 0.0, 1.0)),
+    ({'groups': (0, 1, 0), 'num_groups': 2}, (1/3, 0.0, 1/3)),
+    ], ids=('beam', 'group'))
+def test_group_rfactors_gradient_zero_denominator(group_kwargs, expected):
+    """Check a zero denominator gives zero, not NaN, gradients."""
+    denominators = jax.numpy.asarray((2.0, 0.0, 1.0))
+
+    def _nansum_rfactors(numerators):
+        rfactors = group_rfactors(numerators,
+                                  denominators,
+                                  **group_kwargs)
+        return jax.numpy.nansum(rfactors)
+
+    gradient = jax.grad(_nansum_rfactors)(jax.numpy.asarray((1.0, 2.0, 0.5)))
+    np.testing.assert_allclose(np.asarray(gradient), expected)
