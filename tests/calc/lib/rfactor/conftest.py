@@ -87,7 +87,8 @@ def synthetic_pair(sin_spline, cos_spline):
     }
 
 
-def _evaluate_spline_triplet(data_spline, energy_grid):
+def evaluate_spline_triplet(data_spline, energy_grid):
+    """Return a spline and its first two derivatives on energy_grid."""
     deriv_1 = data_spline.derivative()
     deriv_2 = deriv_1.derivative()
     return (
@@ -142,8 +143,8 @@ def fe2o3_012_1x1_dataset():
     energy_step = 0.5
     energies = np.arange(emin, emax + 0.25 * energy_step, energy_step)
 
-    exp_triplet = _evaluate_spline_triplet(exp_spline, energies)
-    theo_triplet = _evaluate_spline_triplet(theo_spline, energies)
+    exp_triplet = evaluate_spline_triplet(exp_spline, energies)
+    theo_triplet = evaluate_spline_triplet(theo_spline, energies)
 
     return {
         'label': 'fe2o3-012-1x1',
@@ -164,7 +165,10 @@ def fe2o3_012_1x1_dataset():
     }
 
 
-def build_regression_payload(dataset):
+@pytest.fixture(scope='session')
+def regression_payload(fe2o3_012_1x1_dataset):
+    """Return the R factors of the Fe2O3(012) data, as stored."""
+    dataset = fe2o3_012_1x1_dataset
     funcs = {
         'pendry': pendry.r_pendry,
         'r1': r_1.r_1,
@@ -215,13 +219,10 @@ def build_regression_payload(dataset):
     return payload
 
 
-def load_expected_payload():
-    return json.loads(EXPECTED_FILE.read_text())
-
-
-def write_expected_payload(payload):
-    text = json.dumps(payload, indent=2, sort_keys=True)
-    EXPECTED_FILE.write_text(text + '\n')
+@pytest.fixture
+def expected_regression_file():
+    """Return the path to the stored Fe2O3(012) R-factor values."""
+    return EXPECTED_FILE
 
 
 def make_rparams(dataset, r_type, expbeams, theobeams):

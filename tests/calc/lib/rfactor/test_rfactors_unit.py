@@ -15,6 +15,8 @@ from viperleed.calc.lib.rfactor import r_2
 from viperleed.calc.lib.rfactor import smooth
 from viperleed.calc.lib.rfactor import zannazi_jona
 
+from .conftest import evaluate_spline_triplet
+
 
 RFACTOR_FUNCS = (
     pendry.r_pendry,
@@ -23,6 +25,31 @@ RFACTOR_FUNCS = (
     smooth.r_s,
     zannazi_jona.r_zjj,
 )
+
+NAN = np.nan
+
+STEP = 0.5
+# Three beams on a 6-point grid, overlapping on 6, 3 and 5 points.
+OVERLAPS = ((0, 6), (1, 4), (0, 5))
+EXP_I = ((1.0, 2.0, 3.0, 2.0, 1.0, 2.0),
+         (9.9, 1.0, 3.0, 2.0, 9.9, 9.9),
+         (2.0, 1.0, 1.5, 3.0, 2.5, 9.9))
+EXP_D1 = ((1.0, 1.0, -1.0, -1.0, 0.5, 2.0),
+          (9.9, 2.0, 0.0, -2.0, 9.9, 9.9),
+          (0.5, 1.0, 1.5, -1.0, -3.0, 9.9))
+EXP_D2 = ((0.5, -1.0, 1.0, 2.0, -2.0, 1.0),
+          (9.9, 1.0, -1.0, 0.5, 9.9, 9.9),
+          (1.0, 0.5, -1.0, 1.0, 2.0, 9.9))
+THEO_I = ((1.5, 1.0, 2.0, 3.0, 1.0, 1.0),
+          (9.9, 2.0, 2.0, 1.0, 9.9, 9.9),
+          (1.0, 2.0, 1.0, 2.0, 3.0, 9.9))
+THEO_D1 = ((0.5, 0.5, 1.0, 0.0, -1.0, 1.0),
+           (9.9, 1.0, 0.5, -1.0, 9.9, 9.9),
+           (1.0, 0.5, -0.5, 1.5, -1.0, 9.9))
+THEO_D2 = ((1.0, 0.5, -1.0, 1.0, -0.5, 2.0),
+           (9.9, 0.5, 0.5, -1.0, 9.9, 9.9),
+           (-1.0, 1.0, 0.5, 0.5, 1.0, 9.9))
+GROUPS = [0, 0, 1]
 
 
 @pytest.mark.parametrize('func', RFACTOR_FUNCS)
@@ -43,21 +70,8 @@ def test_rfactor_spline_and_precomputed_paths_agree(func, synthetic_pair):
     spline_1 = synthetic_pair['data_spline_1']
     spline_2 = synthetic_pair['data_spline_2']
 
-    deriv_1_1 = spline_1.derivative()
-    deriv_1_2 = deriv_1_1.derivative()
-    deriv_2_1 = spline_2.derivative()
-    deriv_2_2 = deriv_2_1.derivative()
-
-    data_and_derivatives_1 = (
-        spline_1(energies),
-        deriv_1_1(energies),
-        deriv_1_2(energies),
-    )
-    data_and_derivatives_2 = (
-        spline_2(energies),
-        deriv_2_1(energies),
-        deriv_2_2(energies),
-    )
+    data_and_derivatives_1 = evaluate_spline_triplet(spline_1, energies)
+    data_and_derivatives_2 = evaluate_spline_triplet(spline_2, energies)
 
     result_from_splines = func(
         synthetic_pair['v0i'],
@@ -110,9 +124,6 @@ def test_pendry_matches_existing_reference_value(synthetic_pair):
         data_spline_2=synthetic_pair['data_spline_2'],
     )
     assert calc_r == pytest.approx(1.904792, rel=1e-6)
-
-
-NAN = np.nan
 
 
 def test_pendry_from_y_weighs_overlap_edges_by_half():
@@ -232,30 +243,6 @@ def test_zj_ignores_experiment_outside_theory_range():
         data_and_derivatives_2=theo,
     )
     assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
-
-
-STEP = 0.5
-# Three beams on a 6-point grid, overlapping on 6, 3 and 5 points.
-OVERLAPS = ((0, 6), (1, 4), (0, 5))
-EXP_I = ((1.0, 2.0, 3.0, 2.0, 1.0, 2.0),
-         (9.9, 1.0, 3.0, 2.0, 9.9, 9.9),
-         (2.0, 1.0, 1.5, 3.0, 2.5, 9.9))
-EXP_D1 = ((1.0, 1.0, -1.0, -1.0, 0.5, 2.0),
-          (9.9, 2.0, 0.0, -2.0, 9.9, 9.9),
-          (0.5, 1.0, 1.5, -1.0, -3.0, 9.9))
-EXP_D2 = ((0.5, -1.0, 1.0, 2.0, -2.0, 1.0),
-          (9.9, 1.0, -1.0, 0.5, 9.9, 9.9),
-          (1.0, 0.5, -1.0, 1.0, 2.0, 9.9))
-THEO_I = ((1.5, 1.0, 2.0, 3.0, 1.0, 1.0),
-          (9.9, 2.0, 2.0, 1.0, 9.9, 9.9),
-          (1.0, 2.0, 1.0, 2.0, 3.0, 9.9))
-THEO_D1 = ((0.5, 0.5, 1.0, 0.0, -1.0, 1.0),
-           (9.9, 1.0, 0.5, -1.0, 9.9, 9.9),
-           (1.0, 0.5, -0.5, 1.5, -1.0, 9.9))
-THEO_D2 = ((1.0, 0.5, -1.0, 1.0, -0.5, 2.0),
-           (9.9, 0.5, 0.5, -1.0, 9.9, 9.9),
-           (-1.0, 1.0, 0.5, 0.5, 1.0, 9.9))
-GROUPS = [0, 0, 1]
 
 
 def _integral(values):

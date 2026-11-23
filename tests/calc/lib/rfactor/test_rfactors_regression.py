@@ -5,15 +5,10 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-04-07'
 __license__ = 'GPLv3+'
 
+import json
+
 import numpy as np
 import pytest
-
-from .conftest import (
-    EXPECTED_FILE,
-    build_regression_payload,
-    load_expected_payload,
-    write_expected_payload,
-)
 
 
 def _assert_regression_block(actual, expected):
@@ -40,22 +35,27 @@ def _assert_regression_block(actual, expected):
     )
 
 
-def test_realdata_regression_payload(request, fe2o3_012_1x1_dataset):
+def test_realdata_regression_payload(request,
+                                     regression_payload,
+                                     expected_regression_file):
     """Check the R factors of real data against the stored values."""
-    actual = build_regression_payload(fe2o3_012_1x1_dataset)
+    actual = regression_payload
 
     if request.config.getoption('--update-rfactor-expected'):
-        write_expected_payload(actual)
-        pytest.skip(f'Updated expected regression data in {EXPECTED_FILE}')
+        text = json.dumps(actual, indent=2, sort_keys=True)
+        expected_regression_file.write_text(text + '\n')
+        pytest.skip(
+            f'Updated expected regression data in {expected_regression_file}'
+        )
 
-    if not EXPECTED_FILE.is_file():
+    if not expected_regression_file.is_file():
         pytest.fail(
             'Missing expected regression file. Generate it with:\n'
             'pytest tests/calc/lib/rfactor/test_rfactors_regression.py '
             '--update-rfactor-expected'
         )
 
-    expected = load_expected_payload()
+    expected = json.loads(expected_regression_file.read_text())
 
     assert actual['label'] == expected['label']
     assert actual['v0i'] == pytest.approx(expected['v0i'])
@@ -68,9 +68,9 @@ def test_realdata_regression_payload(request, fe2o3_012_1x1_dataset):
         _assert_regression_block(actual[key], expected[key])
 
 
-def test_realdata_spline_and_precomputed_paths_match(fe2o3_012_1x1_dataset):
+def test_realdata_spline_and_precomputed_paths_match(regression_payload):
     """Check that splines and precomputed arrays give the same R."""
-    payload = build_regression_payload(fe2o3_012_1x1_dataset)
+    payload = regression_payload
 
     for key in ('pendry', 'r1', 'r2', 'rs', 'zj'):
         assert payload[key]['overall_from_splines'] == pytest.approx(
@@ -85,9 +85,9 @@ def test_realdata_spline_and_precomputed_paths_match(fe2o3_012_1x1_dataset):
         )
 
 
-def test_realdata_outputs_are_finite(fe2o3_012_1x1_dataset):
+def test_realdata_outputs_are_finite(regression_payload):
     """Check that R is finite, with one value per beam."""
-    payload = build_regression_payload(fe2o3_012_1x1_dataset)
+    payload = regression_payload
 
     for key in ('pendry', 'r1', 'r2', 'rs', 'zj'):
         assert np.isfinite(payload[key]['overall'])
