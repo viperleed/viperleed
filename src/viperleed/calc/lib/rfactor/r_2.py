@@ -34,9 +34,11 @@ def r_2(
     both datasets are defined. This is the definition of Van Hove,
     Weinberg and Chan, "Low-Energy Electron Diffraction" (Springer,
     1986), https://doi.org/10.1007/978-3-642-82721-1, also used in
-    Imre et al., arXiv:2511.05448 (Eq. 1). The R2 of TensErLEED
-    (legacy code) includes an additional factor 1/2, i.e., it is half
-    of the value calculated here.
+    Imre et al., arXiv:2511.05448 (Eq. 1). The R2 of the TensErLEED
+    R-factor program (rfactor.f, used with R_FACTOR_LEGACY) includes
+    an additional factor 1/2, i.e., it is half of the value calculated
+    here. The R2 of the TensErLEED structure search (lib.search.f)
+    has no such factor.
 
     The overall R2 value, and the value of each group of beams, is the
     mean of the per-beam R2 weighted with the length (n - 1) * step of
