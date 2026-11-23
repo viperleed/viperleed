@@ -443,11 +443,24 @@ for how to install ``gfortran`` on various operating systems.
         gfortran --version
 
     In addition to ``gfortran``, you also need to install the :term:`BLAS`
-    and :term:`LAPACK` libraries. Use
+    and :term:`LAPACK` libraries. We recommend OpenBLAS, an optimized
+    implementation that makes TensErLEED considerably faster than the
+    reference libraries:
+
+    .. code-block:: bash
+
+        sudo apt install libopenblas-dev
+
+    This package provides both ``libblas`` and ``liblapack``, which is what
+    the default :ref:`FORTRAN_COMP<fortran_comp>` flags link to. The
+    reference libraries also work, but are slower:
 
     .. code-block:: bash
 
         sudo apt install libblas-dev liblapack-dev
+
+    If both are installed, :program:`update-alternatives` decides which one
+    is used.
 
     Next, install Open MPI (or another MPI implementation of your
     choice) to make ``mpirun`` available:
