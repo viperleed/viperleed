@@ -1,8 +1,9 @@
 """Test configuration for tests/harness/tests.
 
-Defines the fixtures and constants shared by the tests of the tier
-plugins (tier_marks, check_slow and release), which run sample tests
-with pytester.
+Most tests of the harness run sample tests with pytester, in the
+current process or in a subprocess. This module defines what these
+runs share, and the fixtures and constants of the tests of the tier
+plugins (tier_marks, check_slow and release).
 
 Fixtures
 --------
@@ -12,6 +13,13 @@ run (factory)
     Run sample tests with the tier options.
 slow_cases
     An empty dict in place of tiers.SLOW_CASES.
+subprocess_path (autouse)
+    Make package tests importable in pytest subprocesses.
+
+Functions
+---------
+run_pytest
+    Run pytest on the files of pytester, with a plugin of the tests.
 """
 
 __authors__ = (
@@ -27,19 +35,19 @@ import os
 import pytest
 
 from ... import conftest as root_conftest
-from ...helpers import REPO_ROOT
 from .. import tiers
 
-MODULE = 'test_sample.py::'  # Node-id prefix of the sample tests
-XDIST_ARGS = ('-n', '2')
-
-_INI = """
+# The markers of the test suite, for the ini file of sample tests
+INI = """
 [pytest]
 markers =
     slow
     tensorleed
     release
 """
+MODULE = 'test_sample.py::'  # Node-id prefix of the sample tests
+XDIST_ARGS = ('-n', '2')
+
 _OTHER_FILE = """
 def test_unrelated():
     pass
@@ -67,49 +75,36 @@ def fixture_release_cases(monkeypatch):
 
 
 @pytest.fixture(name='run')
-def fixture_run(pytester, monkeypatch, slow_cases, release_cases):
+def fixture_run(pytester, slow_cases, release_cases):
     """Return a function that runs sample tests with the tier options.
 
     The function takes the command-line arguments, the `slow` cases
     to put in tiers.SLOW_CASES, the `release` cases to put in
     tiers.RELEASE_CASES, the `files` to write (default: the
-    sample tests), and whether to keep the `cache` (default: no). It
-    runs in the current process, unless `own_process` is True (default:
-    no) or the arguments request pytest-xdist. Use `own_process` for
-    runs with pytest-cov, which must not interfere with the coverage
-    of the outer run. A separate process gets `slow` handed over with
-    a plugin.
+    sample tests), and the `cache` and `own_process` arguments of
+    run_pytest. A separate process gets `slow` and `release` handed
+    over with a plugin.
     """
     def _run(*args, slow=None, release=None, files=None, cache=False,
              own_process=False):
         slow_cases.update(slow or {})
         release_cases.update(release or {})
-        pytester.makeini(_INI)
+        pytester.makeini(INI)
         pytester.makepyfile(**(files or _SAMPLE_FILES))
         options = list(args)
         if '-m' not in args:
             options.extend(('-m', ''))
-        if not cache:
-            options.extend(('-p', 'no:cacheprovider'))
-        if XDIST_ARGS[0] not in args and not own_process:
-            return pytester.runpytest_inprocess(
-                *options,
-                plugins=[root_conftest],
-                )
-        pytester.makepyfile(**{
-            _SLOW_PLUGIN: f'from tests.harness import tiers\n'
-                          f'tiers.SLOW_CASES.update({slow_cases!r})\n'
-                          f'tiers.RELEASE_CASES.update({release_cases!r})\n',
-            })
-        monkeypatch.setenv(
-            'PYTHONPATH',
-            os.pathsep.join((str(REPO_ROOT), str(pytester.path))),
-            )
-        return pytester.runpytest_subprocess(
-            *options,
-            '-p', _SLOW_PLUGIN,
-            '-p', root_conftest.__name__,
-            )
+        own_process = _in_own_process(args, own_process)
+        if own_process:
+            pytester.makepyfile(**{
+                _SLOW_PLUGIN:
+                    'from tests.harness import tiers\n'
+                    f'tiers.SLOW_CASES.update({slow_cases!r})\n'
+                    f'tiers.RELEASE_CASES.update({release_cases!r})\n',
+                })
+            options.extend(('-p', _SLOW_PLUGIN))
+        return run_pytest(pytester, *options, cache=cache,
+                          own_process=own_process)
     return _run
 
 
@@ -119,3 +114,56 @@ def fixture_slow_cases(monkeypatch):
     cases = {}
     monkeypatch.setattr(tiers, 'SLOW_CASES', cases)
     return cases
+
+
+@pytest.fixture(name='subprocess_path', autouse=True)
+def fixture_subprocess_path(monkeypatch, repo_root):
+    """Make package tests importable in pytest subprocesses.
+
+    The root of the repository goes first in PYTHONPATH, so that the
+    subprocesses import the plugins of this copy of the tests. The
+    folder of the pytester files is added by pytester itself.
+    """
+    python_path = [str(repo_root)]
+    if os.environ.get('PYTHONPATH'):
+        python_path.append(os.environ['PYTHONPATH'])
+    monkeypatch.setenv('PYTHONPATH', os.pathsep.join(python_path))
+
+
+def run_pytest(pytester, *args, plugin=root_conftest, cache=False,
+               own_process=False):
+    """Run pytest on the files of `pytester` with a plugin of the tests.
+
+    Parameters
+    ----------
+    pytester : pytest.Pytester
+        The pytester whose files are tested.
+    *args : str
+        Command-line arguments.
+    plugin : module, optional
+        The plugin to load. Default is tests/conftest.py, which loads
+        all the plugins of the test suite.
+    cache : bool, optional
+        Whether to keep the cache (e.g., for --lf). Default is False.
+    own_process : bool, optional
+        Whether to run pytest in a separate process. Default is False.
+        A separate process is used anyway if `args` request pytest-
+        xdist. Use it for runs with pytest-cov, which must not
+        interfere with the coverage of the outer run.
+
+    Returns
+    -------
+    result : pytest.RunResult
+        The outcome of the run.
+    """
+    options = list(args)
+    if not cache:
+        options.extend(('-p', 'no:cacheprovider'))
+    if _in_own_process(args, own_process):
+        return pytester.runpytest_subprocess(*options, '-p', plugin.__name__)
+    return pytester.runpytest_inprocess(*options, plugins=[plugin])
+
+
+def _in_own_process(args, own_process):
+    """Return whether pytest with `args` runs in a separate process."""
+    return own_process or XDIST_ARGS[0] in args

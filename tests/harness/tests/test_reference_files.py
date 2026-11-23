@@ -10,8 +10,9 @@ __license__ = 'GPLv3+'
 
 import pytest
 
-from ... import conftest
 from .. import reference_files
+from .conftest import XDIST_ARGS
+from .conftest import run_pytest
 
 _REWRITE = reference_files.REWRITE_OPTION
 _TEST_FILE = """
@@ -20,7 +21,6 @@ def test_compare(check_reference, tmp_path):
     written.write_text(WRITTEN, encoding='utf-8')
     check_reference(written, REFERENCE)
 """
-_XDIST_OPTION = '-n'
 _CHANGED = 'other\n'
 _BASE = 'line 1\nline 2\nline 3\n'
 _TIMESTAMP_A = 'Ag(100) 261023-142446\n'
@@ -35,18 +35,7 @@ def _run(pytester, written, reference, *args):
         f'WRITTEN = {written!r}\nREFERENCE = {str(reference)!r}\n'
         + _TEST_FILE
         )
-    run = (
-        pytester.runpytest_subprocess
-        if _XDIST_OPTION in args else
-        pytester.runpytest_inprocess
-        )
-    return run(*args, '-p', 'no:cacheprovider', '-p', conftest.__name__)
-
-
-@pytest.fixture(name='subprocess_path')
-def fixture_subprocess_path(monkeypatch, repo_root):
-    """Make the test-suite plugins importable in a subprocess."""
-    monkeypatch.setenv('PYTHONPATH', str(repo_root))
+    return run_pytest(pytester, *args)
 
 
 def _reference(pytester, text):
@@ -129,12 +118,10 @@ class TestCheckReference:
         assert reference.read_text(encoding='utf-8') == _BASE
 
     @pytest.mark.slow  # Subprocess, about 1 s
-    @pytest.mark.usefixtures('subprocess_path')
     def test_rewrite_xdist(self, pytester):
         """Check rewriting is reported with pytest-xdist."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, _CHANGED, reference, _REWRITE,
-                      _XDIST_OPTION, '2')
+        result = _run(pytester, _CHANGED, reference, _REWRITE, *XDIST_ARGS)
         result.assert_outcomes(passed=0, skipped=1)
         result.stdout.fnmatch_lines([
             '*rewritten reference files*',
@@ -143,14 +130,12 @@ class TestCheckReference:
         assert reference.read_text(encoding='utf-8') == _CHANGED
 
     @pytest.mark.slow  # Subprocess, about 1 s
-    @pytest.mark.usefixtures('subprocess_path')
     def test_mismatch_xdist(self, pytester):
         """Check a mismatch fails with pytest-xdist."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, _CHANGED, reference, _XDIST_OPTION, '2')
+        result = _run(pytester, _CHANGED, reference, *XDIST_ARGS)
         result.assert_outcomes(failed=1)
 
-    @pytest.mark.usefixtures('subprocess_path')
     @pytest.mark.parametrize(
         'args',
         [
@@ -158,7 +143,7 @@ class TestCheckReference:
             pytest.param(('--no-summary',), id='no-summary'),
             pytest.param(('-p', 'no:terminal'), id='no-terminal'),
             pytest.param(
-                (_XDIST_OPTION, '2'),
+                XDIST_ARGS,
                 id='xdist',
                 marks=pytest.mark.slow,  # Subprocess, about 1 s
                 ),

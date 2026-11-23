@@ -17,7 +17,6 @@ import zlib
 import pytest
 
 from ...conftest import N_DRAWS
-from ...helpers import REPO_ROOT
 
 # The tests in this module start pytest subprocesses
 pytestmark = pytest.mark.slow
@@ -39,12 +38,8 @@ def _run_seed_logging_pytest(tmp_path, name, *args):
     folder.mkdir()
     (folder / 'test_small.py').write_text(_TEST_SOURCE)
     log = folder / 'seeds.log'
-    python_path = [str(REPO_ROOT)]
-    if os.environ.get('PYTHONPATH'):
-        python_path.append(os.environ['PYTHONPATH'])
-    env = dict(os.environ,
-               SEED_LOG=str(log),
-               PYTHONPATH=os.pathsep.join(python_path))
+    # PYTHONPATH makes package tests importable (subprocess_path)
+    env = dict(os.environ, SEED_LOG=str(log))
     env.pop('PYTEST_ADDOPTS', None)  # Could disable xdist
     result = subprocess.run(  # noqa: S603  # Fixed, trusted arguments
         (

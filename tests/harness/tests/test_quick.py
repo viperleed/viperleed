@@ -12,8 +12,10 @@ import re
 
 import pytest
 
-from ... import conftest
 from .. import quick
+from .conftest import INI
+from .conftest import XDIST_ARGS
+from .conftest import run_pytest
 
 _TEST_FILE = """
 import pytest
@@ -34,32 +36,17 @@ def test_tensorleed():
 def test_slow_tensorleed():
     pass
 """
-_INI = """
-[pytest]
-markers =
-    slow
-    tensorleed
-"""
 _ALL = frozenset(('plain', 'slow', 'tensorleed', 'slow_tensorleed'))
 _FAST = {'plain', 'tensorleed'}
 _PASSED = re.compile(r'::test_(\w+) PASSED|PASSED \S*::test_(\w+)')
 _QUICK = quick.QUICK_OPTION
 
 
-def _selected(pytester, *args, run=None):
+def _selected(pytester, *args):
     """Return the names of the tests that run with `args`."""
-    pytester.makeini(_INI)
+    pytester.makeini(INI)
     pytester.makepyfile(_TEST_FILE)
-    common = ('-v', '-p', 'no:cacheprovider')
-    result = (
-        run(*args, *common, '-p', conftest.__name__)
-        if run else
-        pytester.runpytest_inprocess(
-            *args,
-            *common,
-            plugins=[conftest],
-            )
-        )
+    result = run_pytest(pytester, *args, '-v')
     passed = (_PASSED.search(line) for line in result.outlines)
     return {match.group(1) or match.group(2) for match in passed if match}
 
@@ -93,14 +80,7 @@ def test_quick_selection(pytester, args, expected):
 
 
 @pytest.mark.slow  # About 0.7 s (pytester, subprocess)
-def test_quick_selection_xdist(pytester, monkeypatch, repo_root):
+def test_quick_selection_xdist(pytester):
     """Check that --quick also skips slow tests with pytest-xdist."""
-    monkeypatch.setenv('PYTHONPATH', str(repo_root))
-    selected = _selected(
-        pytester,
-        _QUICK,
-        '-n',
-        '2',
-        run=pytester.runpytest_subprocess,
-        )
+    selected = _selected(pytester, _QUICK, *XDIST_ARGS)
     assert selected == {'plain', 'tensorleed'}
