@@ -96,20 +96,28 @@ class TestGfortranFindsOpenblas:
 
     def mock_run_prints(self, mocker, output):
         """Make subprocess.run print output, and return the mock."""
+        if not isinstance(output, bytes):
+            output = f'{output}\n'.encode()
         def _run(cmd, **_):
             assert cmd == self.probe_cmd
-            return CompletedProcess(args=cmd,
-                                    returncode=0,
-                                    stdout=f'{output}\n'.encode())
+            return CompletedProcess(args=cmd, returncode=0, stdout=output)
         return mocker.patch('subprocess.run', side_effect=_run)
 
     def test_found(self, tmp_path, mocker):
         """Check that an existing absolute path means found."""
         lib_path = tmp_path / self.lib_name
         lib_path.touch()
-        run = self.mock_run_prints(mocker, lib_path)
+        # MinGW gfortran writes its stdout in text mode: CRLF
+        run = self.mock_run_prints(mocker, f'{lib_path}\r\n'.encode())
         assert gfortran_finds_openblas()
         run.assert_called_once()
+
+    def test_not_utf8(self, mocker):
+        """Check that output that is not UTF-8 does not raise."""
+        output = b'C:\\Users\\M\xfcller\\libopenblas.dll.a\r\n'  # cp1252
+        self.mock_run_prints(mocker, output)
+        with not_raises(UnicodeDecodeError):
+            assert not gfortran_finds_openblas()
 
     def test_bare_name(self, mocker):
         """Check that an echoed bare name means not found."""
