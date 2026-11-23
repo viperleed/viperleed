@@ -23,6 +23,7 @@ import time
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
@@ -35,6 +36,11 @@ from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+
+# The TensErLEED search knows the smooth R-factor (code 4) only since
+# this version. It has no Zanazzi-Jona R-factor (code 3) at all.
+_MIN_TL_VERSION_SMOOTH_SEARCH = Version('2.1.0')
+_R_FACTOR_TYPE_COMMENT = '1: use RPe -- 2: use R2 -- 4: use RS\n'
 
 
 class SearchIORaceConditionError(Exception):
@@ -428,10 +434,43 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     return output
 
 
-def _format_r_factor_type_line(r_factor_type, int_formatter):
-    """Return the search.steu line with the TensErLEED R-factor code."""
+def _format_r_factor_type_line(r_factor_type, int_formatter, tl_version):
+    """Return the search.steu line with the TensErLEED R-factor code.
+
+    Parameters
+    ----------
+    r_factor_type : RFactorType
+        The R-factor type to be used in the search.
+    int_formatter : fortranformat.FortranRecordWriter
+        The formatter for the integer R-factor code.
+    tl_version : Version
+        The version of TensErLEED that runs the search.
+
+    Returns
+    -------
+    str
+        The line of search.steu that selects the R-factor type.
+
+    Raises
+    ------
+    ValueError
+        If the search of `tl_version` cannot use `r_factor_type`,
+        i.e., for the Zanazzi-Jona R-factor, and for the smooth
+        R-factor with TensErLEED older than 2.1.0.
+    """
+    if r_factor_type is RFactorType.ZJ:
+        msg = (f'R_FACTOR_TYPE {r_factor_type.name} cannot be used in the '
+               'TensErLEED search. Use PENDRY, R2 or SMOOTH instead.')
+        raise ValueError(msg)
+    if (r_factor_type is RFactorType.SMOOTH
+            and tl_version < _MIN_TL_VERSION_SMOOTH_SEARCH):
+        msg = (f'R_FACTOR_TYPE {r_factor_type.name} needs TensErLEED '
+               f'{_MIN_TL_VERSION_SMOOTH_SEARCH} or later for the search '
+               f'(TL_VERSION is {tl_version}). Use a newer TL_VERSION, or '
+               'PENDRY or R2.')
+        raise ValueError(msg)
     return (int_formatter.write([r_factor_type.value]).ljust(16)
-            + '1: use RPe -- 2: use R2\n')
+            + _R_FACTOR_TYPE_COMMENT)
 
 
 def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
@@ -611,7 +650,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += (formatter['int'].write([0]).ljust(16) + "initialisation for "
                "random number generator - 0: use system time, 1,...: use"
                " init\n")
-    output += _format_r_factor_type_line(rp.R_FACTOR_TYPE, formatter['int'])
+    output += _format_r_factor_type_line(rp.R_FACTOR_TYPE,
+                                         formatter['int'],
+                                         rp.TL_VERSION)
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
