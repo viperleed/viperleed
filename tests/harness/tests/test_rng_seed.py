@@ -9,7 +9,6 @@ __created__ = '2026-10-15'
 __license__ = 'GPLv3+'
 
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
@@ -18,11 +17,11 @@ import zlib
 import pytest
 
 from ...conftest import N_DRAWS
+from ...helpers import REPO_ROOT
 
 # The tests in this module start pytest subprocesses
 pytestmark = pytest.mark.slow
 
-_TESTS_PARENT = Path(__file__).resolve().parents[3]
 _TEST_SOURCE = """
 import os
 
@@ -40,7 +39,7 @@ def _run_seed_logging_pytest(tmp_path, name, *args):
     folder.mkdir()
     (folder / 'test_small.py').write_text(_TEST_SOURCE)
     log = folder / 'seeds.log'
-    python_path = [str(_TESTS_PARENT)]
+    python_path = [str(REPO_ROOT)]
     if os.environ.get('PYTHONPATH'):
         python_path.append(os.environ['PYTHONPATH'])
     env = dict(os.environ,

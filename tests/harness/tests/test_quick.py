@@ -8,7 +8,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-22'
 __license__ = 'GPLv3+'
 
-from pathlib import Path
 import re
 
 import pytest
@@ -94,10 +93,9 @@ def test_quick_selection(pytester, args, expected):
 
 
 @pytest.mark.slow  # About 0.7 s (pytester, subprocess)
-def test_quick_selection_xdist(pytester, monkeypatch):
+def test_quick_selection_xdist(pytester, monkeypatch, repo_root):
     """Check that --quick also skips slow tests with pytest-xdist."""
-    root = Path(__file__).resolve().parents[3]
-    monkeypatch.setenv('PYTHONPATH', str(root))
+    monkeypatch.setenv('PYTHONPATH', str(repo_root))
     selected = _selected(
         pytester,
         _QUICK,

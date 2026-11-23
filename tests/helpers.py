@@ -36,7 +36,12 @@ from pytest_cases.filters import CaseFilter
 # https://github.com/nteract/testbook/issues/4
 
 
-TEST_DATA = Path(__file__).resolve().parent / '_test_data'
+# The folder of package tests, and the root of the repository, which
+# contains it. The repository root is therefore also the folder from
+# which package tests can be imported (e.g., via PYTHONPATH).
+TESTS_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = TESTS_ROOT.parent
+TEST_DATA = TESTS_ROOT / '_test_data'
 POSCAR_PATH = TEST_DATA / 'POSCARs'
 # Seed for the random choice of atoms that carry mixed elements in
 # psgen. Some draws give eeasisss inputs that make it crash (SIGSEGV),

@@ -9,11 +9,11 @@ __created__ = '2026-10-21'
 __license__ = 'GPLv3+'
 
 import os
-from pathlib import Path
 
 import pytest
 from pytest_cases import parametrize
 
+from ...helpers import REPO_ROOT
 from .. import optional_dependencies
 
 _ALLOW = optional_dependencies.ALLOW_MISSING_OPTION
@@ -41,8 +41,7 @@ def _run(pytester, *args, source=_TEST_FILE):
 
 def _run_xdist(pytester, mocker, *args):
     """Run pytest with pytest-xdist on the test file with the plugin."""
-    root = Path(__file__).resolve().parents[3]
-    mocker.patch.dict(os.environ, {'PYTHONPATH': str(root)})
+    mocker.patch.dict(os.environ, {'PYTHONPATH': str(REPO_ROOT)})
     pytester.makepyfile(_TEST_FILE)
     return pytester.runpytest_subprocess(
         *args,

@@ -23,11 +23,11 @@ __created__ = '2026-10-23'
 __license__ = 'GPLv3+'
 
 import os
-from pathlib import Path
 
 import pytest
 
 from ... import conftest as root_conftest
+from ...helpers import REPO_ROOT
 from .. import tiers
 
 MODULE = 'test_sample.py::'  # Node-id prefix of the sample tests
@@ -44,7 +44,6 @@ _OTHER_FILE = """
 def test_unrelated():
     pass
 """
-_REPO_ROOT = Path(__file__).resolve().parents[3]
 _SLOW_PLUGIN = 'slow_cases_plugin'
 _TEST_FILE = """
 import pytest
@@ -104,7 +103,7 @@ def fixture_run(pytester, monkeypatch, slow_cases, release_cases):
             })
         monkeypatch.setenv(
             'PYTHONPATH',
-            os.pathsep.join((str(_REPO_ROOT), str(pytester.path))),
+            os.pathsep.join((str(REPO_ROOT), str(pytester.path))),
             )
         return pytester.runpytest_subprocess(
             *options,

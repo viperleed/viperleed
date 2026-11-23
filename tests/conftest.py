@@ -37,6 +37,9 @@ first_case
     The first of the current pytest-cases.
 re_match (factory)
     Return a match object from a pattern and a string.
+repo_root
+    Path to the root of the repository, from which package tests
+    can be imported.
 """
 
 __authors__ = (
@@ -56,6 +59,7 @@ import numpy as np
 from pytest_cases import fixture
 
 from .harness import optional_dependencies
+from .helpers import REPO_ROOT
 from .helpers import TEST_DATA
 
 pytest_plugins = (
@@ -120,6 +124,12 @@ def re_match():  # This is actually a fixture factory
 def data_path():
     """Return the Path to the top-level folder containing test data."""
     return TEST_DATA
+
+
+@fixture(scope='session')
+def repo_root():
+    """Return the Path to the root of the repository."""
+    return REPO_ROOT
 
 
 @fixture(name='first_case')
