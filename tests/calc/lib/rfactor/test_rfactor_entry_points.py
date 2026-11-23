@@ -630,3 +630,17 @@ def test_rfactor_from_csv_auto_step():
                                          **kwargs)
     assert auto[:2] == explicit[:2]
     np.testing.assert_array_equal(auto[2], explicit[2])
+
+
+@pytest.mark.parametrize('argument,value', (('intpol_deg', 5),
+                                            ('return_beam_arrays', True)))
+def test_rfactor_from_csv_deprecated_warns(argument, value, caplog):
+    """Check the warning for an ignored argument names the function."""
+    caplog.set_level(logging.WARNING)
+    from_ase.rfactor_from_csv((_GOOD_CSV, _GOOD_CSV),
+                              1.0,
+                              beams_file_is_content=(True, True),
+                              **{argument: value})
+    expected = f'{argument} is deprecated in rfactor_from_csv()'
+    assert any(expected in record.getMessage()
+               for record in caplog.records)

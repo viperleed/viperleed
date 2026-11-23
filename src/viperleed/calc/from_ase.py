@@ -628,7 +628,7 @@ def rfactor_from_csv(
 
     if return_beam_arrays not in (None, False):
         _LOGGER.warning(
-            "return_beam_arrays is deprecated in rfactor_from_ase(); "
+            "return_beam_arrays is deprecated in rfactor_from_csv(); "
             "the spline-based implementation no longer returns the old "
             "Fortran interpolation arrays."
         )
