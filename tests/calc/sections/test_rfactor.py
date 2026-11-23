@@ -62,30 +62,6 @@ _LEGACY_COMPUTED = (
     )
 
 
-def _fake_tensorleed_run(rpars, tmp_path, monkeypatch):
-    """Replace the TensErLEED R factor with one that writes ROUT."""
-    section = rfactor_section
-    tl_path = tmp_path / 'tensorleed'
-    for sub_dir, f_name in (('lib', 'rfacsb.f'), ('src', 'rfactor.f')):
-        (tl_path / sub_dir).mkdir(parents=True)
-        (tl_path / sub_dir / f_name).touch()
-    rpars.get_tenserleed_directory = lambda: SimpleNamespace(path=tl_path)
-    rpars.TL_IGNORE_CHECKSUM = True
-    rpars.FORTRAN_COMP = ['gfortran', '']
-    for name in ('writeWEXPEL', 'writeRfactPARAM'):
-        monkeypatch.setattr(section.iorfactor, name, lambda *_, **__: None)
-    monkeypatch.setattr(section.leedbase,
-                        'fortran_compile_batch',
-                        lambda *_, **__: None)
-    monkeypatch.setattr(section.fs_utils, 'move', lambda *_: None)
-    monkeypatch.setattr(section.subprocess,
-                        'run',
-                        lambda *_, **__: Path('ROUT').touch())
-    monkeypatch.setattr(section.iorfactor,
-                        'readROUT',
-                        lambda: ((0.3, 0.3, 0.), 0., [0.3]))
-
-
 @parametrize('r_factor_type,tl_version,expected', _LEGACY_COMPUTED)
 def test_legacy_analysis_r_factor_type(r_factor_type, tl_version, expected,
                                        tmp_path, monkeypatch):
@@ -95,12 +71,34 @@ def test_legacy_analysis_r_factor_type(r_factor_type, tl_version, expected,
     rpars.R_FACTOR_TYPE = RFactorType(r_factor_type)
     rpars.TL_VERSION = Version(tl_version)
     rpars.expbeams = [SimpleNamespace(getLabel=lambda **_: ('(1|0)', 5))]
-    _fake_tensorleed_run(rpars, tmp_path, monkeypatch)
+    # Replace the TensErLEED R factor with one that writes ROUT
+    tl_path = tmp_path / 'tensorleed'
+    for sub_dir, f_name in (('lib', 'rfacsb.f'), ('src', 'rfactor.f')):
+        (tl_path / sub_dir).mkdir(parents=True)
+        (tl_path / sub_dir / f_name).touch()
+    rpars.get_tenserleed_directory = lambda: SimpleNamespace(path=tl_path)
+    rpars.TL_IGNORE_CHECKSUM = True
+    rpars.FORTRAN_COMP = ['gfortran', '']
+    for name in ('writeWEXPEL', 'writeRfactPARAM'):
+        monkeypatch.setattr(rfactor_section.iorfactor,
+                            name,
+                            lambda *_, **__: None)
+    monkeypatch.setattr(rfactor_section.leedbase,
+                        'fortran_compile_batch',
+                        lambda *_, **__: None)
+    monkeypatch.setattr(rfactor_section.fs_utils, 'move', lambda *_: None)
+    monkeypatch.setattr(rfactor_section.subprocess,
+                        'run',
+                        lambda *_, **__: Path('ROUT').touch())
+    monkeypatch.setattr(rfactor_section.iorfactor,
+                        'readROUT',
+                        lambda: ((0.3, 0.3, 0.), 0., [0.3]))
     pdf_calls = []
     monkeypatch.setattr(rfactor_section.iorfactor,
                         'writeRfactorPdf',
                         lambda *_, **kwargs: pdf_calls.append(kwargs))
-    rfactor_section.run_legacy_rfactor(None, rpars,
+    rfactor_section.run_legacy_rfactor(None,
+                                       rpars,
                                        for_error=False,
                                        name='refcalc',
                                        theobeams=[],
