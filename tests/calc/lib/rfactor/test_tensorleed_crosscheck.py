@@ -37,7 +37,7 @@ DATA_DIR = TEST_DATA / 'rfactor'
 # 1e-7, and Zanazzi-Jona is evaluated on a grid ten times finer in
 # TensErLEED. The tolerances hold for beams spanning several theory
 # steps (at least ~30 eV).
-R_TOLERANCE = {
+_R_TOLERANCE = {
     'pendry': 0.005,
     'smooth': 0.005,
     'r2': 0.005,
@@ -51,7 +51,7 @@ R_TOLERANCE = {
 # Pendry R differs by +0.0064, and by +0.0002 with the cutoff copied
 # into the Python Pendry R.
 _GROUP_TOLERANCE = {
-    **R_TOLERANCE,
+    **_R_TOLERANCE,
     'pendry': 0.01,
     'smooth': 0.01,
     }
@@ -59,7 +59,7 @@ _GROUP_TOLERANCE = {
 # TensErLEED's R2 carries a factor 1/2 that the Python R2 (the usual
 # definition) does not have: the Python value is compared with twice
 # the TensErLEED one.
-R_SCALE = {'r2': 2.0}
+_R_SCALE = {'r2': 2.0}
 
 # Best V0r (eV) may differ by one step of the shifts
 _V0R_TOLERANCE_STEPS = 1
@@ -136,8 +136,8 @@ def test_r_factor_and_v0r(folder_name, theo_name, r_type):
     reference = expected['theory'][theo_name][r_type]
     rpars = _run_python(folder_name, theo_name, r_type)
     r_python = rpars.stored_R['refcalc'][0]
-    scale = R_SCALE.get(r_type, 1.0)
-    assert abs(r_python - scale * reference['r']) <= R_TOLERANCE[r_type]
+    scale = _R_SCALE.get(r_type, 1.0)
+    assert abs(r_python - scale * reference['r']) <= _R_TOLERANCE[r_type]
     step = expected['iv_shift_range'][2]
     assert abs(rpars.best_v0r - reference['best_v0r']) <= (
         _V0R_TOLERANCE_STEPS * step + _EPS
@@ -152,5 +152,5 @@ def test_group_r(folder_name, theo_name, r_type, group):
     reference = _expected_for(folder_name)['theory'][theo_name][r_type]
     rpars = _run_python(folder_name, theo_name, r_type)
     r_python = rpars.stored_R['refcalc'][_GROUP_INDEX[group]]
-    r_reference = R_SCALE.get(r_type, 1.0) * reference[f'r_{group}']
+    r_reference = _R_SCALE.get(r_type, 1.0) * reference[f'r_{group}']
     assert abs(r_python - r_reference) <= _GROUP_TOLERANCE[r_type]
