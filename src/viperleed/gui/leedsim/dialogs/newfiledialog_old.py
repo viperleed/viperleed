@@ -803,7 +803,7 @@ class NewFileDialog(qtw.QDialog):
     # Cancel have keyboard focus fires them
 
     def keyPressEvent(self, event):
-        if event.key() in [qtc.Qt.Key.Key_Enter or qtc.Qt.Key.Key_Return]:
+        if event.key() in (qtc.Qt.Key.Key_Enter, qtc.Qt.Key.Key_Return):
             focusWidg = self.focusWidget()
             if isinstance(focusWidg, qtw.QLineEdit):
                 return
