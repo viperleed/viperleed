@@ -83,7 +83,10 @@ the same error calculation, these would nevertheless be plotted together.
 For each parameter type, the ``Errors.pdf`` file contains *one* plot in which
 the results for *all* parameters of that type are shown together, as well as
 separate single plots for each parameter. The axis labels name the
-|R-factor| type selected by :ref:`RFACTORTYPE`.
+|R-factor| type actually computed. This is the one selected by
+:ref:`RFACTORTYPE`, except for the smooth |R factor| calculated by
+TensErLEED older than v2.1.0, where the Pendry |R factor| is computed
+and named instead (see :ref:`RFACTORTYPE`).
 
 .. versionchanged:: 0.15.0
    Earlier versions always labeled the axis as Pendry |R factor|.
