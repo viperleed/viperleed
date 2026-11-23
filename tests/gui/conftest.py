@@ -49,10 +49,14 @@ def fixture_no_blocking_dialogs(qtw, mocker):
     """Make modal pop-ups return immediately, without showing.
 
     QMessageBox.question answers Yes (the return value can be changed
-    via the returned mock). File dialogs are cancelled.
+    via the returned mock). File dialogs are cancelled, and so are
+    other dialogs run via QDialog.exec (e.g., opened by a button that
+    a test clicks by mistake), which would otherwise wait for a user.
     """
     for method in ('getOpenFileName', 'getOpenFileNames', 'getSaveFileName'):
         mocker.patch.object(qtw.QFileDialog, method, return_value=('', ''))
+    mocker.patch.object(qtw.QDialog, 'exec',
+                        return_value=qtw.QDialog.DialogCode.Rejected)
     return mocker.patch.object(
         qtw.QMessageBox, 'question',
         return_value=qtw.QMessageBox.StandardButton.Yes,
