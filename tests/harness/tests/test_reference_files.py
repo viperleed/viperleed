@@ -9,6 +9,7 @@ __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
 import pytest
+from pytest_cases import parametrize
 
 from .. import reference_files
 from .conftest import XDIST_ARGS
@@ -49,6 +50,21 @@ def _reference(pytester, text):
 class TestCheckReference:
     """Tests for the check_reference fixture."""
 
+    _exit_status_args = {
+        'plain': (),
+        'no-summary': ('--no-summary',),
+        'no-terminal': ('-p', 'no:terminal'),
+        'xdist': pytest.param(
+            XDIST_ARGS,
+            marks=pytest.mark.slow,  # Subprocess, about 1 s
+            ),
+        }
+    # Written and reference texts that differ
+    _verbatim = {
+        'timestamp': (_TIMESTAMP_A, _TIMESTAMP_B),
+        'path': (_PATH_A, _PATH_B),
+        }
+
     def test_equal(self, pytester):
         """Check that an identical file passes."""
         reference = _reference(pytester, _BASE)
@@ -67,14 +83,7 @@ class TestCheckReference:
             ])
         assert reference.read_text(encoding='utf-8') == _BASE  # Not rewritten
 
-    @pytest.mark.parametrize(
-        ('written', 'reference'),
-        [
-            (_TIMESTAMP_A, _TIMESTAMP_B),
-            (_PATH_A, _PATH_B),
-            ],
-        ids=('timestamp', 'path'),
-        )
+    @parametrize('written,reference', _verbatim.values(), ids=_verbatim)
     def test_timestamp_or_path_difference_fails(self, pytester,
                                                 written, reference):
         """Check that timestamps and paths are compared verbatim."""
@@ -136,19 +145,7 @@ class TestCheckReference:
         result = _run(pytester, _CHANGED, reference, *XDIST_ARGS)
         result.assert_outcomes(failed=1)
 
-    @pytest.mark.parametrize(
-        'args',
-        [
-            pytest.param((), id='plain'),
-            pytest.param(('--no-summary',), id='no-summary'),
-            pytest.param(('-p', 'no:terminal'), id='no-terminal'),
-            pytest.param(
-                XDIST_ARGS,
-                id='xdist',
-                marks=pytest.mark.slow,  # Subprocess, about 1 s
-                ),
-            ],
-        )
+    @parametrize('args', _exit_status_args.values(), ids=_exit_status_args)
     def test_rewrite_exit_status(self, pytester, args):
         """Check that a run that rewrote a reference exits non-zero."""
         reference = _reference(pytester, _BASE)

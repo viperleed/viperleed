@@ -33,6 +33,7 @@ __license__ = 'GPLv3+'
 import os
 
 import pytest
+from pytest_cases import fixture
 
 from ... import conftest as root_conftest
 from .. import tiers
@@ -47,6 +48,12 @@ markers =
 """
 MODULE = 'test_sample.py::'  # Node-id prefix of the sample tests
 XDIST_ARGS = ('-n', '2')
+# Extra arguments of runs without and with pytest-xdist, keyed by id,
+# for parametrize. The runs with pytest-xdist are slow.
+SERIAL_AND_XDIST = {
+    'serial': (),
+    'xdist': pytest.param(XDIST_ARGS, marks=pytest.mark.slow),
+    }
 
 _OTHER_FILE = """
 def test_unrelated():
@@ -66,7 +73,7 @@ def test_other():
 _SAMPLE_FILES = {'test_sample': _TEST_FILE, 'test_unrelated': _OTHER_FILE}
 
 
-@pytest.fixture(name='release_cases')
+@fixture(name='release_cases')
 def fixture_release_cases(monkeypatch):
     """Replace tiers.RELEASE_CASES with a dict that tests can fill."""
     cases = {}
@@ -74,7 +81,7 @@ def fixture_release_cases(monkeypatch):
     return cases
 
 
-@pytest.fixture(name='run')
+@fixture(name='run')
 def fixture_run(pytester, slow_cases, release_cases):
     """Return a function that runs sample tests with the tier options.
 
@@ -108,7 +115,7 @@ def fixture_run(pytester, slow_cases, release_cases):
     return _run
 
 
-@pytest.fixture(name='slow_cases')
+@fixture(name='slow_cases')
 def fixture_slow_cases(monkeypatch):
     """Replace tiers.SLOW_CASES with a dict that tests can fill."""
     cases = {}
@@ -116,7 +123,7 @@ def fixture_slow_cases(monkeypatch):
     return cases
 
 
-@pytest.fixture(name='subprocess_path', autouse=True)
+@fixture(name='subprocess_path', autouse=True)
 def fixture_subprocess_path(monkeypatch, repo_root):
     """Make package tests importable in pytest subprocesses.
 

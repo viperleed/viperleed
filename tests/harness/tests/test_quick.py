@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import re
 
 import pytest
+from pytest_cases import parametrize
 
 from .. import quick
 from .conftest import INI
@@ -40,6 +41,20 @@ _ALL = frozenset(('plain', 'slow', 'tensorleed', 'slow_tensorleed'))
 _FAST = {'plain', 'tensorleed'}
 _PASSED = re.compile(r'::test_(\w+) PASSED|PASSED \S*::test_(\w+)')
 _QUICK = quick.QUICK_OPTION
+# Arguments and the tests that run with them
+_SELECTION = {  # pylint: disable=R6101
+    'default': ((), _ALL),
+    'empty expression': (('-m', ''), _ALL),
+    'quick': ((_QUICK,), _FAST),
+    'quick and tensorleed': ((_QUICK, '-m', 'tensorleed'), {'tensorleed'}),
+    'quick and empty expression': ((_QUICK, '-m', ''), _FAST),
+    'tensorleed': (('-m', 'tensorleed'), {'tensorleed', 'slow_tensorleed'}),
+    'quick and not tensorleed': ((_QUICK, '-m', 'not tensorleed'), {'plain'}),
+    'quick and or expression': (
+        (_QUICK, '-m', 'tensorleed or not tensorleed'),
+        _FAST,
+        ),
+    }
 
 
 def _selected(pytester, *args):
@@ -51,29 +66,7 @@ def _selected(pytester, *args):
     return {match.group(1) or match.group(2) for match in passed if match}
 
 
-@pytest.mark.parametrize(
-    ('args', 'expected'),
-    [
-        ((), _ALL),
-        (('-m', ''), _ALL),
-        ((_QUICK,), _FAST),
-        ((_QUICK, '-m', 'tensorleed'), {'tensorleed'}),
-        ((_QUICK, '-m', ''), _FAST),
-        (('-m', 'tensorleed'), {'tensorleed', 'slow_tensorleed'}),
-        ((_QUICK, '-m', 'not tensorleed'), {'plain'}),
-        ((_QUICK, '-m', 'tensorleed or not tensorleed'), _FAST),
-        ],
-    ids=(
-        'default',
-        'empty expression',
-        'quick',
-        'quick and tensorleed',
-        'quick and empty expression',
-        'tensorleed',
-        'quick and not tensorleed',
-        'quick and or expression',
-        ),
-    )
+@parametrize('args,expected', _SELECTION.values(), ids=_SELECTION)
 def test_quick_selection(pytester, args, expected):
     """Check that --quick skips slow tests, on top of any -m."""
     assert _selected(pytester, *args) == expected
