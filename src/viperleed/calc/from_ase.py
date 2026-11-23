@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
@@ -549,8 +549,12 @@ def rfactor_from_csv(
         are expanded outwards to the next multiples. Equal bounds
         (a single, fixed shift) that are not a multiple of
         intpol_step raise a RuntimeError.
-    intpol_step : float, default: 0.5
-        Energy step for the interpolation/output grid.
+    intpol_step : float or None, default: 0.5
+        Energy step for the interpolation/output grid. If None, use
+        the finer of the energy steps of the two data sets.
+
+        .. versionchanged:: 0.15.0
+            Accept None.
     which_r : str, default: 'pendry'
         Which R factor to use. Any name accepted by the R_FACTOR_TYPE
         parameter (e.g., 'pendry', 'smooth'), or 'r1' for the R1 R
