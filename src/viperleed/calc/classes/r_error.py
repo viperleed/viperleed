@@ -8,7 +8,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Florian Kraushofer (@fkraushofer)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-01-12'
 __license__ = 'GPLv3+'
 
@@ -23,6 +23,11 @@ from viperleed.calc.lib.string_utils import range_to_str
 
 logger = logging.getLogger(__name__)
 
+# R-factor types for which var(R), and hence statistical error
+# estimates, are available. The smooth R-factor only modifies the
+# Y-function of the Pendry R-factor, so it shares its var(R).
+R_TYPES_WITH_VAR_R = (RFactorType.PENDRY, RFactorType.SMOOTH)
+
 
 class R_Error():
     """Data structure for storing errors after they have been calculated.
@@ -34,7 +39,6 @@ class R_Error():
 
     def __init__(self, r_type, atoms, mode, rfacs, disp_label, lin_disp,
                  v0i=None, energy_range=None):
-        # Only the Pendry R-factor gives statistical error estimates
         self.r_type = r_type  # RFactorType
         self.atoms = atoms  # atoms that have been varied together
         self.mode = mode    # vib, geo, or occ
@@ -75,12 +79,12 @@ class R_Error():
                 k = "all"
             self.displacements = copy.deepcopy(d[k])
 
-        if v0i and energy_range and r_type is RFactorType.PENDRY:
+        if v0i and energy_range and r_type in R_TYPES_WITH_VAR_R:
             self.calc_var_r(v0i, energy_range)
 
 
     def calc_var_r(self, v0i, energy_range):
-        r"""Calculates the variance of the Pendry R-factor.
+        r"""Calculate the variance of the Pendry or smooth R-factor.
 
         The variance of the Pendry R-factor can be estimated from the
         imaginary part of the inner potential and the measurement energy
@@ -88,6 +92,12 @@ class R_Error():
 
         .. math::
             \mathrm{var}(R_p) = \sqrt{ \frac{8V_{0\mathrm{i}}}{E_{\mathrm{range}}}}R_{\mathrm{min}}
+
+        The same formula is used for the smooth R-factor, which only
+        differs from the Pendry one in the Y-function.
+
+        .. versionchanged:: 0.15.0
+            Also for the smooth R-factor.
 
         Parameters
         ----------
@@ -98,15 +108,14 @@ class R_Error():
 
         Raises
         ------
-        ValueError:
-            If v0i or energy_range are not float values.
-        ValueError:
-            If v0i or energy_range are negative. This would be
-            unphysical.
+        ValueError
+            If the R-factor type is neither Pendry nor smooth, if v0i
+            or energy_range are not float values or not positive, or
+            if no R-factors are stored.
         """
-        if self.r_type is not RFactorType.PENDRY:
+        if self.r_type not in R_TYPES_WITH_VAR_R:
             raise ValueError("Var(R) can only be calculated when using the "
-                             "Pendry R-factor.")
+                             "Pendry or the smooth R-factor.")
         if not isinstance(v0i, float) and isinstance(energy_range, float):
             raise ValueError("v0i and energy_range must be float values.")
         if v0i<= 0 or energy_range <= 0:
@@ -126,7 +135,7 @@ class R_Error():
         -------
         tuple of float or None
             A tuple containing upper and lower error bounds, es
-            estimated from the variance of R_P, if errors can be
+            estimated from the variance of R_P or R_S, if errors can be
             estimated. If either bound can not be estimates (e.g. no
             intersection with line R_min + var(R)), the element is None.
             If neither bound can be estimated, both values are None.
@@ -137,9 +146,7 @@ class R_Error():
             If self.lin_disp is not initialized.
         """
 
-        # error estimates are only available for Pendry R-factor
-        # TODO: update this when introducing a new R-factor
-        if self.r_type is not RFactorType.PENDRY:
+        if self.r_type not in R_TYPES_WITH_VAR_R:
             return (None, None)
         r_min = self.get_r_min
         if self.var_r is None:

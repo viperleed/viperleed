@@ -8,7 +8,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
@@ -19,6 +19,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 from scipy import interpolate
 
+from viperleed.calc.classes.r_error import R_TYPES_WITH_VAR_R
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
@@ -55,7 +56,7 @@ def extract_var_r(errors):
     for mode in var_r_info.keys():
         mode_errors = [err for err in errors
                        if (err.mode == mode
-                           and err.r_type is RFactorType.PENDRY)]
+                           and err.r_type in R_TYPES_WITH_VAR_R)]
         if mode_errors:
             var_r_info[mode] = mode_errors[0].var_r
     return var_r_info
