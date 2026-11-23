@@ -38,7 +38,7 @@ _MOCK_SIN_INTENSITY = np.sin(_MOCK_ROUGH_E_AXIS / (3.0 * np.pi)) ** 2
 _MOCK_COS_INTENSITY = np.cos(_MOCK_ROUGH_E_AXIS / (3.0 * np.pi)) ** 2
 _MOCK_CONST_INTENSITY = np.ones_like(_MOCK_ROUGH_E_AXIS)
 
-FE2O3_012_DIR = TEST_DATA / 'rfactor-tensorleed' / 'fe2o3-012'
+FE2O3_012_DIR = TEST_DATA / 'rfactor' / 'fe2o3-012'
 EXP_BEAMS_FILE = FE2O3_012_DIR / 'EXPBEAMS.csv'
 THEO_BEAMS_FILE = FE2O3_012_DIR / 'THEOBEAMS.csv'
 BEAMCORR_FILE = FE2O3_012_DIR / 'beamcorr.json'

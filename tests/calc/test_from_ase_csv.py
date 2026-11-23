@@ -15,8 +15,7 @@ from viperleed.calc.files.beams import readOUTBEAMS
 
 from ..helpers import TEST_DATA
 
-BEAMS_FILE = (TEST_DATA / 'rfactor-tensorleed' / 'fe2o3-012'
-              / 'EXPBEAMS.csv')
+BEAMS_FILE = TEST_DATA / 'rfactor' / 'fe2o3-012' / 'EXPBEAMS.csv'
 
 
 @pytest.fixture(name='mock_plot')

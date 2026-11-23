@@ -19,7 +19,7 @@ from .conftest import relabel_as_fractional
 from .conftest import run_new_rfactor_with_correspondence
 
 
-DATA_DIR = TEST_DATA / 'rfactor-tensorleed'
+DATA_DIR = TEST_DATA / 'rfactor'
 
 # What this cross-check catches: gross deviations of the Python R
 # factor from TensErLEED (wrong formula, normalisation, beam averaging,
