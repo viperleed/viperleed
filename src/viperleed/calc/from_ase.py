@@ -527,6 +527,12 @@ def rfactor_from_csv(
         Use the Python R factor. The compiled extension
         viperleed.extensions.rfactor is no longer needed.
 
+    .. versionchanged:: 0.15.0
+        The order of the parameters after v0r_shift_range changed
+        (it was intpol_deg, intpol_step, return_beam_arrays), and a
+        third value, r_beams, is always returned. Pass the optional
+        parameters by keyword.
+
     Parameters
     ----------
     beams_files : Sequence of two str or Path
@@ -556,7 +562,7 @@ def rfactor_from_csv(
         the finer of the energy steps of the two data sets.
 
         .. versionchanged:: 0.15.0
-            Accept None.
+            Accept None. Moved from the sixth to the fifth position.
     which_r : str, default: 'pendry'
         Which R factor to use. Any name accepted by the R_FACTOR_TYPE
         parameter (e.g., 'pendry', 'smooth'), or 'r1' for the R1 R
@@ -587,6 +593,9 @@ def rfactor_from_csv(
 
         .. deprecated:: 0.15.0
             A value other than None is ignored with a warning.
+
+        .. versionchanged:: 0.15.0
+            Moved from the fifth position to after plot_iv.
     return_beam_arrays : object, optional
         Ignored. The interpolated beams, Y functions, numbers of
         overlapping points and per-beam R factors of the compiled
@@ -594,6 +603,9 @@ def rfactor_from_csv(
 
         .. deprecated:: 0.15.0
             A value other than None or False is ignored with a warning.
+
+        .. versionchanged:: 0.15.0
+            Moved from the seventh position to the last one.
 
     Returns
     -------
@@ -603,6 +615,10 @@ def rfactor_from_csv(
         The V0r shift in eV corresponding to best_r.
     r_beams : np.ndarray
         Per-beam R-factors at best_v0r.
+
+        .. versionchanged:: 0.15.0
+            Always returned. Before, only best_r and best_v0r were
+            returned, or seven values with return_beam_arrays.
 
     Raises
     ------
