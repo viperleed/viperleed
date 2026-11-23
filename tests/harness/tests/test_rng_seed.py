@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-15'
@@ -16,12 +17,12 @@ import zlib
 
 import pytest
 
-from .conftest import N_DRAWS
+from ...conftest import N_DRAWS
 
 # The tests in this module start pytest subprocesses
 pytestmark = pytest.mark.slow
 
-_TESTS_PARENT = Path(__file__).resolve().parent.parent
+_TESTS_PARENT = Path(__file__).resolve().parents[3]
 _TEST_SOURCE = """
 import os
 

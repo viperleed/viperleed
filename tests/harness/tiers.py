@@ -1,6 +1,6 @@
 """Which tests belong to the slow and TensErLEED tiers.
 
-Data only; the hooks that use it are in slow_marks.py.
+Data only; the hooks that use it are in tier_marks.py.
 
 Attributes
 ----------
@@ -27,6 +27,7 @@ RELEASE_CASES : dict
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-23'

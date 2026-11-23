@@ -1,7 +1,8 @@
-"""Tests for module optional_dependencies of viperleed.tests."""
+"""Tests for module optional_dependencies of tests.harness."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-21'
@@ -13,7 +14,7 @@ from pathlib import Path
 import pytest
 from pytest_cases import parametrize
 
-from . import optional_dependencies
+from .. import optional_dependencies
 
 _ALLOW = optional_dependencies.ALLOW_MISSING_OPTION
 _REQUIRE = optional_dependencies.REQUIRE_ALL_OPTION
@@ -40,7 +41,7 @@ def _run(pytester, *args, source=_TEST_FILE):
 
 def _run_xdist(pytester, mocker, *args):
     """Run pytest with pytest-xdist on the test file with the plugin."""
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[3]
     mocker.patch.dict(os.environ, {'PYTHONPATH': str(root)})
     pytester.makepyfile(_TEST_FILE)
     return pytester.runpytest_subprocess(

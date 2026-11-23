@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
@@ -11,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from . import conftest
-from . import reference_files
+from ... import conftest
+from .. import reference_files
 
 _REWRITE = reference_files.REWRITE_OPTION
 _TEST_FILE = """
@@ -47,7 +48,7 @@ def _run(pytester, written, reference, *args):
 @pytest.fixture(name='subprocess_path')
 def fixture_subprocess_path(monkeypatch):
     """Make the test-suite plugins importable in a subprocess."""
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[3]
     monkeypatch.setenv('PYTHONPATH', str(root))
 
 

@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from . import check_slow
-from . import conftest
-from . import release_option
-from . import tiers
+from ... import conftest
+from .. import check_slow
+from .. import release
+from .. import tiers
 
 _TEST_FILE = """
 import pytest
@@ -50,7 +50,7 @@ markers =
     release
 """
 _MODULE = 'test_sample.py::'
-_REPO_ROOT = Path(__file__).resolve().parent.parent
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _SLOW_PLUGIN = 'slow_cases_plugin'
 _XDIST_ARGS = ('-n', '2')
 
@@ -102,7 +102,7 @@ def fixture_run(pytester, monkeypatch, slow_cases, release_cases):
                 plugins=[conftest],
                 )
         pytester.makepyfile(**{
-            _SLOW_PLUGIN: f'from tests import tiers\n'
+            _SLOW_PLUGIN: f'from tests.harness import tiers\n'
                           f'tiers.SLOW_CASES.update({slow_cases!r})\n'
                           f'tiers.RELEASE_CASES.update({release_cases!r})\n',
             })
@@ -320,7 +320,7 @@ def test_plain():
 """
 _RELEASE_FILES = {'test_sample': _RELEASE_FILE}
 _RELEASE = {'tl_case': ('b-c',)}
-_RELEASE_OPTION = release_option.RELEASE_OPTION
+_RELEASE_OPTION = release.RELEASE_OPTION
 _RELEASE_CASES = ('test_tl[b-c]', 'test_tl_other[b-c]')
 # Numbers of tests that run, out of test_plain and the cases 'a' and
 # 'b-c' of test_tl and test_tl_other

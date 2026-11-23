@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-22'
@@ -12,8 +13,8 @@ import re
 
 import pytest
 
-from . import conftest
-from . import quick_option
+from ... import conftest
+from .. import quick
 
 _TEST_FILE = """
 import pytest
@@ -43,7 +44,7 @@ markers =
 _ALL = frozenset(('plain', 'slow', 'tensorleed', 'slow_tensorleed'))
 _FAST = {'plain', 'tensorleed'}
 _PASSED = re.compile(r'::test_(\w+) PASSED|PASSED \S*::test_(\w+)')
-_QUICK = quick_option.QUICK_OPTION
+_QUICK = quick.QUICK_OPTION
 
 
 def _selected(pytester, *args, run=None):
@@ -95,7 +96,7 @@ def test_quick_selection(pytester, args, expected):
 @pytest.mark.slow  # About 0.7 s (pytester, subprocess)
 def test_quick_selection_xdist(pytester, monkeypatch):
     """Check that --quick also skips slow tests with pytest-xdist."""
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[3]
     monkeypatch.setenv('PYTHONPATH', str(root))
     selected = _selected(
         pytester,
