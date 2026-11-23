@@ -6,6 +6,7 @@ __created__ = '2026-11-19'
 __license__ = 'GPLv3+'
 
 import json
+import logging
 
 import numpy as np
 import pytest
@@ -414,6 +415,17 @@ def test_run_new_rfactor_for_error_uses_best_v0r(r_type,
     assert scan.best_v0r == _FIXED_V0R
     assert rpars.last_R == fixed.last_R
     assert rpars.last_R > best.last_R
+
+
+@pytest.mark.parametrize('r_type', _TYPES)
+def test_run_new_rfactor_no_warning(r_type,
+                                    fe2o3_012_1x1_dataset,
+                                    monkeypatch,
+                                    caplog):
+    """Check that run_new_rfactor logs no warning for clean input."""
+    caplog.set_level(logging.WARNING)
+    _run_section(fe2o3_012_1x1_dataset, r_type, monkeypatch)
+    assert not caplog.records
 
 
 @pytest.mark.skipif(not CAN_PLOT, reason='Needs matplotlib')
