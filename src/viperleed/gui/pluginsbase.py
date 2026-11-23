@@ -11,13 +11,13 @@ that is present on all subclasses of ViPErLEEDPluginBase.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-06-29'
 __license__ = 'GPLv3+'
 
-from PyQt5 import QtCore as qtc
-from PyQt5 import QtGui as qtg
-from PyQt5 import QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.constants import LOGO
 from viperleed.gui.helpers import resources_path
@@ -72,17 +72,17 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
         """
         super().__init__(parent)
         self.name = name
-        self.about_action = qtw.QAction("About")
+        self.about_action = qtg.QAction("About")
         self.__about = AboutViPErLEED(module_name=name,
                                       module_description=description)
 
-        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
+        self.setAttribute(qtc.Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowIcon(qtg.QIcon(LOGO))
 
         # Native windows are a little slower to draw, but offer
         # the advantage of giving access to windowHandler() (a
         # QWindow), which has a screenChanged signal.
-        self.setAttribute(qtc.Qt.WA_NativeWindow)
+        self.setAttribute(qtc.Qt.WidgetAttribute.WA_NativeWindow)
 
         # __screens keeps track of the old
         # and new screens of the plug-in
@@ -135,7 +135,7 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
     def center_on_screen(self):
         """Center the window in the current screen."""
         window_rect = self.frameGeometry()
-        screen_center = qtw.qApp.desktop().availableGeometry(self).center()
+        screen_center = self.screen().availableGeometry().center()
         window_rect.moveCenter(screen_center)
         self.move(window_rect.topLeft())
 
@@ -155,9 +155,9 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
         reject_event : bool
             True if the event should not be processed.
         """
-        if event.type() == qtc.QEvent.NonClientAreaMouseButtonPress:
+        if event.type() == qtc.QEvent.Type.NonClientAreaMouseButtonPress:
             self.old_screen = self.screen()
-        elif event.type() == qtc.QEvent.NonClientAreaMouseButtonRelease:
+        elif event.type() == qtc.QEvent.Type.NonClientAreaMouseButtonRelease:
             self.new_screen = self.screen()
         return super().eventFilter(watched_object, event)
 
@@ -168,7 +168,7 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
 
     def keyPressEvent(self, event):    # pylint: disable=invalid-name
         """Extend keyPressEvent to close 'About' on 'Esc'."""
-        if event.key() == qtc.Qt.Key_Escape:
+        if event.key() == qtc.Qt.Key.Key_Escape:
             self.__about.hide()
         super().keyPressEvent(event)
 
@@ -216,10 +216,10 @@ class AboutViPErLEED(qtw.QWidget):
         self.__close_btn = qtw.QPushButton('Close')
 
         super().__init__(parent)
-        self.setWindowFlags(qtc.Qt.Tool
-                            | qtc.Qt.WindowTitleHint
-                            | qtc.Qt.CustomizeWindowHint
-                            | qtc.Qt.WindowTitleHint)
+        self.setWindowFlags(qtc.Qt.WindowType.Tool
+                            | qtc.Qt.WindowType.WindowTitleHint
+                            | qtc.Qt.WindowType.CustomizeWindowHint
+                            | qtc.Qt.WindowType.WindowTitleHint)
         self.setWindowTitle('About ViPErLEED')
 
         self.__compose()
@@ -298,14 +298,15 @@ class AboutViPErLEED(qtw.QWidget):
         txt.setOpenExternalLinks(True)
         txt.ensurePolished()
 
-        layout.addWidget(logo_one_line(), alignment=qtc.Qt.AlignHCenter)
+        layout.addWidget(logo_one_line(),
+                         alignment=qtc.Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(txt)
         layout.addWidget(self.__close_btn)
 
         self.setLayout(layout)
         self.setMaximumWidth(max_width)
         palette = self.palette()
-        palette.setColor(palette.Background, qtc.Qt.white)
+        palette.setColor(palette.ColorRole.Window, qtc.Qt.GlobalColor.white)
         self.setAutoFillBackground(True)
         self.setPalette(palette)
         self.adjustSize()

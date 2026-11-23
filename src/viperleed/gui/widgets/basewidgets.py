@@ -7,14 +7,14 @@ of the widgets package.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 import numpy as np
-from PyQt5 import QtCore as qtc
-from PyQt5 import QtGui as qtg
-from PyQt5 import QtWidgets as qtw
+from viperleed.gui.qt_compat import QtCore as qtc
+from viperleed.gui.qt_compat import QtGui as qtg
+from viperleed.gui.qt_compat import QtWidgets as qtw
 
 from viperleed.gui.widgets.lib import AllGUIFonts
 from viperleed.gui.widgets.lib import drawText
@@ -30,7 +30,8 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
             raise
 
         super().__init__(parent)
-        self.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
+        self.setSizePolicy(qtw.QSizePolicy.Policy.Expanding,
+                           qtw.QSizePolicy.Policy.Expanding)
         self.setParent(parent)
 
         self.color = color
@@ -242,8 +243,8 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
         painter.begin(self)
         painter.setFont(self.font())
         painter.setPen(pen)
-        painter.setRenderHint(qtg.QPainter.Antialiasing)
-        painter.setRenderHint(qtg.QPainter.TextAntialiasing)
+        painter.setRenderHint(qtg.QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(qtg.QPainter.RenderHint.TextAntialiasing)
 
         #-- Draw first the entries of the matrix
         self.paintElements(painter)

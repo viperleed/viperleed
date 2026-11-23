@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from pytest_cases import parametrize
 
+from . import conftest
 from . import optional_dependencies
 
 _ALLOW = optional_dependencies.ALLOW_MISSING_OPTION
@@ -31,11 +32,7 @@ def test_unaffected():
 def _run(pytester, *args, source=_TEST_FILE):
     """Run pytest on a test file with the plugin."""
     pytester.makepyfile(source)
-    return pytester.runpytest_inprocess(
-        *args,
-        '-p', 'no:cacheprovider',
-        plugins=[optional_dependencies],
-        )
+    return pytester.runpytest_inprocess(*args, *conftest.PYTESTER_OPTIONS)
 
 
 def _run_xdist(pytester, mocker, *args):
@@ -46,8 +43,7 @@ def _run_xdist(pytester, mocker, *args):
     return pytester.runpytest_subprocess(
         *args,
         '-n', '2',
-        '-p', 'no:cacheprovider',
-        '-p', optional_dependencies.__name__,
+        *conftest.PYTESTER_OPTIONS,
         )
 
 
@@ -156,9 +152,10 @@ def test_allow_missing_unknown(pytester, allow):
     """Check that unknown names for --allow-missing are an error."""
     result = _run(pytester, _REQUIRE, *allow)
     assert result.ret == pytest.ExitCode.USAGE_ERROR
+    valid = ', '.join(optional_dependencies.KNOWN_DEPENDENCIES)
     result.stderr.fnmatch_lines([
-        (f'*{_ALLOW}: unknown optional dependencies *. '
-         'Valid names are gfortran, mpifort.'),
+        f'*{_ALLOW}: unknown optional dependencies *. '
+        f'Valid names are {valid}.',
         ])
 
 

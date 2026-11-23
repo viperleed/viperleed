@@ -1,0 +1,108 @@
+"""Load pytest-qt only if a Qt binding is available.
+
+pytest-qt aborts the whole test session if no Qt binding is installed,
+even if no test needs Qt (e.g., for calc-only installations). Hence,
+this plugin registers pytest-qt only when viperleed finds a usable Qt
+binding, and blocks it otherwise. This happens when this plugin is
+registered (in pytest_addoption, called right away for a new plugin),
+that is, before pytest-qt is configured. pytest-qt is registered under
+the same name as when pytest loads it automatically ('pytest-qt'), so
+that it is never registered twice (e.g., in nested runs via pytester,
+where automatic loading may come first or later).
+
+pytest-qt is also told to use the same binding as viperleed.gui's
+qt_compat (selected via the QT_API environment variable, see
+viperleed.gui.qt_compat.binding): two bindings must never be imported
+in the same process.
+
+Nested pytest runs (via pytester) should load this plugin, as
+pytest-qt is otherwise loaded automatically. Use the PYTESTER_OPTIONS
+of tests/conftest.py, which load it.
+
+When pytest-qt is not loaded (no Qt binding, or pytest-qt is not
+installed), its qapp and qtbot fixtures are replaced by fixtures that
+skip the test via missing_dependency (or fail with --require-all).
+They make the test fail instead if a binding is installed but broken
+(see qt_compat.binding), or if the QT_API environment variable
+prevents selecting one (e.g., it has an unsupported value).
+"""
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
+__created__ = '2026-11-10'
+__license__ = 'GPLv3+'
+
+import importlib
+import importlib.util
+import os
+
+import pytest
+
+# Imported here, so that an installed viperleed without qt_compat
+# (e.g., of an older version) fails at the start of the session
+from viperleed.gui.qt_compat import binding as qt_binding
+
+PYTEST_QT = 'pytest-qt'  # Name of the pytest11 entry point
+PYTEST_QT_API_ENV = 'PYTEST_QT_API'
+
+
+def pytest_addoption(parser, pluginmanager):
+    """Register pytest-qt if it can be used, block it otherwise."""
+    _ = parser  # Unused, but needed to get pluginmanager
+    if _MISSING is not None:
+        pluginmanager.set_blocked(PYTEST_QT)  # Also unregisters it
+    elif pluginmanager.get_plugin(PYTEST_QT) is None:
+        pluginmanager.register(importlib.import_module('pytestqt.plugin'),
+                               PYTEST_QT)
+
+
+def _find_missing():
+    """Return (name, detail, fail) of what is missing, or None.
+
+    fail is whether tests that need what is missing should fail,
+    rather than be skipped: if it is a problem to be fixed, rather
+    than an optional dependency that is not installed.
+    """
+    try:
+        binding = qt_binding.get_binding()
+    except qt_binding.QtApiError as exc:  # E.g., an unsupported value
+        return qt_binding.QT_API_ENV, str(exc), True
+    except qt_binding.QtBindingNotFoundError as exc:
+        return 'PyQt', str(exc), False
+    except ImportError as exc:  # Installed, but broken
+        return 'PyQt', f'installed, but broken. {exc}', True
+    if importlib.util.find_spec('pytestqt') is None:
+        return PYTEST_QT, '', False
+    requested = os.environ.get(PYTEST_QT_API_ENV, '').strip().lower()
+    if requested and requested != binding.lower():
+        msg = (f'{PYTEST_QT_API_ENV}={requested!r} differs from the Qt '
+               f'binding used by viperleed ({binding}). Select the binding '
+               'via the QT_API environment variable instead.')
+        raise pytest.UsageError(msg)
+    os.environ[PYTEST_QT_API_ENV] = binding.lower()
+    return None
+
+
+_MISSING = _find_missing()
+
+
+if _MISSING is not None:
+    @pytest.fixture(name='qapp')
+    def fixture_qapp(missing_dependency):
+        """Skip (or fail) the test, as pytest-qt cannot be used."""
+        _report_missing(missing_dependency)
+
+    @pytest.fixture(name='qtbot')
+    def fixture_qtbot(missing_dependency):
+        """Skip (or fail) the test, as pytest-qt cannot be used."""
+        _report_missing(missing_dependency)
+
+
+def _report_missing(missing_dependency):
+    """Skip the current test, or fail it if Qt cannot be used."""
+    name, detail, fail = _MISSING
+    if fail:
+        pytest.fail(f'Cannot use {name}: {detail}')
+    missing_dependency(name, detail)

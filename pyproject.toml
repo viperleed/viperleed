@@ -19,7 +19,7 @@ readme = 'README.md'
 dependencies = [
     'fortranformat',
     'importlib_resources; python_version<"3.10"',  # Patch matplotlib
-    'matplotlib>=3.5',  # Maybe even lower, but had problems installing
+    'matplotlib>=3.5',  # For the 'qtagg' back-end (PyQt5 and PyQt6)
     'numpy',
     'psutil',
     # quicktions 1.20+ ship no Python 3.7 wheels and do not declare
@@ -88,7 +88,7 @@ classifiers = [
 
     [project.optional-dependencies]
     GUI = [
-        'PyQt5',
+        'PyQt5>=5.15',  # Scoped enums, QWidget.screen()
         'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
@@ -138,6 +138,9 @@ classifiers = [
     [tool.coverage.run]
     branch = true
     parallel = true
+    # Also measure Python subprocesses (coverage >= 7.10; older versions
+    # complain, see filterwarnings, but pytest-cov < 7 does it itself)
+    patch = ['subprocess']
     source = [  # Only collect coverage for these
         'viperleed',
         'tests',
@@ -164,8 +167,12 @@ classifiers = [
         '--cov-branch',
         ]
     pythonpath = ['.', '..']
-    # Turn all warnings into errors. See also "How to capture warnings"
-    filterwarnings = ['error',]
+    filterwarnings = [
+        # Turn all warnings into errors. See also "How to capture warnings"
+        'error',
+        # coverage < 7.10 (e.g., on Python < 3.9) has no [run] patch
+        'ignore:Unrecognized option .\[tool.coverage.run\] patch=:Warning',
+        ]
     markers = [
         'slow: takes about half a second or more (quick tier: --quick)',
         'tensorleed: needs a TensErLEED tree (VIPERLEED_TENSORLEED)',
@@ -189,8 +196,8 @@ classifiers = [
 [tool.pylint]
 
     [tool.pylint.master]
-    extension-pkg-whitelist = ['PyQt5', 'quicktions']
-    extension-pkg-allow-list = ['PyQt5', 'quicktions']
+    extension-pkg-whitelist = ['PyQt5', 'PyQt6', 'quicktions']
+    extension-pkg-allow-list = ['PyQt5', 'PyQt6', 'quicktions']
     load-plugins = [
         'pylint.extensions.bad_builtin',
         'pylint.extensions.broad_try_clause',
@@ -241,6 +248,19 @@ classifiers = [
 
     [tool.pylint.format]
     max-line-length = 79
+
+    [tool.pylint.typecheck]
+    generated-members = [
+        # Fully scoped members of Qt enumerations, e.g.,
+        # Qt.AlignmentFlag.AlignLeft: pylint does not find them
+        # with PyQt5, where enumerations are not Enum subclasses.
+        # build/scripts/qt_codemod.py --verify checks them. Only
+        # enumerations of Qt and of Qt classes, accessed via the
+        # aliases of the Qt modules of qt_compat (e.g., qtc), not
+        # to hide errors elsewhere (e.g., in our own Q-classes).
+        '(qtc|qtg|qtw|qtn|qts)\.(Qt|Q[A-Z]\w*)\.[A-Z]\w*\.[A-Z]\w*$',
+        '.*\.GlobalColor\.\w+$',  # Members are lowercase
+        ]
 
     [tool.pylint.messages_control]
     enable = [

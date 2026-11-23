@@ -225,19 +225,21 @@ The tests also run on GitHub Actions:
 
 - The workflow ``Tests`` (:file:`.github/workflows/unit_tests.yml`) runs the
   default tier with ``-n auto`` and ``--require-all`` on every pull request
-  and on every push to the ``master`` branch, in three jobs: on Linux with the
-  newest stable Python 3, and on Windows with Python 3.7 and with the same
-  Python as on Linux (see the workflow file). The Windows jobs install no
-  Fortran compilers and add ``--allow-missing=mpifort,gfortran``, so the
-  tests that need a compiler run on Linux in any case, and on Windows only
-  where the runner image has the compiler (at present :program:`gfortran`,
-  but not :program:`mpifort`). The check ``Tests`` fails unless all
-  three jobs succeed. The coverage of the Linux job is uploaded to
-  `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
-  to ``master``, the job ``Tests (serial)`` also runs the default tier
-  without :program:`pytest-xdist` (on Linux), to catch tests that fail only
-  when run serially. It is not part of the check ``Tests``: a pull request
-  that breaks the serial run is noticed only after it is merged.
+  and on every push to the ``master`` branch, in four jobs: two on Linux with
+  the newest stable Python 3, one with PyQt5 (from ``viperleed[GUI]``) and one
+  with PyQt6 (see :ref:`gui_qt_bindings`), and two on Windows with Python 3.7
+  and with the same Python as on Linux (see the workflow file). The Windows
+  jobs install no Fortran compilers and add
+  ``--allow-missing=mpifort,gfortran``, so the tests that need a compiler run
+  on Linux in any case, and on Windows only where the runner image has the
+  compiler (at present :program:`gfortran`, but not :program:`mpifort`). The
+  check ``Tests`` fails unless all four jobs succeed. The coverage of the two
+  Linux jobs is uploaded to
+  `Codecov <https://codecov.io/gh/viperleed/viperleed>`__, which merges them.
+  After every push to ``master``, the job ``Tests (serial)`` also runs the
+  default tier without :program:`pytest-xdist` (on Linux), to catch tests that
+  fail only when run serially. It is not part of the check ``Tests``: a pull
+  request that breaks the serial run is noticed only after it is merged.
 - The *TensErLEED tests* (:file:`.github/workflows/tensorleed_tests.yml`)
   run the TensErLEED tier on every pull request into ``master``, against a
   tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.
@@ -282,6 +284,80 @@ the input ``release`` is checked (with the GitHub CLI, add
 without running any test. Such a run on the head of a pull request into
 ``master`` thus cannot satisfy the required checks ``TensErLEED tests`` and
 ``TensErLEED tests (Windows)``.
+
+
+.. _gui_qt_bindings:
+
+Writing GUI code for PyQt5 and PyQt6
+------------------------------------
+
+The graphical user interface runs with either PyQt5 or PyQt6. PyQt5 is the
+one installed with ``viperleed[GUI]``, as Qt 6 does not run on Windows 7.
+The oldest versions that work are PyQt5 5.15 and PyQt6 6.1 (see
+``MIN_VERSIONS`` in ``viperleed.gui.qt_compat.binding``): PyQt6 6.0 lacks
+names of enumerations used in the code (e.g., it has ``Qt.MouseButtons``
+rather than ``Qt.MouseButton``), and some of its enumerations do not compare
+equal to the integers that Qt functions return (e.g., ``Qt.Key``). Older
+bindings are treated as unusable. Code in :file:`viperleed/gui` must work
+with both:
+
+- Import Qt modules only from ``viperleed.gui.qt_compat``, never from
+  ``PyQt5`` or ``PyQt6`` directly:
+
+  .. code-block:: python
+
+      from viperleed.gui.qt_compat import QtCore as qtc
+      from viperleed.gui.qt_compat import QtGui as qtg
+      from viperleed.gui.qt_compat import QtWidgets as qtw
+
+- Use fully scoped enumeration members, e.g.,
+  ``qtc.Qt.AlignmentFlag.AlignLeft`` rather than ``qtc.Qt.AlignLeft``, also
+  when accessing them via an object (``palette.ColorRole.Text`` rather than
+  ``palette.Text``).
+- Do not take values of enumerations as booleans: some are plain ``Enum``
+  in PyQt6, whose members are all true (e.g., ``Qt.CheckState.Unchecked``).
+  Compare with the members instead, e.g.,
+  ``item.checkState() != qtc.Qt.CheckState.Unchecked``.
+- Use ``.exec()`` rather than ``.exec_()``.
+- Take ``QAction``, ``QActionGroup``, ``QShortcut``, ``QUndoCommand``,
+  ``QUndoGroup``, ``QUndoStack``, and ``QFileSystemModel`` from ``QtGui``.
+- Where no method works with both bindings, use (or add) a function of
+  ``viperleed.gui.qt_compat.events``, e.g., ``get_global_position(event)``.
+
+The binding is selected the first time a Qt module is imported from
+``viperleed.gui.qt_compat``: the one requested via the ``QT_API``
+:term:`environment variable` (``pyqt5`` or ``pyqt6``), otherwise one that
+was already imported, otherwise PyQt6 if installed, otherwise PyQt5. To work
+with both, keep PyQt5 and PyQt6 in two separate virtual environments, rather
+than switching via ``QT_API`` in one.
+
+The GUI tests in :file:`tests/gui` use the binding installed. Run them in
+both environments. Without a display, set ``QT_QPA_PLATFORM=offscreen``.
+Tests that create widgets use the ``qtbot`` and ``qapp`` fixtures of
+`pytest-qt <https://pytest-qt.readthedocs.io>`__ (among the test
+requirements). Without a Qt binding, these tests are skipped (or fail with
+``--require-all``) rather than aborting the whole test session, as pytest-qt
+would do otherwise (see :file:`tests/qt_plugin.py`). The smoke tests in
+:file:`tests/gui/test_smoke.py` import all GUI modules, and create, show,
+and close all their widgets. They find these automatically: a new widget that
+needs arguments to be created is skipped until a factory for it is added to
+``_FACTORIES`` in that module.
+
+The script :file:`build/scripts/qt_codemod.py` turns code written for PyQt5
+into code that works with both bindings (e.g., when bringing in code from
+older branches). Run it with PyQt6 installed:
+
+.. code-block:: bash
+
+    python build/scripts/qt_codemod.py --check src/viperleed/gui  # report
+    python build/scripts/qt_codemod.py src/viperleed/gui          # rewrite
+
+It also reports what it cannot fix, and short enumeration members accessed
+via objects (add ``--fix-instance-enums`` to fix those too, and review the
+changes). In an environment with PyQt5, ``--verify`` checks that all Qt
+attribute chains exist, and ``--compare REV`` checks that the rewritten code
+refers to the same Qt objects as at git revision ``REV``. Run
+``python build/scripts/qt_codemod.py --help`` for all the options.
 
 
 .. _editable_install:

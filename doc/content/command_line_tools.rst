@@ -103,9 +103,9 @@ tool for running |LEED-IV| calculations.
 -----------------
 
 ``viperleed gui`` starts the ViPErLEED graphical user interface. Before
-opening any window, it checks that :program:`PyQt5` can be loaded and that
-the system has a display. This check takes a few seconds on systems without
-a display.
+opening any window, it checks that :program:`PyQt5` or :program:`PyQt6`
+can be loaded and that the system has a display. This check takes a few
+seconds on systems without a display.
 
     .. argparse::
         :module: viperleed.cli

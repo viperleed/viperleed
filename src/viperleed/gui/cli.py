@@ -12,7 +12,9 @@ __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 from importlib import import_module
+from importlib.util import find_spec
 from itertools import chain
+import os
 from pathlib import Path
 import sys
 
@@ -20,15 +22,24 @@ from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.gui.base import catch_gui_crash
 from viperleed.gui.constants import LOGO
 from viperleed.gui.detect_graphics import PyQtSanity
-from viperleed.gui.detect_graphics import Qt5DependencyFinder
+from viperleed.gui.detect_graphics import QtDependencyFinder
 from viperleed.gui.detect_graphics import check_pyqt_sanity
 from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
+from viperleed.gui.qt_compat.binding import MIN_VERSIONS
+from viperleed.gui.qt_compat.binding import PYQT5
+from viperleed.gui.qt_compat.binding import QT_API_ENV
+from viperleed.gui.qt_compat.binding import SUPPORTED_BINDINGS
+from viperleed.gui.qt_compat.binding import QtApiError
+from viperleed.gui.qt_compat.binding import get_binding
+from viperleed.gui.qt_compat.binding import get_candidates
+
+_QT_COMPAT = 'viperleed.gui.qt_compat'
 
 # Part of error message emitted if a likely ABI mismatch is detected
-# on the current PyQt5 installation (e.g., Anaconda vs. pip)
+# on the current Qt installation (e.g., Anaconda vs. pip)
 _ABI_MISMATCH_MSG = '''
 If you are executing viperleed in a conda environment, try one of the
 following:
@@ -47,26 +58,54 @@ _SKIP_CHECK_MSG = '''
 If your system has a display, you can start the GUI anyway with
     viperleed gui --skip-graphics-check'''
 
-# Error messages emitted if the sanity check fails
+_CANNOT_RUN_MSG = (
+    'Cannot execute the ViPErLEED graphical user interface because {}'
+    )
+_MIN_VERSIONS_MSG = ' or '.join(f'{binding}>={major}.{minor}'
+                                for binding, (major, minor)
+                                in MIN_VERSIONS.items())
+
+# Error messages emitted if the sanity check fails. {qt} is replaced
+# by the Qt bindings that were looked for (e.g., 'PyQt6 or PyQt5'),
+# {binding} by the one that the check is about, {qt_api_error} by why
+# no binding can be selected via QT_API, {qt_api_note} by a note on
+# a binding requested via QT_API, and {also_tried} by lines about
+# other bindings that were tried, and failed.
 _SANITY_TO_ERR_MSG = {
-    PyQtSanity.NOT_FOUND: 'PyQt5 is not installed.',
+    PyQtSanity.NOT_FOUND: (
+        'no Qt binding is installed (looked for {qt}{qt_api_note}).'
+        ),
+    PyQtSanity.INVALID_QT_API: 'no Qt binding can be selected. {qt_api_error}',
+    PyQtSanity.TOO_OLD: (
+        'the installed {binding} is too old. ViPErLEED needs '
+        + _MIN_VERSIONS_MSG + '. Upgrade it, e.g., via'
+        '\n    python -m pip install --upgrade {binding}{also_tried}'
+        ),
     # All of the following may still be caused by missing dependencies
     PyQtSanity.OK: '',
     PyQtSanity.IMPORT_ERROR: (
-        'PyQt5 was found, but it could not be loaded.' + _ABI_MISMATCH_MSG
+        '{binding} was found, but it could not be loaded.{also_tried}'
+        + _ABI_MISMATCH_MSG
         ),
     PyQtSanity.RUNTIME_CRASH: (
-        'PyQt5 was found, but the GUI crashed at startup.' + _ABI_MISMATCH_MSG
+        '{binding} was found, but the GUI crashed at startup.{also_tried}'
+        + _ABI_MISMATCH_MSG
         ),
     PyQtSanity.NO_DISPLAY: (
         'the system appears to have no graphics capability (i.e., no '
-        'monitor was detected).' + _SKIP_CHECK_MSG
+        'monitor was detected).{also_tried}' + _SKIP_CHECK_MSG
         ),
     PyQtSanity.UNRESPONSIVE: (
-        'loading PyQt5 did not complete in time. '
-        'Try once more, or check whether your system is very busy.'
+        'loading {binding} did not complete in time. Try once more, or '
+        'check whether your system is very busy.{also_tried}'
         + _SKIP_CHECK_MSG
         ),
+    }
+# Why another binding that was tried failed, for {also_tried}
+_OTHER_FAILURE = {
+    PyQtSanity.IMPORT_ERROR: 'it could not be loaded',
+    PyQtSanity.RUNTIME_CRASH: 'the GUI crashed at startup with it',
+    PyQtSanity.TOO_OLD: 'it is too old',
     }
 
 
@@ -79,6 +118,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         if args.nogui:
             return commandline_main()
         if args.skip_graphics_check:
+            self._check_qt_api()  # Not to crash later on
             # Also prevent later checks, e.g., in has_pyqt()
             check_pyqt_sanity.assume_ok()
         else:
@@ -96,11 +136,12 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             )
         parser.add_argument(
             '--skip-graphics-check',
-            help=('do not check whether PyQt5 works and the system '
-                  'has a display before starting the graphical user '
-                  'interface. Use this if the check wrongly reports '
-                  'that no display is available. If PyQt5 is broken, '
-                  'Python may crash without further explanation'),
+            help=('do not check whether Qt (PyQt5 or PyQt6) works and '
+                  'the system has a display before starting the '
+                  'graphical user interface. Use this if the check '
+                  'wrongly reports that no display is available. If Qt '
+                  'is broken, Python may crash without further '
+                  'explanation'),
             action='store_true',
             )
 
@@ -111,25 +152,42 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         ------
         SystemExit
             If the GUI cannot execute because
-            - PyQt5 is not installed,
-            - PyQt5 misses any system dependencies,
-            - loading PyQt5 or opening the GUI would crash Python,
-            - the current machine has no graphics capability.
+            - neither PyQt5 nor PyQt6 is installed,
+            - the installed binding is too old,
+            - Qt misses any system dependencies,
+            - loading Qt or opening the GUI would crash Python,
+            - the current machine has no graphics capability,
+            - the QT_API environment variable prevents selecting
+              a binding (e.g., it has an invalid value).
         """
-        err_msg = (
-            'Cannot execute the ViPErLEED graphical user interface because {}'
-            )
         # The check may take a few seconds, e.g., on systems without
         # a display. Tell users, and end the line before any errors.
         print('Checking graphics capabilities...', flush=True, end='')
         sanity = check_pyqt_sanity()
         print('Done', flush=True)
         details = _SANITY_TO_ERR_MSG[sanity]  # Let KeyError propagate
-        if sanity is PyQtSanity.NOT_FOUND:
-            # This is the only case in which it makes no sense to
-            # check for missing dependencies. All other non-sane
+        candidates, qt_api_error = self._get_candidates()
+        also_tried = self._describe_other_failures()
+        details = details.format(
+            qt=' or '.join(candidates),
+            binding=check_pyqt_sanity.binding,
+            qt_api_error=qt_api_error,
+            qt_api_note=self._describe_qt_api(),
+            also_tried=also_tried,
+            )
+        if sanity is PyQtSanity.OK:
+            # Qt could start a QApplication, hence it found a working
+            # platform plugin. Libraries missing for others (e.g., for
+            # wayland, if Qt 6 uses xcb) do not prevent the GUI from
+            # running: do not look for them.
+            return
+        if sanity in {PyQtSanity.NOT_FOUND,
+                      PyQtSanity.INVALID_QT_API,
+                      PyQtSanity.TOO_OLD}:
+            # These are the only failures for which it makes no sense
+            # to check for missing dependencies. All other non-sane
             # configurations may be because of missing dependencies.
-            self.parser.error(err_msg.format(details))
+            self._exit(details)
         missing = tuple(chain.from_iterable(
             find_missing_qt_dependencies().values()
             ))
@@ -137,16 +195,75 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             sep = '\n    '
             fmt_missing = sep.join(missing)
             fmt_missing = sep + fmt_missing
-            how_to_install = Qt5DependencyFinder.find_install_for_libs(missing)
+            how_to_install = QtDependencyFinder.find_install_for_libs(missing)
             install_msg = 'Try again after installing them'
             install_msg += ('.' if not how_to_install
                             else f' via{sep}{how_to_install}')
-            self.parser.error(err_msg.format(
-                'the following PyQt5 dependencies are missing on your system:'
+            self._exit(
+                'the following Qt dependencies of '
+                f'{check_pyqt_sanity.binding} are missing on your system:'
                 f'{fmt_missing}\n{install_msg}'
-                ))
-        if sanity is not PyQtSanity.OK:
-            self.parser.error(err_msg.format(details))
+                + also_tried
+                )
+        self._exit(details)
+
+    def _check_qt_api(self):
+        """Exit if QT_API prevents selecting an installed binding."""
+        candidates, qt_api_error = self._get_candidates()
+        if qt_api_error:
+            msg = _SANITY_TO_ERR_MSG[PyQtSanity.INVALID_QT_API]
+            self._exit(msg.format(qt_api_error=qt_api_error))
+        qt_api_note = self._describe_qt_api()
+        # A binding requested via QT_API is the only candidate
+        if qt_api_note and find_spec(candidates[0]) is None:
+            msg = _SANITY_TO_ERR_MSG[PyQtSanity.NOT_FOUND]
+            self._exit(msg.format(qt=candidates[0], qt_api_note=qt_api_note))
+
+    @staticmethod
+    def _describe_other_failures():
+        """Return lines about other bindings tried, that failed.
+
+        The bindings that are not installed are not mentioned.
+        """
+        binding = check_pyqt_sanity.binding
+        return ''.join(
+            f'\n{other.binding} was also tried, but '
+            f'{_OTHER_FAILURE.get(other.sanity, other.sanity.name)}.'
+            for other in check_pyqt_sanity.results
+            if other.binding not in (None, binding)
+            and other.sanity is not PyQtSanity.NOT_FOUND
+            )
+
+    @staticmethod
+    def _describe_qt_api():
+        """Return a note on the binding requested via QT_API, or ''."""
+        requested = os.environ.get(QT_API_ENV, '').strip()
+        if not requested:
+            return ''
+        return f', requested via {QT_API_ENV}={requested!r}'
+
+    def _exit(self, details):
+        """Exit, as the GUI cannot run because of `details`."""
+        self.parser.error(_CANNOT_RUN_MSG.format(details))
+
+    @staticmethod
+    def _get_candidates():
+        """Return the Qt bindings to look for, and any QT_API error.
+
+        Returns
+        -------
+        candidates : tuple
+            The names of the bindings that are tried. All supported
+            ones if the QT_API environment variable prevents selecting
+            any of them.
+        qt_api_error : str
+            Why QT_API prevents selecting a binding, or an empty
+            string if it does not.
+        """
+        try:
+            return get_candidates(), ''
+        except QtApiError as exc:
+            return SUPPORTED_BINDINGS, str(exc)
 
 
 def commandline_main():
@@ -170,8 +287,10 @@ def gui_main():
     catch_gui_crash()
 
     print('Loading GUI...', flush=True, end='')
-    qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
-    qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
+    if get_binding() == PYQT5:  # Always on (and not available) in Qt 6
+        app_attribute = qtc.Qt.ApplicationAttribute
+        qtg.QGuiApplication.setAttribute(app_attribute.AA_EnableHighDpiScaling)
+        qtg.QGuiApplication.setAttribute(app_attribute.AA_UseHighDpiPixmaps)
     suppress_file_permission_warnings()  # Next line emits the warnings
     app = qtw.QApplication(sys.argv)
     app.setWindowIcon(qtg.QIcon(LOGO))
@@ -190,17 +309,17 @@ def gui_main():
     plugin_selector_window = plugin_selector()
     plugin_selector_window.show()
     print('Done', flush=True)
-    return app.exec_()
+    return app.exec()
 
 
 def import_graphics_modules():
     """Dynamically import modules for graphical capability."""
     if not has_pyqt():
-        raise ImportError('PyQt5 is not available.')
+        raise ImportError('No Qt binding (PyQt5 or PyQt6) is available.')
     gui_select = import_module('viperleed.gui.selectplugin')
     return (
-        import_module('PyQt5.QtCore'),  # Not graphics per-se
-        import_module('PyQt5.QtGui'),
-        import_module('PyQt5.QtWidgets'),
+        import_module(f'{_QT_COMPAT}.QtCore'),  # Not graphics per-se
+        import_module(f'{_QT_COMPAT}.QtGui'),
+        import_module(f'{_QT_COMPAT}.QtWidgets'),
         gui_select.ViPErLEEDSelectPlugin,
         )
