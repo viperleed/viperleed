@@ -1,7 +1,7 @@
 """Tests for module viperleed.calc.files.iorfactor."""
 
 __authors__ = ('Alexandra Mia Imre (@alexmiame)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-12-11'
 __license__ = 'GPLv3+'
 
@@ -75,9 +75,9 @@ def test_find_theory_range_coarse_step(
 class TestWriteRfactorPdf:
     """Tests for writing R-factor plots from TensErLEED column files."""
 
-    @parametrize(r_factor_type=('pendry', 'smooth'))
+    @parametrize(r_factor_type=('pendry', 'r2', 'zj', 'smooth'))
     def test_writes_analysis(self, r_factor_type, mocker):
-        """Check that the analysis PDF is written for an RFactorType."""
+        """Check that only Pendry and smooth write the analysis PDF."""
         energies = np.linspace(50, 100, 21)
         theo = np.column_stack([energies, 1 + np.sin(energies / 5)])
         exp = np.column_stack([energies, 1 + np.cos(energies / 5)])
@@ -93,6 +93,9 @@ class TestWriteRfactorPdf:
         iorfactor.writeRfactorPdf([('(1|0)', 0.1)],
                                   analysisFile='analysis.pdf',
                                   which_r=which_r)
+        if which_r not in (RFactorType.PENDRY, RFactorType.SMOOTH):
+            write_analysis.assert_not_called()
+            return
         write_analysis.assert_called_once()
         _, kwargs = write_analysis.call_args  # .kwargs needs Python 3.8
         assert kwargs['which_r'] is which_r
