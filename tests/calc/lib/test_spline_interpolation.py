@@ -1,7 +1,7 @@
 """Tests for module spline_interpolation of viperleed.calc.lib."""
 
 __authors__ = ('Florian Kraushofer (@fkraushofer)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-08'
 __license__ = 'GPLv3+'
 
@@ -48,7 +48,7 @@ class TestCachedSpline:
         other_grid = make_other(grid)
         spline(grid)
         result = spline(other_grid)
-        assert mock_spline.call_args.args[0] is other_grid
+        assert mock_spline.call_args[0][0] is other_grid
         np.testing.assert_array_equal(result, mock_spline(other_grid))
 
     def test_derivative_cached(self, spline):
