@@ -151,7 +151,7 @@ that beam overlap.
 
 .. [1] Notice that the Pendry or Smooth |R factor| between two sets of beams is
        not the average of the |R factors| between beam pairs, as sums over all
-       beams enter both the numerator and the denominator in 
+       beams enter both the numerator and the denominator in
        Eq. :eq:`eq_RP_def`.
        A weighted average (with the energy span of each beam used as its weight)
        is usually close to the overall |R factor|. In contrast, the overall
