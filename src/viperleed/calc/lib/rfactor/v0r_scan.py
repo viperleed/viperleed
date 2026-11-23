@@ -95,6 +95,37 @@ class V0rScanResult:
         )
 
 
+def _count_points(intensities):
+    """Return the number of non-NaN energies in each beam column."""
+    return np.count_nonzero(~np.isnan(intensities), axis=0)
+
+
+def _log_skipped_beams(exp_beams, exp_intensities, theo_intensities):
+    """Log, at DEBUG level, which beams are too short to interpolate.
+
+    Columns of theo_intensities (already averaged) correspond to
+    the experimental beams, so both are named by their labels.
+    """
+    reasons = {}
+    for what, intensities in (('experimental', exp_intensities),
+                              ('theoretical', theo_intensities)):
+        for beam, n_points in zip(exp_beams, _count_points(intensities)):
+            if n_points >= _MIN_POINTS:
+                continue
+            energies = 'energy' if n_points == 1 else 'energies'
+            reasons.setdefault(beam.label, []).append(
+                f'{n_points} {what} {energies}'
+            )
+    if not reasons:
+        return
+    skipped = '; '.join(f'{label}: ' + ', '.join(why)
+                        for label, why in reasons.items())
+    logger.debug(
+        f'Leaving out of the R factor {len(reasons)} beam(s) with fewer '
+        f'than {_MIN_POINTS} energies: {skipped}'
+    )
+
+
 def _make_spline(grid, intensities, what):
     """Return a cached not-a-knot spline of ragged beam data.
 
@@ -106,7 +137,7 @@ def _make_spline(grid, intensities, what):
     RfactorError
         If no beam has at least two points.
     """
-    n_points = np.count_nonzero(~np.isnan(intensities), axis=0)
+    n_points = _count_points(intensities)
     if not np.any(n_points >= _MIN_POINTS):
         msg = (
             f'No {what} beam has at least {_MIN_POINTS} energies. '
@@ -217,10 +248,11 @@ def scan_v0r(r_func, v0_imag, exp_beams, theo_beams,  # noqa: PLR0913, PLR0917
     exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(
         exp_beams
     )
-    exp_spline = _make_spline(exp_energies, exp_intensities, 'experimental')
     theo_grid, _, _, theo_intensities = iorfactor.beamlist_to_array(theo_beams)
     theo_intensities = average_beam_array(theo_intensities,
                                           beam_correspondence)
+    _log_skipped_beams(exp_beams, exp_intensities, theo_intensities)
+    exp_spline = _make_spline(exp_energies, exp_intensities, 'experimental')
     theo_spline = _make_spline(theo_grid, theo_intensities, 'theoretical')
 
     out_grid = _experimental_axis(exp_energies, theo_range, iv_shift)

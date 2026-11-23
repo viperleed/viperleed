@@ -615,6 +615,67 @@ def test_rfactor_from_csv_empty_beam_is_skipped(empty_side):
     assert np.isnan(r_beams[2])
 
 
+_SKIPPED_MSG = 'Leaving out of the R factor'
+
+
+def _csv_with_skipped_beams(phase, exp_side):
+    """Return CSV content with two full and three short beams.
+
+    The ( 1| 1) beam is all NaN and the ( 2| 0) beam has one point
+    in the experiment; the ( 0| 2) beam has one point in theory.
+    """
+    header, *rows = _csv_with_short_beam(phase, 0).splitlines()
+    rows = [
+        row + (', NaN' if exp_side else f', {i + 1}.0')
+        + (f', {i + 2}.0' if not exp_side or not i else ', NaN')
+        + (f', {i + 3}.0' if exp_side or not i else ', NaN')
+        for i, row in enumerate(rows)
+    ]
+    return '\n'.join([header + ', ( 1| 1), ( 2| 0), ( 0| 2)',
+                      *rows]) + '\n'
+
+
+def test_rfactor_from_csv_logs_skipped_beams_once(caplog):
+    """Check that each beam too short for the R factor is named once."""
+    caplog.set_level(logging.DEBUG)
+    contents = (_csv_with_skipped_beams(0, exp_side=True),
+                _csv_with_skipped_beams(1, exp_side=False))
+    _, _, r_beams = from_ase.rfactor_from_csv(
+        contents,
+        1.0,
+        beams_file_is_content=(True, True),
+        which_r='pendry',
+        v0r_shift_range=(-3, 3),  # Several shifts
+    )
+    assert np.isnan(r_beams[2:]).all()
+    assert not [r for r in caplog.records if r.levelno >= logging.INFO]
+    skipped = [r for r in caplog.records if _SKIPPED_MSG in r.getMessage()]
+    assert len(skipped) == 1
+    assert skipped[0].levelno == logging.DEBUG
+    text = ''.join(r.getMessage() for r in skipped)
+    expected = {'( 1| 1)': '0 experimental energies',
+                '( 2| 0)': '1 experimental energy',
+                '( 0| 2)': '1 theoretical energy'}
+    for label, reason in expected.items():
+        assert text.count(label) == 1
+        assert f'{label}: {reason}' in text
+    full_beams = _CSV_HEADER.strip().split(', ')[1:]
+    assert not any(label in text for label in full_beams)
+
+
+def test_rfactor_from_csv_logs_no_skipped_beams(caplog):
+    """Check that no beam is reported as skipped for full beams."""
+    caplog.set_level(logging.DEBUG)
+    from_ase.rfactor_from_csv(
+        (_csv_with_short_beam(0, 20), _csv_with_short_beam(1, 20)),
+        1.0,
+        beams_file_is_content=(True, True),
+        which_r='pendry',
+    )
+    assert not [r for r in caplog.records
+                if _SKIPPED_MSG in r.getMessage()]
+
+
 def _smooth_csv(energies, phase):
     """Return the content of a CSV file with one smooth beam."""
     rows = (f'{energy:.2f}, {2 + np.sin((energy + phase) / 4):.6f}\n'
