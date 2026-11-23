@@ -25,20 +25,21 @@ _MODE = 'geo'
 
 # R_FACTOR_TYPE, R_FACTOR_LEGACY, TL_VERSION, and the R factor computed
 _COMPUTED_R_FACTOR = (
-    pytest.param(('pendry', True, '2.1.0', 'pendry'), id='pendry'),
-    pytest.param(('smooth', True, '2.1.0', 'smooth'), id='smooth'),
-    pytest.param(('smooth', False, '2.1.0', 'smooth'), id='smooth-python'),
-    pytest.param(('smooth', True, '2.0.0', 'pendry'), id='smooth-tl2.0'),
-    pytest.param(('smooth', False, '2.0.0', 'smooth'),
+    pytest.param('pendry', True, '2.1.0', 'pendry', id='pendry'),
+    pytest.param('smooth', True, '2.1.0', 'smooth', id='smooth'),
+    pytest.param('smooth', False, '2.1.0', 'smooth', id='smooth-python'),
+    pytest.param('smooth', True, '2.0.0', 'pendry', id='smooth-tl2.0'),
+    pytest.param('smooth', False, '2.0.0', 'smooth',
                  id='smooth-tl2.0-python'),
-    pytest.param(('r2', True, '2.0.0', 'r2'), id='r2-tl2.0'),
+    pytest.param('r2', True, '2.0.0', 'r2', id='r2-tl2.0'),
     )
 
 
-@parametrize('case', _COMPUTED_R_FACTOR)
-def test_figures_get_r_factor_type(case, mocker, tmp_path, monkeypatch):
+@parametrize('r_factor_type,legacy,tl_version,expected', _COMPUTED_R_FACTOR)
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def test_figures_get_r_factor_type(r_factor_type, legacy, tl_version,
+                                   expected, mocker, tmp_path, monkeypatch):
     """Check that error plots are labelled with the R computed."""
-    r_factor_type, legacy, tl_version, expected = case
     monkeypatch.chdir(tmp_path)
     # Fake Rparams with one atom varied once per mode
     atom = mocker.MagicMock()
