@@ -17,10 +17,11 @@ calculation, displacements are applied to one parameter at a time, and the
 in an "error curve".
 
 When using the :ref:`Pendry or the smooth<pendry_r>` |R factor|, its
-standard error, historically called |varR|,\ [1]_ provides an estimate of the uncertainty of
-a given parameter: The point of intersection between the error curve for
-one parameter and |R+varR| can be taken as a measure of the statistical
-error of the parameter itself :cite:p:`heinzElectronBasedMethods2013`.
+standard error, historically called |varR|,\ [1]_ provides an estimate
+of the uncertainty of a given parameter: The point of intersection
+between the error curve for one parameter and |R+varR| can be taken as a
+measure of the statistical error of the parameter itself
+:cite:p:`heinzElectronBasedMethods2013`.
 This gives the "error calculation" its name. |varR| is defined as
 
 .. math::
@@ -47,8 +48,9 @@ Ref. :cite:alp:`pendryReliabilityFactorsLEED1980`.
 Aside from the estimate of the accuracy of a displacement parameter, error
 curves can be used to judge the impact of a certain displacement on the
 overall |R factor|. While estimates on the parameter accuracy only apply
-to the Pendry and smooth |R factors|, the impact of a parameter on the |R factor| is
-also meaningful for other |R-factor| :ref:`definitions<r-factor_calculation>`.
+to the Pendry and smooth |R factors|, the impact of a parameter on the
+|R factor| is also meaningful for other |R-factor|
+:ref:`definitions<r-factor_calculation>`.
 
 -  You may find the |R factor| to be very insensitive to the displacement of
    some atoms (i.e., much less sensitive than for other atoms with a similar
@@ -124,8 +126,8 @@ The results of the error calculation consists of the :ref:`errorspdf_header`
 files, stored in the |OUT| directory.
 
 If the Pendry or the smooth |R factor| is used, the value of |R+varR| is
-calculated
-for each error type and drawn as a horizontal line in :ref:`errorspdf`.
+calculated for each error type and drawn as a horizontal line in
+:ref:`errorspdf`.
 If  ViPErLEED finds an intersection between the error curve for any
 parameter :math:`p` and the line |R+varR|, the intersection points are
 used to calculate the (estimate of the) statistical uncertainty for

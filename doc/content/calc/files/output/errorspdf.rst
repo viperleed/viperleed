@@ -31,8 +31,9 @@ information. The information given for each parameter is:
   :ref:`error_calculation`; only for Pendry's and the smooth |R factor|),
 - parameter value at minimum |R factor| (labeled ``p_min``),
 - statistical error estimates for the parameter fit (labeled ``-Δp``
-  and ``+Δp``. Only for Pendry's and the smooth |R factor| and only if the error
-  curve reaches ``R_min + var(R)`` in the displacement range considered.
+  and ``+Δp``. Only for Pendry's and the smooth |R factor| and only if
+  the error curve reaches ``R_min + var(R)`` in the displacement range
+  considered.
   See also :ref:`error_calculation`.).
 
 For geometric displacements the column ``Direction`` lists the direction

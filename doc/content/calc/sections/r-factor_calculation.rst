@@ -120,7 +120,9 @@ For each beam, :math:`R_2` is defined as
 .. math::
     :label: eq_R2_def
 
-    R_2 = \frac{\int{\mkern-5mu\left(I^\mathrm{exp}(E) - c\,I^\mathrm{theo}(E)\right)^2 dE}}{\int{I^\mathrm{exp}(E)^2\,dE}},
+    R_2 = \frac{\int{\mkern-5mu\left(I^\mathrm{exp}(E)
+                - c\,I^\mathrm{theo}(E)\right)^2 dE}}
+               {\int{I^\mathrm{exp}(E)^2\,dE}},
     \qquad
     c = \frac{\int{I^\mathrm{exp}(E)\,dE}}{\int{I^\mathrm{theo}(E)\,dE}},
 

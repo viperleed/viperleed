@@ -57,17 +57,17 @@ one and the one of TensErLEED. Which one is used depends on where the
    Zanazzi-Jona |R factor|, and for |RS| with older TensErLEED versions.
 
 The python-native implementation calculates :math:`R_2` with its
-literature definition (see |R-factor| :ref:`calculation<r-factor_calculation>`).
-The :math:`R_2` of the TensErLEED |R-factor| program is half of that
-value (see :ref:`R_FACTOR_LEGACY<rfactorlegacy>`). The TensErLEED
-structure search uses the literature definition, like the python-native
-implementation.
+literature definition (see |R-factor|
+:ref:`calculation<r-factor_calculation>`). The :math:`R_2` of the
+TensErLEED |R-factor| program is half of that value (see
+:ref:`R_FACTOR_LEGACY<rfactorlegacy>`). The TensErLEED structure search
+uses the literature definition, like the python-native implementation.
 
 Note that var(R) in :ref:`error calculations<error_calculation>` is only
-supported for Pendry and Smooth |R-factor|.
+supported for the Pendry and smooth |R factors|.
 
 .. versionchanged:: 0.15.0
    R_FACTOR_TYPE accepts names and synonyms of the |R-factor| types (see
    above). Earlier versions only accept the integer numbers 1 (Pendry) and
-   2 (:math:`R_2`). The integer codes 3 (Zanazzi-Jona) and 4 (Smooth) and
-   the Smooth and Zanazzi-Jona |R-factor| types are new in version 0.15.0.
+   2 (:math:`R_2`). The integer codes 3 (Zanazzi-Jona) and 4 (smooth) and
+   the smooth and Zanazzi-Jona |R-factor| types are new in version 0.15.0.

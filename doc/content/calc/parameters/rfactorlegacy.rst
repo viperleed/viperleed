@@ -54,8 +54,9 @@ interpolation degrees.
    part of ViPErLEED, for all four :ref:`R-factor types<rfactortype>`.
    Earlier versions used the python-native |R factor| only if an optional
    compiled extension was installed, and the TensErLEED |R factor|
-   otherwise. Its :math:`R_2` is twice that of the TensErLEED |R-factor| program. INTPOL_DEG
-   other than 3 is rejected if R_FACTOR_LEGACY is ``False``.
+   otherwise. Its :math:`R_2` is twice that of the TensErLEED
+   |R-factor| program. INTPOL_DEG other than 3 is rejected if
+   R_FACTOR_LEGACY is ``False``.
 
 **Default:** True
 
