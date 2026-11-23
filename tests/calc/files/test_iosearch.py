@@ -41,11 +41,10 @@ def test_r_factor_type_line(name, fmt, code):
     assert line == code.ljust(16) + _COMMENT
 
 
-@parametrize(name=('pendry', 'r2'))
+@parametrize('name,code', (('pendry', '    1'), ('r2', '    2')))
 @parametrize(tl_version=_TL_VERSIONS)
-def test_r_factor_type_line_any_version(name, tl_version):
+def test_r_factor_type_line_any_version(name, code, tl_version):
     """Check that Pendry and R2 are written for any TensErLEED."""
-    code = str(RFactorType(name).value).rjust(5)
     line = _format_line(name, 'I5', tl_version)
     assert line == code.ljust(16) + _COMMENT
 
