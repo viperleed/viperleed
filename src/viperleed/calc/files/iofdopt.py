@@ -3,7 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-10-25'
 __license__ = 'GPLv3+'
 
@@ -17,12 +17,12 @@ from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
+from viperleed.calc.lib.matplotlib_utils import get_colormap
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
-    from matplotlib import cm
     from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
 
@@ -209,10 +209,7 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
               for b in rp.expbeams]
     formatting = copy.deepcopy(rp.PLOT_IV)  # use to set colors
     formatting['colors'] = (
-        # Pylint can't tell that we will not execute this,
-        # as per decorator, if we fail to import matplotlib
-        # pylint: disable-next=possibly-used-before-assignment
-        list(cm.get_cmap('viridis', len(points)).colors)
+        list(get_colormap('viridis', len(points)).colors)
         + [np.array([0, 0, 0, 1])])
     formatting['curve_line_widths'] = [0.5] * len(points) + [1.]
     formatting['curve_line_widths'][best_point_ind] = 1.
