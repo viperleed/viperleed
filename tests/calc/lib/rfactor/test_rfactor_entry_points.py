@@ -321,8 +321,10 @@ def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
     """Check that INTPOL_DEG != 3 set in code is refused."""
     expbeams = readOUTBEAMS(fe2o3_012_1x1_dataset['exp_file'])
     theobeams = readOUTBEAMS(fe2o3_012_1x1_dataset['theo_file'])
-    rpars = make_rparams(fe2o3_012_1x1_dataset, 'pendry',
-                          expbeams, theobeams)
+    rpars = make_rparams(fe2o3_012_1x1_dataset,
+                         'pendry',
+                         expbeams,
+                         theobeams)
     rpars.INTPOL_DEG = 5
     with pytest.raises(ParameterConflictError, match='R_FACTOR_LEGACY'):
         rfactor_section.run_new_rfactor(None,
@@ -373,9 +375,9 @@ def _run_section_at(dataset, r_type, monkeypatch, shift_range, **kwargs):
     monkeypatch.setattr(rfactor_section.v0r_scan, 'scan_v0r', _record_scan)
     theobeams = readOUTBEAMS(dataset['theo_file'])
     rpars = make_rparams(dataset,
-                          r_type,
-                          readOUTBEAMS(dataset['exp_file']),
-                          theobeams)
+                         r_type,
+                         readOUTBEAMS(dataset['exp_file']),
+                         theobeams)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*shift_range, _STEP)
     rpars.best_v0r = kwargs.get('best_v0r')
     run_new_rfactor_with_correspondence(

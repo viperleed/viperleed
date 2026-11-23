@@ -15,9 +15,12 @@ from viperleed.calc.lib.rfactor.groups import group_rfactors
 @pytest.mark.parametrize(
     ('groups', 'expected'),
     [
-        pytest.param(None, (1.0 + 2.0 + 3.0) / (4.0 + 5.0 + 6.0),
+        pytest.param(None,
+                     (1.0 + 2.0 + 3.0) / (4.0 + 5.0 + 6.0),
                      id='overall'),
-        pytest.param('beam', np.array([0.25, 0.4, 0.5]), id='per_beam'),
+        pytest.param('beam',
+                     np.array([0.25, 0.4, 0.5]),
+                     id='per_beam'),
     ],
 )
 def test_group_rfactors_overall_and_per_beam(groups, expected):

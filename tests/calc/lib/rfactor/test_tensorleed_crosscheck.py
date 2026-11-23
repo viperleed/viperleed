@@ -105,9 +105,9 @@ def _run_python(folder_name, theo_name, r_type):
     if expected['fractional']:
         relabel_as_fractional(expbeams)
     rpars = make_rparams({'v0i': expected['v0_imag']},
-                          r_type,
-                          expbeams,
-                          theobeams)
+                         r_type,
+                         expbeams,
+                         theobeams)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*expected['iv_shift_range'])
     with pytest.MonkeyPatch.context() as patch:
         run_new_rfactor_with_correspondence(patch,

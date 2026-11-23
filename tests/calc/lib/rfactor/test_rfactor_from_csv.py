@@ -23,13 +23,13 @@ def test_rfactor_from_csv(fe2o3_012_1x1_dataset, with_correspondence):
     if with_correspondence:
         kwargs['beam_correspondence'] = (
             fe2o3_012_1x1_dataset['beam_correspondence']
-            )
+        )
     best_r, best_v0r, r_beams = from_ase.rfactor_from_csv(
         (fe2o3_012_1x1_dataset['exp_file'],
          fe2o3_012_1x1_dataset['theo_file']),
         fe2o3_012_1x1_dataset['v0i'],
         **kwargs,
-        )
+    )
     assert np.isfinite(best_r)
     assert np.isfinite(best_v0r)
     assert isinstance(r_beams, np.ndarray)
@@ -58,7 +58,7 @@ def test_rfactor_from_csv_which_r_r1(fe2o3_012_1x1_dataset, mocker):
     r_1_func = mocker.patch(
         'viperleed.calc.lib.rfactor.r_1.r_1',
         wraps=r_1.r_1,
-        )
+    )
     from_ase.rfactor_from_csv(
         (fe2o3_012_1x1_dataset['exp_file'],
          fe2o3_012_1x1_dataset['theo_file']),
