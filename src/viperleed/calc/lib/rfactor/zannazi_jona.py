@@ -12,7 +12,7 @@ from . import utils
 from .groups import group_beam_rfactors
 
 
-def _zj_quotient(beam_normalization, exp_derivs, theo_derivs, ignore):
+def _zj_quotient(beam_normalization, exp_derivs, theo_derivs, no_overlap):
     """Return the ZJ integrand |num| / eps at each point.
 
     Parameters
@@ -23,7 +23,7 @@ def _zj_quotient(beam_normalization, exp_derivs, theo_derivs, ignore):
     exp_derivs, theo_derivs : tuple of dnl.xp.ndarray
         First and second derivatives of the experimental and
         theoretical intensities. Must be zero outside the overlap.
-    ignore : dnl.xp.ndarray
+    no_overlap : dnl.xp.ndarray
         Boolean array, True for the points outside the overlap.
 
     Returns
@@ -36,12 +36,12 @@ def _zj_quotient(beam_normalization, exp_derivs, theo_derivs, ignore):
     numerators = abs(beam_normalization * theo_2 - exp_2) * abs(
         beam_normalization * theo_1 - exp_1
     )
-    numerators = dnl.xp.where(ignore, 0.0, numerators)
+    numerators = dnl.xp.where(no_overlap, 0.0, numerators)
 
     # epsilon: largest experimental |I'| in the overlap
     epsilon = abs(exp_1) + dnl.xp.max(abs(exp_1), axis=0)
     epsilon = dnl.xp.clip(epsilon, 1e-12, None)
-    epsilon = dnl.xp.where(ignore, 1.0, epsilon)
+    epsilon = dnl.xp.where(no_overlap, 1.0, epsilon)
     return numerators / epsilon
 
 
