@@ -24,6 +24,7 @@ tests/conftest.py.
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-21'
@@ -32,7 +33,11 @@ __license__ = 'GPLv3+'
 import pytest
 
 ALLOW_MISSING_OPTION = '--allow-missing'
-KNOWN_DEPENDENCIES = ('gfortran', 'mpifort')  # Add new names here
+KNOWN_DEPENDENCIES = (  # Add new names here
+    'gfortran',
+    'mpifort',
+    'PyQt',  # Either PyQt5 or PyQt6
+    )
 REQUIRE_ALL_OPTION = '--require-all'
 
 
