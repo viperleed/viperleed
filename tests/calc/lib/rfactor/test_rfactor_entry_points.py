@@ -514,7 +514,16 @@ _BAD_CSV_INPUTS = {
                          ids=_BAD_CSV_INPUTS)
 def test_rfactor_from_csv_rejects_bad_input(contents):
     """Check that empty or single-energy beams are refused."""
-    with pytest.raises(ValueError, match=r'at least 2|is empty'):
+    with pytest.raises(ValueError, match=r'Need at least 2, found [01]'):
+        from_ase.rfactor_from_csv(contents,
+                                  1.0,
+                                  beams_file_is_content=(True, True))
+
+
+def test_rfactor_from_csv_rejects_no_theo_energies():
+    """Check the message for theoretical beams without energies."""
+    contents = _BAD_CSV_INPUTS['no theo energies']
+    with pytest.raises(ValueError, match=r'theoretical energies.*found 0'):
         from_ase.rfactor_from_csv(contents,
                                   1.0,
                                   beams_file_is_content=(True, True))

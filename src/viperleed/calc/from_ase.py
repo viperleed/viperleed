@@ -42,6 +42,7 @@ from viperleed.calc.run import run_calc
 
 _LOGGER = logging.getLogger(__name__)
 _ALL_BEAMS = "all"
+_MIN_ENERGIES = 2  # Needed to define a theory energy grid
 _INPUT_FILES = (
     "PARAMETERS",
     "VIBROCC",
@@ -625,9 +626,10 @@ def rfactor_from_csv(
     ValueError
         If either file contains multiple beams with the same
         indices, if there are no beams in common between the two
-        files (when beam_correspondence is not given), or if
+        files (when beam_correspondence is not given), if
         beam_correspondence is not a 1D sequence with one entry per
-        theoretical beam.
+        theoretical beam, or if the theoretical beams have fewer
+        than two energies.
 
         .. versionchanged:: 0.15.0
             Repeated beam labels in a file raise ValueError (was
@@ -687,6 +689,11 @@ def rfactor_from_csv(
     rpars = Rparams()
     rpars.expbeams = expbeams
     rpars.V0_IMAG = v0i
+    n_theo_energies = len(rf_io.sorted_energies_from_beams(theobeams))
+    if n_theo_energies < _MIN_ENERGIES:
+        msg = ('Not enough theoretical energies. Need at least '
+               f'{_MIN_ENERGIES}, found {n_theo_energies}')
+        raise ValueError(msg)
     theo_grid, *_ = rf_io.beamlist_to_array(theobeams)
     rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(theo_grid)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*v0r_shift_range, intpol_step)
