@@ -538,87 +538,47 @@ for how to install ``gfortran`` on various operating systems.
         calculation cannot be performed under Windows with those
         versions.
 
-    .. warning::
-        The notes below are for installing the very basic, non-optimized
-        LAPACK/BLAS versions. Hence, execution of the code will be rather
-        **slow**.
-
-    -  Install `MSys2 <https://www.msys2.org/>`__, which then installs MinGW,
-       then open the MSys2 shell.
-    -  Update :program:`MSys2` running
+    -  Install `MSYS2 <https://www.msys2.org/>`__, then open its
+       :program:`MSYS2 UCRT64` shell from the Start menu.
+    -  Update :program:`MSYS2` running
 
        .. code-block:: bash
 
             pacman -Syu
 
-    -  Install ``gfortran`` and other useful packages via
+       If it asks you to close the shell, do so, open the shell again,
+       and repeat the command until there is nothing left to update.
+    -  Install ``gcc``, ``gfortran`` and OpenBLAS, an optimized
+       implementation of the :term:`BLAS` and :term:`LAPACK` libraries,
+       via
 
        .. code-block:: bash
 
-            pacman -S mingw-w64-x86_64-toolchain
+            pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-gcc-fortran mingw-w64-ucrt-x86_64-openblas
 
-    -  Add the :file:`<path_to_mingw_installation>/mingw64/bin` entry to your
-       :envvar:`Path` environment variable. This way, calling ``gfortran`` from the
-       terminal will find the one just installed with no need to explicitly
-       passing the whole path.
+    -  Add the :file:`<path_to_msys2_installation>\\ucrt64\\bin` entry
+       (usually :file:`C:\\msys64\\ucrt64\\bin`) to your :envvar:`Path`
+       environment variable. This way, calling ``gfortran`` from the
+       terminal will find the one just installed with no need to
+       explicitly pass the whole path.
        See :ref:`set_envvar` for how to access the environment-variable
        settings on Windows. Edit the :envvar:`Path` environment variable
-       by appending :file:`<path_to_mingw_installation>/mingw64/bin`.
-       On Windows 7, use a semicolon as separator.
+       by appending :file:`<path_to_msys2_installation>\\ucrt64\\bin`.
 
-    -  Install developer tools, :program:`cmake`, and :program:`git` with
+    You can check that ``gfortran`` finds OpenBLAS by running, in a new
+    terminal,
 
-       .. code-block:: bash
+    .. code-block:: bat
 
-           pacman -S base-devel
-           pacman -S mingw-w64-x86_64-cmake
-           pacman -S git
+       gfortran -print-file-name=libopenblas.dll.a
 
-    -  Clone the LAPACK git repository with
+    It should print the full path to :file:`libopenblas.dll.a`. If it
+    prints only the file name, |calc| cannot use OpenBLAS, and falls back
+    to the slower reference libraries, if installed.
 
-       .. code-block:: bash
-
-            git clone https://github.com/msys2/MINGW-packages.git
-
-       This is the basic, non-optimized version. There are ways to also
-       build better versions.
-       See `here <https://icl.cs.utk.edu/lapack-for-windows/lapack/>`__.
-    -  Move to the LAPACK directory with
-
-       .. code-block:: bash
-
-            cd MINGW-packages/mingw-w64-lapack
-    -  Build LAPACK and BLAS packages with
-
-       .. code-block:: bash
-
-            makepkg-mingw
-
-       Should :program:`curl` complain about some certificates, you can also
-       `download <http://www.netlib.org/lapack/>`__ the LAPACK/BLAS source
-       code as a ``.tar.gz`` archive.
-       Take the version that :program:`curl` complains about, and place the
-       archive in the package folder, which you can find in
-       :file:`<path_to_mingw_installation>/home/<user_name>/MINGW-packages/mingw-w64-lapack`.
-       This build will take quite a while.
-
-    -  Install LAPACK/BLAS packages with
-
-       .. code-block:: bash
-
-            pacman -U mingw-w64-x86_64-lapack-<REPLACE_WITH_VERSION>.pkg.tar.zst
-
-       Note that the archive may have a different suffix. Run ``ls`` in
-       the same folder to check the correct name.
-
-    You can then test the LAPACK installation with
-
-    .. code-block:: bash
-
-       cd ~
-       wget http://www.math.ucla.edu/~wotaoyin/software/lapack_test.cpp  # download
-       g++ lapack_test.cpp -llapack -o lapack_test     # build
-       ./lapack_test                                   # run
+    With these packages, the default :ref:`FORTRAN_COMP` settings link
+    OpenBLAS: there is no need to set ``FORTRAN_COMP`` in the
+    :ref:`PARAMETERS` file.
 
     - Download and install MS-MPI to obtain a Windows-native MPI
       implementation:
@@ -643,18 +603,6 @@ for how to install ``gfortran`` on various operating systems.
 
            Adapt ``MPI_INC`` and ``MPI_LIB`` to point to the correct
            MS-MPI location.
-
-    For actually running, set the :ref:`FORTRAN_COMP` parameter in the
-    :ref:`PARAMETERS` file as follows:
-
-    .. todo:: Michele: is -std=legacy required on native Windows?
-
-    ::
-
-       # -std=legacy makes it work for Fortran77
-       FORTRAN_COMP = 'gfortran -O2 -std=legacy'
-       # NOTE: order of LAPACK and BLAS is important!
-       FORTRAN_COMP post = '-llapack -lblas -lpthread'
 
 
   .. tab-item:: Windows (32 bit), native
