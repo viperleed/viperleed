@@ -27,6 +27,7 @@ RFACTOR_FUNCS = (
 
 @pytest.mark.parametrize('func', RFACTOR_FUNCS)
 def test_rfactor_requires_input_data(func, synthetic_pair):
+    """Check that missing input data raises a TypeError."""
     with pytest.raises(TypeError):
         func(
             synthetic_pair['v0i'],
@@ -37,6 +38,7 @@ def test_rfactor_requires_input_data(func, synthetic_pair):
 
 @pytest.mark.parametrize('func', RFACTOR_FUNCS)
 def test_rfactor_spline_and_precomputed_paths_agree(func, synthetic_pair):
+    """Check that splines and precomputed arrays give the same R."""
     energies = synthetic_pair['energies']
     spline_1 = synthetic_pair['data_spline_1']
     spline_2 = synthetic_pair['data_spline_2']
@@ -81,6 +83,7 @@ def test_rfactor_spline_and_precomputed_paths_agree(func, synthetic_pair):
 
 @pytest.mark.parametrize('func', RFACTOR_FUNCS)
 def test_rfactor_per_beam_shape(func, synthetic_pair):
+    """Check that groups='beam' gives a scalar for a single beam."""
     spline_1 = synthetic_pair['data_spline_1']
     spline_2 = synthetic_pair['data_spline_2']
 
@@ -98,6 +101,7 @@ def test_rfactor_per_beam_shape(func, synthetic_pair):
 
 
 def test_pendry_matches_existing_reference_value(synthetic_pair):
+    """Check Pendry's R of the synthetic pair against a known value."""
     calc_r = pendry.r_pendry(
         synthetic_pair['v0i'],
         synthetic_pair['energy_step'],

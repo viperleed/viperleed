@@ -17,6 +17,7 @@ from .conftest import (
 
 
 def _assert_regression_block(actual, expected):
+    """Check that the R factors of actual and expected blocks agree."""
     assert actual['overall'] == pytest.approx(
         expected['overall'],
         rel=1e-11,
@@ -40,6 +41,7 @@ def _assert_regression_block(actual, expected):
 
 
 def test_realdata_regression_payload(request, fe2o3_012_1x1_dataset):
+    """Check the R factors of real data against the stored values."""
     actual = build_regression_payload(fe2o3_012_1x1_dataset)
 
     if request.config.getoption('--update-rfactor-expected'):
@@ -67,6 +69,7 @@ def test_realdata_regression_payload(request, fe2o3_012_1x1_dataset):
 
 
 def test_realdata_spline_and_precomputed_paths_match(fe2o3_012_1x1_dataset):
+    """Check that splines and precomputed arrays give the same R."""
     payload = build_regression_payload(fe2o3_012_1x1_dataset)
 
     for key in ('pendry', 'r1', 'r2', 'rs', 'zj'):
@@ -83,6 +86,7 @@ def test_realdata_spline_and_precomputed_paths_match(fe2o3_012_1x1_dataset):
 
 
 def test_realdata_outputs_are_finite(fe2o3_012_1x1_dataset):
+    """Check that R is finite, with one value per beam."""
     payload = build_regression_payload(fe2o3_012_1x1_dataset)
 
     for key in ('pendry', 'r1', 'r2', 'rs', 'zj'):

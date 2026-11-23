@@ -12,6 +12,7 @@ from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 
 def test_average_beam_array_permutation_only():
+    """Check that a correspondence without repeats permutes columns."""
     beam_array = np.array([
         [1.0, 2.0, 3.0],
         [10.0, 20.0, 30.0],
@@ -28,6 +29,7 @@ def test_average_beam_array_permutation_only():
 
 
 def test_average_beam_array_averages_duplicate_targets():
+    """Check that columns with the same target are averaged."""
     beam_array = np.array([
         [1.0, 3.0, 10.0],
         [2.0, 5.0, 20.0],
@@ -44,6 +46,7 @@ def test_average_beam_array_averages_duplicate_targets():
 
 
 def test_average_beam_array_filters_minus_one():
+    """Check that columns with correspondence -1 are dropped."""
     beam_array = np.array([
         [1.0, 3.0, 10.0],
         [2.0, 5.0, 20.0],
@@ -60,6 +63,7 @@ def test_average_beam_array_filters_minus_one():
 
 
 def test_average_beam_array_duplicate_and_minus_one_together():
+    """Check that averaging and dropping columns work together."""
     beam_array = np.array([
         [1.0, 3.0, 10.0, 100.0],
         [2.0, 5.0, 20.0, 200.0],
