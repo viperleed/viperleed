@@ -12,24 +12,22 @@ import pytest
 from viperleed.calc.lib.rfactor.groups import group_rfactors
 
 
-def test_group_rfactors_overall():
-    """Check that groups=None gives the ratio of the summed values."""
+@pytest.mark.parametrize(
+    ('groups', 'expected'),
+    [
+        pytest.param(None, (1.0 + 2.0 + 3.0) / (4.0 + 5.0 + 6.0),
+                     id='overall'),
+        pytest.param('beam', np.array([0.25, 0.4, 0.5]), id='per_beam'),
+    ],
+)
+def test_group_rfactors_overall_and_per_beam(groups, expected):
+    """Check the ratio of sums for groups=None and groups='beam'."""
     numerators = np.array([1.0, 2.0, 3.0])
     denominators = np.array([4.0, 5.0, 6.0])
 
-    result = group_rfactors(numerators, denominators, groups=None)
+    result = group_rfactors(numerators, denominators, groups=groups)
 
-    assert result == pytest.approx((1.0 + 2.0 + 3.0) / (4.0 + 5.0 + 6.0))
-
-
-def test_group_rfactors_per_beam():
-    """Check that groups='beam' gives one ratio per beam."""
-    numerators = np.array([1.0, 2.0, 3.0])
-    denominators = np.array([4.0, 5.0, 6.0])
-
-    result = group_rfactors(numerators, denominators, groups='beam')
-
-    assert result == pytest.approx(np.array([0.25, 0.4, 0.5]))
+    assert result == pytest.approx(expected)
 
 
 def test_group_rfactors_integer_groups():
