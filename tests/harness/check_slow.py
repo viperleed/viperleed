@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-27'
@@ -36,7 +37,7 @@ def pytest_addoption(parser):
               f'{_upper(tiers.SLOW_THRESHOLD):.2f} s or more, and the '
               f'"slow" ones that took less than '
               f'{_lower(tiers.SLOW_THRESHOLD):.2f} s (call phase), as '
-              'candidates to be marked or unmarked in tests/tiers.py. '
+              'candidates to be marked or unmarked in tests/harness/tiers.py. '
               'Only reports; also with pytest-xdist.'),
         )
 
@@ -136,7 +137,7 @@ def _write_slow_candidates(terminalreporter, config):
     terminalreporter.write_line(
         f'Call phase, threshold {threshold} s, band '
         f'{tiers.SLOW_BAND:.0%}: tests in between keep their marking. '
-        'Edit tests/tiers.py (SLOW_CASES) or the marks; timings are '
+        'Edit tests/harness/tiers.py (SLOW_CASES) or the marks; timings are '
         'noisy: re-run a candidate before changing it.'
         )
     to_mark_title = (

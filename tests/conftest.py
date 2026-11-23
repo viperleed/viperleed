@@ -1,11 +1,13 @@
 """Test configuration for viperleed.tests.
 
 Defines fixtures and fixture factories used in multiple tests, and
-loads the plugins with the options and hooks of the test suite:
-check_slow.py (--check-slow), quick_option.py (--quick),
+loads the plugins with the options and hooks of the test suite, in
+package harness: check_slow.py (--check-slow), quick.py (--quick),
 reference_files.py (--rewrite-references, check_reference),
-release_option.py (--release), rng_seed.py (--rng-seed) and
-slow_marks.py (slow, release and tensorleed marks, stale-entry guard).
+release.py (--release), rng_seed.py (--rng-seed) and tier_marks.py
+(slow, release and tensorleed marks, stale-entry guard). The options
+of harness/optional_dependencies.py (--require-all, --allow-missing)
+and its fixture missing_dependency are hooked up here.
 
 Random-input tests (those requesting `draws`) check N_DRAWS draws
 seeded from the test id, so that outcomes are reproducible and known
@@ -35,6 +37,9 @@ first_case
     The first of the current pytest-cases.
 re_match (factory)
     Return a match object from a pattern and a string.
+repo_root
+    Path to the root of the repository, from which package tests
+    can be imported.
 """
 
 __authors__ = (
@@ -53,17 +58,18 @@ import zlib
 import numpy as np
 from pytest_cases import fixture
 
-from . import optional_dependencies
+from .harness import optional_dependencies
+from .helpers import REPO_ROOT
 from .helpers import TEST_DATA
 
 pytest_plugins = (
     'pytester',  # For testing the options themselves
-    'tests.check_slow',
-    'tests.quick_option',
-    'tests.reference_files',
-    'tests.release_option',
-    'tests.rng_seed',
-    'tests.slow_marks',
+    'tests.harness.check_slow',
+    'tests.harness.quick',
+    'tests.harness.reference_files',
+    'tests.harness.release',
+    'tests.harness.rng_seed',
+    'tests.harness.tier_marks',
     )
 
 # Fixture of optional_dependencies that needs no wrapping
@@ -118,6 +124,12 @@ def re_match():  # This is actually a fixture factory
 def data_path():
     """Return the Path to the top-level folder containing test data."""
     return TEST_DATA
+
+
+@fixture(scope='session')
+def repo_root():
+    """Return the Path to the root of the repository."""
+    return REPO_ROOT
 
 
 @fixture(name='first_case')

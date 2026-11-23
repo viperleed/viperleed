@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-18'
@@ -10,15 +11,15 @@ __license__ = 'GPLv3+'
 import http.client
 import importlib.util
 import io
-from pathlib import Path
 import urllib.error
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-_SCRIPT = (Path(__file__).resolve().parents[2]
-           / 'build/scripts/assemble_tensorleed_tree.py')
+from ..helpers import REPO_ROOT
+
+_SCRIPT = REPO_ROOT / 'build/scripts/assemble_tensorleed_tree.py'
 
 
 def _load_script():
