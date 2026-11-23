@@ -35,6 +35,11 @@ and the Zanazzi-Jona |R factor| :math:`R_\mathrm{ZJ}`
     We recommend **not using** :math:`R_2`, since it leads to less accurate results than
     minimization of |RS| or |RP| :cite:p:`spornAccuracyQuantitativeLEED1998,imreRFactor2026`.
 
+.. todo::
+    Insert in the note: When using a gradient-based search algorithm
+    with the viperleed-jax ``BACKEND``, it is highly encouraged to use
+    |RS|.
+
 .. _pendry_r:
 
 The smooth |R factor| |RS| and Pendry's |R factor| |RP|
