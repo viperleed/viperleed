@@ -985,6 +985,8 @@ def beamlist_to_array(beams):
     n_E_beams = np.zeros(n_beams, dtype=np.int32)
 
     for i, b in enumerate(beams):
+        if not b.intens:  # No data, e.g., an all-NaN column in a CSV
+            continue      # Leave an all-NaN column, like a short beam
         # write beams into colums of beam_arr
         id_start[i] = np.where(np.isclose(energies, min(b.intens.keys())))[0][0]
         n_E_beams[i] = len(b.intens)

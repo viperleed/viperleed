@@ -10,6 +10,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
@@ -147,3 +148,17 @@ class TestWriteWEXPELRFactorType:
         wr_line, warns = expect
         assert wr_line in write_wexpel(rpars)
         assert (_PENDRY_FALLBACK_LOG in caplog.text) == warns
+
+
+def test_beamlist_to_array_empty_beam():
+    """Check that a beam without intensities gives an all-NaN column."""
+    full = Beam((1, 0))
+    full.intens = {30.0: 1.0, 31.0: 2.0}
+    empty = Beam((0, 1))
+    grid, _, n_energies, intensities = iorfactor.beamlist_to_array(
+        [full, empty]
+    )
+    np.testing.assert_array_equal(grid, [30.0, 31.0])
+    np.testing.assert_array_equal(n_energies, [2, 0])
+    np.testing.assert_array_equal(intensities[:, 0], [1.0, 2.0])
+    assert np.isnan(intensities[:, 1]).all()

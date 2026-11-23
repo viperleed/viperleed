@@ -588,6 +588,33 @@ def test_rfactor_from_csv_uses_short_beams(n_points):
     assert r_with != pytest.approx(r_without)
 
 
+def _csv_with_empty_beam(phase):
+    """Return CSV content with a third beam that is all NaN."""
+    header, *rows = _csv_with_short_beam(phase, 0).splitlines()
+    return '\n'.join([header + ', ( 1| 1)',
+                      *(row + ', NaN' for row in rows)]) + '\n'
+
+
+@pytest.mark.parametrize('empty_side', ['exp', 'theo'])
+def test_rfactor_from_csv_empty_beam_is_skipped(empty_side):
+    """Check that an all-NaN beam does not affect the overall R."""
+    kwargs = {'beams_file_is_content': (True, True), 'which_r': 'pendry'}
+    r_without, *_ = from_ase.rfactor_from_csv(
+        (_csv_with_short_beam(0, 0), _csv_with_short_beam(1, 0)),
+        1.0,
+        **kwargs,
+    )
+    full = (_csv_with_short_beam(0, 20), _csv_with_short_beam(1, 20))
+    contents = (
+        (_csv_with_empty_beam(0), full[1]) if empty_side == 'exp'
+        else (full[0], _csv_with_empty_beam(1))
+    )
+    r_with, _, r_beams = from_ase.rfactor_from_csv(contents, 1.0, **kwargs)
+    assert r_with == pytest.approx(r_without)
+    assert len(r_beams) == _N_BEAMS
+    assert np.isnan(r_beams[2])
+
+
 def _smooth_csv(energies, phase):
     """Return the content of a CSV file with one smooth beam."""
     rows = (f'{energy:.2f}, {2 + np.sin((energy + phase) / 4):.6f}\n'
