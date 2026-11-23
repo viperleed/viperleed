@@ -3,9 +3,9 @@
 Helper functions for the interpolation of ragged arrays.
 """
 
-__authors__ = ('Alexandra M. Imre (@alexmiame)',
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-02-19'
 __license__ = 'GPLv3+'
 

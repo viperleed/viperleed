@@ -3,7 +3,7 @@
 Defines functions that pick the function computing an R factor.
 """
 
-__authors__ = ('Alexandra M. Imre (@alexmiame)',
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)')
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-08'

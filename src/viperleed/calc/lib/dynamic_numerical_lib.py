@@ -20,8 +20,8 @@ Scipy splines may be replaced with their JAX-compatible counterparts
 from the interpax package.
 """
 
-__authors__ = ('Alexandra M. Imre (@alexmiame)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
