@@ -138,6 +138,9 @@ classifiers = [
     [tool.coverage.run]
     branch = true
     parallel = true
+    # Also measure Python subprocesses (coverage >= 7.10; older versions
+    # complain, see filterwarnings, but pytest-cov < 7 does it itself)
+    patch = ['subprocess']
     source = [  # Only collect coverage for these
         'viperleed',
         'tests',
@@ -164,8 +167,12 @@ classifiers = [
         '--cov-branch',
         ]
     pythonpath = ['.', '..']
-    # Turn all warnings into errors. See also "How to capture warnings"
-    filterwarnings = ['error',]
+    filterwarnings = [
+        # Turn all warnings into errors. See also "How to capture warnings"
+        'error',
+        # coverage < 7.10 (e.g., on Python < 3.9) has no [run] patch
+        'ignore:Unrecognized option .\[tool.coverage.run\] patch=:Warning',
+        ]
     markers = [
         'slow: takes about half a second or more (quick tier: --quick)',
         'tensorleed: needs a TensErLEED tree (VIPERLEED_TENSORLEED)',
