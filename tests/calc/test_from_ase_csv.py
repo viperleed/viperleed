@@ -12,6 +12,7 @@ import pytest
 
 from viperleed.calc import from_ase
 from viperleed.calc.files.beams import readOUTBEAMS
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 
 from ..helpers import TEST_DATA
 
@@ -97,3 +98,18 @@ def test_which_beams_invalid(which_beams, mock_plot):
     with pytest.raises(ValueError, match='which_beams'):
         from_ase.plot_iv_from_csv(BEAMS_FILE, which_beams=which_beams)
     mock_plot.assert_not_called()
+
+
+@pytest.mark.skipif(not CAN_PLOT, reason='Needs matplotlib')
+@pytest.mark.parametrize('n_points', [0, 1], ids=['empty', 'one-point'])
+def test_short_beam_is_plotted(n_points, tmp_path):
+    """Check that an all-NaN or one-point beam column does not crash."""
+    rows = (f'{energy}, {1 + energy % 3}.0, '
+            + (f'{energy}.0' if energy < 30 + n_points else 'NaN')
+            for energy in range(30, 50))
+    content = 'E, ( 1| 0), ( 0| 1)\n' + '\n'.join(rows) + '\n'
+    output = tmp_path / 'iv.pdf'
+    from_ase.plot_iv_from_csv(content,
+                              output_file=output,
+                              beam_file_is_content=True)
+    assert output.is_file()

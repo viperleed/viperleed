@@ -836,7 +836,7 @@ def plot_iv_from_csv(
 
         # normalize each beam by the max intensity
         for beam in beam_list:
-            maxint = max(beam.intens.values())
+            maxint = max(beam.intens.values(), default=1.0)  # 1.0: no data
             beam.intens = {en: i / maxint for en, i in beam.intens.items()}
         beam_labels=[beam.label for beam in beam_list]
         all_beam_data.append(beam_list)
