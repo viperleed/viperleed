@@ -574,11 +574,20 @@ for how to install ``gfortran`` on various operating systems.
 
     It should print the full path to :file:`libopenblas.dll.a`. If it
     prints only the file name, |calc| cannot use OpenBLAS, and falls back
-    to the slower reference libraries, if installed.
+    to the slower reference libraries. These are not installed with the
+    packages above. To use them instead of OpenBLAS, install them in the
+    :program:`MSYS2 UCRT64` shell via
+
+    .. code-block:: bash
+
+         pacman -S mingw-w64-ucrt-x86_64-lapack
 
     With these packages, the default :ref:`FORTRAN_COMP` settings link
     OpenBLAS: there is no need to set ``FORTRAN_COMP`` in the
-    :ref:`PARAMETERS` file.
+    :ref:`PARAMETERS` file. If you followed earlier versions of these
+    instructions, remove ``FORTRAN_COMP`` and ``FORTRAN_COMP post`` from
+    your :ref:`PARAMETERS` files: |calc| uses OpenBLAS only with the
+    default settings.
 
     - Download and install MS-MPI to obtain a Windows-native MPI
       implementation:

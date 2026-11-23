@@ -17,8 +17,8 @@ If ``mpiifort``/``mpifort`` or mpirun are not found on the system, the search
 will be compiled with the standard FORTRAN_COMP compiler and executed *without*
 parallelization.
 
-See the :ref:`installation section<install_fortran_comp>` for details on how to install
-the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
+See the :ref:`installation section<install_fortran_comp>` for details on how
+to install the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
 
 **Default:** if :term:`ifort` is present:
 
@@ -57,8 +57,9 @@ if :term:`ifort` is not present, but gfortran is:
        FORTRAN_COMP post = '-llapack -lpthread -lblas -fbacktrace'
 
     Your system decides which BLAS and LAPACK libraries ``-lblas`` and
-    ``-llapack`` link to. See the :ref:`installation section<install_fortran_comp>`
-    for how to use OpenBLAS.
+    ``-llapack`` link to. See the
+    :ref:`installation section<install_fortran_comp>` for how to use
+    OpenBLAS.
 
   .. tab-item:: Windows
     :sync: win
