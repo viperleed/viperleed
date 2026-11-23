@@ -10,8 +10,10 @@ R_FACTOR_TYPE determines what definition of the |R factor| is used in
 |R-factor| :ref:`calculation<r-factor_calculation>`.
 
 Note that var(R) in :ref:`error calculations<error_calculation>` is only supported
-for Pendry and Smooth |R-factor|, and Zanazzi-Jona is not supported in the
-TensErLEED :ref:`structure search<sec_search>`.
+for Pendry and Smooth |R-factor|. Zanazzi-Jona is not supported in the
+TensErLEED :ref:`structure search<sec_search>`, and Smooth is supported
+there only with TensErLEED v2.1.0 or later (see :ref:`TL_VERSION<tl_version>`).
+The search stops with an error for unsupported combinations.
 
 Whether the |R factor| is calculated by the python-native implementation or
 by TensErLEED is chosen via :ref:`R_FACTOR_LEGACY<rfactorlegacy>`.
