@@ -417,15 +417,27 @@ def test_run_new_rfactor_for_error_uses_best_v0r(r_type,
     assert rpars.last_R > best.last_R
 
 
+@pytest.mark.parametrize('plot', [False, True], ids=['no-plot', 'plot'])
+@pytest.mark.parametrize('for_error', [False, True],
+                         ids=['normal', 'for-error'])
 @pytest.mark.parametrize('r_type', _TYPES)
+# pylint: disable-next=too-many-arguments  # Fixtures and parameters
 def test_run_new_rfactor_no_warning(r_type,
+                                    for_error,
+                                    plot,
                                     fe2o3_012_1x1_dataset,
                                     monkeypatch,
                                     caplog):
     """Check that run_new_rfactor logs no warning for clean input."""
+    calls = _capture_pdf_writer(monkeypatch)  # Fast, no PDF files
     caplog.set_level(logging.WARNING)
-    _run_section(fe2o3_012_1x1_dataset, r_type, monkeypatch)
+    _run_section(fe2o3_012_1x1_dataset,
+                 r_type,
+                 monkeypatch,
+                 for_error=for_error,
+                 plot=plot)
     assert not caplog.records
+    assert bool(calls) is plot
 
 
 @pytest.mark.skipif(not CAN_PLOT, reason='Needs matplotlib')
