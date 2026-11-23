@@ -1,0 +1,49 @@
+{
+ "tensorleed_version": "2.1.0",
+ "intpol_deg": 3,
+ "r_factor_smoothing": 0,
+ "note": "Reference values from the R-factor of TensErLEED 2.1.0 on the same inputs, frozen; TensErLEED is not run by the tests. r is the overall R factor, r_integer and r_fractional those of the integer- and fractional-order beams (null if absent). The values of r2 are TensErLEED's own, which are half of the usual R2 definition.",
+ "exp_file": "../../beam-data/EXPBEAMS-fe2o3-012-1x1.csv",
+ "beam_correspondence_file": "../../beam-data/beamcorr-fe2o3-012-1x1.json",
+ "system": "Fe2O3(012) 1x1",
+ "fractional": false,
+ "theory": {
+  "../../beam-data/THEOBEAMS-fe2o3-012-1x1.csv": {
+   "pendry": {
+    "r": 0.479,
+    "r_integer": 0.479,
+    "r_fractional": null,
+    "best_v0r": 0.5
+   },
+   "smooth": {
+    "r": 0.4731,
+    "r_integer": 0.4731,
+    "r_fractional": null,
+    "best_v0r": 0.5
+   },
+   "zj": {
+    "r": 0.1483,
+    "r_integer": 0.1483,
+    "r_fractional": null,
+    "best_v0r": 0.5
+   },
+   "r2": {
+    "r": 0.209,
+    "r_integer": 0.209,
+    "r_fractional": null,
+    "best_v0r": 1.5
+   }
+  }
+ },
+ "v0_imag": 3.0,
+ "theo_energies": [
+  27.0,
+  753.0,
+  3.0
+ ],
+ "iv_shift_range": [
+  -10.0,
+  10.0,
+  0.5
+ ]
+}
