@@ -15,9 +15,9 @@ from viperleed.calc.classes.r_error import R_Error
 from viperleed.calc.classes.r_error import R_TYPES_WITH_VAR_R
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
+from viperleed.calc.files import iorfactor
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas
-from viperleed.calc.sections.rfactor import computed_r_factor_type
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 from viperleed.calc.sections.superpos import superpos as section_superpos
 
@@ -160,10 +160,13 @@ def errorcalc(sl, rp):
     ioerrorcalc.write_errors_summary_csv(summary_csv_content,
                                          summary_fname='Errors_summary.csv')
 
-    # Errors.pdf
+    # Errors.pdf, labelled with the R factor actually computed
+    r_factor_type = rp.R_FACTOR_TYPE
+    if rp.R_FACTOR_LEGACY:  # Old TensErLEED versions lack smooth
+        r_factor_type = iorfactor.legacy_r_factor_type(rp)
     errors_figs = ioerrorcalc.make_errors_figs(
         errors,
-        r_factor_type=computed_r_factor_type(rp),
+        r_factor_type=r_factor_type,
         formatting=rp.PLOT_IV,
         )
     ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')
