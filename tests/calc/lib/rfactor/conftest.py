@@ -219,12 +219,6 @@ def regression_payload(fe2o3_012_1x1_dataset):
     return payload
 
 
-@pytest.fixture
-def expected_regression_file():
-    """Return the path to the stored Fe2O3(012) R-factor values."""
-    return EXPECTED_FILE
-
-
 def make_rparams(dataset, r_type, expbeams, theobeams):
     """Return an Rparams ready for run_new_rfactor.
 
