@@ -33,9 +33,7 @@ def test_rfactor_from_csv(fe2o3_012_1x1_dataset, with_correspondence):
     assert np.isfinite(best_r)
     assert np.isfinite(best_v0r)
     assert isinstance(r_beams, np.ndarray)
-    assert r_beams.ndim == 1
-    if with_correspondence:
-        assert r_beams.shape == (len(fe2o3_012_1x1_dataset['hk']),)
+    assert r_beams.shape == (len(fe2o3_012_1x1_dataset['hk']),)
     assert np.all(np.isfinite(r_beams))
 
 
