@@ -676,6 +676,30 @@ def test_rfactor_from_csv_logs_no_skipped_beams(caplog):
                 if _SKIPPED_MSG in r.getMessage()]
 
 
+_UNMATCHED_MSG = 'beams without'
+
+
+@pytest.mark.parametrize(('extra_theo', 'level'), [(True, logging.DEBUG),
+                                                (False, logging.WARNING)])
+def test_rfactor_from_csv_logs_unmatched_beams(extra_theo, level, caplog):
+    """Check the level of the record naming beams without a mate."""
+    caplog.set_level(logging.DEBUG)
+    two_beams = _csv_with_short_beam(0, 0)
+    three_beams = _csv_with_short_beam(1, 20)
+    contents = ((two_beams, three_beams) if extra_theo
+                else (three_beams, two_beams))
+    from_ase.rfactor_from_csv(contents,
+                              1.0,
+                              beams_file_is_content=(True, True))
+    unmatched = [r for r in caplog.records
+                 if _UNMATCHED_MSG in r.getMessage()]
+    assert len(unmatched) == 1
+    assert unmatched[0].levelno == level
+    assert unmatched[0].getMessage().endswith(': ( 1| 1)')
+    n_warnings = sum(r.levelno >= logging.WARNING for r in caplog.records)
+    assert n_warnings == (level >= logging.WARNING)
+
+
 def _smooth_csv(energies, phase):
     """Return the content of a CSV file with one smooth beam."""
     rows = (f'{energy:.2f}, {2 + np.sin((energy + phase) / 4):.6f}\n'

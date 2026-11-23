@@ -487,19 +487,16 @@ def _match_beams_by_label(expbeams, theobeams):
     exp_labels = {beam.hkfrac for beam in expbeams}
     missing_theo = [beam.label for beam in theobeams
                     if beam.hkfrac not in exp_labels]
-    if missing_exp or missing_theo:
-        parts = []
-        if missing_exp:
-            parts.append(
-                "Experimental beams without theoretical match: "
-                + ", ".join(missing_exp)
-            )
-        if missing_theo:
-            parts.append(
-                "Theoretical beams without experimental match: "
-                + ", ".join(missing_theo)
-            )
-        _LOGGER.warning("\n".join(parts))
+    if missing_exp:
+        missing = ", ".join(missing_exp)
+        _LOGGER.warning(
+            f"Experimental beams without theoretical match: {missing}"
+        )
+    if missing_theo:  # Usual: theory often has more beams
+        missing = ", ".join(missing_theo)
+        _LOGGER.debug(
+            f"Theoretical beams without experimental match: {missing}"
+        )
     if not matched_exp:
         raise ValueError("No common beams found between experimental and"
                          "theoretical data.")
