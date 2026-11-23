@@ -225,14 +225,16 @@ The tests also run on GitHub Actions:
 
 - The workflow ``Tests`` (:file:`.github/workflows/unit_tests.yml`) runs the
   default tier with ``-n auto`` and ``--require-all`` on every pull request
-  and on every push to the ``master`` branch, in three jobs: on Linux with the
-  newest stable Python 3, and on Windows with Python 3.7 and with the same
-  Python as on Linux (see the workflow file). The Windows jobs install no
-  Fortran compilers and add ``--allow-missing=mpifort,gfortran``, so the
-  tests that need a compiler run on Linux in any case, and on Windows only
-  where the runner image has the compiler (at present :program:`gfortran`,
-  but not :program:`mpifort`). The check ``Tests`` fails unless all
-  three jobs succeed. The coverage of the Linux job is uploaded to
+  and on every push to the ``master`` branch, in four jobs: two on Linux with
+  the newest stable Python 3, one with PyQt5 (from ``viperleed[GUI]``) and one
+  with PyQt6 (see :ref:`gui_qt_bindings`), and two on Windows with Python 3.7
+  and with the same Python as on Linux (see the workflow file). The Windows
+  jobs install no Fortran compilers and add
+  ``--allow-missing=mpifort,gfortran``, so the tests that need a compiler run
+  on Linux in any case, and on Windows only where the runner image has the
+  compiler (at present :program:`gfortran`, but not :program:`mpifort`). The
+  check ``Tests`` fails unless all four jobs succeed. The coverage of the
+  PyQt5 Linux job is uploaded to
   `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
   to ``master``, the job ``Tests (serial)`` also runs the default tier
   without :program:`pytest-xdist` (on Linux), to catch tests that fail only
