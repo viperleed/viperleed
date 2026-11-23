@@ -16,12 +16,16 @@ implementations exist. The :ref:`RFACTORTYPE` parameter can be set in
 the :ref:`PARAMETERS` file to choose between
 the smooth R factor |RS| :cite:p:`imreRFactor2026`,
 Pendry's |R factor| |RP| :cite:p:`pendryReliabilityFactorsLEED1980`,
-and :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`:
+:math:`R_2` :cite:p:`vanhoveLowEnergyElectronDiffraction1986,spornAccuracyQuantitativeLEED1998`,
+and the Zanazzi-Jona |R factor| :math:`R_\mathrm{ZJ}`
+:cite:p:`mooreZanazziJonaPendryReliability1982`:
 
 -   Both |RS| and |RP| compare the logarithmic derivatives of the |IV| data, using a fix
     for the divergence of the logarithm when the intensity approaches zero.
 -   :math:`R_2` is based on the mean square difference of the |IV| curves
     (after appropriate scaling).
+-   :math:`R_\mathrm{ZJ}` compares the first and second derivatives of the
+    |IV| curves (after appropriate scaling).
 
 .. note::
     Using |RP| is the **default setting**.
@@ -30,10 +34,6 @@ and :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`:
     has many local minima in the vicinity of the global minimum).
     We recommend **not using** :math:`R_2`, since it leads to less accurate results than
     minimization of |RS| or |RP| :cite:p:`spornAccuracyQuantitativeLEED1998,imreRFactor2026`.
-
-.. todo::
-    Insert in the note: When using a gradient-based search algorithm with the viperleed-jax :ref:`BACKEND`,
-    it is highly encouraged to use |RS|.    
 
 .. _pendry_r:
 
@@ -109,11 +109,45 @@ file should already contain smoothed data.
     |IV| curves is discouraged, as the smoothing algorithm applied there is
     inferior to that used by the |IV|-curve editor.
 
+.. _r2_zj_r:
+
+The |R factors| :math:`R_2` and :math:`R_\mathrm{ZJ}`
+-----------------------------------------------------
+
+For each beam, :math:`R_2` is defined as
+:cite:p:`vanhoveLowEnergyElectronDiffraction1986`
+
+.. math::
+    :label: eq_R2_def
+
+    R_2 = \frac{\int{\mkern-5mu\left(I^\mathrm{exp}(E) - c\,I^\mathrm{theo}(E)\right)^2 dE}}{\int{I^\mathrm{exp}(E)^2\,dE}},
+    \qquad
+    c = \frac{\int{I^\mathrm{exp}(E)\,dE}}{\int{I^\mathrm{theo}(E)\,dE}},
+
+where the integrals run over the energy range in which both curves are
+defined. The scaling factor :math:`c` removes the difference in the
+absolute intensities of the two curves. Note that the :math:`R_2` calculated
+by TensErLEED is half of the value of Eq. :eq:`eq_R2_def` (see
+:ref:`rfactorlegacy`).
+
+:math:`R_\mathrm{ZJ}` compares the first and second derivatives of the
+scaled curves, which makes it sensitive mostly to the positions and shapes
+of the extrema :cite:p:`mooreZanazziJonaPendryReliability1982`. ViPErLEED
+reports the reduced :math:`R_\mathrm{ZJ}`, i.e., the value divided by
+0.027, as proposed by Zanazzi and Jona.
+
+For both :math:`R_2` and :math:`R_\mathrm{ZJ}`, the value for a set of
+beams is the average of the values of the individual beams, each weighted
+with the energy range in which the experimental and calculated curves of
+that beam overlap.
+
 .. [1] Notice that the Pendry or Smooth |R factor| between two sets of beams is
        not the average of the |R factors| between beam pairs, as sums over all
        beams enter both the numerator and the denominator in 
        Eq. :eq:`eq_RP_def`.
        A weighted average (with the energy span of each beam used as its weight)
-       is usually close to the overall |R factor|.
+       is usually close to the overall |R factor|. In contrast, the overall
+       :math:`R_2` and :math:`R_\mathrm{ZJ}` (see :ref:`below<r2_zj_r>`) are
+       exactly such weighted averages.
 .. [2] Unpublished data by Lutz Hammer and coworkers.
 .. [3] See also `this discussion <https://github.com/viperleed/viperleed/issues/218>`_\ .
