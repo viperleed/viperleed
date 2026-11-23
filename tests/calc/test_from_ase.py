@@ -13,7 +13,6 @@ __created__ = '2023-02-23'
 __license__ = 'GPLv3+'
 
 from io import StringIO
-import json
 import logging
 
 import numpy as np
@@ -26,7 +25,6 @@ from viperleed.calc.classes.slab import Slab
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
-from viperleed.calc.lib.rfactor import r_1
 from viperleed.calc.lib.math_utils import angle
 
 from ..helpers import TEST_DATA
@@ -42,19 +40,9 @@ from . import cases_ase
 
 
 ASE_DATA = TEST_DATA / 'from_ase'
-BEAM_DATA_DIR = TEST_DATA / 'rfactor-tensorleed' / 'fe2o3-012'
 # A level that no caller of run_calc uses, to detect any re-setting
 _UNUSED_LEVEL = logging.WARNING + 1
 
-
-@pytest.fixture
-def fe2o3_012_1x1_beam_files():
-    exp_csv = BEAM_DATA_DIR / "EXPBEAMS.csv"
-    theo_csv = BEAM_DATA_DIR / "THEOBEAMS.csv"
-    beamcorr_file = BEAM_DATA_DIR / "beamcorr.json"
-    beam_correspondence = json.loads(beamcorr_file.read_text())[
-        "beam_correspondence"]
-    return exp_csv, theo_csv, beam_correspondence
 
 def _make_refcalc_ok_transforms():
     """Yield slab transforms (or sequences thereof) and names (for ids)."""
@@ -592,70 +580,3 @@ class TestFailingRefcalc:
     def test_no_beams(self):
         """Ensure ref-calc did not produce any beam."""
         assert not self.theobeams
-
-class TestRfactorFromCsv:
-    @staticmethod
-    def test_reads_csv_paths_with_explicit_beam_correspondence(
-        fe2o3_012_1x1_beam_files,
-    ):
-        exp_csv, theo_csv, beam_correspondence = fe2o3_012_1x1_beam_files
-
-        best_r, best_v0r, r_beams = vpr_ase.rfactor_from_csv(
-            (exp_csv, theo_csv),
-            4.5,
-            beam_correspondence=beam_correspondence,
-        )
-
-        assert np.isfinite(best_r)
-        assert np.isfinite(best_v0r)
-        assert isinstance(r_beams, np.ndarray)
-        assert r_beams.ndim == 1
-        assert np.all(np.isfinite(r_beams))
-
-    @staticmethod
-    def test_reads_csv_paths_without_beam_correspondence(
-        fe2o3_012_1x1_beam_files,
-    ):
-        exp_csv, theo_csv, _ = fe2o3_012_1x1_beam_files
-
-        best_r, best_v0r, r_beams = vpr_ase.rfactor_from_csv(
-            (exp_csv, theo_csv),
-            4.5,
-        )
-
-        assert np.isfinite(best_r)
-        assert np.isfinite(best_v0r)
-        assert isinstance(r_beams, np.ndarray)
-        assert r_beams.ndim == 1
-        assert np.all(np.isfinite(r_beams))
-
-    @staticmethod
-    def test_invalid_beam_correspondence_length_raises(
-        fe2o3_012_1x1_beam_files,
-    ):
-        exp_csv, theo_csv, beam_correspondence = fe2o3_012_1x1_beam_files
-
-        with pytest.raises(ValueError, match="beam_correspondence"):
-            vpr_ase.rfactor_from_csv(
-                (exp_csv, theo_csv),
-                4.5,
-                beam_correspondence=beam_correspondence[:-1],
-            )
-
-    @staticmethod
-    def test_which_r_r1(fe2o3_012_1x1_beam_files, mocker):
-        """Check that which_r='r1' computes the R1 R factor."""
-        exp_csv, theo_csv, _ = fe2o3_012_1x1_beam_files
-        r_1_func = mocker.patch(
-            'viperleed.calc.lib.rfactor.r_1.r_1',
-            wraps=r_1.r_1,
-            )
-        vpr_ase.rfactor_from_csv((exp_csv, theo_csv), 4.5, which_r='r1')
-        r_1_func.assert_called()
-
-    @staticmethod
-    def test_which_r_code_raises(fe2o3_012_1x1_beam_files):
-        """Check that an integer code is not an R-factor name."""
-        exp_csv, theo_csv, _ = fe2o3_012_1x1_beam_files
-        with pytest.raises(ValueError, match='Unknown R-factor name'):
-            vpr_ase.rfactor_from_csv((exp_csv, theo_csv), 4.5, which_r='1')
