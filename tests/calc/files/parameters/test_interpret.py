@@ -35,6 +35,7 @@ from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.known_parameters import is_deprecated
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
+from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 
@@ -613,6 +614,9 @@ class TestFortranComp(_TestInterpretBase):
         if os.name == 'nt' and val == 'ifort':
             self._check_default_ifort_on_windows(*compiler)
             return
+        if os.name == 'nt' and val == 'gfortran':
+            self._check_default_gfortran_on_windows(*compiler)
+            return
         if pre is not None:
             with subtests.test('Check pre'):
                 assert pre in compiler[0]
@@ -642,6 +646,14 @@ class TestFortranComp(_TestInterpretBase):
         compiler, post = rpars.FORTRAN_COMP_MPI
         assert compiler == expect
         assert not post
+
+    @staticmethod
+    def _check_default_gfortran_on_windows(pre, post):
+        """Check the default flags for gfortran on Windows."""
+        blas = ('-lopenblas' if fortran_utils.gfortran_finds_openblas()
+                else '-llapack -lpthread -lblas')
+        assert pre == 'gfortran -O2'
+        assert post == f'{blas} -fbacktrace'
 
     def _check_default_ifort_on_windows(self, pre, post):
         """Check the default flags for ifort on Windows."""
