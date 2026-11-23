@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
@@ -12,7 +12,7 @@ import logging
 import os
 
 from viperleed.calc.classes.r_error import R_Error
-from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
+from viperleed.calc.classes.r_error import R_TYPES_WITH_VAR_R
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
@@ -128,7 +128,7 @@ def errorcalc(sl, rp):
         logger.info("Error calculation: Returning with no output.")
         return
 
-    if rp.R_FACTOR_TYPE not in (RFactorType.PENDRY, RFactorType.SMOOTH):
+    if rp.R_FACTOR_TYPE not in R_TYPES_WITH_VAR_R:
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
                     "and Smooth R-factors.")
