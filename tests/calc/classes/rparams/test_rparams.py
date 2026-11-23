@@ -19,7 +19,7 @@ _OPENBLAS_POST = '-lopenblas -fbacktrace'
 _PROBE = 'viperleed.calc.lib.fortran_utils.gfortran_finds_openblas'
 
 
-class TestGetFortranCompGfortran:
+class TestGetFortranCompGfortran:  # pylint: disable=too-few-public-methods
     """Tests for the gfortran flags of Rparams.getFortranComp."""
 
     _platforms = {  # id: (os_name, probe_result, expect_post, probed)
@@ -28,11 +28,10 @@ class TestGetFortranCompGfortran:
         'posix': ('posix', True, _GENERIC_POST, False),
         }
 
-    @parametrize('os_name,found,expect,probed',
-                 _platforms.values(),
-                 ids=_platforms)
-    def test_post(self, os_name, found, expect, probed, mocker, caplog):
+    @parametrize(platform=_platforms.values(), ids=_platforms)
+    def test_post(self, platform, mocker, caplog):
         """Check and log the link flags chosen for gfortran."""
+        os_name, found, expect, probed = platform
         rpars = Rparams()  # Before patching os.name: it makes Paths
         mocker.patch('shutil.which', return_value='gfortran')
         mocker.patch('os.name', os_name)
