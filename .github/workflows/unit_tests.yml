@@ -18,7 +18,8 @@
 #   on Linux in any case, and on Windows where the runner image has
 #   the compiler (today gfortran, not mpifort). Any other missing
 #   dependency still fails.
-#   PyQt5 is installed too, but no test needs it.
+#   PyQt5 is installed too (the [GUI] extra), as the GUI tests need a
+#   Qt binding. They run without a display (QT_QPA_PLATFORM).
 # - Coverage is uploaded to Codecov from the Linux job. This needs the
 #   Codecov app and the CODECOV_TOKEN secret. A failed upload does not
 #   fail the job.
