@@ -17,6 +17,8 @@ markexpr
 optional_dependencies
     Skip tests on missing optional dependencies, or fail them with
     --require-all (except those exempted with --allow-missing).
+qt
+    Load pytest-qt only if PyQt5 is available, and make it use PyQt5.
 quick
     The --quick option (quick tier): deselect the 'slow' tests.
 reference_files
