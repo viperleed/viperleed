@@ -48,7 +48,12 @@ def pytest_addoption(parser):
         "--update-rfactor-expected",
         action="store_true",
         default=False,
-        help="Regenerate frozen expected values for real-data rfactor regression tests.",
+        help=(
+            "Regenerate rfactor-regression.expected.json of the "
+            "Fe2O3(012) data. The frozen values of the entry-point "
+            "tests (rfactor-entry-points.expected.json) are not "
+            "regenerated."
+        ),
     )
 
 
