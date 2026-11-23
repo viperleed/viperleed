@@ -13,8 +13,8 @@ import pytest
 from viperleed.calc import from_ase
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
-from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files import iorfactor
+from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.iorfactor import RfactorError
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 from viperleed.calc.sections import rfactor as rfactor_section
