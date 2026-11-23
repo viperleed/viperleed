@@ -1,5 +1,11 @@
 """Tests for viperleed.calc.lib.rfactor.groups."""
 
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
+               'Florian Kraushofer (@fkraushofer)')
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
+__created__ = '2026-01-07'
+__license__ = 'GPLv3+'
+
 import numpy as np
 import pytest
 

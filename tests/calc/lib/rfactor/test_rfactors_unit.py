@@ -1,5 +1,11 @@
 """Unit tests for R-factor implementations on synthetic data."""
 
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
+               'Florian Kraushofer (@fkraushofer)')
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
+__created__ = '2026-04-07'
+__license__ = 'GPLv3+'
+
 import numpy as np
 import pytest
 
