@@ -136,7 +136,8 @@ TensErLEED |R-factor| program differs from Eq. :eq:`eq_R2_def`, see
 scaled curves, which makes it sensitive mostly to the positions and shapes
 of the extrema :cite:p:`mooreZanazziJonaPendryReliability1982`. ViPErLEED
 reports the reduced :math:`R_\mathrm{ZJ}`, i.e., the value divided by
-0.027, as proposed by Zanazzi and Jona.
+0.027, as proposed by Zanazzi and Jona
+:cite:p:`zanazziReliabilityFactorSurface1977`.
 
 For both :math:`R_2` and :math:`R_\mathrm{ZJ}`, the value for a set of
 beams is the average of the values of the individual beams, each weighted
