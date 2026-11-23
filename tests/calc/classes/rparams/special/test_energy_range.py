@@ -617,7 +617,7 @@ class TestParseStringSequence:
         'name float': (('float',), ValueError),
         'call float': (('float("inf")', '1'), ValueError),
         'syntax': (('1)', '(2'), ValueError),
-        'deep': (('1' + '+1' * 50000,), ValueError),
+        'deep': (('-' * 10000 + '1',), ValueError),
         'string': (('1', '"a"'), TypeError),
         'complex': (('1j',), TypeError),
         'tuple': (('(1, 2)',), TypeError),

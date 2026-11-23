@@ -17,11 +17,47 @@ Running tests
 ViPErLEED comes with a suite of tests and uses
 `pytest <https://docs.pytest.org/en/>`__ for testing.
 Tests that run :term:`TensErLEED` (marked ``tensorleed``) are not part of
-a default run. To run them, the :term:`TensErLEED` source code (repository
-``viperleed-tensorleed``) should be available on the testing machine and the
-``VIPERLEED_TENSORLEED`` :term:`environment variable` should be set. See also
-:ref:`install_tensorleed`, which also describes where the compiled
-:ref:`eeasisss_compile` source code is expected.
+a default run. To run them, a :term:`TensErLEED` tree should be available on
+the testing machine and the ``VIPERLEED_TENSORLEED``
+:term:`environment variable` should point to it. The tests need several
+versions of :term:`TensErLEED` and a compiled :program:`eeasisss` (see also
+:ref:`install_tensorleed` and :ref:`eeasisss_compile`). Assemble the tree
+with the script :file:`build/scripts/assemble_tensorleed_tree.py`, from the
+root of your local copy of the |repo|:
+
+.. code-block:: bash
+
+    python build/scripts/assemble_tensorleed_tree.py <path/to/tree>
+
+The script downloads release tags of the ``viperleed-tensorleed`` repository,
+copies the :term:`TensErLEED` versions used by the tests into the given
+directory, compiles :file:`random_.o` for :term:`TensErLEED` v1.6.1 (from
+the cross-platform :download:`random_.c</_static/tenserleed_windows/random_.c>`
+of :ref:`install_tensorleed`, on all platforms), and compiles
+:program:`eeasisss`. It needs Internet access, a C and a Fortran
+compiler (:program:`gcc` and :program:`gfortran` by default), and
+:program:`make` (on Windows, the
+:file:`make.bat` file shipped with :program:`eeasisss` is used instead).
+The script has been tested on Linux, and on Windows with :program:`gcc`
+and :program:`gfortran` of MSYS2 (UCRT64). The tests also need LAPACK
+and BLAS, which :term:`TensErLEED` links with ``-llapack -lblas``. See
+:ref:`install_gcc` (tab "Windows (64 bit), native" on Windows) for how to
+install the compilers and these libraries. Continuous integration uses
+MSYS2 UCRT64 with the prebuilt ``mingw-w64-ucrt-x86_64-lapack`` package
+instead of building LAPACK and BLAS. For the Intel compilers, add
+``--compilers intel`` (:program:`icx` and the ``intel`` target of
+:program:`eeasisss`); ``--cc`` and ``--fc`` choose other C and Fortran
+compilers (``--fc`` not on Windows). See
+``python build/scripts/assemble_tensorleed_tree.py --help``. Only
+:program:`gcc` and :program:`gfortran` are tested in continuous
+integration. The directory must not exist or
+be empty: the script does not overwrite an existing tree. If a step fails,
+the script removes what it wrote, so that it can be run again with the same
+directory. To update the tree after a change of the script, assemble it
+into a new directory. At the end, the script warns if
+``viperleed-tensorleed`` has release tags newer than those it uses (it
+does not fail, even if the tags cannot be listed): the script may then
+need an update.
 
 Tests are *not* distributed with the ``viperleed`` package on
 `pypi <https://pypi.org/project/viperleed/>`__. To run the tests, clone the
@@ -180,6 +216,72 @@ less than 0.8 times the threshold. The band around the threshold (the
 test depends on the cases that ran before it; tests in the band keep their
 marking. It only reports: it changes neither the selection nor the exit
 status. It also works with ``-n`` (:program:`pytest-xdist`).
+
+
+Continuous integration
+''''''''''''''''''''''
+
+The tests also run on GitHub Actions:
+
+- The workflow ``Tests`` (:file:`.github/workflows/unit_tests.yml`) runs the
+  default tier with ``-n auto`` and ``--require-all`` on every pull request
+  and on every push to the ``master`` branch, in three jobs: on Linux with the
+  newest stable Python 3, and on Windows with Python 3.7 and with the same
+  Python as on Linux (see the workflow file). The Windows jobs install no
+  Fortran compilers and add ``--allow-missing=mpifort,gfortran``, so the
+  tests that need a compiler run on Linux in any case, and on Windows only
+  where the runner image has the compiler (at present :program:`gfortran`,
+  but not :program:`mpifort`). The check ``Tests`` fails unless all
+  three jobs succeed. The coverage of the Linux job is uploaded to
+  `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
+  to ``master``, the job ``Tests (serial)`` also runs the default tier
+  without :program:`pytest-xdist` (on Linux), to catch tests that fail only
+  when run serially. It is not part of the check ``Tests``: a pull request
+  that breaks the serial run is noticed only after it is merged.
+- The *TensErLEED tests* (:file:`.github/workflows/tensorleed_tests.yml`)
+  run the TensErLEED tier on every pull request into ``master``, against a
+  tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.
+  On pull requests, they include the release tests (``--release``, see
+  above), and a second job, ``TensErLEED tests (Windows)``, runs the same
+  tests on Windows, with :program:`gcc`, :program:`gfortran` and LAPACK of
+  MSYS2 (UCRT64), but without MPI (the searches run as a single process).
+  The Windows job takes 35--40 minutes.
+  Their results are the checks ``TensErLEED tests`` and
+  ``TensErLEED tests (Windows)``. The workflow does not run
+  on pull requests into other branches. It starts when a pull request into
+  ``master`` is opened or receives new commits: if the base of a pull
+  request is changed to ``master`` later, push a commit or start the
+  workflow by hand with ``release`` checked (see below). On Linux, the tree
+  is cached, but a cache made for a pull request is visible only to that
+  pull request: the tree is assembled on the first run of each pull
+  request, and later runs reuse it.
+
+All jobs except the Python 3.7 one use the newest stable Python 3
+(``python-version: '3.x'``). A new Python release can therefore make the
+checks fail on every pull request until :program:`viperleed` (or one of its
+dependencies) is fixed for it.
+
+Whether a pull request can be merged with a failing check depends on the
+rulesets of the |repo|, which the administrators of the repository set up.
+
+To run the TensErLEED tests for another branch, e.g., a version branch
+before opening the pull request into ``master``, start the workflow by hand:
+on the *Actions* page of the |repo|, select ``TensErLEED tests``, click
+:guilabel:`Run workflow`, and choose the branch. With the
+`GitHub CLI <https://cli.github.com>`__, run
+
+.. code-block:: bash
+
+    gh workflow run tensorleed_tests.yml --ref <branch>
+
+Runs started by hand skip the release tests and the Windows tests unless
+the input ``release`` is checked (with the GitHub CLI, add
+``-f release=true``). Without ``release``, the checks are named
+``TensErLEED tests (no release)`` and
+``TensErLEED tests (Windows, no release)``, and the Windows job passes
+without running any test. Such a run on the head of a pull request into
+``master`` thus cannot satisfy the required checks ``TensErLEED tests`` and
+``TensErLEED tests (Windows)``.
 
 
 .. _editable_install:
