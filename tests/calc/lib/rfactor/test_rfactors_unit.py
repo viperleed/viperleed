@@ -93,14 +93,13 @@ def test_rfactor_per_beam_shape(func, synthetic_pair):
     assert result.ndim == 0 or result.shape == ()  # scalar spline case
 
 
-def test_pendry_matches_existing_reference_value(sin_spline, cos_spline):
-    energies = np.arange(15.0, 300.0, 0.5)
+def test_pendry_matches_existing_reference_value(synthetic_pair):
     calc_r = pendry.r_pendry(
-        3.0,
-        0.5,
-        energies,
-        data_spline_1=sin_spline,
-        data_spline_2=cos_spline,
+        synthetic_pair['v0i'],
+        synthetic_pair['energy_step'],
+        synthetic_pair['energies'],
+        data_spline_1=synthetic_pair['data_spline_1'],
+        data_spline_2=synthetic_pair['data_spline_2'],
     )
     assert calc_r == pytest.approx(1.904792, rel=1e-6)
 
