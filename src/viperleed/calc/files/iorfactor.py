@@ -22,6 +22,7 @@ import numpy as np
 
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
+from viperleed.calc.files import tenserleed
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
@@ -536,7 +537,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     output += ' NSSK=    0,\n'
     r_factor_type = rp.R_FACTOR_TYPE
     if (r_factor_type is RFactorType.SMOOTH
-            and rp.TL_VERSION < Version('2.1.0')):  # No R_S implemented
+            and rp.TL_VERSION < tenserleed.MIN_TL_VERSION_SMOOTH):
         logger.warning(
             'Smooth R-factors are not supported outside of the search for '
             'TensErLEED versions <2.1. Falling back on Pendry R-factor. '

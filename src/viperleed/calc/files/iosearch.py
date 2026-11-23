@@ -26,6 +26,7 @@ import numpy as np
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import poscar
+from viperleed.calc.files import tenserleed
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
@@ -37,9 +38,6 @@ from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
-# The TensErLEED search knows the smooth R-factor (code 4) only since
-# this version. It has no Zanazzi-Jona R-factor (code 3) at all.
-_MIN_TL_VERSION_SMOOTH_SEARCH = Version('2.1.0')
 _R_FACTOR_TYPE_COMMENT = '1: use RPe -- 2: use R2 -- 4: use RS\n'
 
 
@@ -463,9 +461,9 @@ def _format_r_factor_type_line(r_factor_type, int_formatter, tl_version):
                'TensErLEED search. Use PENDRY, R2 or SMOOTH instead.')
         raise ValueError(msg)
     if (r_factor_type is RFactorType.SMOOTH
-            and tl_version < _MIN_TL_VERSION_SMOOTH_SEARCH):
+            and tl_version < tenserleed.MIN_TL_VERSION_SMOOTH):
         msg = (f'R_FACTOR_TYPE {r_factor_type.name} needs TensErLEED '
-               f'{_MIN_TL_VERSION_SMOOTH_SEARCH} or later for the search '
+               f'{tenserleed.MIN_TL_VERSION_SMOOTH} or later for the search '
                f'(TL_VERSION is {tl_version}). Use a newer TL_VERSION, or '
                'PENDRY or R2.')
         raise ValueError(msg)
