@@ -58,8 +58,10 @@ one and the one of TensErLEED. Which one is used depends on where the
 
 The python-native implementation calculates :math:`R_2` with its
 literature definition (see |R-factor| :ref:`calculation<r-factor_calculation>`).
-The :math:`R_2` of TensErLEED is half of that value (see
-:ref:`R_FACTOR_LEGACY<rfactorlegacy>`).
+The :math:`R_2` of the TensErLEED |R-factor| program is half of that
+value (see :ref:`R_FACTOR_LEGACY<rfactorlegacy>`). The TensErLEED
+structure search uses the literature definition, like the python-native
+implementation.
 
 Note that var(R) in :ref:`error calculations<error_calculation>` is only
 supported for Pendry and Smooth |R-factor|.

@@ -24,10 +24,10 @@ whatever the value of R_FACTOR_LEGACY.
 The python-native implementation calculates :math:`R_2` with its
 literature definition :cite:p:`vanhoveLowEnergyElectronDiffraction1986`
 (see |R-factor| :ref:`calculation<r-factor_calculation>`). The
-:math:`R_2` of TensErLEED includes an additional factor 1/2: for the
-same curves, the TensErLEED :math:`R_2` is half of the python-native
-one. This also applies to the :math:`R_2` reported by the TensErLEED
-structure search.
+:math:`R_2` of the TensErLEED |R-factor| program includes an additional
+factor 1/2: for the same curves, its :math:`R_2` is half of the
+python-native one. The :math:`R_2` of the TensErLEED structure search
+has no such factor: it equals the python-native one.
 
 With R_FACTOR_LEGACY = ``False``, the |R-factor| calculation differs
 from the TensErLEED one in these respects:
@@ -54,7 +54,7 @@ interpolation degrees.
    part of ViPErLEED, for all four :ref:`R-factor types<rfactortype>`.
    Earlier versions used the python-native |R factor| only if an optional
    compiled extension was installed, and the TensErLEED |R factor|
-   otherwise. Its :math:`R_2` is twice the TensErLEED value. INTPOL_DEG
+   otherwise. Its :math:`R_2` is twice that of the TensErLEED |R-factor| program. INTPOL_DEG
    other than 3 is rejected if R_FACTOR_LEGACY is ``False``.
 
 **Default:** True
