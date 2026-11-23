@@ -14,6 +14,7 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
+from viperleed.calc.lib.version import Version
 from viperleed.calc.sections import errorcalc
 
 _MODULE = 'viperleed.calc.sections.errorcalc'
@@ -22,10 +23,22 @@ _ENERGY_RANGE = 500.0
 _MODE = 'geo'
 
 
-@parametrize(r_factor_type=('pendry', 'smooth'))
-def test_figures_get_r_factor_type(r_factor_type, mocker,
-                                   tmp_path, monkeypatch):
-    """Check that error plots are labelled with R_FACTOR_TYPE."""
+# R_FACTOR_TYPE, R_FACTOR_LEGACY, TL_VERSION, and the R factor computed
+_COMPUTED_R_FACTOR = (
+    pytest.param(('pendry', True, '2.1.0', 'pendry'), id='pendry'),
+    pytest.param(('smooth', True, '2.1.0', 'smooth'), id='smooth'),
+    pytest.param(('smooth', False, '2.1.0', 'smooth'), id='smooth-python'),
+    pytest.param(('smooth', True, '2.0.0', 'pendry'), id='smooth-tl2.0'),
+    pytest.param(('smooth', False, '2.0.0', 'smooth'),
+                 id='smooth-tl2.0-python'),
+    pytest.param(('r2', True, '2.0.0', 'r2'), id='r2-tl2.0'),
+    )
+
+
+@parametrize('case', _COMPUTED_R_FACTOR)
+def test_figures_get_r_factor_type(case, mocker, tmp_path, monkeypatch):
+    """Check that error plots are labelled with the R computed."""
+    r_factor_type, legacy, tl_version, expected = case
     monkeypatch.chdir(tmp_path)
     # Fake Rparams with one atom varied once per mode
     atom = mocker.MagicMock()
@@ -41,6 +54,8 @@ def test_figures_get_r_factor_type(r_factor_type, mocker,
         search_atlist=[atom],
         searchpars=[search_par],
         R_FACTOR_TYPE=RFactorType(r_factor_type),
+        R_FACTOR_LEGACY=legacy,
+        TL_VERSION=Version(tl_version),
         )
     for name in ('R_Error',
                  'section_deltas',
@@ -56,7 +71,7 @@ def test_figures_get_r_factor_type(r_factor_type, mocker,
     make_figs = io_mock.make_errors_figs
     make_figs.assert_called_once()
     _, kwargs = make_figs.call_args  # .kwargs needs Python 3.8
-    assert kwargs['r_factor_type'] is RFactorType(r_factor_type)
+    assert kwargs['r_factor_type'] is RFactorType(expected)
 
 
 @parametrize(r_factor_type=('pendry', 'smooth'))
@@ -83,6 +98,7 @@ def test_var_r_reaches_output(r_factor_type, mocker, tmp_path,
         search_atlist=[atom],
         searchpars=[search_par],
         R_FACTOR_TYPE=RFactorType(r_factor_type),
+        R_FACTOR_LEGACY=False,
         V0_IMAG=_V0I,
         )
     rpars.total_energy_range.return_value = _ENERGY_RANGE

@@ -447,6 +447,29 @@ def sorted_energies_from_beams(beams):
     return sorted({e for beam in beams for e in beam.intens})
 
 
+def legacy_r_factor_type(rpars):
+    """Return the R-factor type that the TensErLEED R factor computes.
+
+    TensErLEED versions earlier than MIN_TL_VERSION_SMOOTH have no
+    smooth R factor. For those, writeWEXPEL falls back on Pendry.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The run parameters. Only R_FACTOR_TYPE and TL_VERSION are used.
+
+    Returns
+    -------
+    RFactorType
+        The type of R factor that the TensErLEED R-factor program
+        computes for `rpars`.
+    """
+    if (rpars.R_FACTOR_TYPE is RFactorType.SMOOTH
+            and rpars.TL_VERSION < tenserleed.MIN_TL_VERSION_SMOOTH):
+        return RFactorType.PENDRY
+    return rpars.R_FACTOR_TYPE
+
+
 def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     """Write input file WEXPEL for R-factor calculation.
 
@@ -539,16 +562,14 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         output += '\n'
     output += '&NL2\n'
     output += ' NSSK=    0,\n'
-    r_factor_type = rp.R_FACTOR_TYPE
-    if (r_factor_type is RFactorType.SMOOTH
-            and rp.TL_VERSION < tenserleed.MIN_TL_VERSION_SMOOTH):
+    r_factor_type = legacy_r_factor_type(rp)
+    if r_factor_type is not rp.R_FACTOR_TYPE:
         logger.warning(
             'TensErLEED %s has no smooth R-factor (needs %s or later). '
             'Falling back on Pendry R-factor in WEXPEL.',
             rp.TL_VERSION,
             tenserleed.MIN_TL_VERSION_SMOOTH,
             )
-        r_factor_type = RFactorType.PENDRY
     output += f' WR=      {_WEXPEL_R_WEIGHTS[r_factor_type]},\n'
     output += '''\
  &END

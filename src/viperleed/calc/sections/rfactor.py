@@ -116,6 +116,28 @@ def _fetch_and_check_spectra(rp, index, name):
         raise ValueError("Contradiction in beam sets")
 
 
+def computed_r_factor_type(rpars):
+    """Return the type of R factor that section Rfactor computes.
+
+    This is R_FACTOR_TYPE, except for the TensErLEED R factor with a
+    TensErLEED version that lacks the smooth R factor (see
+    iorfactor.legacy_r_factor_type).
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The run parameters.
+
+    Returns
+    -------
+    RFactorType
+        The type of R factor computed.
+    """
+    if rpars.R_FACTOR_LEGACY:
+        return iorfactor.legacy_r_factor_type(rpars)
+    return rpars.R_FACTOR_TYPE
+
+
 def run_new_rfactor(sl, rp, for_error, name, theobeams):
     """Run the spline-based (Python) R-factor calculation.
 
@@ -412,7 +434,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
                 analysisFile=aname,
                 v0i=rp.V0_IMAG,
                 formatting=rp.PLOT_IV,
-                which_r=rp.R_FACTOR_TYPE,
+                which_r=iorfactor.legacy_r_factor_type(rp),
                 )
         except Exception:                                                       # TODO catch correct exception
             logger.warning("Error plotting R-factors.", exc_info=True)

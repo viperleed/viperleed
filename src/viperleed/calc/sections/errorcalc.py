@@ -17,6 +17,7 @@ from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas
+from viperleed.calc.sections.rfactor import computed_r_factor_type
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 from viperleed.calc.sections.superpos import superpos as section_superpos
 
@@ -162,7 +163,7 @@ def errorcalc(sl, rp):
     # Errors.pdf
     errors_figs = ioerrorcalc.make_errors_figs(
         errors,
-        r_factor_type=rp.R_FACTOR_TYPE,
+        r_factor_type=computed_r_factor_type(rp),
         formatting=rp.PLOT_IV,
         )
     ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')
