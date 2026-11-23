@@ -421,7 +421,7 @@ def test_run_new_rfactor_for_error_uses_best_v0r(r_type,
 @pytest.mark.parametrize('for_error', [False, True],
                          ids=['normal', 'for-error'])
 @pytest.mark.parametrize('r_type', _TYPES)
-# pylint: disable-next=too-many-arguments  # Fixtures and parameters
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def test_run_new_rfactor_no_warning(r_type,
                                     for_error,
                                     plot,
