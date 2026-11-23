@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-17'
 __license__ = 'GPLv3+'
 
+from multiprocessing import Process
 from types import SimpleNamespace
 from unittest.mock import ANY
 
@@ -314,12 +315,21 @@ class TestCheckBinding:
             mocker.call(_DISPLAY_TIMEOUT),
             ]
 
-    def test_not_installed_real(self):
+    def test_not_installed_real(self, mocker):
         """Check the result of a real subprocess for a missing binding."""
         missing = 'PyQt7'
+        processes = []  # Keep the real one, for its exit code
+
+        def _make_process(*args, **kwargs):
+            processes.append(Process(*args, **kwargs))
+            return processes[-1]
+        mocker.patch(f'{MODULE}.Process', side_effect=_make_process)
         # pylint: disable-next=protected-access
         result = PyQtSanityChecker._check_binding(missing)
-        assert result == BindingCheck(missing, PyQtSanity.NOT_FOUND)
+        exit_code = processes[0].exitcode
+        assert result == BindingCheck(missing, PyQtSanity.NOT_FOUND), (
+            f'Probe exited with code {exit_code}'
+            )
 
     def test_unresponsive(self, mock_multiprocessing):
         """Check the result when importing does not finish in time."""
