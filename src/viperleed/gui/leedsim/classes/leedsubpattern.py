@@ -7,17 +7,17 @@ used for the plotting of a LEED pattern.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-13'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
 import copy
 
-from matplotlib import cm as color_maps
 from matplotlib import colors as mpl_colors
 import numpy as np
 
+from viperleed.calc.lib.matplotlib_utils import get_colormap
 from viperleed.gui.helpers import two_d_iterable_to_array
 
 from viperleed.gui import decorators as dev_
@@ -390,7 +390,7 @@ class LEEDSubpattern:
             colors = (self.defaults['single']['facecolors'],)
         else:
             cmap = self.__scatter_format.pop('cmap', self.defaults['cmap'])
-            cmap = color_maps.get_cmap(cmap)
+            cmap = get_colormap(cmap)
             colors = cmap(np.linspace(0.1, 0.9, n_domains))
 
         self.__all_leed_colors = dict(zip(keys, colors))
@@ -517,6 +517,7 @@ class LEEDSubpattern:
             or if color is not a Sequence
         ValueError
             If float(alpha) is not between 0 and 1,
+            if cmap is neither a Colormap nor the name of one,
             if color does not have exactly three elements,
             or if any of the three elements is not and
             integer between 0 and 255
@@ -539,7 +540,7 @@ class LEEDSubpattern:
 
         # cmap given:
         if cmap is not None:
-            color_maps.get_cmap(cmap)  # raises errors if invalid
+            get_colormap(cmap)  # raises errors if invalid
             self.__scatter_format.pop('facecolors', None)
             self.__scatter_format.pop('edgecolors', None)
             return
