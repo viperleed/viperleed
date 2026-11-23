@@ -50,7 +50,12 @@ when the parameters are read. Set R_FACTOR_LEGACY to ``True`` to use other
 interpolation degrees.
 
 .. versionchanged:: 0.15.0
-   INTPOL_DEG other than 3 is rejected if R_FACTOR_LEGACY is ``False``.
+   R_FACTOR_LEGACY = ``False`` uses the python-native |R factor| that is
+   part of ViPErLEED, for all four :ref:`R-factor types<rfactortype>`.
+   Earlier versions used the python-native |R factor| only if an optional
+   compiled extension was installed, and the TensErLEED |R factor|
+   otherwise. Its :math:`R_2` is twice the TensErLEED value. INTPOL_DEG
+   other than 3 is rejected if R_FACTOR_LEGACY is ``False``.
 
 **Default:** True
 

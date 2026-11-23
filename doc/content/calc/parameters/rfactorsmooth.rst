@@ -7,7 +7,10 @@ R_FACTOR_SMOOTHING
 
 R_FACTOR_SMOOTHING defines the number of times that experimental |IV| curves
 will be smoothed by 3-point smoothing during |R-factor| calculations, both
-after the reference calculation and during the search.
+after the reference calculation and during the search. It applies only to
+the TensErLEED |R factor|: the python-native |R factor| (see
+:ref:`R_FACTOR_LEGACY<rfactorlegacy>`) does not smooth the experimental
+curves.
 
 .. note::
     It is recommended to smooth the experimental curves beforehand, such
@@ -23,6 +26,9 @@ after the reference calculation and during the search.
 .. versionchanged:: 0.15.0
    Parameter renamed from ``R_FACTOR_SMOOTH`` to ``R_FACTOR_SMOOTHING``.
    The old name is still accepted as an alias for backwards compatibility.
+   A warning is issued if R_FACTOR_SMOOTHING is set while
+   :ref:`R_FACTOR_LEGACY<rfactorlegacy>` is ``False``, as the
+   python-native |R factor| ignores it.
 
 **Default:** 0
 
