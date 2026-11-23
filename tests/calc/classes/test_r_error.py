@@ -91,3 +91,20 @@ def test_no_error_estimates_without_var_r(r_type):
     assert not any(ioerrorcalc.extract_var_r([error]).values())
     with pytest.raises(ValueError, match='Pendry or the smooth'):
         error.calc_var_r(_V0I, _E_RANGE)
+
+
+_NON_FLOAT_ARGS = {  # v0i, energy_range
+    'int v0i': (4, _E_RANGE),
+    'int energy_range': (_V0I, 500),
+    'str energy_range': (_V0I, '500'),
+    }
+
+
+@pytest.mark.parametrize(('v0i', 'energy_range'),
+                         _NON_FLOAT_ARGS.values(),
+                         ids=_NON_FLOAT_ARGS)
+def test_var_r_rejects_non_float(v0i, energy_range):
+    """Check that var(R) refuses a v0i or energy_range not float."""
+    error = _make_geo_error(RFactorType.PENDRY)
+    with pytest.raises(ValueError, match='must be float'):
+        error.calc_var_r(v0i, energy_range)

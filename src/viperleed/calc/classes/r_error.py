@@ -116,7 +116,7 @@ class R_Error():
         if self.r_type not in R_TYPES_WITH_VAR_R:
             raise ValueError("Var(R) can only be calculated when using the "
                              "Pendry or the smooth R-factor.")
-        if not isinstance(v0i, float) and isinstance(energy_range, float):
+        if not (isinstance(v0i, float) and isinstance(energy_range, float)):
             raise ValueError("v0i and energy_range must be float values.")
         if v0i<= 0 or energy_range <= 0:
             raise ValueError("v0i and energy range must be positive ")
