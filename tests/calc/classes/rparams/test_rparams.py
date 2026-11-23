@@ -2,7 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-23'
 __license__ = 'GPLv3+'
@@ -31,25 +31,17 @@ class TestGetFortranCompGfortran:
     @parametrize('os_name,found,expect,probed',
                  _platforms.values(),
                  ids=_platforms)
-    def test_post(self, os_name, found, expect, probed, mocker):
-        """Check the link flags chosen for gfortran."""
+    def test_post(self, os_name, found, expect, probed, mocker, caplog):
+        """Check and log the link flags chosen for gfortran."""
         rpars = Rparams()  # Before patching os.name: it makes Paths
         mocker.patch('shutil.which', return_value='gfortran')
         mocker.patch('os.name', os_name)
         probe = mocker.patch(_PROBE, return_value=found)
+        caplog.set_level(logging.DEBUG)
         rpars.getFortranComp(comp='gfortran')
         pre, post = rpars.FORTRAN_COMP
         assert pre == _PRE
         assert post == expect
         assert probe.called == probed
-
-    def test_logs_blas_flags(self, mocker, caplog):
-        """Check that the chosen BLAS flags are logged."""
-        rpars = Rparams()  # Before patching os.name: it makes Paths
-        mocker.patch('shutil.which', return_value='gfortran')
-        mocker.patch('os.name', 'nt')
-        mocker.patch(_PROBE, return_value=True)
-        caplog.set_level(logging.DEBUG)
-        rpars.getFortranComp(comp='gfortran')
-        expect_log = 'BLAS flags -lopenblas'
-        assert expect_log in caplog.text
+        blas_flags = expect.replace(' -fbacktrace', '')
+        assert f'BLAS flags {blas_flags}' in caplog.text
