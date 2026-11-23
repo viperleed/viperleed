@@ -16,8 +16,8 @@ calculation, displacements are applied to one parameter at a time, and the
 |R factor| is determined for each step of the variation range, resulting
 in an "error curve".
 
-When using the :ref:`Pendry<pendry_r>` |R factor|, its standard error,
-historically called |varR|,\ [1]_ provides an estimate of the uncertainty of
+When using the :ref:`Pendry or the smooth<pendry_r>` |R factor|, its
+standard error, historically called |varR|,\ [1]_ provides an estimate of the uncertainty of
 a given parameter: The point of intersection between the error curve for
 one parameter and |R+varR| can be taken as a measure of the statistical
 error of the parameter itself :cite:p:`heinzElectronBasedMethods2013`.
@@ -26,7 +26,8 @@ This gives the "error calculation" its name. |varR| is defined as
 .. math::
     \mathrm{var}(R_\mathrm{P}) = R_\mathrm{P} \sqrt{ \frac{8 |V_{0\mathrm{i}}| }{ \delta E} },
 
-where |RP| is the value of the Pendry |R factor|, |V0i| the imaginary part of
+where |RP| is the value of the Pendry |R factor| (or of the smooth |R factor|
+|RS|, for which the same formula is used), |V0i| the imaginary part of
 the inner potential, and :math:`\delta E` the total energy range of the beam
 set (i.e., the sum of the energy ranges for all the symmetry-inequivalent
 beams). For more information, see
@@ -46,7 +47,7 @@ Ref. :cite:alp:`pendryReliabilityFactorsLEED1980`.
 Aside from the estimate of the accuracy of a displacement parameter, error
 curves can be used to judge the impact of a certain displacement on the
 overall |R factor|. While estimates on the parameter accuracy only apply
-to the Pendry |R factor|, the impact of a parameter on the |R factor| is
+to the Pendry and smooth |R factors|, the impact of a parameter on the |R factor| is
 also meaningful for other |R-factor| :ref:`definitions<r-factor_calculation>`.
 
 -  You may find the |R factor| to be very insensitive to the displacement of
@@ -122,12 +123,17 @@ reduce computational cost.
 The results of the error calculation consists of the :ref:`errorspdf_header`
 files, stored in the |OUT| directory.
 
-If the Pendry |R factor| is used, the value of |R+varR| is calculated
+If the Pendry or the smooth |R factor| is used, the value of |R+varR| is
+calculated
 for each error type and drawn as a horizontal line in :ref:`errorspdf`.
 If  ViPErLEED finds an intersection between the error curve for any
 parameter :math:`p` and the line |R+varR|, the intersection points are
 used to calculate the (estimate of the) statistical uncertainty for
 :math:`p`. This is written to :ref:`errorscsv` and plotted in :ref:`errorspdf`.
+
+.. versionchanged:: 0.15.0
+   |varR|, |R+varR|, and the statistical uncertainties of the parameters
+   are also calculated for the smooth |R factor| |RS|.
 
 
 .. [1] It is a common mistake to refer to |varR| as the "variance" of the
