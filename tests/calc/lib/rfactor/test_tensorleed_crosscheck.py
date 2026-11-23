@@ -12,14 +12,14 @@ import pytest
 
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.files.beams import readOUTBEAMS
-from viperleed.calc.sections import rfactor as rfactor_section
 
-from .conftest import TESTS_DIR
-from .test_rfactor_entry_points import _make_rparams
-from .test_rfactor_entry_points import _relabel_as_fractional
+from ....helpers import TEST_DATA
+from .conftest import make_rparams
+from .conftest import relabel_as_fractional
+from .conftest import run_new_rfactor_with_correspondence
 
 
-DATA_DIR = TESTS_DIR / '_test_data' / 'rfactor-tensorleed'
+DATA_DIR = TEST_DATA / 'rfactor-tensorleed'
 
 # What this cross-check catches: gross deviations of the Python R
 # factor from TensErLEED (wrong formula, normalisation, beam averaging,
@@ -103,21 +103,17 @@ def _run_python(folder_name, theo_name, r_type):
     expbeams = readOUTBEAMS(folder / expected['exp_file'])
     theobeams = readOUTBEAMS(folder / theo_name)
     if expected['fractional']:
-        _relabel_as_fractional(expbeams)
-    rpars = _make_rparams({'v0i': expected['v0_imag']},
+        relabel_as_fractional(expbeams)
+    rpars = make_rparams({'v0i': expected['v0_imag']},
                           r_type,
                           expbeams,
                           theobeams)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*expected['iv_shift_range'])
     with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(rfactor_section.leedbase,
-                      'getBeamCorrespondence',
-                      lambda *_: correspondence)
-        rfactor_section.run_new_rfactor(None,
-                                        rpars,
-                                        for_error=False,
-                                        name='refcalc',
-                                        theobeams=theobeams)
+        run_new_rfactor_with_correspondence(patch,
+                                            correspondence,
+                                            rpars,
+                                            theobeams)
     return rpars
 
 

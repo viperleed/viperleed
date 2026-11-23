@@ -1,14 +1,17 @@
 """Shared fixtures and helpers for rfactor tests."""
 
-from __future__ import annotations
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 
+from fractions import Fraction
 import json
-from pathlib import Path
 
 import numpy as np
 import pytest
 from scipy.interpolate import CubicSpline
 
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.iorfactor import beamlist_to_array
 from viperleed.calc.lib.rfactor import pendry
@@ -18,6 +21,9 @@ from viperleed.calc.lib.rfactor import smooth
 from viperleed.calc.lib.rfactor import zannazi_jona
 from viperleed.calc.lib.rfactor.utils import average_beam_array
 from viperleed.calc.lib.spline_interpolation import interpolate_ragged_array
+from viperleed.calc.sections import rfactor as rfactor_section
+
+from ....helpers import TEST_DATA
 
 
 _MOCK_ROUGH_E_AXIS = np.arange(15.0, 300.0, 3.0)
@@ -28,12 +34,13 @@ _MOCK_SIN_INTENSITY = np.sin(_MOCK_ROUGH_E_AXIS / (3.0 * np.pi)) ** 2
 _MOCK_COS_INTENSITY = np.cos(_MOCK_ROUGH_E_AXIS / (3.0 * np.pi)) ** 2
 _MOCK_CONST_INTENSITY = np.ones_like(_MOCK_ROUGH_E_AXIS)
 
-TESTS_DIR = Path(__file__).resolve().parents[3]
-BEAM_DATA_DIR = TESTS_DIR / "_test_data" / "beam-data"
-EXP_BEAMS_FILE = BEAM_DATA_DIR / "EXPBEAMS-fe2o3-012-1x1.csv"
-THEO_BEAMS_FILE = BEAM_DATA_DIR / "THEOBEAMS-fe2o3-012-1x1.csv"
-BEAMCORR_FILE = BEAM_DATA_DIR / "beamcorr-fe2o3-012-1x1.json"
-EXPECTED_FILE = BEAM_DATA_DIR / "rfactor-fe2o3-012-1x1.expected.json"
+FE2O3_012_DIR = TEST_DATA / 'rfactor-tensorleed' / 'fe2o3-012'
+EXP_BEAMS_FILE = FE2O3_012_DIR / 'EXPBEAMS.csv'
+THEO_BEAMS_FILE = FE2O3_012_DIR / 'THEOBEAMS.csv'
+BEAMCORR_FILE = FE2O3_012_DIR / 'beamcorr.json'
+EXPECTED_FILE = FE2O3_012_DIR / 'rfactor-regression.expected.json'
+ENTRY_POINTS_EXPECTED_FILE = (FE2O3_012_DIR
+                              / 'rfactor-entry-points.expected.json')
 
 
 def pytest_addoption(parser):
@@ -133,6 +140,7 @@ def fe2o3_012_1x1_dataset():
         "label": "fe2o3-012-1x1",
         "exp_file": EXP_BEAMS_FILE,
         "theo_file": THEO_BEAMS_FILE,
+        "expected_entry_points": ENTRY_POINTS_EXPECTED_FILE,
         "v0i": 3.0,
         "energy_step": energy_step,
         "energies": energies,
@@ -204,3 +212,76 @@ def load_expected_payload():
 
 def write_expected_payload(payload):
     EXPECTED_FILE.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def make_rparams(dataset, r_type, expbeams, theobeams):
+    """Return an Rparams ready for run_new_rfactor.
+
+    Parameters
+    ----------
+    dataset : dict
+        The beam data. Only the 'v0i' entry is used.
+    r_type : str
+        Name of the R factor.
+    expbeams : Sequence of Beam
+        The experimental beams.
+    theobeams : Sequence of Beam
+        The theoretical beams.
+
+    Returns
+    -------
+    Rparams
+        Parameters with the R-factor type, V0_IMAG, experimental beams
+        and theory energies set.
+    """
+    rpars = Rparams()
+    rpars.R_FACTOR_TYPE = RFactorType[r_type.upper()]
+    rpars.V0_IMAG = dataset['v0i']
+    rpars.PLOT_IV['plot'] = False
+    rpars.expbeams = expbeams
+    theo_grid, *_ = beamlist_to_array(theobeams)
+    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(theo_grid)
+    return rpars
+
+
+def relabel_as_fractional(beams):
+    """Shift the h index of every third beam by a half."""
+    for beam in beams[::3]:
+        beam.hk = (beam.hk[0] + Fraction(1, 2), beam.hk[1])
+
+
+def run_new_rfactor_with_correspondence(monkeypatch,
+                                        correspondence,
+                                        rpars,
+                                        theobeams,
+                                        **kwargs):
+    """Call run_new_rfactor with a fixed beam correspondence.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Used to replace getBeamCorrespondence.
+    correspondence : Sequence
+        The beam correspondence to use.
+    rpars : Rparams
+        Parameters of the calculation.
+    theobeams : Sequence of Beam
+        The theoretical beams.
+    **kwargs
+        Passed on to run_new_rfactor. 'for_error' defaults to False
+        and 'name' to 'refcalc'.
+
+    Returns
+    -------
+    numpy.ndarray
+        The R factor of each experimental beam.
+    """
+    monkeypatch.setattr(rfactor_section.leedbase,
+                        'getBeamCorrespondence',
+                        lambda *_: correspondence)
+    kwargs.setdefault('for_error', False)
+    kwargs.setdefault('name', 'refcalc')
+    return rfactor_section.run_new_rfactor(None,
+                                           rpars,
+                                           theobeams=theobeams,
+                                           **kwargs)

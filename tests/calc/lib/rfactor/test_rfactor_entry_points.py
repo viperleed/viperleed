@@ -5,32 +5,28 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-19'
 __license__ = 'GPLv3+'
 
-from fractions import Fraction
 import json
 
 import numpy as np
 import pytest
 
 from viperleed.calc import from_ase
-from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
-from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files import iorfactor
-from viperleed.calc.files.iorfactor import beamlist_to_array
 from viperleed.calc.files.iorfactor import RfactorError
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 from viperleed.calc.sections import rfactor as rfactor_section
 
-from .conftest import BEAM_DATA_DIR
+from .conftest import make_rparams
+from .conftest import relabel_as_fractional
+from .conftest import run_new_rfactor_with_correspondence
 
 
 # Values of R, best V0r and per-beam R recorded before the R-factor
 # core was shared between the entry points. Both entry points must
 # keep producing them bit for bit.
-_EXPECTED_FILE = (BEAM_DATA_DIR
-                  / 'rfactor-entry-points-fe2o3-012-1x1.expected.json')
 _SHIFT_RANGE = (-3.0, 3.0)
 _STEP = 0.5
 _TYPES = tuple(r_type.name.lower() for r_type in RFactorType)
@@ -58,24 +54,6 @@ _SECTION_ONLY = {
     'fractional-beams': {'fractional': True},
     }
 _PDF_ENTRY_POINTS = ('run_new_rfactor', 'rfactor_from_csv')
-
-
-def _make_rparams(dataset, r_type, expbeams, theobeams):
-    """Return an Rparams ready for run_new_rfactor."""
-    rpars = Rparams()
-    rpars.R_FACTOR_TYPE = RFactorType[r_type.upper()]
-    rpars.V0_IMAG = dataset['v0i']
-    rpars.PLOT_IV['plot'] = False
-    rpars.expbeams = expbeams
-    theo_grid, *_ = beamlist_to_array(theobeams)
-    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(theo_grid)
-    return rpars
-
-
-def _relabel_as_fractional(beams):
-    """Shift the h index of every third beam by a half."""
-    for beam in beams[::3]:
-        beam.hk = (beam.hk[0] + Fraction(1, 2), beam.hk[1])
 
 
 # Energy offset (eV) applied to the experimental beams in a calculation
@@ -123,47 +101,51 @@ def _run_section(dataset, r_type, monkeypatch, **options):
     shift_range = options.get('shift_range', _SHIFT_RANGE)
     step = options.get('step', _STEP)
     for_error = options.get('for_error', False)
-    monkeypatch.setattr(rfactor_section.leedbase,
-                        'getBeamCorrespondence',
-                        lambda *_: dataset['beam_correspondence'])
     expbeams = readOUTBEAMS(dataset['exp_file'])
     theobeams = readOUTBEAMS(dataset['theo_file'])
     if options.get('fractional', False):
-        _relabel_as_fractional(expbeams)
-    rpars = _make_rparams(dataset, r_type, expbeams, theobeams)
+        relabel_as_fractional(expbeams)
+    rpars = make_rparams(dataset, r_type, expbeams, theobeams)
     rpars.PLOT_IV['plot'] = options.get('plot', False)
     shift = shift_range if step is None else (*shift_range, step)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*shift)
     name = 'refcalc'
     normal_pass = None
     if for_error:
-        rfactor_section.run_new_rfactor(None,
-                                        rpars,
-                                        for_error=False,
-                                        name=name,
-                                        theobeams=theobeams)
+        run_new_rfactor_with_correspondence(
+            monkeypatch,
+            dataset['beam_correspondence'],
+            rpars,
+            theobeams,
+            name=name,
+            )
         normal_pass = rpars.best_v0r
         _shift_beams(rpars.expbeams, _FOR_ERROR_DATA_SHIFT)
         name = 'superpos'
-    r_beams = rfactor_section.run_new_rfactor(None,
-                                              rpars,
-                                              for_error=for_error,
-                                              name=name,
-                                              theobeams=theobeams)
+    r_beams = run_new_rfactor_with_correspondence(
+        monkeypatch,
+        dataset['beam_correspondence'],
+        rpars,
+        theobeams,
+        for_error=for_error,
+        name=name,
+        )
     overall, integer, r_fractional = rpars.stored_R[name]
     if normal_pass is not None:
         # The data changed such that the optimum would move. Instead,
         # R is evaluated at the fixed V0r of the normal pass.
         assert rpars.best_v0r == normal_pass
-        reference = _make_rparams(dataset, r_type, expbeams, theobeams)
+        reference = make_rparams(dataset, r_type, expbeams, theobeams)
         reference.IV_SHIFT_RANGE = IVShiftRange(normal_pass,
                                                 normal_pass,
                                                 rpars.IV_SHIFT_RANGE.step)
-        rfactor_section.run_new_rfactor(None,
-                                        reference,
-                                        for_error=False,
-                                        name=name,
-                                        theobeams=theobeams)
+        run_new_rfactor_with_correspondence(
+            monkeypatch,
+            dataset['beam_correspondence'],
+            reference,
+            theobeams,
+            name=name,
+            )
         np.testing.assert_allclose(rpars.stored_R[name],
                                    reference.stored_R[name],
                                    rtol=1e-12)
@@ -242,9 +224,9 @@ def _run_pdf(entry_point, dataset, monkeypatch):
     return calls[0]
 
 
-def _load_expected(entry_point, r_type, scenario=None):
+def _load_expected(dataset, entry_point, r_type, scenario=None):
     """Return the frozen values for `entry_point` and `r_type`."""
-    expected = json.loads(_EXPECTED_FILE.read_text())
+    expected = json.loads(dataset['expected_entry_points'].read_text())
     if scenario is None:
         return expected[entry_point][r_type]
     return expected['scenarios'][scenario][entry_point][r_type]
@@ -256,7 +238,9 @@ def test_run_new_rfactor(r_type, fe2o3_012_1x1_dataset, monkeypatch):
     actual = _run_section(fe2o3_012_1x1_dataset, r_type, monkeypatch)
     # assert_equal is exact, and NaN (no fractional beams) equals NaN
     np.testing.assert_equal(actual,
-                            _load_expected('run_new_rfactor', r_type))
+                            _load_expected(fe2o3_012_1x1_dataset,
+                                           'run_new_rfactor',
+                                           r_type))
 
 
 @pytest.mark.parametrize('r_type', _TYPES)
@@ -264,7 +248,9 @@ def test_rfactor_from_csv(r_type, fe2o3_012_1x1_dataset):
     """Check rfactor_from_csv bit for bit against frozen values."""
     actual = _run_from_csv(fe2o3_012_1x1_dataset, r_type)
     np.testing.assert_equal(actual,
-                            _load_expected('rfactor_from_csv', r_type))
+                            _load_expected(fe2o3_012_1x1_dataset,
+                                           'rfactor_from_csv',
+                                           r_type))
 
 
 @pytest.mark.parametrize('r_type', _TYPES)
@@ -278,7 +264,10 @@ def test_run_new_rfactor_range(scenario, r_type,
                           step=step)
     np.testing.assert_equal(
         actual,
-        _load_expected('run_new_rfactor', r_type, scenario),
+        _load_expected(fe2o3_012_1x1_dataset,
+                       'run_new_rfactor',
+                       r_type,
+                       scenario),
         )
 
 
@@ -293,7 +282,10 @@ def test_rfactor_from_csv_range(scenario, r_type, fe2o3_012_1x1_dataset):
                            step=step)
     np.testing.assert_equal(
         actual,
-        _load_expected('rfactor_from_csv', r_type, scenario),
+        _load_expected(fe2o3_012_1x1_dataset,
+                       'rfactor_from_csv',
+                       r_type,
+                       scenario),
         )
 
 
@@ -307,7 +299,10 @@ def test_run_new_rfactor_special(scenario, r_type,
                           **kwargs)
     np.testing.assert_equal(
         actual,
-        _load_expected('run_new_rfactor', r_type, scenario),
+        _load_expected(fe2o3_012_1x1_dataset,
+                       'run_new_rfactor',
+                       r_type,
+                       scenario),
         )
 
 
@@ -315,7 +310,10 @@ def test_run_new_rfactor_special(scenario, r_type,
 def test_pdf_inputs(entry_point, fe2o3_012_1x1_dataset, monkeypatch):
     """Check what the entry points hand to the PDF writer."""
     actual = _run_pdf(entry_point, fe2o3_012_1x1_dataset, monkeypatch)
-    expected = _load_expected(entry_point, 'pendry', 'pdf')
+    expected = _load_expected(fe2o3_012_1x1_dataset,
+                               entry_point,
+                               'pendry',
+                               'pdf')
     np.testing.assert_equal(actual, expected)
 
 
@@ -323,7 +321,7 @@ def test_run_new_rfactor_rejects_intpol_deg(fe2o3_012_1x1_dataset):
     """Check that INTPOL_DEG != 3 set in code is refused."""
     expbeams = readOUTBEAMS(fe2o3_012_1x1_dataset['exp_file'])
     theobeams = readOUTBEAMS(fe2o3_012_1x1_dataset['theo_file'])
-    rpars = _make_rparams(fe2o3_012_1x1_dataset, 'pendry',
+    rpars = make_rparams(fe2o3_012_1x1_dataset, 'pendry',
                           expbeams, theobeams)
     rpars.INTPOL_DEG = 5
     with pytest.raises(ParameterConflictError, match='R_FACTOR_LEGACY'):
@@ -365,9 +363,6 @@ def _run_section_at(dataset, r_type, monkeypatch, shift_range, **kwargs):
     scan : V0rScanResult
         The result of the only call to scan_v0r.
     """
-    monkeypatch.setattr(rfactor_section.leedbase,
-                        'getBeamCorrespondence',
-                        lambda *_: dataset['beam_correspondence'])
     scans = []
     scan_v0r = rfactor_section.v0r_scan.scan_v0r
 
@@ -377,17 +372,19 @@ def _run_section_at(dataset, r_type, monkeypatch, shift_range, **kwargs):
 
     monkeypatch.setattr(rfactor_section.v0r_scan, 'scan_v0r', _record_scan)
     theobeams = readOUTBEAMS(dataset['theo_file'])
-    rpars = _make_rparams(dataset,
+    rpars = make_rparams(dataset,
                           r_type,
                           readOUTBEAMS(dataset['exp_file']),
                           theobeams)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*shift_range, _STEP)
     rpars.best_v0r = kwargs.get('best_v0r')
-    rfactor_section.run_new_rfactor(None,
-                                    rpars,
-                                    for_error=kwargs.get('for_error', False),
-                                    name='refcalc',
-                                    theobeams=theobeams)
+    run_new_rfactor_with_correspondence(
+        monkeypatch,
+        dataset['beam_correspondence'],
+        rpars,
+        theobeams,
+        for_error=kwargs.get('for_error', False),
+        )
     assert len(scans) == 1
     return rpars, scans[0]
 

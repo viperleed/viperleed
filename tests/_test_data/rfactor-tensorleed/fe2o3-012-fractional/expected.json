@@ -3,12 +3,12 @@
  "intpol_deg": 3,
  "r_factor_smoothing": 0,
  "note": "Reference values from the R-factor of TensErLEED 2.1.0 on the same inputs, frozen; TensErLEED is not run by the tests. r is the overall R factor, r_integer and r_fractional those of the integer- and fractional-order beams (null if absent). The values of r2 are TensErLEED's own, which are half of the usual R2 definition.",
- "exp_file": "../../beam-data/EXPBEAMS-fe2o3-012-1x1.csv",
- "beam_correspondence_file": "../../beam-data/beamcorr-fe2o3-012-1x1.json",
+ "exp_file": "../fe2o3-012/EXPBEAMS.csv",
+ "beam_correspondence_file": "../fe2o3-012/beamcorr.json",
  "system": "Fe2O3(012) 1x1, with every third experimental beam (and the matching theory beam, in the TensErLEED run) relabelled as (h + 1/2|k)",
  "fractional": true,
  "theory": {
-  "../../beam-data/THEOBEAMS-fe2o3-012-1x1.csv": {
+  "../fe2o3-012/THEOBEAMS.csv": {
    "pendry": {
     "r": 0.479,
     "r_integer": 0.4817,

@@ -3,7 +3,7 @@
  "intpol_deg": 3,
  "r_factor_smoothing": 0,
  "note": "Reference values from the R-factor of TensErLEED 2.1.0 on the same inputs, frozen; TensErLEED is not run by the tests. r is the overall R factor, r_integer and r_fractional those of the integer- and fractional-order beams (null if absent). The values of r2 are TensErLEED's own, which are half of the usual R2 definition.",
- "exp_file": "EXPBEAMS.csv",
+ "exp_file": "../ag100/EXPBEAMS.csv",
  "beam_correspondence_file": "beamcorr.json",
  "system": "Ag(100) 1x1 reference calculation with TensErLEED 1.6.1 and 2.1.0 (theory files); the R factor is that of TensErLEED 2.1.0 in both cases",
  "fractional": false,

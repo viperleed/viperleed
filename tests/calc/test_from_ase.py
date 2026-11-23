@@ -42,16 +42,16 @@ from . import cases_ase
 
 
 ASE_DATA = TEST_DATA / 'from_ase'
-BEAM_DATA_DIR = TEST_DATA / 'beam-data'
+BEAM_DATA_DIR = TEST_DATA / 'rfactor-tensorleed' / 'fe2o3-012'
 # A level that no caller of run_calc uses, to detect any re-setting
 _UNUSED_LEVEL = logging.WARNING + 1
 
 
 @pytest.fixture
 def fe2o3_012_1x1_beam_files():
-    exp_csv = BEAM_DATA_DIR / "EXPBEAMS-fe2o3-012-1x1.csv"
-    theo_csv = BEAM_DATA_DIR / "THEOBEAMS-fe2o3-012-1x1.csv"
-    beamcorr_file = BEAM_DATA_DIR / "beamcorr-fe2o3-012-1x1.json"
+    exp_csv = BEAM_DATA_DIR / "EXPBEAMS.csv"
+    theo_csv = BEAM_DATA_DIR / "THEOBEAMS.csv"
+    beamcorr_file = BEAM_DATA_DIR / "beamcorr.json"
     beam_correspondence = json.loads(beamcorr_file.read_text())[
         "beam_correspondence"]
     return exp_csv, theo_csv, beam_correspondence
