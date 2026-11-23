@@ -25,7 +25,7 @@ def test_group_rfactors_per_beam():
     numerators = np.array([1.0, 2.0, 3.0])
     denominators = np.array([4.0, 5.0, 6.0])
 
-    result = group_rfactors(numerators, denominators, groups="beam")
+    result = group_rfactors(numerators, denominators, groups='beam')
 
     assert result == pytest.approx(np.array([0.25, 0.4, 0.5]))
 
@@ -46,7 +46,10 @@ def test_group_rfactors_integer_groups_with_num_groups_and_gap():
     denominators = np.array([2.0, 4.0, 6.0])
     groups = np.array([0, 2, 2])
 
-    result = group_rfactors(numerators, denominators, groups=groups, num_groups=3)
+    result = group_rfactors(numerators,
+                            denominators,
+                            groups=groups,
+                            num_groups=3)
 
     expected = np.array([
         1.0 / 2.0,
@@ -64,7 +67,10 @@ def test_group_rfactors_single_group_matches_overall():
     groups = np.zeros(len(numerators), dtype=int)
 
     overall = group_rfactors(numerators, denominators, groups=None)
-    grouped = group_rfactors(numerators, denominators, groups=groups, num_groups=1)
+    grouped = group_rfactors(numerators,
+                             denominators,
+                             groups=groups,
+                             num_groups=1)
 
     assert grouped.shape == (1,)
     assert grouped[0] == pytest.approx(overall)
@@ -75,8 +81,11 @@ def test_group_rfactors_unique_groups_match_per_beam():
     denominators = np.array([2.0, 4.0, 5.0])
     groups = np.arange(len(numerators))
 
-    grouped = group_rfactors(numerators, denominators, groups=groups, num_groups=len(groups))
-    per_beam = group_rfactors(numerators, denominators, groups="beam")
+    grouped = group_rfactors(numerators,
+                             denominators,
+                             groups=groups,
+                             num_groups=len(groups))
+    per_beam = group_rfactors(numerators, denominators, groups='beam')
 
     assert grouped == pytest.approx(per_beam)
 
@@ -85,5 +94,5 @@ def test_group_rfactors_incompatible_shapes():
     numerators = np.array([1.0, 2.0])
     denominators = np.array([4.0, 5.0, 6.0])
 
-    with pytest.raises(ValueError, match="same shape"):
+    with pytest.raises(ValueError, match='same shape'):
         group_rfactors(numerators, denominators, groups=None)

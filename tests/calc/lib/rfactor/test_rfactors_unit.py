@@ -25,21 +25,21 @@ RFACTOR_FUNCS = (
 )
 
 
-@pytest.mark.parametrize("func", RFACTOR_FUNCS)
+@pytest.mark.parametrize('func', RFACTOR_FUNCS)
 def test_rfactor_requires_input_data(func, synthetic_pair):
     with pytest.raises(TypeError):
         func(
-            synthetic_pair["v0i"],
-            synthetic_pair["energy_step"],
-            synthetic_pair["energies"],
+            synthetic_pair['v0i'],
+            synthetic_pair['energy_step'],
+            synthetic_pair['energies'],
         )
 
 
-@pytest.mark.parametrize("func", RFACTOR_FUNCS)
+@pytest.mark.parametrize('func', RFACTOR_FUNCS)
 def test_rfactor_spline_and_precomputed_paths_agree(func, synthetic_pair):
-    energies = synthetic_pair["energies"]
-    spline_1 = synthetic_pair["data_spline_1"]
-    spline_2 = synthetic_pair["data_spline_2"]
+    energies = synthetic_pair['energies']
+    spline_1 = synthetic_pair['data_spline_1']
+    spline_2 = synthetic_pair['data_spline_2']
 
     deriv_1_1 = spline_1.derivative()
     deriv_1_2 = deriv_1_1.derivative()
@@ -58,35 +58,39 @@ def test_rfactor_spline_and_precomputed_paths_agree(func, synthetic_pair):
     )
 
     result_from_splines = func(
-        synthetic_pair["v0i"],
-        synthetic_pair["energy_step"],
+        synthetic_pair['v0i'],
+        synthetic_pair['energy_step'],
         energies,
         data_spline_1=spline_1,
         data_spline_2=spline_2,
     )
     result_from_arrays = func(
-        synthetic_pair["v0i"],
-        synthetic_pair["energy_step"],
+        synthetic_pair['v0i'],
+        synthetic_pair['energy_step'],
         energies,
         data_and_derivatives_1=data_and_derivatives_1,
         data_and_derivatives_2=data_and_derivatives_2,
     )
 
-    assert result_from_splines == pytest.approx(result_from_arrays, rel=1e-12, abs=1e-14)
+    assert result_from_splines == pytest.approx(
+        result_from_arrays,
+        rel=1e-12,
+        abs=1e-14,
+    )
 
 
-@pytest.mark.parametrize("func", RFACTOR_FUNCS)
+@pytest.mark.parametrize('func', RFACTOR_FUNCS)
 def test_rfactor_per_beam_shape(func, synthetic_pair):
-    spline_1 = synthetic_pair["data_spline_1"]
-    spline_2 = synthetic_pair["data_spline_2"]
+    spline_1 = synthetic_pair['data_spline_1']
+    spline_2 = synthetic_pair['data_spline_2']
 
     result = func(
-        synthetic_pair["v0i"],
-        synthetic_pair["energy_step"],
-        synthetic_pair["energies"],
+        synthetic_pair['v0i'],
+        synthetic_pair['energy_step'],
+        synthetic_pair['energies'],
         data_spline_1=spline_1,
         data_spline_2=spline_2,
-        groups="beam",
+        groups='beam',
     )
 
     result = np.asarray(result)
@@ -118,7 +122,7 @@ def test_pendry_from_y_weighs_overlap_edges_by_half():
     assert result == pytest.approx(numerator / denominator, rel=1e-12)
 
 
-@pytest.mark.parametrize("peak_sign", [1, -1])
+@pytest.mark.parametrize('peak_sign', [1, -1])
 def test_zj_weighs_overlap_edges_by_half(peak_sign):
     """Check trapezoid weights and epsilon of ZJ's R at the edges."""
     # Overlap is the three middle points. With I_e = 2, I_t = 1 there,
@@ -143,7 +147,7 @@ def test_zj_weighs_overlap_edges_by_half(peak_sign):
     assert result == pytest.approx(0.5 / (4 * 0.027), rel=1e-12)
 
 
-@pytest.mark.parametrize("func", [r_1.r_1, r_2.r_2])
+@pytest.mark.parametrize('func', [r_1.r_1, r_2.r_2])
 def test_r1_r2_vanish_for_scaled_copy_on_overlap(func):
     """Check R1 and R2 ignore theory outside the experimental range."""
     # The experiment covers only the middle of the theory range. On the
@@ -159,7 +163,7 @@ def test_r1_r2_vanish_for_scaled_copy_on_overlap(func):
     assert result == pytest.approx(0.0, abs=1e-12)
 
 
-@pytest.mark.parametrize("func", [r_1.r_1, r_2.r_2])
+@pytest.mark.parametrize('func', [r_1.r_1, r_2.r_2])
 def test_r1_r2_vanish_for_scaled_copy_in_wide_experiment(func):
     """Check R1 and R2 ignore experiment outside the theory range."""
     # Mirror of the test above: the theory covers only the middle of
@@ -319,15 +323,15 @@ def _call_with_ragged_beams(func, empty_beams=(), **kwargs):
 
 
 @pytest.mark.parametrize(
-    ("func", "per_beam"),
+    ('func', 'per_beam'),
     [(r_2.r_2, _r2_of_beam), (zannazi_jona.r_zjj, _zj_of_beam)],
-    ids=["r2", "zj"],
+    ids=['r2', 'zj'],
 )
 class TestBeamAveraging:
     """Tests for averaging of R2 and ZJ over beams."""
     def test_per_beam_values(self, func, per_beam):
         """Check per-beam values."""
-        result = _call_with_ragged_beams(func, groups="beam")
+        result = _call_with_ragged_beams(func, groups='beam')
         expected = [per_beam(b) for b in range(3)]
         assert result == pytest.approx(expected, rel=1e-12)
 
@@ -353,7 +357,7 @@ class TestBeamAveraging:
         expected = _weighted_mean([per_beam(0), per_beam(2)], (0, 2))
         assert result == pytest.approx(expected, rel=1e-12)
 
-    @pytest.mark.parametrize("groups", [None, "beam"])
+    @pytest.mark.parametrize('groups', [None, 'beam'])
     def test_beam_with_zero_experimental_intensity_is_excluded(
         self, func, per_beam, groups
     ):

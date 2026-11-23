@@ -220,7 +220,8 @@ def load_expected_payload():
 
 
 def write_expected_payload(payload):
-    EXPECTED_FILE.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
+    text = json.dumps(payload, indent=2, sort_keys=True)
+    EXPECTED_FILE.write_text(text + '\n')
 
 
 def make_rparams(dataset, r_type, expbeams, theobeams):
