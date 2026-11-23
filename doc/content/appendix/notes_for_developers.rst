@@ -233,13 +233,13 @@ The tests also run on GitHub Actions:
   ``--allow-missing=mpifort,gfortran``, so the tests that need a compiler run
   on Linux in any case, and on Windows only where the runner image has the
   compiler (at present :program:`gfortran`, but not :program:`mpifort`). The
-  check ``Tests`` fails unless all four jobs succeed. The coverage of the
-  PyQt5 Linux job is uploaded to
-  `Codecov <https://codecov.io/gh/viperleed/viperleed>`__. After every push
-  to ``master``, the job ``Tests (serial)`` also runs the default tier
-  without :program:`pytest-xdist` (on Linux), to catch tests that fail only
-  when run serially. It is not part of the check ``Tests``: a pull request
-  that breaks the serial run is noticed only after it is merged.
+  check ``Tests`` fails unless all four jobs succeed. The coverage of the two
+  Linux jobs is uploaded to
+  `Codecov <https://codecov.io/gh/viperleed/viperleed>`__, which merges them.
+  After every push to ``master``, the job ``Tests (serial)`` also runs the
+  default tier without :program:`pytest-xdist` (on Linux), to catch tests that
+  fail only when run serially. It is not part of the check ``Tests``: a pull
+  request that breaks the serial run is noticed only after it is merged.
 - The *TensErLEED tests* (:file:`.github/workflows/tensorleed_tests.yml`)
   run the TensErLEED tier on every pull request into ``master``, against a
   tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.

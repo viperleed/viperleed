@@ -24,9 +24,10 @@
 #   PyQt6 job installs PyQt6 instead of the [GUI] extra, so that the
 #   GUI runs with each of the bindings it supports (mplcairo, also in
 #   [GUI], is optional and tested by the other jobs).
-# - Coverage is uploaded to Codecov from the PyQt5 Linux job. This
-#   needs the Codecov app and the CODECOV_TOKEN secret. A failed upload
-#   does not fail the job.
+# - Coverage is uploaded to Codecov from the two Linux jobs, which
+#   Codecov merges: code that runs only with PyQt5 or only with PyQt6
+#   counts as covered. This needs the Codecov app and the CODECOV_TOKEN
+#   secret. A failed upload does not fail the job.
 # - Require the check "Tests" (job all-tests) in the
 #   rulesets: it fails unless every job of the matrix succeeded, and
 #   its name does not change with the operating systems or the Python
@@ -80,6 +81,7 @@ jobs:
             os: ubuntu-latest
             python-version: '3.x'
             qt-package: PyQt6
+            coverage: true
           - platform: Windows
             os: windows-latest
             python-version: '3.7'
