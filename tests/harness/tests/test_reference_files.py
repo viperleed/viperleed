@@ -2,17 +2,18 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
-from pathlib import Path
-
 import pytest
+from pytest_cases import parametrize
 
-from . import conftest
-from . import reference_files
+from .. import reference_files
+from .conftest import XDIST_ARGS
+from .conftest import run_pytest
 
 _REWRITE = reference_files.REWRITE_OPTION
 _TEST_FILE = """
@@ -21,7 +22,6 @@ def test_compare(check_reference, tmp_path):
     written.write_text(WRITTEN, encoding='utf-8')
     check_reference(written, REFERENCE)
 """
-_XDIST_OPTION = '-n'
 _CHANGED = 'other\n'
 _BASE = 'line 1\nline 2\nline 3\n'
 _TIMESTAMP_A = 'Ag(100) 261023-142446\n'
@@ -36,19 +36,7 @@ def _run(pytester, written, reference, *args):
         f'WRITTEN = {written!r}\nREFERENCE = {str(reference)!r}\n'
         + _TEST_FILE
         )
-    run = (
-        pytester.runpytest_subprocess
-        if _XDIST_OPTION in args else
-        pytester.runpytest_inprocess
-        )
-    return run(*args, '-p', 'no:cacheprovider', '-p', conftest.__name__)
-
-
-@pytest.fixture(name='subprocess_path')
-def fixture_subprocess_path(monkeypatch):
-    """Make the test-suite plugins importable in a subprocess."""
-    root = Path(__file__).resolve().parent.parent
-    monkeypatch.setenv('PYTHONPATH', str(root))
+    return run_pytest(pytester, *args)
 
 
 def _reference(pytester, text):
@@ -61,6 +49,21 @@ def _reference(pytester, text):
 
 class TestCheckReference:
     """Tests for the check_reference fixture."""
+
+    _exit_status_args = {
+        'plain': (),
+        'no-summary': ('--no-summary',),
+        'no-terminal': ('-p', 'no:terminal'),
+        'xdist': pytest.param(
+            XDIST_ARGS,
+            marks=pytest.mark.slow,  # Subprocess, about 1 s
+            ),
+        }
+    # Written and reference texts that differ
+    _verbatim = {
+        'timestamp': (_TIMESTAMP_A, _TIMESTAMP_B),
+        'path': (_PATH_A, _PATH_B),
+        }
 
     def test_equal(self, pytester):
         """Check that an identical file passes."""
@@ -80,14 +83,7 @@ class TestCheckReference:
             ])
         assert reference.read_text(encoding='utf-8') == _BASE  # Not rewritten
 
-    @pytest.mark.parametrize(
-        ('written', 'reference'),
-        [
-            (_TIMESTAMP_A, _TIMESTAMP_B),
-            (_PATH_A, _PATH_B),
-            ],
-        ids=('timestamp', 'path'),
-        )
+    @parametrize('written,reference', _verbatim.values(), ids=_verbatim)
     def test_timestamp_or_path_difference_fails(self, pytester,
                                                 written, reference):
         """Check that timestamps and paths are compared verbatim."""
@@ -131,12 +127,10 @@ class TestCheckReference:
         assert reference.read_text(encoding='utf-8') == _BASE
 
     @pytest.mark.slow  # Subprocess, about 1 s
-    @pytest.mark.usefixtures('subprocess_path')
     def test_rewrite_xdist(self, pytester):
         """Check rewriting is reported with pytest-xdist."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, _CHANGED, reference, _REWRITE,
-                      _XDIST_OPTION, '2')
+        result = _run(pytester, _CHANGED, reference, _REWRITE, *XDIST_ARGS)
         result.assert_outcomes(passed=0, skipped=1)
         result.stdout.fnmatch_lines([
             '*rewritten reference files*',
@@ -145,27 +139,13 @@ class TestCheckReference:
         assert reference.read_text(encoding='utf-8') == _CHANGED
 
     @pytest.mark.slow  # Subprocess, about 1 s
-    @pytest.mark.usefixtures('subprocess_path')
     def test_mismatch_xdist(self, pytester):
         """Check a mismatch fails with pytest-xdist."""
         reference = _reference(pytester, _BASE)
-        result = _run(pytester, _CHANGED, reference, _XDIST_OPTION, '2')
+        result = _run(pytester, _CHANGED, reference, *XDIST_ARGS)
         result.assert_outcomes(failed=1)
 
-    @pytest.mark.usefixtures('subprocess_path')
-    @pytest.mark.parametrize(
-        'args',
-        [
-            pytest.param((), id='plain'),
-            pytest.param(('--no-summary',), id='no-summary'),
-            pytest.param(('-p', 'no:terminal'), id='no-terminal'),
-            pytest.param(
-                (_XDIST_OPTION, '2'),
-                id='xdist',
-                marks=pytest.mark.slow,  # Subprocess, about 1 s
-                ),
-            ],
-        )
+    @parametrize('args', _exit_status_args.values(), ids=_exit_status_args)
     def test_rewrite_exit_status(self, pytester, args):
         """Check that a run that rewrote a reference exits non-zero."""
         reference = _reference(pytester, _BASE)

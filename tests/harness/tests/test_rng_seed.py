@@ -2,13 +2,13 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-10-15'
 __license__ = 'GPLv3+'
 
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
@@ -16,12 +16,11 @@ import zlib
 
 import pytest
 
-from .conftest import N_DRAWS
+from ...conftest import N_DRAWS
 
 # The tests in this module start pytest subprocesses
 pytestmark = pytest.mark.slow
 
-_TESTS_PARENT = Path(__file__).resolve().parent.parent
 _TEST_SOURCE = """
 import os
 
@@ -39,12 +38,8 @@ def _run_seed_logging_pytest(tmp_path, name, *args):
     folder.mkdir()
     (folder / 'test_small.py').write_text(_TEST_SOURCE)
     log = folder / 'seeds.log'
-    python_path = [str(_TESTS_PARENT)]
-    if os.environ.get('PYTHONPATH'):
-        python_path.append(os.environ['PYTHONPATH'])
-    env = dict(os.environ,
-               SEED_LOG=str(log),
-               PYTHONPATH=os.pathsep.join(python_path))
+    # PYTHONPATH makes package tests importable (subprocess_path)
+    env = dict(os.environ, SEED_LOG=str(log))
     env.pop('PYTEST_ADDOPTS', None)  # Could disable xdist
     result = subprocess.run(  # noqa: S603  # Fixed, trusted arguments
         (
