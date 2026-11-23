@@ -169,8 +169,8 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
             )
     # select the R-factor function for R_FACTOR_TYPE
     r_func = select_rfactor(rp.R_FACTOR_TYPE)
-    logger.info('Calculating R-factor type %s.',
-                rp.R_FACTOR_TYPE.name.lower())
+    logger.info('Calculating R-factor type '
+                f'{rp.R_FACTOR_TYPE.name.lower()}.')
 
     _, theo_range, iv_shift, _ = iorfactor.prepare_rfactor_energy_ranges(
         rp, theobeams, for_error, n_expand=(rp.INTPOL_DEG - 1) // 2
@@ -193,9 +193,8 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams):
     if not for_error:
         rp.best_v0r = scan.best_v0r
     logger.info(
-        "Best inner potential shift: %.2f eV with R = %.4f",
-        scan.best_v0r,
-        scan.best_r,
+        f'Best inner potential shift: {scan.best_v0r:.2f} eV with '
+        f'R = {scan.best_r:.4f}'
     )
 
     # calculate R-factors at best shift

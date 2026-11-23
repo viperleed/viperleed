@@ -175,8 +175,8 @@ def _find_best_shift(r_at_shift, iv_shift):
     best_index = np.nanargmin(r_values)
     best_shift = shifts[best_index]
     best_r = r_values[best_index]
-    logger.debug('Best inner potential shift: %.2f eV with R = %.4f',
-                 best_shift, best_r)
+    logger.debug(f'Best inner potential shift: {best_shift:.2f} eV '
+                 f'with R = {best_r:.4f}')
     return best_shift, best_r
 
 

@@ -7,7 +7,7 @@ read from a PARAMETERS file do not clash with one another.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
@@ -111,11 +111,10 @@ class ParametersChecker:
                                                        'R_FACTOR_LEGACY')
         if smoothing and not legacy:
             _LOGGER.warning(
-                'R_FACTOR_SMOOTHING is set to %s, but it is ignored by '
-                'the Python R factor. Set R_FACTOR_LEGACY = True to '
-                'smooth the experimental curves with the TensErLEED '
-                'R factor.',
-                smoothing,
+                f'R_FACTOR_SMOOTHING is set to {smoothing}, but it is '
+                'ignored by the Python R factor. Set R_FACTOR_LEGACY = '
+                'True to smooth the experimental curves with the '
+                'TensErLEED R factor.'
                 )
 
     def _check_n_cores(self):

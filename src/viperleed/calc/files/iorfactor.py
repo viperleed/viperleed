@@ -333,13 +333,10 @@ def find_theory_range(theo_energies, exp_range, iv_shift, n_expand):
         # it is exactly an integer multiple of the fixed value
         # they desired
         logger.warning(
-            'Using interpolation step %s eV, which is coarser than the '
-            'smallest step between experiment and theory (%s eV). '
-            'Consider using %s or not defining a step for the '
-            'IV_SHIFT_RANGE parameter',
-            iv_shift.step,
-            small_step,
-            small_step,
+            f'Using interpolation step {iv_shift.step} eV, which is '
+            'coarser than the smallest step between experiment and '
+            f'theory ({small_step} eV). Consider using {small_step} or '
+            'not defining a step for the IV_SHIFT_RANGE parameter'
         )
     return _find_common_theory_experiment_range(
         theo_energies,
@@ -565,10 +562,9 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     r_factor_type = legacy_r_factor_type(rp)
     if r_factor_type is not rp.R_FACTOR_TYPE:
         logger.warning(
-            'TensErLEED %s has no smooth R-factor (needs %s or later). '
-            'Falling back on Pendry R-factor in WEXPEL.',
-            rp.TL_VERSION,
-            tenserleed.MIN_TL_VERSION_SMOOTH,
+            f'TensErLEED {rp.TL_VERSION} has no smooth R-factor (needs '
+            f'{tenserleed.MIN_TL_VERSION_SMOOTH} or later). Falling back '
+            'on Pendry R-factor in WEXPEL.'
             )
     output += f' WR=      {_WEXPEL_R_WEIGHTS[r_factor_type]},\n'
     output += '''\
@@ -1182,8 +1178,8 @@ def _write_rfactor_analysis_pdf_from_splines(
         pdf = PdfPages(analysis_file)
     except PermissionError:
         logger.error(
-            'write_Rfactorpdf_from_splines: Cannot open file %s. Aborting.',
-            analysis_file,
+            'write_Rfactorpdf_from_splines: Cannot open file '
+            f'{analysis_file}. Aborting.'
         )
         return
     # The following will spam the logger with debug messages; disable.
