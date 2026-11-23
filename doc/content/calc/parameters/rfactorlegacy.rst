@@ -42,7 +42,7 @@ from the TensErLEED one in these respects:
    curves on a grid with the same step.
 -  :ref:`R_FACTOR_SMOOTHING<rfactorsmooth>` is ignored: experimental
    curves are not smoothed. A warning is issued if R_FACTOR_SMOOTHING is
-   set together with R_FACTOR_LEGACY = ``False``.
+   set to a non-zero value together with R_FACTOR_LEGACY = ``False``.
 
 The new implementation supports only cubic interpolation. Combining
 R_FACTOR_LEGACY = ``False`` with an INTPOL_DEG other than 3 is rejected

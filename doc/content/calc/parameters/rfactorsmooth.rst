@@ -7,10 +7,7 @@ R_FACTOR_SMOOTHING
 
 R_FACTOR_SMOOTHING defines the number of times that experimental |IV| curves
 will be smoothed by 3-point smoothing during |R-factor| calculations, both
-after the reference calculation and during the search. It applies only to
-the TensErLEED |R factor|: the python-native |R factor| (see
-:ref:`R_FACTOR_LEGACY<rfactorlegacy>`) does not smooth the experimental
-curves.
+after the reference calculation and during the search.
 
 .. note::
     It is recommended to smooth the experimental curves beforehand, such
@@ -26,9 +23,8 @@ curves.
 .. versionchanged:: 0.15.0
    Parameter renamed from ``R_FACTOR_SMOOTH`` to ``R_FACTOR_SMOOTHING``.
    The old name is still accepted as an alias for backwards compatibility.
-   A warning is issued if R_FACTOR_SMOOTHING is set while
-   :ref:`R_FACTOR_LEGACY<rfactorlegacy>` is ``False``, as the
-   python-native |R factor| ignores it.
+   The warning for a non-zero value with R_FACTOR_LEGACY = ``False``
+   (see below) is new.
 
 **Default:** 0
 
@@ -41,8 +37,8 @@ curves.
    R_FACTOR_SMOOTHING = 4
 
 .. warning::
-   This parameter is only applied in the old TensErLEED-based fortran codes,
-   and not in the newer |R-factor| implementations. If you use the newer,
-   python-based |R-factor| implementations, for example by setting
-   :ref:`R_FACTOR_LEGACY<rfactorlegacy>` to ``False``, this parameter will have
-   no effect.
+   This parameter applies only to the TensErLEED |R factor|. The
+   python-native |R factor|, used with
+   :ref:`R_FACTOR_LEGACY<rfactorlegacy>` = ``False``, does not smooth the
+   experimental curves and ignores R_FACTOR_SMOOTHING. In that case, a
+   warning is issued if R_FACTOR_SMOOTHING is set to a non-zero value.
