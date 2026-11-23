@@ -63,21 +63,25 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def sin_spline():
+    """Return a spline through a squared-sine mock I(V) curve."""
     return CubicSpline(_MOCK_ROUGH_E_AXIS, _MOCK_SIN_INTENSITY)
 
 
 @pytest.fixture
 def cos_spline():
+    """Return a spline through a squared-cosine mock I(V) curve."""
     return CubicSpline(_MOCK_ROUGH_E_AXIS, _MOCK_COS_INTENSITY)
 
 
 @pytest.fixture
 def const_spline():
+    """Return a spline through a constant mock I(V) curve."""
     return CubicSpline(_MOCK_ROUGH_E_AXIS, _MOCK_CONST_INTENSITY)
 
 
 @pytest.fixture
 def synthetic_pair(sin_spline, cos_spline):
+    """Return R-factor arguments for the sine and cosine splines."""
     return {
         'v0i': 3.0,
         'energy_step': _MOCK_FINE_E_STEP,
@@ -107,8 +111,8 @@ def _load_beam_correspondence():
     return tuple(data['beam_correspondence'])
 
 
-@pytest.fixture(scope='session')
-def fe2o3_012_1x1_dataset():
+@pytest.fixture(name='fe2o3_012_1x1_dataset', scope='session')
+def fixture_fe2o3_012_1x1_dataset():
     """Real beam data with fixed beam correspondence applied to THEO beams."""
     exp_out_beams = readOUTBEAMS(EXP_BEAMS_FILE)
     theo_out_beams = readOUTBEAMS(THEO_BEAMS_FILE)
