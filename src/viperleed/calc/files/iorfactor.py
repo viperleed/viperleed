@@ -539,10 +539,10 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     if (r_factor_type is RFactorType.SMOOTH
             and rp.TL_VERSION < tenserleed.MIN_TL_VERSION_SMOOTH):
         logger.warning(
-            'Smooth R-factors are not supported outside of the search for '
-            'TensErLEED versions <2.1. Falling back on Pendry R-factor. '
-            'Resulting R-factors may differ from those calculated during '
-            'the search.'
+            'TensErLEED %s has no smooth R-factor (needs %s or later). '
+            'Falling back on Pendry R-factor in WEXPEL.',
+            rp.TL_VERSION,
+            tenserleed.MIN_TL_VERSION_SMOOTH,
             )
         r_factor_type = RFactorType.PENDRY
     output += f' WR=      {_WEXPEL_R_WEIGHTS[r_factor_type]},\n'
