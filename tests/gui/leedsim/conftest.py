@@ -10,6 +10,20 @@ __license__ = 'GPLv3+'
 from pytest_cases import fixture
 
 
+@fixture(name='check_aligned')
+def fixture_check_aligned():
+    """Return a function that checks the alignment of a widget.
+
+    The function checks that the widget has the given alignment in the
+    (box) layout that contains it, and that it is not stretched.
+    """
+    def _check(layout, widget, alignment):
+        index = layout.indexOf(widget)
+        assert not layout.stretch(index)
+        assert layout.itemAt(index).alignment() == alignment
+    return _check
+
+
 @fixture(name='check_annotations_follow_move')
 def fixture_check_annotations_follow_move(qtc, qtg):
     """Return a function that checks that annotations follow a window.

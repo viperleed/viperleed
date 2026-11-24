@@ -629,8 +629,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                         #(qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
             shapesLay = qtw.QHBoxLayout()
             shapesLay.addStretch(1)
-            shapesLay.addWidget(self.cellShapes,
-                                qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
+            shapesLay.addWidget(
+                self.cellShapes,
+                alignment=qtc.Qt.AlignHCenter | qtc.Qt.AlignTop,
+                )
             shapesLay.addStretch(1)
             topLayout.addLayout(shapesLay, 1, 0, 1, topLayout.columnCount())#,qtc.Qt.AlignCenter)
             # topLayout.setRowStretch(0,100)
