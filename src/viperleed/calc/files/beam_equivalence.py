@@ -122,8 +122,6 @@ def read_beam_equivalence(path):
                 continue
             try:
                 exp_key, calc_weights = _parse_assignment(line)
-                # Validate the line on its own, for the line number
-                BeamCorrespondence({exp_key: calc_weights})
             except ValueError as exc:
                 msg = f'{path}, line {line_nr}: {exc}'
                 raise ValueError(msg) from None
@@ -157,6 +155,8 @@ def _parse_assignment(line):
                    'more than once on the right-hand side.')
             raise ValueError(msg)
         calc_weights[calc_key] = weight
+    # Validate the line on its own, for the line number
+    BeamCorrespondence({exp_key: calc_weights})
     return exp_key, calc_weights
 
 
@@ -213,7 +213,8 @@ def write_beam_equivalence(correspondence, path):
         terms = (_format_label(calc_key) if equal
                  else f'{_format_weight(weight)}*{_format_label(calc_key)}'
                  for calc_key, weight in calc_weights.items())
-        lines.append(f'{_format_label(exp_key)} = {" + ".join(terms)}')
+        joined = ' + '.join(terms)
+        lines.append(f'{_format_label(exp_key)} = {joined}')
     Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
