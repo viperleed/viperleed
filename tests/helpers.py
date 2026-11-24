@@ -16,9 +16,11 @@ import copy
 from dataclasses import dataclass, fields
 import functools
 import inspect
+import itertools
 from pathlib import Path
 import random
 
+import fortranformat as ff
 import pytest
 from pytest_cases import case as case_decorator
 from pytest_cases import fixture
@@ -27,6 +29,9 @@ from pytest_cases.case_funcs import get_case_tags
 from pytest_cases.case_funcs import is_case_class
 from pytest_cases.case_funcs import is_case_function
 from pytest_cases.filters import CaseFilter
+
+from viperleed.calc.lib.leedbase import HARTREE_TO_EV
+from viperleed.calc.lib.leedbase import HARTREE_TO_EV_V16
 
 
 # Think about a decorator for injecting fixtures.
@@ -553,3 +558,56 @@ class InfoBase:
     def empty(self):
         """Return whether any of the fields have truethy values."""
         return not any(self)
+
+
+def write_delta_stub(path, energies, inner_potential=0.5, *,
+                     old_format=False):
+    """Write a delta-amplitude file with given energies.
+
+    The file has the layout written by TensErLEED, with four beams,
+    one atom, and 11 displacement steps, and zero amplitudes.
+
+    Parameters
+    ----------
+    path : Path
+        The file to be written.
+    energies : Iterable
+        Energies (eV, relative to the inner potential) of the energy
+        blocks. Each block has a header line (E, VPI, VV in Hartree)
+        followed by the reference and delta amplitudes.
+    inner_potential : float, optional
+        The real part of the inner potential (Hartree). Default is 0.5.
+    old_format : bool, optional
+        Whether to write the file as TensErLEED v1.6 does: three-digit
+        integers in the header, E, VPI, VO, VV in the header of each
+        energy block, and energies converted with the Hartree value
+        of TensErLEED v1.6. Default is False.
+    """
+    n_beams, n_atoms, n_steps = 4, 1, 11
+    write_header = ff.FortranRecordWriter('10F7.4').write
+    write_amplitudes = ff.FortranRecordWriter('6E13.7').write
+    header = (
+        write_amplitudes([0.0, 0.0, 1.15, 0.0, 0.0, 1.15]),
+        ff.FortranRecordWriter('3I3' if old_format else '3I5').write(
+            [n_beams, n_atoms, n_steps]
+            ),
+        ff.FortranRecordWriter('10F10.5').write([1.0] * 2 * n_beams),
+        write_header([0.0] * 3 * n_atoms),
+        write_header([0.1] * 3 * n_atoms * n_steps),
+        write_header([0.0] * n_steps),
+        )
+    amplitudes = (
+        write_amplitudes([0.1] * 2 * n_beams),
+        write_amplitudes([0.2] * 2 * n_beams * n_steps),
+        )
+    potentials = ([-0.2, 0.0, inner_potential] if old_format
+                  else [-0.2, inner_potential])
+    hartree_to_ev = HARTREE_TO_EV_V16 if old_format else HARTREE_TO_EV
+    blocks = (
+        (write_amplitudes([e / hartree_to_ev + inner_potential,
+                           *potentials]),
+         *amplitudes)
+        for e in energies
+        )
+    lines = itertools.chain(header, itertools.chain.from_iterable(blocks))
+    path.write_text(''.join(f'{line}\n' for line in lines), encoding='utf-8')

@@ -20,13 +20,18 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.search_job import IS_WINDOWS
+from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.search import search
 
+from ....helpers import TEST_DATA
+from ....helpers import write_delta_stub
 from .conftest import _MODULE
 
+_AG100_INPUTS = TEST_DATA / 'Ag(100)' / 'initialization'
 use = pytest.mark.usefixtures
 
 
@@ -193,6 +198,79 @@ def _find_compiler_or_skip(find_compiler, dependency, missing_dependency):
             missing_dependency(dependency, 'compiler not found')
         return None  # Unreachable: missing_dependency raises
     return _find_or_skip
+
+
+class TestSearchDeltaEnergies:
+    """Tests for the check of delta energies at the start of search."""
+
+    @fixture(name='run_search')
+    def fixture_run_search(self, rpars, mock_no_run, tmp_path, mocker):
+        """Return a function to run search with given delta files."""
+        # As in Ag(100): EXPBEAMS from 48 eV, THEO_ENERGIES 50-350 eV
+        rpars.expbeams = readOUTBEAMS(str(_AG100_INPUTS / 'EXPBEAMS.csv'))
+        rpars.THEO_ENERGIES = TheoEnergies(50, 350, 3)
+
+        def _run(*delta_ranges, old_format=False):
+            # One delta file per atom, one atom per (e_min, e_max)
+            rpars.search_atlist = []
+            for i, (e_min, e_max) in enumerate(delta_ranges, start=1):
+                delta_name = f'DEL_{i}_Ag_1'
+                write_delta_stub(tmp_path / delta_name,
+                                 range(e_min, e_max + 1, 3),
+                                 old_format=old_format)
+                rpars.search_atlist.append(
+                    mocker.MagicMock(current_deltas=[delta_name])
+                    )
+            with execute_in_dir(tmp_path):
+                search(mocker.MagicMock(name='slab'), rpars)
+            return mock_no_run
+        return _run
+
+    @parametrize(e_min=(50, 47))
+    @parametrize(e_max=(350, 353))
+    def test_delta_covers_range(self, e_min, e_max, run_search):
+        """Check that no complaint is raised for sufficient energies."""
+        mocks = run_search((e_min, e_max))
+        mocks['write_rfinfo'].assert_called_once()
+
+    @parametrize('e_min, e_max', ((50, 347), (53, 350), (50, 101)))
+    def test_delta_too_short(self, e_min, e_max, run_search):
+        """Check complaints if delta energies are too short."""
+        with pytest.raises(RuntimeError, match='DEL_1_Ag_1') as exc:
+            run_search((e_min, e_max))
+        assert f'{e_max:.2f}' in str(exc.value)
+        assert 'from 50.00 to 350.00 eV' in str(exc.value)
+
+    def test_second_file_too_short(self, run_search):
+        """Check that all delta files are checked."""
+        with pytest.raises(RuntimeError, match='DEL_2_Ag_1') as exc:
+            run_search((50, 350), (50, 347))
+        assert 'DEL_1_Ag_1' not in str(exc.value)
+
+    def test_experiment_narrower(self, rpars, run_search):
+        """Check that deltas need to cover the experiment range only."""
+        for beam in rpars.expbeams:
+            beam.intens = {e: intensity
+                           for e, intensity in beam.intens.items()
+                           if 100 <= e <= 300}
+        mocks = run_search((89, 311))
+        mocks['write_rfinfo'].assert_called_once()
+
+    @parametrize(e_min=(50, 200, 302))
+    def test_v16_covers_range(self, e_min, rpars, run_search):
+        """Check delta files of TensErLEED v1.6 at high energies."""
+        rpars.THEO_ENERGIES = TheoEnergies(e_min, 350, 3)
+        mocks = run_search((e_min, 350), old_format=True)
+        mocks['write_rfinfo'].assert_called_once()
+
+    @parametrize(e_min=(50, 200, 302))
+    def test_v16_too_short(self, e_min, rpars, run_search):
+        """Check complaints for too-short v1.6 delta files."""
+        rpars.THEO_ENERGIES = TheoEnergies(e_min, 350, 3)
+        with pytest.raises(RuntimeError, match='DEL_1_Ag_1') as exc:
+            run_search((e_min, 347), old_format=True)
+        assert f'{e_min:.2f} to 347.00' in str(exc.value)
+        assert f'from {e_min:.2f} to 350.00 eV' in str(exc.value)
 
 
 class TestSearch:

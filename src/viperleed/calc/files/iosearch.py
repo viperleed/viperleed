@@ -388,7 +388,6 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         formatter['energies'].write([theo_range.max + 0.1 * vincr]).ljust(16)
         + "EMAX\n"
         )
-    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES                # TODO: Issue #138
     output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")
     output += (formatter['int'].write([0]).ljust(16)
                + "IPR - determines amount of output to stdout\n")
