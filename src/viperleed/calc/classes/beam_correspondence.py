@@ -252,7 +252,7 @@ def _normalised(exp_key, calc_weights):
         if weight:  # Zero-weight beams are in no assignment
             weights[calc_key] = float(weight)
     total = sum(weights.values())
-    if not total > 0:  # Also no calculated beams, or NaN
+    if not total > 0:  # Also no calculated beams
         msg = (f'The assignment of experimental beam {_format_key(exp_key)} '
                'has no calculated beam with a non-zero weight.')
         raise ValueError(msg)

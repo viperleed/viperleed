@@ -89,7 +89,6 @@ class TestConstruction:
         with pytest.raises(ValueError, match=r'\(1/2 0\).*more than once'):
             BeamCorrespondence(assignments)
 
-
     def test_assignments_is_a_copy(self):
         """Check that .assignments returns a copy."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1}})
