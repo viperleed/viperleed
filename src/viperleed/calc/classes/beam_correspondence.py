@@ -11,7 +11,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-24'
 __license__ = 'GPLv3+'
 
-from collections.abc import Mapping
 import math
 
 import numpy as np
@@ -67,17 +66,11 @@ class BeamCorrespondence:
 
         Raises
         ------
-        TypeError
-            If `assignments`, or one of its values, is not a Mapping.
         ValueError
             If a weight is negative or not finite, if a beam
             assignment has no calculated beam or only zero weights,
             or if two keys of one Mapping are the same beam.
         """
-        if not isinstance(assignments, Mapping):
-            msg = ('assignments must be a Mapping, not '
-                   f'{type(assignments).__name__!r}')
-            raise TypeError(msg)
         self._assignments = {}
         for exp_hk, calc_weights in assignments.items():
             exp_key = _to_key(exp_hk)
@@ -93,11 +86,7 @@ class BeamCorrespondence:
             return NotImplemented
         return self._assignments == other._assignments
 
-    __hash__ = None  # Mutable-looking container, not hashable
-
-    def __len__(self):
-        """Return the number of beam assignments."""
-        return len(self._assignments)
+    __hash__ = None
 
     def __repr__(self):
         """Return a string representation of self."""
@@ -161,15 +150,13 @@ class BeamCorrespondence:
             raise ValueError('A beam correspondence with calculated beams '
                              'in more than one beam assignment has no '
                              'legacy (per-calculated-beam) form.')
-        calc_to_exp_index = {}
+        vector = [-1] * len(ivbeams)
         for exp_key, calc_weights in self._assignments.items():
             exp_index = _find_index(exp_key, expbeams)
             for calc_key in calc_weights:
-                calc_to_exp_index[calc_key] = exp_index
-        vector = []
-        for beam in ivbeams:
-            calc_key = _find_key(beam, calc_to_exp_index)
-            vector.append(calc_to_exp_index.get(calc_key, -1))
+                calc_index = _find_index(calc_key, ivbeams)
+                if calc_index >= 0:
+                    vector[calc_index] = exp_index
         return vector
 
     def weight_matrix(self, expbeams, ivbeams):
@@ -229,14 +216,6 @@ def _find_index(key, beams):
     return -1
 
 
-def _find_key(beam, keys):
-    """Return the first of `keys` matching `beam`, or None."""
-    for key in keys:
-        if beam.isEqual_hk(key, eps=BEAM_EPS):
-            return key
-    return None
-
-
 def _format_key(key):
     """Return a string representation of a beam key."""
     first, second = key
@@ -245,10 +224,6 @@ def _format_key(key):
 
 def _normalised(exp_key, calc_weights):
     """Return {calc_key: normalised weight} for one beam assignment."""
-    if not isinstance(calc_weights, Mapping):
-        msg = ('Each beam assignment must be a Mapping, not '
-               f'{type(calc_weights).__name__!r}')
-        raise TypeError(msg)
     weights = {}
     seen = set()
     for calc_hk, weight in calc_weights.items():

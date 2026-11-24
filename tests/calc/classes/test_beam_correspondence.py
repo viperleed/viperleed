@@ -49,12 +49,6 @@ _COLLIDING = {
     }
 
 
-_NOT_MAPPINGS = {
-    'top level': [((1, 0), {(1, 0): 1})],
-    'assignment': {(1, 0): [(1, 0)]},
-    }
-
-
 class TestConstruction:
     """Tests for creating a BeamCorrespondence."""
 
@@ -76,11 +70,6 @@ class TestConstruction:
             })
         assert from_ints == from_fractions
         assert from_ints != BeamCorrespondence({(1, 0): {(1, 0): 1}})
-
-    def test_len(self):
-        """Check the number of beam assignments."""
-        corr = BeamCorrespondence({(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 1}})
-        assert len(corr) == 2
 
 
     @parametrize('weights,expect', _WEIGHTS.values(), ids=_WEIGHTS)
@@ -107,11 +96,6 @@ class TestConstruction:
         with pytest.raises(ValueError, match=r'\(1/2 0\).*more than once'):
             BeamCorrespondence(assignments)
 
-    @parametrize(assignments=_NOT_MAPPINGS.values(), ids=_NOT_MAPPINGS)
-    def test_not_a_mapping(self, assignments):
-        """Check complaints for input that is not a Mapping."""
-        with pytest.raises(TypeError):
-            BeamCorrespondence(assignments)
 
     def test_assignments_is_a_copy(self):
         """Check that .assignments returns a copy."""
