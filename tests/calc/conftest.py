@@ -8,6 +8,8 @@ ag100
     A Ag(100) slab, an Rparams, and a TestInfo.
 ag100_with_displacements_and_offsets
     A Ag(100) Slab and an Rparams, after reading a DISPLACEMENTS block.
+make_beams (factory)
+    Return a list of Beam objects with given (h, k) indices.
 make_poscar (factory)
     Return a Slab from POSCAR, an Rparams and a TestInfo from a TestInfo.
 mock_path
@@ -35,6 +37,7 @@ import pytest
 import pytest_cases
 
 from viperleed.calc import psgen
+from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files import displacements
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.tenserleed import get_tensorleed_path
@@ -58,6 +61,14 @@ def poscars_path():
 def fixture_tensorleed_path():
     """Return the Path to the top-level tree with tensor-LEED source code."""
     return get_tensorleed_path()
+
+
+@pytest_cases.fixture(name='make_beams', scope='session')
+def factory_make_beams():
+    """Return a list of Beam objects with the given (h, k) indices."""
+    def _make(*indices):
+        return [Beam(hk) for hk in indices]
+    return _make
 
 
 @pytest.fixture(name='make_poscar', scope='session')
