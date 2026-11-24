@@ -266,6 +266,7 @@ def initialization(sl, rp, subdomain=False):
 
     # Check that layer cuts are not too close together
     _check_and_warn_layer_cuts(rp, sl)
+    _log_auto_layer_cuts(rp, sl)
 
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
@@ -664,6 +665,31 @@ def _check_and_warn_layer_cuts(rpars, slab):
             "convergence issues in the reference calculation. Check the "
             "LAYERS_CUTS parameter in the PARAMETERS file."
             )
+
+
+def _log_auto_layer_cuts(rpars, slab):
+    """Log the layer-cut positions if any was detected automatically.
+
+    All the cuts are logged, both those given explicitly as fractions
+    of c and those detected automatically (dz/dc LAYER_CUTS), at the
+    positions used to create the layers of `slab`. Nothing is logged
+    if all LAYER_CUTS are given explicitly.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The PARAMETERS. Its LAYER_CUTS attribute decides which
+        cuts are used and whether anything is logged.
+    slab : Slab
+        The slab whose layers are created from `rpars`.
+    """
+    if not any(token.is_auto_cut for token in rpars.LAYER_CUTS):
+        return
+    # pylint: disable-next=protected-access  # Same cuts as create_layers
+    cuts = slab._get_layer_cut_positions(rpars, bulk_cuts=())
+    cuts_str = ' '.join(f'{cut:.4f}' for cut in cuts)
+    logger.info('Layer cuts (fractions of c), including automatically '
+                f'detected ones: {cuts_str}')
 
 
 def _check_domain_consistent(domain, main_rpars):
