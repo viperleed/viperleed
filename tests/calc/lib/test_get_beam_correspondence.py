@@ -111,6 +111,10 @@ class TestSynthetic:
         assert rpars.halt == 0
         assert ('No experimental beams found for calculated beams: '
                 '( 2| 0), ( 1| 1), ( 3| 1)') in caplog.messages
+        assert caplog.messages == [
+            ('No experimental beams found for calculated beams: '
+             '( 2| 0), ( 1| 1), ( 3| 1)'),
+            ]
 
     def test_two_calculated_on_one_experimental(self, synthetic):
         """Check calculated beams averaged for one experimental."""
@@ -132,6 +136,14 @@ class TestSynthetic:
         slab, rpars = synthetic(expbeams=((0.5, 0), (1, 0)),
                                 ivbeams=((0, 0.5), (1 + 2e-6, -3e-6)))
         assert getBeamCorrespondence(slab, rpars) == [0, 1]
+
+    def test_beyond_tolerance(self, synthetic):
+        """Check that beams 2e-5 apart do not match."""
+        slab, rpars = synthetic(expbeams=((1, 0), (1, 1)),
+                                ivbeams=((1 + 2e-5, 0), (1, 1)))
+        assert getBeamCorrespondence(slab, rpars) == [-1, 0]
+        assert _labels(rpars.expbeams) == ['( 1| 1)']
+        assert rpars.halt == 1
 
     def test_no_symmetry(self, synthetic, mocker):
         """Check matching without symmetry-equivalent beams."""
