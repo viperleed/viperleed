@@ -12,11 +12,14 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-24'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
 import re
 
 from quicktions import Fraction
 
+from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.files.beams import _snap_to_fraction
+from viperleed.calc.lib.string_utils import strip_comments
 
 # One beam index: an integer, a decimal, or a fraction like 1/2
 _INDEX = r'[+-]?(?:\d+/\d+|\d+(?:\.\d*)?|\.\d+)'
@@ -25,6 +28,13 @@ _INDEX = r'[+-]?(?:\d+/\d+|\d+(?:\.\d*)?|\.\d+)'
 # whitespace, a comma, or a vertical bar, e.g., (1/2 | -1)
 _LABEL_RE = re.compile(
     rf'\(\s*(?P<first>{_INDEX})(?:\s*[,|]\s*|\s+)(?P<second>{_INDEX})\s*\)'
+    )
+
+# One term of the right-hand side of a beam assignment: a beam label,
+# optionally preceded by a non-negative weight and '*', e.g., 1/3*(1 0)
+_TERM_RE = re.compile(
+    r'(?:(?P<weight>\d+/\d+|\d+(?:\.\d*)?|\.\d+)\s*\*\s*)?'
+    r'(?P<label>\([^()]*\))'
     )
 
 
@@ -62,3 +72,113 @@ def parse_beam_label(label):
     except ZeroDivisionError:
         msg = f'Invalid beam label {label.strip()!r}: division by zero.'
         raise ValueError(msg) from None
+
+
+def read_beam_equivalence(path):
+    """Return the beam correspondence read from a BEAM_EQUIVALENCE file.
+
+    Each non-empty line holds one beam assignment,
+        <label> = <term> + <term> + ...
+    with each term either a beam <label> (weight 1) or
+    <weight>*<label>. Weights are non-negative integers, decimals,
+    or fractions such as 1/3. Comments start with '!', '#', or '%'.
+
+    Parameters
+    ----------
+    path : str or Path
+        The file to read.
+
+    Returns
+    -------
+    BeamCorrespondence
+        One beam assignment per line, in the order of the file.
+
+    Raises
+    ------
+    ValueError
+        If a line cannot be parsed, if a beam is on the left-hand side
+        of more than one line or more than once on one right-hand
+        side, if a line has no non-zero weight, or if the file holds
+        no beam assignment. The message names the file and, where
+        applicable, the line number.
+    """
+    path = Path(path)
+    assignments = {}
+    first_line = {}  # {experimental beam: line number}
+    with path.open('r', encoding='utf-8') as file:
+        for line_nr, raw_line in enumerate(file, start=1):
+            line = strip_comments(raw_line)
+            if not line:
+                continue
+            try:
+                exp_key, calc_weights = _parse_assignment(line)
+                # Validate the line on its own, for the line number
+                BeamCorrespondence({exp_key: calc_weights})
+            except ValueError as exc:
+                msg = f'{path}, line {line_nr}: {exc}'
+                raise ValueError(msg) from None
+            if exp_key in first_line:
+                msg = (f'{path}, line {line_nr}: Experimental beam '
+                       f'{_format_label(exp_key)} is already assigned '
+                       f'on line {first_line[exp_key]}.')
+                raise ValueError(msg)
+            first_line[exp_key] = line_nr
+            assignments[exp_key] = calc_weights
+    if not assignments:
+        msg = f'{path}: No beam assignment found.'
+        raise ValueError(msg)
+    return BeamCorrespondence(assignments)
+
+
+def _parse_assignment(line):
+    """Return the experimental beam and {calculated beam: weight}."""
+    try:
+        left, right = line.split('=')
+    except ValueError:
+        msg = (f'Invalid line {line!r}. Expected one beam assignment, '
+               'e.g., (1 0) = (1 0) + 0.5*(-1 0).')
+        raise ValueError(msg) from None
+    exp_key = parse_beam_label(left)
+    calc_weights = {}
+    for term in _split_terms(right):
+        weight, calc_key = _parse_term(term)
+        if calc_key in calc_weights:
+            msg = (f'Calculated beam {_format_label(calc_key)} appears '
+                   'more than once on the right-hand side.')
+            raise ValueError(msg)
+        calc_weights[calc_key] = weight
+    return exp_key, calc_weights
+
+
+def _split_terms(right):
+    """Return the terms of the right-hand side of a beam assignment."""
+    # Split at '+' outside parentheses: labels may contain a '+'
+    terms = re.split(r'\+(?![^()]*\))', right)
+    if any(not term.strip() for term in terms):
+        msg = (f'Invalid right-hand side {right.strip()!r}. Expected '
+               "terms like (1 0) or 0.5*(1 0), separated by '+'.")
+        raise ValueError(msg)
+    return terms
+
+
+def _parse_term(term):
+    """Return the weight and calculated beam of one term."""
+    match = _TERM_RE.fullmatch(term.strip())
+    if not match:
+        msg = (f'Invalid term {term.strip()!r}. Expected a beam, e.g., '
+               '(1 0), optionally with a non-negative weight, e.g., '
+               '0.5*(1 0) or 1/3*(1 0).')
+        raise ValueError(msg)
+    weight = match['weight']
+    try:
+        weight = Fraction(weight) if weight else Fraction(1)
+    except ZeroDivisionError:
+        msg = f'Invalid weight {weight!r}: division by zero.'
+        raise ValueError(msg) from None
+    return weight, parse_beam_label(match['label'])
+
+
+def _format_label(key):
+    """Return the label of a beam from its (h, k) Fractions."""
+    first, second = key
+    return f'({first} {second})'
