@@ -23,12 +23,37 @@ import pytest
 
 _PY_310 = sys.version_info >= (3, 10)
 
+# broadcast_mouse skips receivers that already got an event with the
+# same timestamp. The last timestamps start at zero: a first event
+# created by the application (zero timestamp) is not broadcast.
+BROADCAST_ZERO_TIMESTAMP = pytest.mark.xfail(
+    raises=AssertionError,
+    reason='broadcast_mouse does not broadcast a first event with zero '
+           'timestamp',
+    )
+
 # HoverAnnot.sizeHint passes numpy floats to QSize, whose constructor
 # takes ints. Python >= 3.10 no longer converts floats implicitly. The
 # TypeError is raised in a Qt virtual method: pytest-qt fails the test.
 FLOATS_TO_QSIZE = pytest.mark.xfail(
     _PY_310,
     reason='HoverAnnot.sizeHint passes floats to QSize (Python >= 3.10)',
+    )
+
+# MPLFigureCanvas.mpl_to_qt_coordinates uses _dpi_ratio of matplotlib
+# canvases, which does not exist any more in matplotlib >= 3.5 (the
+# oldest supported).
+MPL_TO_QT_COORDINATES = pytest.mark.xfail(
+    raises=AttributeError,
+    reason='MPLFigureCanvas.mpl_to_qt_coordinates uses _dpi_ratio',
+    )
+
+# The keyPressEvent of the old NewFileDialog checks for keys in
+# [Key_Enter or Key_Return], i.e., only for Key_Enter. Return clicks
+# the default button of the dialog rather than the focused one.
+RETURN_KEY_OLD_NEW_FILE_DIALOG = pytest.mark.xfail(
+    reason='Return does not click the focused button of the old '
+           'NewFileDialog',
     )
 
 # TextBox() without arguments uses `contents` before assignment (a
