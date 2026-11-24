@@ -81,10 +81,18 @@ class BeamCorrespondence:
             self._assignments[exp_key] = _normalised(exp_key, calc_weights)
 
     def __eq__(self, other):
-        """Return whether self and other hold the same assignments."""
+        """Return whether self and other hold the same assignments.
+
+        Assignment weights compare equal within a relative tolerance
+        of WEIGHT_REL_TOL, so that the result does not depend on the
+        scale of the weights that self and other were created from.
+        """
         if not isinstance(other, BeamCorrespondence):
             return NotImplemented
-        return self._assignments == other._assignments
+        mine, theirs = self._assignments, other._assignments
+        return (mine.keys() == theirs.keys()
+                and all(_weights_close(calc_weights, theirs[exp_key])
+                        for exp_key, calc_weights in mine.items()))
 
     __hash__ = None
 
@@ -253,6 +261,14 @@ def _normalised(exp_key, calc_weights):
         # does not depend on the scale of the input weights
         return {calc_key: 1 / len(weights) for calc_key in weights}
     return {calc_key: weight / total for calc_key, weight in weights.items()}
+
+
+def _weights_close(calc_weights, other_weights):
+    """Return whether two beam assignments have the same weights."""
+    return (calc_weights.keys() == other_weights.keys()
+            and all(math.isclose(weight, other_weights[calc_key],
+                                 rel_tol=WEIGHT_REL_TOL)
+                    for calc_key, weight in calc_weights.items()))
 
 
 def _to_key(indices):

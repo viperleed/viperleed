@@ -114,12 +114,18 @@ _EQUAL = {
         ),
     'weighted, normalised': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
                              {(1, 0): {(1, 0): 0.25, (0, 1): 0.75}}),
+    'weighted, any scale': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
+                            {(1, 0): {(1, 0): 0.1, (0, 1): 0.3}}),
+    'weighted, within tolerance': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
+                                   {(1, 0): {(1, 0): 1, (0, 1): 3 + 1e-8}}),
     }
 
 
 _NOT_EQUAL = {
     'different weights': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
                           {(1, 0): {(1, 0): 3, (0, 1): 1}}),
+    'weighted, beyond tolerance': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
+                                   {(1, 0): {(1, 0): 1, (0, 1): 3.0001}}),
     'weighted and unweighted': ({(1, 0): {(1, 0): 1, (0, 1): 1}},
                                 {(1, 0): {(1, 0): 1, (0, 1): 2}}),
     'different calculated beam': ({(1, 0): {(1, 0): 1, (0, 1): 1}},
@@ -128,6 +134,18 @@ _NOT_EQUAL = {
                                     {(0, 1): {(1, 0): 1}}),
     'extra assignment': ({(1, 0): {(1, 0): 1}},
                          {(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 1}}),
+    }
+
+
+# Weights whose normalised values change by
+# rounding when they are normalised again
+_ROUND_TRIP = {
+    'small weight': {(0, 0): 0.762280082457942,
+                     (1, 0): 0.0021060533511106927,
+                     (2, 0): 0.4453871940548014},
+    'similar weights': {(0, 0): 0.1859062658947177,
+                        (1, 0): 0.9925434121760651,
+                        (2, 0): 0.8599465287952899},
     }
 
 
@@ -143,6 +161,13 @@ class TestEquality:
     def test_not_equal(self, first, second):
         """Check correspondences that compare unequal."""
         assert BeamCorrespondence(first) != BeamCorrespondence(second)
+
+    @parametrize(weights=_ROUND_TRIP.values(), ids=_ROUND_TRIP)
+    def test_round_trip(self, weights):
+        """Check that a correspondence equals one made from its copy."""
+        corr = BeamCorrespondence({(1, 0): weights})
+        assert corr.is_weighted
+        assert BeamCorrespondence(corr.assignments) == corr
 
     def test_not_equal_other_type(self):
         """Check that other objects never compare equal."""
