@@ -137,16 +137,25 @@ _VALID_FILES = {  # pylint: disable=R6101
     }
 
 # The rotational-domain example of issue #206, without and with
-# weights (twice as much of the domain giving (1 0) and (-1 0))
-_ISSUE_206 = (
-    '! Rotational domains, see #206\n'
-    '(1 0) = (1 0) + (-1 0) + (0 1) + (0 -1)\n'
-    '(1 1) = (1 1) + (-1 -1) + (1 -1) + (-1 1)\n'
-    )
-_ISSUE_206_WEIGHTED = (
-    '(1 0) = 2*(1 0) + 2*(-1 0) + (0 1) + (0 -1)\n'
-    '(1 1) = (1 1) + (-1 -1) + (1 -1) + (-1 1)\n'
-    )
+# weights (twice as much of the domain giving (1 0) and (-1 0)):
+# file contents, expected beam assignments, and whether weighted
+_ISSUE_206 = {  # pylint: disable=R6101
+    'unweighted': (
+        ('! Rotational domains, see #206\n'
+         '(1 0) = (1 0) + (-1 0) + (0 1) + (0 -1)\n'
+         '(1 1) = (1 1) + (-1 -1) + (1 -1) + (-1 1)\n'),
+        {(1, 0): {(1, 0): 1, (-1, 0): 1, (0, 1): 1, (0, -1): 1},
+         (1, 1): {(1, 1): 1, (-1, -1): 1, (1, -1): 1, (-1, 1): 1}},
+        False,
+        ),
+    'weighted': (
+        ('(1 0) = 2*(1 0) + 2*(-1 0) + (0 1) + (0 -1)\n'
+         '(1 1) = (1 1) + (-1 -1) + (1 -1) + (-1 1)\n'),
+        {(1, 0): {(1, 0): 1/3, (-1, 0): 1/3, (0, 1): 1/6, (0, -1): 1/6},
+         (1, 1): {(1, 1): 1, (-1, -1): 1, (1, -1): 1, (-1, 1): 1}},
+        True,
+        ),
+    }
 
 _INVALID_FILES = {  # pylint: disable=R6101
     'no equal sign': ('(1 0) (1 0)', 1, 'Invalid line'),
@@ -197,30 +206,13 @@ class TestReadBeamEquivalence:
         correspondence = read_text('(0 1) = (0 1)\n(1 0) = (1 0)')
         assert list(correspondence.assignments) == [(0, 1), (1, 0)]
 
-    def test_zero_weight_dropped(self, read_text):
-        """Check that a zero-weight beam is in no beam assignment."""
-        correspondence = read_text('(1 0) = (1 0) + 0*(0 1)')
-        assert correspondence.assignments == {(1, 0): {(1, 0): 1.0}}
-
-    def test_issue_206(self, read_text):
+    @parametrize('contents,expect,weighted', _ISSUE_206.values(),
+                 ids=_ISSUE_206)
+    def test_issue_206(self, contents, expect, weighted, read_text):
         """Check the rotational-domain example of issue #206."""
-        expect = BeamCorrespondence({
-            (1, 0): {(1, 0): 1, (-1, 0): 1, (0, 1): 1, (0, -1): 1},
-            (1, 1): {(1, 1): 1, (-1, -1): 1, (1, -1): 1, (-1, 1): 1},
-            })
-        correspondence = read_text(_ISSUE_206)
-        assert correspondence == expect
-        assert not correspondence.is_weighted
-
-    def test_issue_206_weighted(self, read_text):
-        """Check the weighted rotational-domain example of #206."""
-        expect = BeamCorrespondence({
-            (1, 0): {(1, 0): 1/3, (-1, 0): 1/3, (0, 1): 1/6, (0, -1): 1/6},
-            (1, 1): {(1, 1): 1, (-1, -1): 1, (1, -1): 1, (-1, 1): 1},
-            })
-        correspondence = read_text(_ISSUE_206_WEIGHTED)
-        assert correspondence == expect
-        assert correspondence.is_weighted
+        correspondence = read_text(contents)
+        assert correspondence == BeamCorrespondence(expect)
+        assert correspondence.is_weighted == weighted
 
     def test_path_str(self, tmp_path):
         """Check reading from a path given as a string."""
@@ -234,12 +226,10 @@ class TestReadBeamEquivalence:
     def test_invalid(self, contents, line_nr, cause, read_text, tmp_path):
         """Check the error for an invalid line."""
         path = tmp_path / 'BEAM_EQUIVALENCE'
-        prefix = re.escape(f'{path}, line {line_nr}: ')
+        prefix = '^' + re.escape(f'{path}, line {line_nr}: ')
         with pytest.raises(ValueError, match=prefix) as exc_info:
             read_text(contents)
-        message = str(exc_info.value)
-        assert message.startswith(f'{path}, line {line_nr}: ')
-        assert cause in message
+        assert cause in str(exc_info.value)
 
     @parametrize(contents=('', '\n\n', '# only a comment\n  ! another\n'))
     def test_no_assignment(self, contents, read_text, tmp_path):
