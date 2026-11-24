@@ -392,6 +392,33 @@ def _check_delta_energies(rp, domains):
         raise RuntimeError(message)
 
 
+def _read_sdtl_from(filepos, rp):
+    """Return the SD.TL blocks after `filepos`, and the new position.
+
+    Parameters
+    ----------
+    filepos : int
+        Position in SD.TL from which to read.
+    rp : Rparams
+        The run parameters of the search.
+
+    Returns
+    -------
+    filepos : int
+        The position in SD.TL after the content read.
+    blocks : list
+        The blocks read, as returned by iosearch.readSDTL_blocks.
+        Empty if there is no new content.
+    """
+    filepos, content = iosearch.readSDTL_next(offset=filepos)
+    if not content:
+        return filepos, []
+    blocks = iosearch.readSDTL_blocks(content,
+                                      rp.SEARCH_BEAMS,
+                                      n_expect=rp.SEARCH_POPULATION)
+    return filepos, blocks
+
+
 def _check_search_log(search_log_path):
     """Check the file at `search_log_path` for known fatal errors.
 
@@ -792,14 +819,7 @@ def search(sl, rp):
                     # evaluate
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = iosearch.readSDTL_next(
-                            offset=filepos
-                            )
-                        if content:
-                            newData = iosearch.readSDTL_blocks(
-                                content, whichR=rp.SEARCH_BEAMS,
-                                n_expect=rp.SEARCH_POPULATION
-                                )
+                        filepos, newData = _read_sdtl_from(filepos, rp)
                     elif (search_eval_timer.has_reached_deadline()              # TODO: nicer with a QTimer timeout
                           and rp.HALTING < 3):
                         stop = True
@@ -1024,8 +1044,16 @@ def search(sl, rp):
                                          max_configs=max_read_configs)
         if predictR is not None:
             rfac_predict.append((gens[-1], predictR))
+    if len(gens) <= 1 and Path('SD.TL').is_file():
+        # The search ended before the second evaluation of SD.TL
+        _, final_data = _read_sdtl_from(filepos, rp)
+        for gen, rfacs, _ in final_data:
+            gens.append(gen + genOffset)
+            rfaclist.append(np.array(rfacs))
+        if final_data:
+            _, _, lastconfig = final_data[-1]
     # write pdf one more time
-    if len(gens) > 1:
+    if gens:
         try:
             searchpdf.writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                              markers=markers,

@@ -316,3 +316,71 @@ class TestSearch:
         for mock in mocks_called_multiple_times:
             mock.assert_called()
         # TODO: check relevant calls
+
+
+class TestSearchPdfOneGeneration:
+    """Tests for plots of a search that ends after one generation."""
+
+    @use('vary', 'mock_src_files', 'tl_version')
+    def test_pdfs_written(self, rpars, mock_run, tmp_path, mocker,
+                          missing_dependency):
+        """Check PDFs are written if SD.TL has a single generation."""
+        rpars.SUPPRESS_EXECUTION = False
+        rpars.N_CORES = 1
+        _skip_on_missing_compiler(rpars, mocker, missing_dependency)
+        # The search finishes before SD.TL is ever evaluated
+        mock_run['eval_timer'].return_value.has_expired.return_value = False
+        sdtl_content = 'one generation'
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_next',
+                     return_value=(len(sdtl_content), sdtl_content))
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_blocks',
+                     return_value=[(100, [0.3, 0.4], [(100, (1, 2))])])
+        write_progress = mocker.patch(
+            f'{_MODULE}.searchpdf.writeSearchProgressPdf'
+            )
+        write_report = mocker.patch(
+            f'{_MODULE}.searchpdf.writeSearchReportPdf'
+            )
+        with execute_in_dir(tmp_path):
+            search(mocker.MagicMock(name='slab'), rpars)
+        write_progress.assert_called_once()
+        write_report.assert_called_once()
+        gens = write_progress.call_args[0][1]
+        assert gens == [100]
+
+    @use('vary', 'mock_src_files', 'tl_version')
+    def test_restart_after_one_generation(self, rpars, mock_run, tmp_path,
+                                          mocker, missing_dependency):
+        """Check the final read of SD.TL after a restarted search."""
+        rpars.SUPPRESS_EXECUTION = False
+        rpars.N_CORES = 1
+        _skip_on_missing_compiler(rpars, mocker, missing_dependency)
+
+        # One generation is read in the first run, which restarts as
+        # GAUSSIAN_WIDTH changes. The second run ends before SD.TL is
+        # evaluated, and has one more generation in the final read.
+        def _change_gaussian_width(rpars_):
+            rpars_.GAUSSIAN_WIDTH *= 0.5
+        mock_run['update_rpars'].side_effect = _change_gaussian_width
+        mock_run['search_job'].return_value.is_running.side_effect = (
+            True, False,   # First run, SD.TL read in the loop
+            False,         # Second run
+            )
+        sdtl_content = 'one generation'
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_next',
+                     return_value=(len(sdtl_content), sdtl_content))
+        first_config, final_config = [(100, (1, 2))], [(100, (2, 1))]
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_blocks',
+                     side_effect=([(100, [0.3, 0.4], first_config)],
+                                  [(7, [0.2, 0.3], final_config)]))
+        mocker.patch(f'{_MODULE}.parabolaFit', return_value=(None, None))
+        write_progress = mocker.patch(
+            f'{_MODULE}.searchpdf.writeSearchProgressPdf'
+            )
+        mocker.patch(f'{_MODULE}.searchpdf.writeSearchReportPdf')
+        with execute_in_dir(tmp_path):
+            search(mocker.MagicMock(name='slab'), rpars)
+        write_progress.assert_called_once()
+        _, gens, _, lastconfig = write_progress.call_args[0]
+        assert gens == [100, 107]
+        assert lastconfig is final_config
