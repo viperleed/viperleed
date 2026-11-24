@@ -19,14 +19,6 @@ __license__ = 'GPLv3+'
 
 import pytest
 
-# The keyPressEvent of the old NewFileDialog checks for keys in
-# [Key_Enter or Key_Return], i.e., only for Key_Enter. Return clicks
-# the default button of the dialog rather than the focused one.
-RETURN_KEY_OLD_NEW_FILE_DIALOG = pytest.mark.xfail(
-    reason='Return does not click the focused button of the old '
-           'NewFileDialog',
-    )
-
 # TextBox() without arguments uses `contents` before assignment (a
 # typo in its __init__).
 TEXTBOX_WITHOUT_ARGUMENTS = pytest.mark.xfail(
