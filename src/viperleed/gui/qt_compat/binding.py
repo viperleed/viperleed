@@ -13,7 +13,8 @@ according to these rules:
   another binding was already imported.
 - Otherwise, if one of the bindings was already imported (e.g., by
   user code or by another package), that one is used. Two different
-  Qt bindings cannot coexist in the same process.
+  Qt bindings cannot be used together in the same process. If both
+  were already imported, PyQt6 is used, as matplotlib does.
 - Otherwise, the first binding that can be imported among PyQt6 and
   PyQt5 (in this order) is used. A binding that is installed but
   broken (e.g., it misses some of its own modules), or older than
@@ -34,7 +35,7 @@ Which bindings would be tried, in which order, is returned by
 get_candidates, which imports none of them. This allows checking the
 candidates in a subprocess first, as a broken Qt installation may
 crash the interpreter when imported. The binding found to work can
-then be selected with set_binding.
+then be selected with set_binding, which accepts only candidates.
 """
 
 __authors__ = (
@@ -247,13 +248,26 @@ def set_binding(binding):
     ValueError
         If `binding` is not supported, or if a different binding
         was already selected.
+    QtApiError
+        If `binding` is not among the candidates (see get_candidates):
+        if the QT_API environment variable has an unsupported value
+        or requests another binding, or if another binding was
+        already imported.
     """
     global _SELECTED_BINDING  # pylint: disable=global-statement
     if binding not in SUPPORTED_BINDINGS:
         raise ValueError(f'Unsupported Qt binding {binding!r}')
-    if _SELECTED_BINDING not in (None, binding):
+    if _SELECTED_BINDING == binding:
+        return
+    if _SELECTED_BINDING is not None:
         raise ValueError(f'Cannot select {binding}: {_SELECTED_BINDING} '
                          'is already in use')
+    candidates = get_candidates()
+    if binding not in candidates:  # Then it is a single one
+        why = (f'{QT_API_ENV}={os.environ[QT_API_ENV]!r} requests it'
+               if _get_requested_binding() else 'it was already imported')
+        raise QtApiError(f'Cannot select {binding}: {candidates[0]} must '
+                         f'be used, as {why}.')
     _SELECTED_BINDING = binding
 
 

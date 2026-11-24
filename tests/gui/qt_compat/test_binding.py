@@ -374,14 +374,31 @@ class TestImportBinding:
 class TestSetBinding:
     """Tests for the set_binding function."""
 
-    def test_different(self):
+    def test_already_imported_other(self, fake_bindings):
+        """Check complaints if another binding was already imported."""
+        fake_bindings(BOTH, imported=(PYQT6,))
+        with pytest.raises(QtApiError, match='already imported'):
+            binding.set_binding(PYQT5)
+        assert binding._SELECTED_BINDING is None  # pylint: disable=W0212
+
+    def test_different(self, fake_bindings):
         """Check complaints when another binding was selected."""
+        fake_bindings(())
         binding.set_binding(PYQT5)
         with pytest.raises(ValueError, match='already in use'):
             binding.set_binding(PYQT6)
 
-    def test_same_again(self):
+    def test_requested_other(self, fake_bindings, monkeypatch):
+        """Check complaints if QT_API requests another binding."""
+        monkeypatch.setenv(QT_API_ENV, 'pyqt6')
+        fake_bindings(BOTH)
+        with pytest.raises(QtApiError, match=QT_API_ENV):
+            binding.set_binding(PYQT5)
+        assert binding._SELECTED_BINDING is None  # pylint: disable=W0212
+
+    def test_same_again(self, fake_bindings):
         """Check that selecting the same binding again is fine."""
+        fake_bindings(())
         binding.set_binding(PYQT5)
         binding.set_binding(PYQT5)
         assert get_binding() == PYQT5
@@ -399,3 +416,10 @@ class TestSetBinding:
         """Check complaints for an unsupported binding."""
         with pytest.raises(ValueError, match='Unsupported'):
             binding.set_binding(unsupported)
+
+    def test_unsupported_qt_api(self, fake_bindings, monkeypatch):
+        """Check complaints for an unsupported QT_API value."""
+        monkeypatch.setenv(QT_API_ENV, 'pyside6')
+        fake_bindings(BOTH)
+        with pytest.raises(QtApiError, match='Unsupported value'):
+            binding.set_binding(PYQT5)
