@@ -15,8 +15,11 @@ import pytest
 from pytest_cases import fixture
 
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.classes.beam import Beam
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.lib.leedbase import get_tensor_indices
 from viperleed.calc.lib.leedbase import get_symmetry_equivalent_beams
+from viperleed.calc.lib.leedbase import getBeamCorrespondence
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 
 
@@ -268,3 +271,86 @@ class TestGetSymmetryEquivalentBeams:
             mock_get_leed_dict.return_value,
             )
         assert not caplog.text
+
+
+class TestGetBeamCorrespondence:
+    """Tests for the getBeamCorrespondence function."""
+
+    @fixture(name='make_rpars')
+    def fixture_make_rpars(self, mocker):
+        """Return a fake Rparams with ivbeams and expbeams set."""
+        def _make(expbeams, ivbeams):
+            return mocker.MagicMock(ivbeams=ivbeams, expbeams=expbeams)
+        return _make
+
+    def test_expbeam_not_calculated(self, make_rpars, mocker, caplog):
+        """Check removal of an EXPBEAMS that was not calculated."""
+        mocker.patch(f'{_MODULE}.get_symmetry_equivalent_beams',
+                     return_value=[((0.0, 1.0), 0), ((0.0, -1.0), 0),])
+        missing = [Beam((2.0, 2.0)),    # Without symmetry equivalents
+                   Beam((0.0, -1.0))]   # With symmetry-equivalents
+        mock_rpars = make_rpars(expbeams=missing,
+                                ivbeams=[Beam((1.0, 0.0))])
+        result = getBeamCorrespondence('mock_slab', mock_rpars)
+        expect = [-1]
+        expect_log = []
+        for missing_beam in missing:
+            expect_log.extend((
+            f'Experimental beam {missing_beam.label} does not have a '
+            'theoretical counterpart. Consider adding it to IVBEAMS.',
+            f'Beam {missing_beam.label} was removed from set of '
+            'experimental beams!',
+            ))
+        assert result == expect
+        assert not any(beam in mock_rpars.expbeams for beam in missing)
+        assert all(msg in caplog.text for msg in expect_log)
+        mock_rpars.setHaltingLevel.assert_called_with(1)
+
+    def test_direct_match(self, make_rpars, mocker, caplog):
+        """Check result when IVBEAMS and EXPBEAMS match exactly."""
+        caplog.set_level(0)  # All messages
+        get_eq_beams = mocker.patch(f'{_MODULE}.get_symmetry_equivalent_beams')
+        mock_rpars = make_rpars(expbeams=[Beam((1.0, 0.0)), Beam((-1.0, 0.0))],
+                                ivbeams=[Beam((-1.0, 0.0)), Beam((1.0, 0.0))])
+        result = getBeamCorrespondence('mock_slab', mock_rpars)
+        expect = [1, 0]  # Indices in expbeams
+        assert result == expect
+        assert not caplog.text
+        mock_rpars.setHaltingLevel.assert_not_called()
+        get_eq_beams.assert_called_once_with('mock_slab', mock_rpars)
+
+    def test_symmetry_equivalent_match(self, make_rpars, mocker, caplog):
+        """Check result for some IVBEAMS among symmetry-equivalents ones."""
+        caplog.set_level(0)  # All messages
+        eq_beams = [
+            ((1.0, 0.0), 0), ((-1.0, 0.0), 0),
+            ((2.0, 0.0), 1), ((-2.0, 0.0), 1),
+            ]
+        mocker.patch(f'{_MODULE}.get_symmetry_equivalent_beams',
+                     return_value=eq_beams)
+        mock_rpars = make_rpars(
+            expbeams=[Beam((1.0, 0.0)), Beam((-2.0, 0.0))],
+            ivbeams=[Beam((1.0, 0.0)), Beam((-1.0, 0.0)), Beam((2.0, 0.0))],
+            )
+        result = getBeamCorrespondence('mock_slab', mock_rpars)
+        expect = [0, 0, 1]
+        assert result == expect
+        assert not caplog.text
+        mock_rpars.setHaltingLevel.assert_not_called()
+
+    def test_theo_beam_not_measured(self, make_rpars, mocker, caplog):
+        """Check DEBUG message if an IVBEAMS has no EXPBEAMS counterpart."""
+        caplog.set_level(0)  # We emit DEBUG
+        mocker.patch(f'{_MODULE}.get_symmetry_equivalent_beams',
+                     return_value=[((1.0, 0.0), 1), ((-1.0, 0.0), 1)])
+        mock_rpars = make_rpars(
+            expbeams=[Beam((0.0, 1.0))],  # Not equivalent
+            ivbeams=[Beam((1.0, 0.0))],   # Unmatched
+            )
+        result = getBeamCorrespondence('mock_slab', mock_rpars)
+        expect = [-1]
+        expect_log = (
+            'No experimental beams found for calculated beams: ( 1| 0)'
+            )
+        assert result == expect
+        assert expect_log in caplog.text

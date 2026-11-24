@@ -175,7 +175,7 @@ class BeamIndex(tuple):
 
         indices = '|'.join(self._fmt_one_index(i, num_min_len, den_min_len)
                            for i in self)
-        return f'{indices:{format_spec}}'
+        return f'{indices:{format_spec}}'                                       # TODO: this one is rather missing the parentheses!
 
     def __imul__(self, value):
         """Return a scaled version of this BeamIndex."""

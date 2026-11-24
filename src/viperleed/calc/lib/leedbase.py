@@ -27,6 +27,7 @@ from viperleed.calc.lib.math_utils import lcm
 from viperleed.calc.lib.matrix import SingularMatrixError
 from viperleed.calc.lib.matrix import ensure_integer_matrix
 from viperleed.gui.base import get_equivalent_beams
+# from viperleed.gui.classes.beamindex import BeamIndex
 
 
 # constants for conversion Angstrom and eV <-> atomic units
