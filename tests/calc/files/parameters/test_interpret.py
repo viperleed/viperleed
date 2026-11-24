@@ -1121,6 +1121,31 @@ class TestRun(_TestInterpretBase):
         """Ensure invalid RUN raises exceptions."""
         self.check_raises(interpreter, val, exc)
 
+    _from_file = {
+        'colon range': ('ref:search', [0, 1, 2, 3]),
+        'hyphen calc': ('ref-calc delta-amplitudes', [0, 1, 2]),
+        'hyphen opt': ('fd-opt', [0, 6]),
+        'hyphen optimization': ('fd-optimization', [0, 6]),
+        }
+
+    @parametrize('val,expect', _from_file.values(), ids=_from_file)
+    def test_read_from_file(self, val, expect, tmp_path):
+        """Check RUN read from a PARAMETERS file and interpreted."""
+        fpath = tmp_path / 'PARAMETERS'
+        fpath.write_text(f'RUN = {val}\n')
+        rpars = parameters.read(fpath)
+        parameters.interpret(rpars, slab=None, silent=True)
+        assert rpars.RUN == expect
+
+    @parametrize(val=('search:superpos', 'super:pos', 'ref-calc:search'))
+    def test_read_from_file_invalid(self, val, tmp_path):
+        """Ensure RUN with a colon inside a name raises when read."""
+        fpath = tmp_path / 'PARAMETERS'
+        fpath.write_text(f'RUN = {val}\n')
+        rpars = parameters.read(fpath)
+        with pytest.raises(err.ParameterValueError):
+            parameters.interpret(rpars, slab=None, silent=True)
+
 
 class TestSearchBeams(_TestInterpretBase):
     """Tests for interpreting SEARCH_BEAMS."""

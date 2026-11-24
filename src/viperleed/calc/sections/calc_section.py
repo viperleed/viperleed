@@ -7,29 +7,41 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-01-23'
 __license__ = 'GPLv3+'
 
 from enum import Enum
 from itertools import chain
+import re
 
 from viperleed.calc.lib.string_utils import read_int_range
 from viperleed.calc.lib.string_utils import split_string_range
 
 
-_ALIASES = {  # Exact match first, then check .startswith
-    'INITIALIZATION': ('ini', 'init', 'initialisation'),
-    'REFCALC': ('ref', 'fd'),
-    'RFACTOR_REFCALC': ('rfac', 'rfactor'),
-    'RFACTOR_SUPERPOS': ('rfacsuper',),
-    'DELTAS': ('del', 'delta', 'deltaamplitudes'),
-    'SEARCH': (),
-    'SUPERPOS': ('sup', 'super'),
-    'DOMAINS': ('dom', 'domain'),
-    'ERRORCALC': ('err', 'error'),
-    'FD_OPTIMIZATION': ('opt', 'optimize', 'fdopt'),
+# Regular expressions for the aliases of each section. They are
+# matched against the whole lower-case string first, then against its
+# beginning. White space is not allowed, as it separates items in RUN.
+# Hyphens, which separate ranges, are allowed only in place of the
+# underscore before 'calc(ulation)', 'amplitudes' and 'opt(imization)'
+# (as in 'DELTA-AMPLITUDES'). Longer alternatives come first, so that
+# matching the beginning of a string finds the longest alias.
+_ALIAS_PATTERNS = {
+    'INITIALIZATION': r'init(iali[sz](e|ation))?|ini',
+    'REFCALC': r'(ref(erence)?|fd|full_?dynamic)([-_]?calc(ulation)?)?',
+    'RFACTOR_REFCALC': r'r_?fac(tor)?',
+    'RFACTOR_SUPERPOS': r'r_?fac(tor)?_?super(pos)?',
+    'DELTAS': r'deltas?([-_]?(calc(ulation)?|amplitudes?))?|del',
+    'SEARCH': r'(struct(ure)?_?)?search',
+    'SUPERPOS': r'sup(er(pos)?)?',
+    'DOMAINS': r'domains?([-_]?calc(ulation)?)?|dom',
+    'ERRORCALC': r'err(ors?)?([-_]?calc(ulation)?)?',
+    'FD_OPTIMIZATION': (r'opt(imi[sz](e|ation))?'
+                        r'|(fd|full_?dynamic)[-_]?opt(imi[sz](e|ation))?'),
     }
+_ALIASES = {name: re.compile(pattern)
+            for name, pattern in _ALIAS_PATTERNS.items()}
+_PREFIX_NAME = re.compile(r'\w+')
 
 
 class CalcSection(Enum):
@@ -68,15 +80,29 @@ class CalcSection(Enum):
         except KeyError:
             pass
 
-        # Try with the aliases instead. First look for an exact match
-        for name, aliases in _ALIASES.items():
-            if any(alias == value for alias in aliases):
+        # Try with the aliases instead
+        for name, alias in _ALIASES.items():
+            if alias.fullmatch(value):
                 return cls[name]
-        # Alternatively, see if the value begins with an alias
-        for name, aliases in _ALIASES.items():
-            if any(value.startswith(alias) for alias in aliases):
-                return cls[name]
-        return None
+        return cls._from_alias_prefix(value)
+
+    @classmethod
+    def _from_alias_prefix(cls, value):
+        """Return the section of the longest alias that starts `value`.
+
+        This keeps names like 'superposition' working, which earlier
+        versions accepted as they start with an alias. Only names made
+        of letters, digits and underscores are accepted here: hyphens,
+        colons and white space separate ranges and items in RUN.
+        """
+        if not _PREFIX_NAME.fullmatch(value):
+            return None
+        longest, best_name = 0, None
+        for name, alias in _ALIASES.items():
+            match = alias.match(value)
+            if match and match.end() > longest:
+                longest, best_name = match.end(), name
+        return cls[best_name] if best_name else None
 
     @classmethod
     def sequence_from_string(cls, string_):
