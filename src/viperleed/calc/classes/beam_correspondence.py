@@ -58,8 +58,9 @@ class BeamCorrespondence:
             {experimental_hk: {calculated_hk: weight}}. Each hk is a
             sequence of two numbers convertible to Fraction (floats
             are converted exactly: pass Fractions or integers, e.g.,
-            a Beam's `hkfrac`). Weights are non-negative numbers;
-            they are normalised to sum to one for each experimental
+            a Beam's `hkfrac`). Weights are non-negative numbers.
+            Calculated beams with zero weight are left out; the other
+            weights are normalised to sum to one for each experimental
             beam. Weights that are all equal within a relative
             tolerance of WEIGHT_REL_TOL are stored as exactly 1/n
             for n calculated beams.
@@ -249,7 +250,8 @@ def _normalised(exp_key, calc_weights):
             msg = (f'Negative weight {weight} in the assignment of '
                    f'experimental beam {_format_key(exp_key)}.')
             raise ValueError(msg)
-        weights[_to_key(calc_hk)] = float(weight)
+        if weight:  # Zero-weight beams are in no assignment
+            weights[_to_key(calc_hk)] = float(weight)
     total = sum(weights.values())
     if not total > 0:  # Also no calculated beams, or NaN
         msg = (f'The assignment of experimental beam {_format_key(exp_key)} '

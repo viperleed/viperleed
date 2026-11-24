@@ -28,8 +28,7 @@ _WEIGHTS = {
     'equal': ({(1, 0): 1, (0, 1): 1}, {(1, 0): 0.5, (0, 1): 0.5}),
     'one': ({(1, 0): 3}, {(1, 0): 1.0}),
     'unequal': ({(1, 0): 1, (0, 1): 3}, {(1, 0): 0.25, (0, 1): 0.75}),
-    'with zero': ({(1, 0): 0, (0, 1): 0.2},
-                  {(1, 0): 0.0, (0, 1): 1.0}),
+    'with zero': ({(1, 0): 0, (0, 1): 0.2}, {(0, 1): 1.0}),
     }
 
 
@@ -162,6 +161,27 @@ class TestEquality:
         assert corr.__eq__(assignments) is NotImplemented
 
 
+_WITH_ZERO = {(1, 0): {(1, 0): 1, (0, 1): 0}, (0, 1): {(0, 1): 1}}
+
+
+class TestZeroWeights:
+    """Tests for calculated beams with zero weight."""
+
+    def test_dropped(self):
+        """Check that zero-weight calculated beams are left out."""
+        without_zero = {(1, 0): {(1, 0): 1}, (0, 1): {(0, 1): 1}}
+        assert (BeamCorrespondence(_WITH_ZERO)
+                == BeamCorrespondence(without_zero))
+
+    def test_not_weighted(self):
+        """Check that a zero weight does not make a weighted one."""
+        assert not BeamCorrespondence(_WITH_ZERO).is_weighted
+
+    def test_not_shared(self):
+        """Check that a zero-weight beam is not a shared beam."""
+        assert not BeamCorrespondence(_WITH_ZERO).has_shared_beams
+
+
 _UNWEIGHTED = {
     'single beams': {(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 7}},
     'equal': {(1, 0): {(1, 0): 2, (0, 1): 2, (-1, 0): 2}},
@@ -176,7 +196,6 @@ _WEIGHTED = {
     'one of two': {(1, 0): {(1, 0): 1},
                    (1, 1): {(1, 1): 0.4, (-1, 1): 0.6}},
     'beyond tolerance': {(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-5}},
-    'zero weight': {(1, 0): {(1, 0): 1, (0, 1): 0}},
     }
 
 
