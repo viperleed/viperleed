@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -21,12 +21,29 @@ from viperleed.calc.symmetry import setSymmetry
 
 logger = logging.getLogger(__name__)
 
+# Ranges with more steps than this make the search slow and memory
+# hungry, and are most likely typos (e.g., a misplaced decimal point).
+MAX_RECOMMENDED_STEPS = 30
+
+
 class DisplacementsError(Exception):
     """Base exception for DISPLACEMENTS-related errors."""
 
 
 class NoDisplacementsError(DisplacementsError):
     """No valid displacements were found in DISPLACEMENTS."""
+
+
+def _warn_many_steps(n_steps, description):
+    """Warn if a displacement range has a lot of steps."""
+    if n_steps > MAX_RECOMMENDED_STEPS:
+        logger.warning(
+            f'DISPLACEMENTS file: the range for {description} has '
+            f'{n_steps} steps (more than {MAX_RECOMMENDED_STEPS}). A '
+            'large number of steps makes the search slow and '
+            'memory-intensive. Check that the range and step size are '
+            'correct.'
+            )
 
 
 def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            # TODO: This should probably set rp.fileLoaded['DISPLACEMENTS'] = True
@@ -663,6 +680,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     "that keeping the input configuration unchanged will not "
                     "be possible during the search: " + value)
                 rp.setHaltingLevel(1)
+            _warn_many_steps(len(drange), pside)
         if mode == 1 and "offset" in dr:
             # geo offset, get value
             try:
@@ -847,6 +865,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 _break = False
             if _break:
                 continue
+            _warn_many_steps(maxsteps, pside)
             for subl in sublists:
                 try:
                     fl = [float(s) for s in subl[-3:]]
