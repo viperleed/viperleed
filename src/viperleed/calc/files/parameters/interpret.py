@@ -1971,6 +1971,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         bounds = {'THETA': NumericBounds(type_=float, range_=(-90, 90),
                                          out_of_range_event='fail'),
                   'PHI': NumericBounds(type_=float, range_=(0, 360),
+                                       accept_limits=(True, False),
                                        out_of_range_event='modulo')}
         if ',' not in assignment.values_str and len(assignment.values) != 2:
             self.rpars.setHaltingLevel(1)

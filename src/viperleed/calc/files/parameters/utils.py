@@ -13,7 +13,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
@@ -46,7 +46,15 @@ class NumericBounds:
         acceptable values. Default is (True, True).
     out_of_range_event : {'fail', 'coerce', 'modulo'}, optional
         How to behave in case a number goes out of bounds.
-        Default is 'fail'.
+        Default is 'fail'. With 'modulo', values are mapped
+        periodically into the range, whose endpoints are then
+        equivalent. Exactly one endpoint must be acceptable;
+        the other one is mapped to the accepted one.
+
+        .. versionchanged:: 0.15.0
+           'modulo' requires exactly one accepted limit, rather
+           than both, so that, e.g., 360 maps to 0 for a range
+           (0, 360) with accept_limits=(True, False).
     """
     type_: type = float
     range_: tuple = (None, None)
@@ -65,6 +73,9 @@ class NumericBounds:
             If out_of_range_event is 'modulo' and some of the bounds
             were not specified
         ValueError
+            If out_of_range_event is 'modulo' and not exactly one
+            of the limits is acceptable
+        ValueError
             If type_ is not one of the acceptable values
         """
         if self.out_of_range_event not in ('fail', 'modulo', 'coerce'):
@@ -77,9 +88,9 @@ class NumericBounds:
         is_modulo = self.out_of_range_event == 'modulo'
         if is_modulo and any(limit is None for limit in self.range_):
             raise ValueError('out_of_range_event "modulo" needs both limits')
-        if is_modulo and not all(self.accept_limits):
-            raise ValueError('out_of_range_event "modulo" needs both limits '
-                             'to be acceptable.')
+        if is_modulo and sum(self.accept_limits) != 1:
+            raise ValueError('out_of_range_event "modulo" needs exactly '
+                             'one limit to be acceptable.')
 
         set_frozen_attr(self, '_msg_', self._make_message())
 
@@ -139,7 +150,10 @@ class NumericBounds:
 
         if self.out_of_range_event == 'modulo':
             _min, _max = self.range_
-            return (value - _min) % (_max - _min) + _min
+            value = (value - _min) % (_max - _min) + _min
+            if value == _min and not self.accept_limits[0]:
+                return _max
+            return value
 
         assert self.coerce
         _min, _max = self.closed_range
