@@ -23,15 +23,6 @@ import pytest
 
 _PY_310 = sys.version_info >= (3, 10)
 
-# broadcast_mouse skips receivers that already got an event with the
-# same timestamp. The last timestamps start at zero: a first event
-# created by the application (zero timestamp) is not broadcast.
-BROADCAST_ZERO_TIMESTAMP = pytest.mark.xfail(
-    raises=AssertionError,
-    reason='broadcast_mouse does not broadcast a first event with zero '
-           'timestamp',
-    )
-
 # HoverAnnot.sizeHint passes numpy floats to QSize, whose constructor
 # takes ints. Python >= 3.10 no longer converts floats implicitly. The
 # TypeError is raised in a Qt virtual method: pytest-qt fails the test.

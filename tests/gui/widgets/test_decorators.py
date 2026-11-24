@@ -12,8 +12,6 @@ from collections import Counter
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from ..known_bugs import BROADCAST_ZERO_TIMESTAMP
-
 _PRESS = 'press'
 _RELEASE = 'release'
 _WHEEL = 'wheel'
@@ -130,7 +128,6 @@ class TestBroadcastMouse:
         # pylint: disable-next=magic-value-comparison
         assert 'on_child_destroyed' in patched
 
-    @BROADCAST_ZERO_TIMESTAMP
     def test_first_event_zero_timestamp(self, window, count_events,
                                         send_wheel):
         """Check that a first event with zero timestamp is broadcast."""
