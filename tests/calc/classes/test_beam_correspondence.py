@@ -211,6 +211,15 @@ _HAS_SHARED_BEAMS = (
 class TestProperties:
     """Tests for is_weighted and has_shared_beams."""
 
+    def test_is_weighted_order_independent(self):
+        """Check that key order does not decide if weights are equal."""
+        weights = {(1, 0): 1, (0, 1): 1 + 0.9e-6, (1, 1): 1 - 0.9e-6}
+        reordered = {key: weights[key] for key in ((0, 1), (1, 0), (1, 1))}
+        corr = BeamCorrespondence({(1, 0): weights})
+        corr_reordered = BeamCorrespondence({(1, 0): reordered})
+        assert corr.is_weighted is corr_reordered.is_weighted
+        assert corr == corr_reordered
+
     @parametrize('assignments,expect', _IS_WEIGHTED)
     def test_is_weighted(self, assignments, expect):
         """Check whether a correspondence counts as weighted."""

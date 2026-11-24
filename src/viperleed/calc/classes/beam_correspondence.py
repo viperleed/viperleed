@@ -203,9 +203,11 @@ class BeamCorrespondence:
 
 def _all_equal(weights):
     """Return whether all `weights` are equal within WEIGHT_REL_TOL."""
-    first, *others = weights
-    return all(math.isclose(w, first, rel_tol=WEIGHT_REL_TOL)
-               for w in others)
+    weights = tuple(weights)
+    largest = max(weights)
+    # Spread of all weights rather than distance from the first one,
+    # so that the result does not depend on the order of the weights
+    return largest - min(weights) <= WEIGHT_REL_TOL * largest
 
 
 def _find_index(key, beams):
