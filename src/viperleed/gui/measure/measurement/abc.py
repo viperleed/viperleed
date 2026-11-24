@@ -112,6 +112,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     # All cameras and controllers have been disconnected
     devices_disconnected = qtc.pyqtSignal()
 
+    # Emitted whenever the current energy of the measurement changes.
+    energy_changed = qtc.pyqtSignal(float)
+
     # Whole measurement is over
     finished = qtc.pyqtSignal()
 
@@ -237,6 +240,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             raise RuntimeError('Cannot set current energy '
                                'if no energy ramp is set.')
         self._energy_ramp.current_energy = new_energy
+        self.energy_changed.emit(new_energy)
 
     @property
     def current_step_nr(self):
@@ -1563,6 +1567,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self._prepare_finalization()
         else:
             self._energy_ramp.increment_energy()
+            self.energy_changed.emit(self.current_energy)
             self._begin_next_energy_step()
 
     # too-many-locals, too-complex
