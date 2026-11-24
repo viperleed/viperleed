@@ -70,8 +70,9 @@ class BeamCorrespondence:
         TypeError
             If `assignments`, or one of its values, is not a Mapping.
         ValueError
-            If a weight is negative, or if a beam assignment
-            has no calculated beam or only zero weights.
+            If a weight is negative or not finite, if a beam
+            assignment has no calculated beam or only zero weights,
+            or if two keys of one Mapping are the same beam.
         """
         if not isinstance(assignments, Mapping):
             msg = ('assignments must be a Mapping, not '
@@ -80,6 +81,10 @@ class BeamCorrespondence:
         self._assignments = {}
         for exp_hk, calc_weights in assignments.items():
             exp_key = _to_key(exp_hk)
+            if exp_key in self._assignments:
+                msg = (f'Experimental beam {_format_key(exp_key)} '
+                       'appears more than once.')
+                raise ValueError(msg)
             self._assignments[exp_key] = _normalised(exp_key, calc_weights)
 
     def __eq__(self, other):
@@ -245,13 +250,22 @@ def _normalised(exp_key, calc_weights):
                f'{type(calc_weights).__name__!r}')
         raise TypeError(msg)
     weights = {}
+    seen = set()
     for calc_hk, weight in calc_weights.items():
-        if weight < 0:
-            msg = (f'Negative weight {weight} in the assignment of '
-                   f'experimental beam {_format_key(exp_key)}.')
+        calc_key = _to_key(calc_hk)
+        if calc_key in seen:
+            msg = (f'Calculated beam {_format_key(calc_key)} appears '
+                   'more than once in the assignment of experimental '
+                   f'beam {_format_key(exp_key)}.')
+            raise ValueError(msg)
+        seen.add(calc_key)
+        if not math.isfinite(weight) or weight < 0:
+            msg = (f'Invalid weight {weight} in the assignment of '
+                   f'experimental beam {_format_key(exp_key)}: weights '
+                   'must be finite and non-negative.')
             raise ValueError(msg)
         if weight:  # Zero-weight beams are in no assignment
-            weights[_to_key(calc_hk)] = float(weight)
+            weights[calc_key] = float(weight)
     total = sum(weights.values())
     if not total > 0:  # Also no calculated beams, or NaN
         msg = (f'The assignment of experimental beam {_format_key(exp_key)} '

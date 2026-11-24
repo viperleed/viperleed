@@ -36,6 +36,16 @@ _INVALID = {
     'negative': {(1, 0): {(1, 0): 1, (0, 1): -0.5}},
     'all zero': {(1, 0): {(1, 0): 0, (0, 1): 0}},
     'empty': {(1, 0): {}},
+    'infinite': {(1, 0): {(1, 0): float('inf'), (0, 1): 1}},
+    'not a number': {(1, 0): {(1, 0): float('nan'), (0, 1): 1}},
+    }
+
+
+# Keys that differ as Python objects but are the same beam
+_COLLIDING = {
+    'experimental': {(0.5, 0): {(1, 0): 1}, ('1/2', '0'): {(0, 1): 1}},
+    'calculated': {(1, 0): {(0.5, 0): 1, ('1/2', '0'): 1}},
+    'calculated, zero weight': {(1, 0): {(0.5, 0): 1, ('1/2', '0'): 0}},
     }
 
 
@@ -90,6 +100,12 @@ class TestConstruction:
         with pytest.raises(ValueError, match='weight'):
             BeamCorrespondence(assignments)
 
+
+    @parametrize(assignments=_COLLIDING.values(), ids=_COLLIDING)
+    def test_colliding_keys(self, assignments):
+        """Check complaints for two keys that are the same beam."""
+        with pytest.raises(ValueError, match=r'\(1/2 0\).*more than once'):
+            BeamCorrespondence(assignments)
 
     @parametrize(assignments=_NOT_MAPPINGS.values(), ids=_NOT_MAPPINGS)
     def test_not_a_mapping(self, assignments):
