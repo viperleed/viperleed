@@ -77,7 +77,8 @@ class _FakeSerial:
         """Return busy state."""
         return self._busy
 
-    def set_busy(self, busy):
+    @busy.setter
+    def busy(self, busy):
         """Set busy state and emit signal."""
         self._busy = busy
         self.busy_changed.emit(busy)

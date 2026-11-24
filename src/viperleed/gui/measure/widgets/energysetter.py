@@ -86,10 +86,6 @@ class EnergySetter(qtw.QGroupBox):
 
     @busy.setter
     def busy(self, is_busy):
-        """Set whether an operation is in flight."""
-        self.set_busy(is_busy)
-
-    def set_busy(self, is_busy):
         """Set the in-flight state, emitting busy_changed on change.
 
         Parameters
