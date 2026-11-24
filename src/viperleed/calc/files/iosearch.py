@@ -493,17 +493,6 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
         nplaces = len(rp.search_atlist)
     for at in attodo:
         if at.oriState is None:
-            for el in at.offset_occ:
-                if el not in at.disp_occ:
-                    logger.error(
-                        "{} has occupation offset defined for element {}, "
-                        "which does not appear in atom displacement list. "
-                        "Value will be skipped, this may cause errors."
-                        .format(at, el))
-                else:
-                    at.disp_occ[el] = [v + at.offset_occ[el]
-                                       for v in at.disp_occ[el]]
-                    del at.disp_occ[el] # TODO: why? we write and then delete? Should be offset_occ? If yes, loop should go over .copy
             for (disp, offset) in [(at.disp_geo, at.offset_geo),
                            (at.disp_vib, at.offset_vib),
                            (at.disp_geo, at.disp_geo_offset)]:

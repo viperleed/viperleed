@@ -5,7 +5,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Kraushofer (@fkraushofer)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -72,6 +72,21 @@ class TestAtomMergeDisplacementOffset:
             assert atom.disp_vib[element] == approx([-0.2, -0.1, 0.0])
         with subtests.test('occ'):
             assert atom.disp_occ[element] == approx([0.7, 0.8, 0.9, 1.0])
+
+    def test_occupation_offset_consumed(self, manually_displaced_atom):
+        """Check that merging stores the original state of the atom.
+
+        The occupation offset is also applied and emptied.
+        """
+        atom = manually_displaced_atom
+        element = atom.el
+        atom.offset_occ[element] = -0.1
+        atom.dispInitialized = True
+        assert atom.oriState is None
+        atom.mergeDisp(element)
+        assert atom.oriState is not None
+        assert not atom.offset_occ
+        assert atom.disp_occ[element] == approx([0.6, 0.7, 0.8, 0.9])
 
 
 class TestDisplacementRanges:
