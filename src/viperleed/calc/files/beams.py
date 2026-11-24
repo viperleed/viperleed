@@ -21,6 +21,7 @@ import re
 
 import fortranformat as ff
 import numpy as np
+from quicktions import Fraction
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.lib import leedbase
@@ -35,6 +36,10 @@ logger = logging.getLogger(__name__)
 # Largest denominator of the fractional beam indices read from IVBEAMS.
 # Same as the default of Beam, used when indices are given as floats.
 _MAX_DENOMINATOR = 99
+
+# Largest difference between a decimal index in IVBEAMS and the
+# fraction it was rounded from: writeIVBEAMS writes six decimals.
+_DECIMALS_TOLERANCE = Fraction(1, 2_000_000)
 
 
 def averageBeams(beams, weights=None):
@@ -113,16 +118,39 @@ def readIVBEAMS(filename='IVBEAMS'):
                 'the data will not be read.'
                 )
             continue
-        # Decimals, as writeIVBEAMS writes them, would otherwise give
-        # exact fractions like 333333/1000000 rather than 1/3
-        beam_index = BeamIndex(*(index.limit_denominator(_MAX_DENOMINATOR)
+        beam_index = BeamIndex(*(_snap_to_fraction(index)
                                  for index in beam_index))
         all_indices[beam_index] = None  # Don't care about dict value
-    beams = []
-    for hk_indices in all_indices:
-        beams.append(Beam(hk_indices))
+    # With floats, Beam also limits the denominator of the indices that
+    # were not snapped (e.g., 1/127), and keeps their float value as hk
+    beams = [Beam(tuple(float(index) for index in hk_indices))
+             for hk_indices in all_indices]
     logger.debug('IVBEAMS file was read successfully')
     return beams
+
+
+def _snap_to_fraction(index):
+    """Return a fractional index rounded to six decimals as a fraction.
+
+    Decimals, as writeIVBEAMS writes them, are exact fractions like
+    333333/1000000 rather than the 1/3 they were rounded from.
+
+    Parameters
+    ----------
+    index : Fraction
+        One fractional index of a beam, as read from IVBEAMS.
+
+    Returns
+    -------
+    snapped_index : Fraction
+        The fraction with denominator up to _MAX_DENOMINATOR closest
+        to `index`, if within the rounding to six decimals, otherwise
+        `index` itself.
+    """
+    limited = index.limit_denominator(_MAX_DENOMINATOR)
+    if abs(limited - index) <= _DECIMALS_TOLERANCE:
+        return limited
+    return index
 
 
 def sortIVBEAMS(sl, rp):

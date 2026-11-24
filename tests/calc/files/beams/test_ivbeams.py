@@ -187,6 +187,7 @@ class TestReadIVBEAMSRoundTrip:
         """Check that float indices match the decimals in the file."""
         ivbeams_file, written = written_beams
         read_back = readIVBEAMS(ivbeams_file)
+        assert len(read_back) == len(written)
         for beam, written_beam in zip(read_back, written):
             from_file = tuple(float(f'{hk:.6f}') for hk in written_beam.hk)
             assert beam.hk == pytest.approx(from_file, abs=1e-6)
@@ -201,3 +202,28 @@ class TestReadIVBEAMSRoundTrip:
         read_back = readIVBEAMS(ivbeams_file)
         assert len(read_back) == 1
         assert read_back[0].hkfrac == (Fraction(1, 3), Fraction(0))
+
+    @parametrize(indices=(('1/127', '0'), ('1/128', '0'), ('0.005', '0')))
+    def test_large_denominator(self, indices, tmp_path):
+        """Check indices far from fractions with small denominators."""
+        ivbeams_file = tmp_path/'IVBEAMS'
+        ivbeams_file.write_text(f'HEADER\n{indices[0]} {indices[1]}\n',
+                                encoding='utf-8')
+        read_back = readIVBEAMS(ivbeams_file)
+        # Beam from the float values of the indices, as before
+        expect = Beam(tuple(float(Fraction(index)) for index in indices))
+        assert len(read_back) == 1
+        beam = read_back[0]
+        assert beam.hk == pytest.approx(expect.hk, abs=1e-6)
+        assert beam.hkfrac == expect.hkfrac
+        assert beam.label == expect.label
+
+    def test_distinct_large_denominators(self, tmp_path):
+        """Check that beams with denominators above 99 do not merge."""
+        ivbeams_file = tmp_path/'IVBEAMS'
+        ivbeams_file.write_text('HEADER\n'
+                                '1/127 0\n'
+                                '1/128 0\n',
+                                encoding='utf-8')
+        read_back = readIVBEAMS(ivbeams_file)
+        assert len(read_back) == 2
