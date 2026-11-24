@@ -4,7 +4,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-07-01'
 __license__ = 'GPLv3+'
 
@@ -12,13 +12,18 @@ import re
 
 import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.slab import MissingBulkSlabError
 from viperleed.calc.files import experiment_symmetry
+from viperleed.calc.files.parameters import ParameterInterpreter
+from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.version import Version
+from viperleed.calc.sections.initialization import _inherit_from_main
 
 from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs
@@ -52,6 +57,69 @@ def fixture_with_info(args):
     symmetry.findBulkSymmetry(bulk, rpars)
     symmetry.findSymmetry(bulk, rpars, bulk=True)
     return args
+
+
+def _prepare_for_writing(slab, rpars):
+    """Prepare `slab` and `rpars` for writing experiment_symmetry."""
+    rpars.THEO_ENERGIES = TheoEnergies(10, 100, 2)
+    symmetry.findSymmetry(slab, rpars, forceFindOri=True)
+    bulk = slab.make_bulk_slab(rpars)
+    symmetry.findBulkSymmetry(bulk, rpars)
+    symmetry.findSymmetry(bulk, rpars, bulk=True)
+
+
+def _written_beam_incidence(slab, rpars, tmp_path):
+    """Return the beamIncidence line written for `slab` and `rpars`."""
+    with execute_in_dir(tmp_path):
+        experiment_symmetry.write(slab, rpars)
+    written = (tmp_path / experiment_symmetry.FILENAME).read_text()
+    return next(line for line in written.splitlines()
+                if line.startswith('beamIncidence'))
+
+
+_BEAM_INCIDENCE_LINES = {
+    'default': (None, 'beamIncidence = (0, 0)'),
+    'normal': ('THETA 0, PHI 0', 'beamIncidence = (0.0, 0.0)'),
+    'off-normal': ('THETA 20.5, PHI 30', 'beamIncidence = (20.5, 30.0)'),
+    'negative theta': ('THETA -20, PHI 30',
+                       'beamIncidence = (20.0, 210.0)'),
+    }
+
+
+@fixture(name='ag100_main')
+@parametrize('incidence,expect',
+             _BEAM_INCIDENCE_LINES.values(),
+             ids=_BEAM_INCIDENCE_LINES)
+def fixture_ag100_main(incidence, expect):
+    """Return a Ag(100) slab and an Rparams with BEAM_INCIDENCE read."""
+    slab, rpars, *_ = CasePOSCARSlabs().case_poscar_ag100()
+    if incidence is not None:
+        interpreter = ParameterInterpreter(rpars)
+        interpreter.interpret_beam_incidence(
+            Assignment(incidence, 'BEAM_INCIDENCE')
+            )
+    return slab, rpars, expect
+
+
+def test_beam_incidence_line(ag100_main, tmp_path):
+    """Check the exact beamIncidence line written."""
+    slab, rpars, expect = ag100_main
+    _prepare_for_writing(slab, rpars)
+    assert _written_beam_incidence(slab, rpars, tmp_path) == expect
+
+
+def test_beam_incidence_line_domain(ag100_main, tmp_path, mocker):
+    """Check the exact beamIncidence line written for a domain."""
+    _, main_rpars, expect = ag100_main
+    main_rpars.TL_VERSION = Version('2.0.0')
+    slab, rpars, *_ = CasePOSCARSlabs().case_poscar_ag100()
+    domain = mocker.MagicMock(rpars=rpars, workdir=tmp_path)
+    mocker.patch('shutil.copy2')  # IVBEAMS
+    mocker.patch('viperleed.calc.files.parameters.modify')
+    with execute_in_dir(tmp_path):
+        _inherit_from_main((domain,), main_rpars, {domain: ()})
+    _prepare_for_writing(slab, rpars)
+    assert _written_beam_incidence(slab, rpars, tmp_path) == expect
 
 
 def test_get_dict_fails(mocker):
