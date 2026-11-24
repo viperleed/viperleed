@@ -15,8 +15,10 @@ __license__ = 'GPLv3+'
 from pathlib import Path
 import re
 
+import numpy as np
 from quicktions import Fraction
 
+from viperleed.calc.classes.beam import MAX_DENOMINATOR
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.files.beams import _snap_to_fraction
 from viperleed.calc.lib.string_utils import strip_comments
@@ -36,6 +38,14 @@ _TERM_RE = re.compile(
     r'(?:(?P<weight>\d+/\d+|\d+(?:\.\d*)?|\.\d+)\s*\*\s*)?'
     r'(?P<label>\([^()]*\))'
     )
+
+# Relative tolerance within which the writer gives a weight as a
+# fraction: well below that of BeamCorrespondence, so that only
+# weights like 1/3 (rounded to a float) are written as fractions
+_FRACTION_REL_TOL = 1e-12
+
+_HEADER = ('# BEAM_EQUIVALENCE: experimental beam = (weight*) '
+           'calculated beam + ...')
 
 
 def parse_beam_label(label):
@@ -178,7 +188,50 @@ def _parse_term(term):
     return weight, parse_beam_label(match['label'])
 
 
+def write_beam_equivalence(correspondence, path):
+    """Write a beam correspondence to a BEAM_EQUIVALENCE file.
+
+    The file starts with a comment line, followed by one line per
+    beam assignment, in the order of `correspondence`. Indices are
+    written as integers or fractions, e.g., (1/2 -1). Weights are
+    left out for beam assignments whose weights are all equal.
+
+    Parameters
+    ----------
+    correspondence : BeamCorrespondence
+        The beam correspondence to write.
+    path : str or Path
+        The file to write to. It is overwritten if it exists.
+
+    Returns
+    -------
+    None.
+    """
+    lines = [_HEADER]
+    for exp_key, calc_weights in correspondence.assignments.items():
+        equal = len(set(calc_weights.values())) == 1
+        terms = (_format_label(calc_key) if equal
+                 else f'{_format_weight(weight)}*{_format_label(calc_key)}'
+                 for calc_key, weight in calc_weights.items())
+        lines.append(f'{_format_label(exp_key)} = {" + ".join(terms)}')
+    Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
 def _format_label(key):
     """Return the label of a beam from its (h, k) Fractions."""
     first, second = key
     return f'({first} {second})'
+
+
+def _format_weight(weight):
+    """Return a string for an assignment weight that reads back as it.
+
+    A fraction with a small denominator, if it equals `weight` within
+    a relative tolerance of _FRACTION_REL_TOL, otherwise the shortest
+    decimal that reads back as `weight` (without exponent, which the
+    reader does not accept).
+    """
+    fraction = Fraction(weight).limit_denominator(MAX_DENOMINATOR)
+    if abs(fraction - weight) <= _FRACTION_REL_TOL * weight:
+        return str(fraction)
+    return np.format_float_positional(weight, trim='-')

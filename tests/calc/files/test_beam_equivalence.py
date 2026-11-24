@@ -14,9 +14,15 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 from quicktions import Fraction
 
+from viperleed.calc import symmetry
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
+from viperleed.calc.files import parameters
+from viperleed.calc.files import poscar
 from viperleed.calc.files.beam_equivalence import parse_beam_label
 from viperleed.calc.files.beam_equivalence import read_beam_equivalence
+from viperleed.calc.files.beam_equivalence import write_beam_equivalence
+from viperleed.calc.files.beams import readOUTBEAMS
+from viperleed.calc.lib.leedbase import build_beam_correspondence
 
 _HALF = Fraction(1, 2)
 _THIRD = Fraction(1, 3)
@@ -246,3 +252,93 @@ class TestReadBeamEquivalence:
         with pytest.raises(ValueError, match='No beam assignment') as exc:
             read_text(contents)
         assert str(exc.value).startswith(str(path))
+
+
+_AG100_IVBEAMS = (
+    (1, 0), (0, 1), (1, 1), (-1, 1), (2, 0), (0, -2), (1, 2), (3, 0),
+    (-3, 0), (5, 0),
+    )
+
+
+@fixture(name='ag100_correspondence')
+def fixture_ag100_correspondence(data_path, make_beams):
+    """Return the automatic beam correspondence for Ag(100)."""
+    inputs = data_path / 'Ag(100)' / 'initialization'
+    slab = poscar.read(inputs / 'POSCAR')
+    rpars = parameters.read(inputs / 'PARAMETERS')
+    parameters.interpret(rpars, slab=slab, silent=True)
+    slab.full_update(rpars)
+    symmetry.findSymmetry(slab, rpars)
+    symmetry.enforceSymmetry(slab, rpars)
+    slab.make_bulk_slab(rpars)
+    bulk = slab.bulkslab
+    symmetry.findSymmetry(bulk, rpars, bulk=True, output=False)
+    bulk.revert_unit_cell()
+    symmetry.findBulkSymmetry(bulk, rpars)
+    rpars.expbeams = readOUTBEAMS(str(inputs / 'EXPBEAMS.csv'))
+    rpars.ivbeams = make_beams(*_AG100_IVBEAMS)
+    return build_beam_correspondence(slab, rpars)
+
+
+_ROUND_TRIP = {
+    'unweighted': {(1, 0): {(1, 0): 1, (0, 1): 1, (-1, 0): 1},
+                   (_HALF, -1): {(_HALF, -1): 1},
+                   (-_THIRD, 2*_THIRD): {(-_THIRD, 2*_THIRD): 1,
+                                         (_THIRD, _THIRD): 1}},
+    'weighted': {(1, 0): {(1, 0): 2, (0, 1): 1},
+                 (1, 1): {(1, 1): 1, (-1, -1): 1},
+                 (0, _HALF): {(0, _HALF): 0.123456789, (_HALF, 0): 1,
+                              (0, -_HALF): 1e-9}},
+    'shared': {(1, 0): {(1, 0): 1, (0, 1): 1},
+               (0, 1): {(0, 1): 3, (-1, 0): 1}},
+    }
+
+
+class TestWriteBeamEquivalence:
+    """Tests for write_beam_equivalence."""
+
+    @parametrize(assignments=_ROUND_TRIP.values(), ids=_ROUND_TRIP)
+    def test_round_trip(self, assignments, tmp_path):
+        """Check that a written correspondence reads back equal."""
+        correspondence = BeamCorrespondence(assignments)
+        path = tmp_path / 'BEAM_EQUIVALENCE'
+        write_beam_equivalence(correspondence, path)
+        read_back = read_beam_equivalence(path)
+        assert read_back == correspondence
+        assert list(read_back.assignments) == list(assignments)
+
+    def test_round_trip_ag100(self, ag100_correspondence, tmp_path):
+        """Check the round trip for the automatic Ag(100) case."""
+        path = tmp_path / 'BEAM_EQUIVALENCE'
+        write_beam_equivalence(ag100_correspondence, str(path))
+        assert read_beam_equivalence(path) == ag100_correspondence
+
+    def test_golden_unweighted(self, tmp_path):
+        """Check the contents written for a small unweighted case."""
+        correspondence = BeamCorrespondence({
+            (1, 0): {(1, 0): 1, (0, 1): 1},
+            (_HALF, -1): {(_HALF, -1): 2, (-1, _HALF): 2},
+            })
+        path = tmp_path / 'BEAM_EQUIVALENCE'
+        write_beam_equivalence(correspondence, path)
+        expect = (
+            '# BEAM_EQUIVALENCE: experimental beam = (weight*) '
+            'calculated beam + ...\n'
+            '(1 0) = (1 0) + (0 1)\n'
+            '(1/2 -1) = (1/2 -1) + (-1 1/2)\n'
+            )
+        assert path.read_text(encoding='utf-8') == expect
+
+    def test_golden_weighted(self, tmp_path):
+        """Check the weights written for a weighted case."""
+        correspondence = BeamCorrespondence({
+            (1, 0): {(1, 0): 2, (0, 1): 1},
+            (1, 1): {(1, 1): 0.123456789, (-1, -1): 0.876543211},
+            })
+        path = tmp_path / 'BEAM_EQUIVALENCE'
+        write_beam_equivalence(correspondence, path)
+        expect = [
+            '(1 0) = 2/3*(1 0) + 1/3*(0 1)',
+            '(1 1) = 0.123456789*(1 1) + 0.876543211*(-1 -1)',
+            ]
+        assert path.read_text(encoding='utf-8').splitlines()[1:] == expect
