@@ -61,7 +61,9 @@ def _replace_incidence_angle(rpars, which, value):
     which : {'theta', 'phi'}
         Which angle to replace.
     value : float
-        The new value of the angle, in degrees.
+        The new value of the angle, in degrees. A theta beyond
+        grazing incidence (i.e., larger than 90 degrees or smaller
+        than -90 degrees) is clipped to grazing incidence.
 
     Returns
     -------
@@ -74,8 +76,8 @@ def _replace_incidence_angle(rpars, which, value):
     angles = {'theta': incidence.theta,
               'phi': incidence.phi,
               which: value}  # Replaces one of the two
-    return _with_phi_below_full_turn(BeamIncidence(angles['theta'],
-                                                   angles['phi']))
+    theta = _clip_theta(angles['theta'])
+    return _with_phi_below_full_turn(BeamIncidence(theta, angles['phi']))
 
 
 def _clip_theta(theta):
@@ -320,9 +322,7 @@ def fd_optimization(sl, rp):
             x = max(0, x)
             trp.V0_IMAG = x
         elif which in _INCIDENCE_ANGLES:
-            # Calculate points beyond grazing incidence at grazing
-            angle = x if which == 'phi' else _clip_theta(x)
-            trp.BEAM_INCIDENCE = _replace_incidence_angle(trp, which, angle)
+            trp.BEAM_INCIDENCE = _replace_incidence_angle(trp, which, x)
         else:       # geometry: x is a scaling factor for the unit cell
             x = max(0.1, x)
             apply_scaling(tsl, trp, which, x)

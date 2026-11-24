@@ -35,6 +35,8 @@ class TestReplaceIncidenceAngle:
     _valid = {
         'theta': ('theta', 20, (20.0, 50.0)),
         'theta negative': ('theta', -30, (30.0, 230.0)),
+        'theta beyond grazing': ('theta', 95, (90.0, 50.0)),
+        'theta beyond negative grazing': ('theta', -95, (90.0, 230.0)),
         'phi': ('phi', 70, (10.0, 70.0)),
         'phi above 360': ('phi', 370, (10.0, 10.0)),
         'phi 360': ('phi', 360, (10.0, 0.0)),
@@ -176,6 +178,8 @@ class TestOptimizeIncidence:
     _written = {
         'theta, phi 360': (('theta', 'THETA 10, PHI 360', 11.0),
                            'THETA 11.0000, PHI 0.0000'),
+        'theta beyond grazing': (('theta', 'THETA 89, PHI 30', 90.3),
+                                 'THETA 90.0000, PHI 30.0000'),
         }
 
     @parametrize('args,expect', _written.values(), ids=_written)
