@@ -17,19 +17,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-23'
 __license__ = 'GPLv3+'
 
-import sys
-
 import pytest
-
-_PY_310 = sys.version_info >= (3, 10)
-
-# HoverAnnot.sizeHint passes numpy floats to QSize, whose constructor
-# takes ints. Python >= 3.10 no longer converts floats implicitly. The
-# TypeError is raised in a Qt virtual method: pytest-qt fails the test.
-FLOATS_TO_QSIZE = pytest.mark.xfail(
-    _PY_310,
-    reason='HoverAnnot.sizeHint passes floats to QSize (Python >= 3.10)',
-    )
 
 # MPLFigureCanvas.mpl_to_qt_coordinates uses _dpi_ratio of matplotlib
 # canvases, which does not exist any more in matplotlib >= 3.5 (the

@@ -35,6 +35,12 @@ class TestLEEDPatternSimulator:
         no_blocking_dialogs.return_value = qtw.QMessageBox.StandardButton.No
         assert simulator.close()
 
+    def test_move_event(self, simulator, check_annotations_follow_move):
+        """Check that the hover annotations follow the moved window."""
+        # pylint: disable-next=protected-access
+        annotations = simulator._ctrls['leed_canvas'].annots
+        check_annotations_follow_move(simulator, annotations)
+
     def test_new_file_dialog_done(self, simulator, qtbot, qtc):
         """Check that the new-file dialog can be opened and accepted."""
         # pylint: disable=protected-access

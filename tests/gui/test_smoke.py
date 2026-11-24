@@ -164,8 +164,6 @@ _FACTORIES = {
 # Widgets with bugs that make test_open_and_close fail. Keys are
 # 'module:Class', values the xfail marks of tests.gui.known_bugs.
 _KNOWN_BUGS = {
-    'viperleed.gui.leedsim.widgets.hoverannot:HoverAnnot':
-        known_bugs.FLOATS_TO_QSIZE,
     'viperleed.gui.widgets.spinboxes:TextBox':
         known_bugs.TEXTBOX_WITHOUT_ARGUMENTS,
     }
