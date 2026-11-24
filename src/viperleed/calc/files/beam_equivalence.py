@@ -23,8 +23,11 @@ from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.files.beams import snap_to_fraction
 from viperleed.calc.lib.string_utils import strip_comments
 
-# One beam index: an integer, a decimal, or a fraction like 1/2
-_INDEX = r'[+-]?(?:\d+/\d+|\d+(?:\.\d*)?|\.\d+)'
+# A non-negative number: an integer, a decimal, or a fraction like 1/2
+_UNSIGNED = r'(?:\d+/\d+|\d+(?:\.\d*)?|\.\d+)'
+
+# One beam index: a number, optionally with a sign
+_INDEX = rf'[+-]?{_UNSIGNED}'
 
 # A beam label: two indices in parentheses, separated by
 # whitespace, a comma, or a vertical bar, e.g., (1/2 | -1)
@@ -35,7 +38,7 @@ _LABEL_RE = re.compile(
 # One term of the right-hand side of a beam assignment: a beam label,
 # optionally preceded by a non-negative weight and '*', e.g., 1/3*(1 0)
 _TERM_RE = re.compile(
-    r'(?:(?P<weight>\d+/\d+|\d+(?:\.\d*)?|\.\d+)\s*\*\s*)?'
+    rf'(?:(?P<weight>{_UNSIGNED})\s*\*\s*)?'
     r'(?P<label>\([^()]*\))'
     )
 
