@@ -218,6 +218,30 @@ marking. It only reports: it changes neither the selection nor the exit
 status. It also works with ``-n`` (:program:`pytest-xdist`).
 
 
+Tests of the graphical user interface
+'''''''''''''''''''''''''''''''''''''
+
+The tests in :file:`tests/gui` need PyQt5 (installed with
+``viperleed[GUI]``). Without a display, set ``QT_QPA_PLATFORM=offscreen``.
+Tests that create widgets use the ``qtbot`` and ``qapp`` fixtures of
+`pytest-qt <https://pytest-qt.readthedocs.io>`__ (among the test
+requirements). Without PyQt5, these tests are skipped (or fail with
+``--require-all``) rather than aborting the whole test session, as
+:program:`pytest-qt` would do otherwise (see :file:`tests/harness/qt.py`).
+Test modules import the GUI modules that need Qt via the ``import_with_qt``
+fixture (and the Qt modules via the ``qtc``, ``qtg``, and ``qtw`` fixtures)
+of :file:`tests/gui/conftest.py`, rather than at the top, so that they can
+be collected without PyQt5. The smoke tests in
+:file:`tests/gui/test_smoke.py` import all GUI modules, and create, show,
+and close all their widgets. They find these automatically: a new widget that
+needs arguments to be created is skipped until a factory for it is added to
+``_FACTORIES`` in that module.
+
+Tests that fail because of a bug of the GUI that is not fixed yet are marked
+as expected failures with the marks of :file:`tests/gui/known_bugs.py`. When
+fixing one of these bugs, remove its mark, there and where it is used.
+
+
 Continuous integration
 ''''''''''''''''''''''
 
