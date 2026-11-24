@@ -7,14 +7,19 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-06-22'
 __license__ = 'GPLv3+'
 
+import itertools
 import logging
 import re
+from types import SimpleNamespace
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
+from quicktions import Fraction
 
+from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import readIVBEAMS
+from viperleed.calc.files.beams import writeIVBEAMS
 
 _MODULE = 'viperleed.calc.files.beams'
 
@@ -140,3 +145,59 @@ class TestReadIVBEAMS:
         assert result == expect
         expect_log = 'IVBEAMS file was read successfully'
         assert expect_log in caplog.text
+
+
+class TestReadIVBEAMSRoundTrip:
+    """Tests for reading back IVBEAMS files written by writeIVBEAMS."""
+
+    _fractions = (
+        Fraction(0),
+        Fraction(1, 2),
+        Fraction(1, 3),
+        Fraction(2, 3),
+        Fraction(1, 4),
+        Fraction(1, 6),
+        Fraction(1, 7),
+        Fraction(-1, 3),
+        Fraction(3, 2),
+        )
+
+    @fixture(name='written_beams')
+    def fixture_written_beams(self, tmp_path, mocker):
+        """Return an IVBEAMS file from writeIVBEAMS and its beams."""
+        mocker.patch(f'{_MODULE}.leedbase.getLEEDdict', return_value={})
+        hkfracs = itertools.product(self._fractions, repeat=2)
+        rpars = SimpleNamespace(
+            AVERAGE_BEAMS=False,
+            expbeams=[Beam(hkfrac) for hkfrac in hkfracs],
+            )
+        ivbeams_file = tmp_path/'IVBEAMS'
+        written = writeIVBEAMS(None, rpars, filename=ivbeams_file)
+        assert len(written) == len(self._fractions)**2
+        return ivbeams_file, written
+
+    def test_same_beams(self, written_beams):
+        """Check that beams read back with their fractional indices."""
+        ivbeams_file, written = written_beams
+        read_back = readIVBEAMS(ivbeams_file)
+        assert [b.hkfrac for b in read_back] == [b.hkfrac for b in written]
+        assert [b.label for b in read_back] == [b.label for b in written]
+
+    def test_same_float_indices(self, written_beams):
+        """Check that float indices match the decimals in the file."""
+        ivbeams_file, written = written_beams
+        read_back = readIVBEAMS(ivbeams_file)
+        for beam, written_beam in zip(read_back, written):
+            from_file = tuple(float(f'{hk:.6f}') for hk in written_beam.hk)
+            assert beam.hk == pytest.approx(from_file, abs=1e-6)
+
+    def test_duplicate_decimal_and_fraction(self, tmp_path):
+        """Check that a decimal and a fraction of one beam merge."""
+        ivbeams_file = tmp_path/'IVBEAMS'
+        ivbeams_file.write_text('HEADER\n'
+                                '  0.333333  0.000000\n'
+                                '1/3 0\n',
+                                encoding='utf-8')
+        read_back = readIVBEAMS(ivbeams_file)
+        assert len(read_back) == 1
+        assert read_back[0].hkfrac == (Fraction(1, 3), Fraction(0))

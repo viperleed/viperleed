@@ -32,6 +32,10 @@ from viperleed.gui.classes.beamindex import BeamIndex
 
 logger = logging.getLogger(__name__)
 
+# Largest denominator of the fractional beam indices read from IVBEAMS.
+# Same as the default of Beam, used when indices are given as floats.
+_MAX_DENOMINATOR = 99
+
 
 def averageBeams(beams, weights=None):
     """Takes a list of percentages and a list of lists of Beam objects.
@@ -109,6 +113,10 @@ def readIVBEAMS(filename='IVBEAMS'):
                 'the data will not be read.'
                 )
             continue
+        # Decimals, as writeIVBEAMS writes them, would otherwise give
+        # exact fractions like 333333/1000000 rather than 1/3
+        beam_index = BeamIndex(*(index.limit_denominator(_MAX_DENOMINATOR)
+                                 for index in beam_index))
         all_indices[beam_index] = None  # Don't care about dict value
     beams = []
     for hk_indices in all_indices:
