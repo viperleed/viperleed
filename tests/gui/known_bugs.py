@@ -18,10 +18,3 @@ __created__ = '2026-11-23'
 __license__ = 'GPLv3+'
 
 import pytest
-
-# TextBox() without arguments uses `contents` before assignment (a
-# typo in its __init__).
-TEXTBOX_WITHOUT_ARGUMENTS = pytest.mark.xfail(
-    raises=UnboundLocalError,
-    reason='TextBox() without arguments uses contents before assignment',
-    )
