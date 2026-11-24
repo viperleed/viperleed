@@ -159,18 +159,8 @@ def get_candidates():
         If the QT_API environment variable has an unsupported value,
         or if it requests a binding other than one already imported.
     """
-    requested = _get_requested_binding()
-    already_imported = tuple(binding for binding in SUPPORTED_BINDINGS
-                             if f'{binding}.QtCore' in sys.modules)
-    if requested and already_imported and requested not in already_imported:
-        raise QtApiError(
-            f'{QT_API_ENV}={os.environ[QT_API_ENV]!r} requests {requested}, '
-            f'but {already_imported[0]} was already imported. Two Qt '
-            'bindings cannot be used in the same process.'
-            )
-    if requested:
-        return (requested,)
-    return already_imported[:1] or SUPPORTED_BINDINGS
+    candidates, _ = _get_candidates()
+    return candidates
 
 
 def import_binding(binding, modules=()):
@@ -262,13 +252,18 @@ def set_binding(binding):
     if _SELECTED_BINDING is not None:
         raise ValueError(f'Cannot select {binding}: {_SELECTED_BINDING} '
                          'is already in use')
-    candidates = get_candidates()
+    candidates, requested = _get_candidates()
     if binding not in candidates:  # Then it is a single one
-        why = (f'{QT_API_ENV}={os.environ[QT_API_ENV]!r} requests it'
-               if _get_requested_binding() else 'it was already imported')
+        why = (f'{_describe_qt_api()} requests it' if requested
+               else 'it was already imported')
         raise QtApiError(f'Cannot select {binding}: {candidates[0]} must '
                          f'be used, as {why}.')
     _SELECTED_BINDING = binding
+
+
+def _describe_qt_api():
+    """Return the value of QT_API, as 'QT_API=<value>', for messages."""
+    return f'{QT_API_ENV}={os.environ[QT_API_ENV]!r}'
 
 
 def _forget_binding(binding):
@@ -285,6 +280,36 @@ def _forget_binding(binding):
                        if name == binding or name.startswith(prefix)]
     for name in binding_modules:
         del sys.modules[name]
+
+
+def _get_candidates():
+    """Return the candidate bindings, and the one requested via QT_API.
+
+    Returns
+    -------
+    candidates : tuple
+        The names of the bindings to try, in order (see get_candidates).
+    requested : str or None
+        The binding requested via QT_API, None if QT_API is not set.
+
+    Raises
+    ------
+    QtApiError
+        If the QT_API environment variable has an unsupported value,
+        or if it requests a binding other than one already imported.
+    """
+    requested = _get_requested_binding()
+    already_imported = tuple(binding for binding in SUPPORTED_BINDINGS
+                             if f'{binding}.QtCore' in sys.modules)
+    if requested and already_imported and requested not in already_imported:
+        raise QtApiError(
+            f'{_describe_qt_api()} requests {requested}, but '
+            f'{already_imported[0]} was already imported. Two Qt '
+            'bindings cannot be used in the same process.'
+            )
+    if requested:
+        return (requested,), requested
+    return already_imported[:1] or SUPPORTED_BINDINGS, None
 
 
 def _get_requested_binding():
@@ -304,8 +329,7 @@ def _get_requested_binding():
 
 def _select_binding():
     """Return the name of the binding that should be used."""
-    requested = _get_requested_binding()
-    candidates = get_candidates()
+    candidates, requested = _get_candidates()
     errors = []
     broken = False
     for binding in candidates:
@@ -323,7 +347,7 @@ def _select_binding():
         else:
             return binding
     msg = (f'Could not import {requested}, requested via '
-           f'{QT_API_ENV}={os.environ[QT_API_ENV]!r}. ' if requested
+           f'{_describe_qt_api()}. ' if requested
            else f'Could not import any Qt binding among {candidates}. ')
     msg += 'Errors: ' + '; '.join(errors)
     if broken:
