@@ -14,6 +14,7 @@ import pickle
 import pytest
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.base import SpecialParameter
 from viperleed.calc.classes.rparams.special.beam_incidence import (
     BeamIncidence,
@@ -91,6 +92,12 @@ class TestBeamIncidenceValid:
         """Check creation from a (theta, phi) pair or an instance."""
         incidence = BeamIncidence.from_value(value)
         assert incidence == BeamIncidence(12, 34)
+
+    def test_rparams_default(self):
+        """Check that Rparams has normal incidence by default."""
+        rpars = Rparams()
+        assert rpars.BEAM_INCIDENCE == BeamIncidence(0, 0)
+        assert isinstance(rpars.BEAM_INCIDENCE, BeamIncidence)
 
     def test_registered(self):
         """Check that BeamIncidence is registered for its parameter."""

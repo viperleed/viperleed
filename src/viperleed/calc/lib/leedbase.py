@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -557,7 +557,8 @@ def getLEEDdict(sl, rp):
          'bulkGroup': sl.bulkslab.foundplanegroup,
          'bulk3Dsym': sl.bulkslab.get_bulk_3d_str(),
          'screenAperture': rp.SCREEN_APERTURE,
-         'beamIncidence': (rp.THETA, rp.PHI)}
+         'beamIncidence': (rp.BEAM_INCIDENCE.theta,
+                           rp.BEAM_INCIDENCE.phi)}
     # some values can be overwritten via parameters:
     if isinstance(rp.AVERAGE_BEAMS, tuple):
         d['beamIncidence'] = rp.AVERAGE_BEAMS

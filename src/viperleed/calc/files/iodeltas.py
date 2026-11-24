@@ -9,7 +9,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -405,7 +405,8 @@ def generateDeltaBasic(sl, rp):
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
     output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'
     output += formatter['uc'].write(ucsurf[1]).ljust(lj) + 'ARB2\n'
-    output += (formatter['angles'].write([rp.THETA, rp.PHI]).ljust(lj)
+    output += (formatter['angles'].write([rp.BEAM_INCIDENCE.theta,
+                                          rp.BEAM_INCIDENCE.phi]).ljust(lj)
                + 'THETA PHI\n')
     if rp.TL_VERSION >= Version('1.7.0'):
         # TODO: if phaseshifts are calculated differently, change format here

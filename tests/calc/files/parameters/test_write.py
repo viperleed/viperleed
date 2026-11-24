@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-18'
 __license__ = 'GPLv3+'
 
@@ -14,6 +14,9 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    BeamIncidence,
+    )
 from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.files import parameters
@@ -97,19 +100,21 @@ class TestModifiedParameterValue:
         mod_param = ModifiedParameterValue(attr, rpars, original=None)
         assert mod_param.fmt_value == expected
 
-    _fmt_special_values = {
-        'BEAM_INCIDENCE': ({'PHI': 0, 'THETA': 12},
-                           'THETA 12.0000, PHI 0.0000')
+    _fmt_incidence = {
+        'ints': ((12, 0), 'THETA 12.0000, PHI 0.0000'),
+        'floats': ((12.5, 30.25), 'THETA 12.5000, PHI 30.2500'),
         }
 
-    @parametrize(args=_fmt_special_values.items(), ids=_fmt_special_values)
-    def test_format_special_getter(self, args):
-        """Check formatting of values that require special getters."""
-        param, (rpars_settings, expected) = args
+    @parametrize('angles,expected',
+                 _fmt_incidence.values(),
+                 ids=_fmt_incidence)
+    def test_format_beam_incidence(self, angles, expected):
+        """Check formatting of a BEAM_INCIDENCE value."""
         rpars = Rparams()
-        for attr, value in rpars_settings.items():
-            setattr(rpars, attr, value)
-        mod_param = ModifiedParameterValue(param, rpars, original=None)
+        rpars.BEAM_INCIDENCE = BeamIncidence(*angles)
+        mod_param = ModifiedParameterValue('BEAM_INCIDENCE',
+                                           rpars,
+                                           original=None)
         assert mod_param.fmt_value == expected
 
     _invalid = {

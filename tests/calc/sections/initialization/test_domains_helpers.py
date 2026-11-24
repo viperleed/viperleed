@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-07'
 __license__ = 'GPLv3+'
 
@@ -12,6 +12,9 @@ from copy import deepcopy
 import pytest
 from pytest_cases import fixture
 
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    BeamIncidence,
+    )
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.initialization import _check_domain_consistent
@@ -30,8 +33,7 @@ class TestCheckDomainConsistent:
         return mocker.MagicMock(
             LMAX=mocker.MagicMock(max=5),
             THEO_ENERGIES=mocker.MagicMock(),
-            THETA=1.0,
-            PHI=2.0,
+            BEAM_INCIDENCE=BeamIncidence(1.0, 2.0),
             TL_VERSION=Version('1.6.0'),
             ivbeams=[],
             fileLoaded={'IVBEAMS': True}
@@ -62,7 +64,7 @@ class TestCheckDomainConsistent:
         """Check expected behavior when BEAM_INCIDENCE is mismatched."""
         domain.rpars.THEO_ENERGIES.contains.return_value = True
         rpars.TL_VERSION = Version('2.0.0')
-        domain.rpars.THETA = 99
+        domain.rpars.BEAM_INCIDENCE = BeamIncidence(30, 0)
         with caplog.at_level('INFO'):
             result = _check_domain_consistent(domain, rpars)
         assert result == ['BEAM_INCIDENCE']
@@ -143,8 +145,7 @@ class TestInheritFromMain:
 
     expect_inherited = (
         'THEO_ENERGIES',
-        'THETA',
-        'PHI',
+        'BEAM_INCIDENCE',
         'N_CORES',
         'ivbeams',
         )

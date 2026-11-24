@@ -22,6 +22,9 @@ from pytest_cases import fixture, parametrize, parametrize_with_cases
 from pytest_cases.filters import id_has_suffix
 
 from viperleed.calc import symmetry
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    BeamIncidence,
+    )
 from viperleed.calc.lib.math_utils import angle as angle_radians
 
 from ...helpers import check_draws
@@ -701,3 +704,34 @@ class TestSymmetryReduction:
                                  'and symmetry reduction. Angles differ by '
                                  '180 degrees')
                 assert angle(a_before, a_after) == info.symmetry.rotation
+
+
+class TestRotateUnitCell:
+    """Tests for the unit-cell rotation in enforceSymmetry."""
+
+    def test_phi_follows_rotation(self, slab_p6m, mocker):
+        """Check that PHI is shifted by the unit-cell rotation."""
+        slab, param, *_ = slab_p6m
+        param.BEAM_INCIDENCE = BeamIncidence(30, 10)
+        modify = mocker.patch.object(symmetry.parameters, 'modify')
+        symmetry.findSymmetry(slab, param)
+        a_before = slab.ab_cell.T[0].copy()
+        symmetry.enforceSymmetry(slab, param, rotcell=True)
+        a_after = slab.ab_cell.T[0]
+        rotation = np.degrees(angle_radians(a_before, a_after))
+        assert abs(rotation) > 1  # Otherwise the test is useless
+        incidence = param.BEAM_INCIDENCE
+        assert incidence.theta == approx(30)
+        assert incidence.phi == approx((10 + rotation) % 360)
+        modify.assert_called_once_with(param, 'BEAM_INCIDENCE')
+
+    def test_normal_incidence_not_modified(self, slab_p6m, mocker):
+        """Check that normal incidence is left untouched."""
+        slab, param, *_ = slab_p6m
+        param.BEAM_INCIDENCE = BeamIncidence(0, 10)
+        modify = mocker.patch.object(symmetry.parameters, 'modify')
+        symmetry.findSymmetry(slab, param)
+        symmetry.enforceSymmetry(slab, param, rotcell=True)
+        incidence = param.BEAM_INCIDENCE
+        assert incidence == BeamIncidence(0, 10)
+        modify.assert_not_called()
