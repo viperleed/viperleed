@@ -16,9 +16,12 @@ Note that this will only happen once, so later iterations of the
 program will use the IVBEAMS file created in the first run, if it is
 not deleted manually.
 
-The first line is treated as a header and can contain a comment, all
-other lines contain two numbers indicating a beam. Input format can be
-integer, float, or fractions as ``a/b``:
+The first line is treated as a header and can contain any text, or be
+empty. It is never read as a beam, even if it starts with a comment
+character. All other lines contain two numbers indicating a beam.
+Input format can be integer, float, or fractions as ``a/b``. In these
+lines, everything after a ``!``, ``#``, or ``%`` is a comment and is
+ignored, as are empty lines:
 
 ..  code-block:: none
 
@@ -36,6 +39,10 @@ integer, float, or fractions as ``a/b``:
 
 The order of the beams is not important, and if one beam is given twice,
 it will be ignored the second time.
+
+.. versionchanged:: 0.15.0
+   Comments and empty lines after the header are ignored. Before, a
+   line starting with a comment character gave an error.
 
 Since everything to the right of the first two columns is ignored,
 copying beams from the :ref:`BEAMLIST` file will also work.
