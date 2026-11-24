@@ -82,8 +82,8 @@ class TestParseBeamLabel:
     def test_notations_equal(self):
         """Check that one beam in different notations gives one key.
 
-        Mutant 'no snapping' (parse_beam_label without
-        _snap_to_fraction) fails this test.
+        Decimals must be snapped to the fraction they round, as for
+        IVBEAMS, so that they compare equal to it.
         """
         labels = '(0.5 0)', '(1/2, 0)', '(0.500000 | 0)', '(0.5000001 0)'
         keys = {parse_beam_label(label) for label in labels}
@@ -232,13 +232,7 @@ class TestReadBeamEquivalence:
     @parametrize('contents,line_nr,cause', _INVALID_FILES.values(),
                  ids=_INVALID_FILES)
     def test_invalid(self, contents, line_nr, cause, read_text, tmp_path):
-        """Check the error for an invalid line.
-
-        Mutants 'duplicate left-hand side accepted' (no check for an
-        experimental beam already in the file) and 'no snapping before
-        the duplicate check' (keys compared before _snap_to_fraction)
-        fail the 'duplicate left' and 'duplicate left snapped' cases.
-        """
+        """Check the error for an invalid line."""
         path = tmp_path / 'BEAM_EQUIVALENCE'
         prefix = re.escape(f'{path}, line {line_nr}: ')
         with pytest.raises(ValueError, match=prefix) as exc_info:
