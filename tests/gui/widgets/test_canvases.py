@@ -10,8 +10,6 @@ __license__ = 'GPLv3+'
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from ..known_bugs import MPL_TO_QT_COORDINATES
-
 
 class TestMPLFigureCanvas:
     """Tests for the MPLFigureCanvas class."""
@@ -25,7 +23,6 @@ class TestMPLFigureCanvas:
         show(canvas)
         return canvas
 
-    @MPL_TO_QT_COORDINATES
     @parametrize(x_y=((0, 0), (30, 40), (199, 149)))
     def test_mpl_to_qt_coordinates(self, x_y, canvas, qtc):
         """Check the inverse of matplotlib's mouseEventCoords."""

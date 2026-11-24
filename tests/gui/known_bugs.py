@@ -19,14 +19,6 @@ __license__ = 'GPLv3+'
 
 import pytest
 
-# MPLFigureCanvas.mpl_to_qt_coordinates uses _dpi_ratio of matplotlib
-# canvases, which does not exist any more in matplotlib >= 3.5 (the
-# oldest supported).
-MPL_TO_QT_COORDINATES = pytest.mark.xfail(
-    raises=AttributeError,
-    reason='MPLFigureCanvas.mpl_to_qt_coordinates uses _dpi_ratio',
-    )
-
 # The keyPressEvent of the old NewFileDialog checks for keys in
 # [Key_Enter or Key_Return], i.e., only for Key_Enter. Return clicks
 # the default button of the dialog rather than the focused one.
