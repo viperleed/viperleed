@@ -13,6 +13,7 @@ from viperleed.gui.classes.lattice2d import Lattice2D
 
 _C6 = '6-fold screw/rotations'
 _RELATED_TO_C6 = {'3-fold screw/rotations', '2-fold screw/rotation'}
+_HEXAGONAL = [[1, 0], [-0.5, 3**0.5 / 2]]
 
 
 class TestBulk3DSymDialog:
@@ -24,8 +25,7 @@ class TestBulk3DSymDialog:
         module = import_with_qt('viperleed.gui.leedsim.dialogs.'
                                 'dialogbulk3dsym')
         dialog = module.Bulk3DSymDialog()
-        dialog.update_operations(Lattice2D([[1, 0], [-0.5, 3**0.5 / 2]],
-                                           group='p1'))
+        dialog.update_operations(Lattice2D(_HEXAGONAL, group='p1'))
         show(dialog)
         return dialog
 
@@ -66,3 +66,14 @@ class TestBulk3DSymDialog:
         extra_ops.clicked.emit(c6_index)
         states = self.get_states(extra_ops, qtc)
         assert all(s == (False, True) for s in states.values())
+
+    def test_update_operations_checks_bulk(self, dialog, extra_ops, qtc):
+        """Check that only the screws/glides of the bulk are checked."""
+        bulk = Lattice2D(_HEXAGONAL, group='p1')
+        bulk.group.set_screws_glides('r(3), m([1, 0])', bulk.cell_shape)
+        dialog.update_operations(bulk)
+        states = self.get_states(extra_ops, qtc)
+        checked = {text for text, (is_checked, _) in states.items()
+                   if is_checked}
+        assert checked == {'3-fold screw/rotations',
+                           'mirror/glide across [1, 0]'}
