@@ -107,6 +107,61 @@ class TestConstruction:
         assert corr == BeamCorrespondence({(1, 0): {(1, 0): 1}})
 
 
+_EQUAL = {
+    'unweighted, any scale': (
+        {(1, 0): {(1, 0): 1, (0, 1): 1, (1, 1): 1}},
+        {(1, 0): {(1, 0): 0.7, (0, 1): 0.7, (1, 1): 0.7}},
+        ),
+    'unweighted, nine tenths': (
+        {(1, 0): {(h, 0): 1 for h in range(9)}},
+        {(1, 0): {(h, 0): 0.1 for h in range(9)}},
+        ),
+    'unweighted, within tolerance': (
+        {(1, 0): {(1, 0): 0.3, (0, 1): 0.3, (1, 1): 0.3}},
+        {(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-8, (1, 1): 1}},
+        ),
+    'weighted, normalised': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
+                             {(1, 0): {(1, 0): 0.25, (0, 1): 0.75}}),
+    }
+
+
+_NOT_EQUAL = {
+    'different weights': ({(1, 0): {(1, 0): 1, (0, 1): 3}},
+                          {(1, 0): {(1, 0): 3, (0, 1): 1}}),
+    'weighted and unweighted': ({(1, 0): {(1, 0): 1, (0, 1): 1}},
+                                {(1, 0): {(1, 0): 1, (0, 1): 2}}),
+    'different calculated beam': ({(1, 0): {(1, 0): 1, (0, 1): 1}},
+                                  {(1, 0): {(1, 0): 1, (1, 1): 1}}),
+    'different experimental beam': ({(1, 0): {(1, 0): 1}},
+                                    {(0, 1): {(1, 0): 1}}),
+    'extra assignment': ({(1, 0): {(1, 0): 1}},
+                         {(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 1}}),
+    }
+
+
+class TestEquality:
+    """Tests for comparing BeamCorrespondence objects."""
+
+    @parametrize('first,second', _EQUAL.values(), ids=_EQUAL)
+    def test_equal(self, first, second):
+        """Check correspondences that compare equal."""
+        assert BeamCorrespondence(first) == BeamCorrespondence(second)
+        assert not BeamCorrespondence(first) != BeamCorrespondence(second)
+
+    @parametrize('first,second', _NOT_EQUAL.values(), ids=_NOT_EQUAL)
+    def test_not_equal(self, first, second):
+        """Check correspondences that compare unequal."""
+        assert BeamCorrespondence(first) != BeamCorrespondence(second)
+        assert not BeamCorrespondence(first) == BeamCorrespondence(second)
+
+    def test_not_equal_other_type(self):
+        """Check that other objects never compare equal."""
+        assignments = {(1, 0): {(1, 0): 1}}
+        corr = BeamCorrespondence(assignments)
+        assert corr != assignments
+        assert corr.__eq__(assignments) is NotImplemented
+
+
 _UNWEIGHTED = {
     'single beams': {(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 7}},
     'equal': {(1, 0): {(1, 0): 2, (0, 1): 2, (-1, 0): 2}},

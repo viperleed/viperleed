@@ -60,7 +60,9 @@ class BeamCorrespondence:
             are converted exactly: pass Fractions or integers, e.g.,
             a Beam's `hkfrac`). Weights are non-negative numbers;
             they are normalised to sum to one for each experimental
-            beam.
+            beam. Weights that are all equal within a relative
+            tolerance of WEIGHT_REL_TOL are stored as exactly 1/n
+            for n calculated beams.
 
         Raises
         ------
@@ -114,12 +116,8 @@ class BeamCorrespondence:
     @property
     def is_weighted(self):
         """Return whether some beam assignment has unequal weights."""
-        for calc_weights in self._assignments.values():
-            weights = list(calc_weights.values())
-            if not all(math.isclose(w, weights[0], rel_tol=WEIGHT_REL_TOL)
-                       for w in weights):
-                return True
-        return False
+        return not all(_all_equal(calc_weights.values())
+                       for calc_weights in self._assignments.values())
 
     def legacy_vector(self, expbeams, ivbeams):
         """Return the experimental-beam index for each calculated beam.
@@ -210,6 +208,13 @@ class BeamCorrespondence:
         return matrix
 
 
+def _all_equal(weights):
+    """Return whether all `weights` are equal within WEIGHT_REL_TOL."""
+    first, *others = weights
+    return all(math.isclose(w, first, rel_tol=WEIGHT_REL_TOL)
+               for w in others)
+
+
 def _find_index(key, beams):
     """Return the index of the first beam matching `key`, or -1."""
     for i, beam in enumerate(beams):
@@ -250,6 +255,10 @@ def _normalised(exp_key, calc_weights):
         msg = (f'The assignment of experimental beam {_format_key(exp_key)} '
                'has no calculated beam with a non-zero weight.')
         raise ValueError(msg)
+    if _all_equal(weights.values()):
+        # Unweighted: store exactly 1/n, so that the result
+        # does not depend on the scale of the input weights
+        return {calc_key: 1 / len(weights) for calc_key in weights}
     return {calc_key: weight / total for calc_key, weight in weights.items()}
 
 
