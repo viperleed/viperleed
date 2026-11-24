@@ -26,7 +26,7 @@ _R_VAR_COLOR = 'slategray'  # Color of the R + var(R) lines
 class _StubError:
     """A minimal stand-in for an R_Error."""
 
-    get_error_estimates = _ESTIMATES
+    error_estimates = _ESTIMATES
 
     def __init__(self, mode, r_offset=0, var_r=0.15):
         """Initialize a stub error curve for `mode`."""
@@ -38,7 +38,7 @@ class _StubError:
         self.atoms = [SimpleNamespace(num=1, site='A')]
 
     @property
-    def get_r_min(self):
+    def r_min(self):
         """Return the minimum R factor."""
         return min(self.rfacs)
 

@@ -99,12 +99,12 @@ def generate_errors_csv(errors, sep=","):
         summary_columns["at"].append(atoms_str)
         summary_columns["dir"].append(param_err.disp_label)
         summary_columns["mode"].append(param_err.mode)
-        summary_columns["r_min"].append(param_err.get_r_min)
+        summary_columns["r_min"].append(param_err.r_min)
         summary_columns["var_r"].append(param_err.var_r)
-        summary_columns["p_min"].append(param_err.get_p_min)
+        summary_columns["p_min"].append(param_err.p_min)
 
         # statistical error estimates
-        d_p_minus, d_p_plus = param_err.get_error_estimates
+        d_p_minus, d_p_plus = param_err.error_estimates
         summary_columns["d_p_minus"].append(d_p_minus)
         summary_columns["d_p_plus"].append(d_p_plus)
 
@@ -353,8 +353,8 @@ def make_errors_figs(errors, formatting=None):
             err_x_to_mark[err] = [v - indmark[0] for v in indmark]
         # plot combined figure: R+var line of the lowest R minimum
         rmax = max(r for err in mode_errors for r in err.rfacs)
-        best_err = min(mode_errors, key=lambda err: err.get_r_min)
-        rmin = best_err.get_r_min
+        best_err = min(mode_errors, key=lambda err: err.r_min)
+        rmin = best_err.r_min
         var = best_err.var_r
         # Pylint can't tell that we will not execute this,
         # as per decorator, if we fail to import matplotlib
@@ -421,7 +421,7 @@ def make_errors_figs(errors, formatting=None):
                 [sp.set_linewidth(0.7 * line_width) for ax in axs
                 for sp in ax.spines.values()]
             err = mode_errors.pop(0)
-            rmin = err.get_r_min
+            rmin = err.r_min
             var = err.var_r
             rmax = max(r for r in err.rfacs)
             x_values = _plot_x_values(err)
@@ -491,7 +491,7 @@ def make_errors_figs(errors, formatting=None):
             p_best = x_values[err.rfacs.index(rmin)]
             error_estimates = [
                 e*_plot_scale(err) if e else e
-                for e in err.get_error_estimates
+                for e in err.error_estimates
                 ]
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]

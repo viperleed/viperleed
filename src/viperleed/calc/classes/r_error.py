@@ -8,7 +8,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Florian Kraushofer (@fkraushofer)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-01-12'
 __license__ = 'GPLv3+'
 
@@ -112,13 +112,16 @@ class R_Error():
         if not self.rfacs:
             raise ValueError("Cannot calculate variance of R-factor without "
                              "stored R-factors.")
-        self.var_r = np.sqrt(8*np.abs(v0i) / energy_range) * self.get_r_min
+        self.var_r = np.sqrt(8*np.abs(v0i) / energy_range) * self.r_min
 
 
     @property
-    def get_error_estimates(self):
+    def error_estimates(self):
         """Decide if statistical error estimates can be given and
         calculates them.
+
+        .. versionchanged:: 0.15.0
+            Renamed, dropping the former `get_` prefix.
 
         Returns
         -------
@@ -138,7 +141,7 @@ class R_Error():
         # error estimates are only available for Pendry R-factor
         if self.r_type != 1:  #TODO: when we introduce a new R-factor, make sure to update this.
             return (None, None)
-        r_min = self.get_r_min
+        r_min = self.r_min
         if self.var_r is None:
             logger.warning("Cannot calculate statistical errors for "
                            f'atoms {range_to_str([at.num for at in self.atoms])}')
@@ -184,8 +187,11 @@ class R_Error():
         return tuple(error_estimates)
 
     @property
-    def get_r_min(self):
+    def r_min(self):
         """Returns minimum R-factor of error.
+
+        .. versionchanged:: 0.15.0
+            Renamed, dropping the former `get_` prefix.
 
         Returns
         -------
@@ -195,15 +201,18 @@ class R_Error():
         return min(self.rfacs)
 
     @property
-    def get_p_min(self):
+    def p_min(self):
         """Returns parameter value at minimum R-factor.
+
+        .. versionchanged:: 0.15.0
+            Renamed, dropping the former `get_` prefix.
 
         Returns
         -------
         float
             parameter value at minium R-factor (self.rfacs).
         """
-        return self.lin_disp[self.rfacs.index(self.get_r_min)]
+        return self.lin_disp[self.rfacs.index(self.r_min)]
 
 
 def get_n_zero_crossings(x_arr):
