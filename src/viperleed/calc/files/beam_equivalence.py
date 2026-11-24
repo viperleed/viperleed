@@ -156,7 +156,11 @@ def _parse_assignment(line):
             raise ValueError(msg)
         calc_weights[calc_key] = weight
     # Validate the line on its own, for the line number
-    BeamCorrespondence({exp_key: calc_weights})
+    try:
+        BeamCorrespondence({exp_key: calc_weights})
+    except OverflowError:
+        msg = 'A weight is too large to be represented as a float.'
+        raise ValueError(msg) from None
     return exp_key, calc_weights
 
 

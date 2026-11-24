@@ -166,6 +166,8 @@ _INVALID_FILES = {  # pylint: disable=R6101
     'text weight': ('(1 0) = a*(1 0)', 1, 'Invalid term'),
     'exponent weight': ('(1 0) = 1e-1*(1 0)', 1, 'Invalid term'),
     'zero denominator': ('(1 0) = 1/0*(1 0)', 1, 'division by zero'),
+    'huge weight': ('(1 0) = (1 0)\n(0 1) = 1' + '0'*400 + '*(0 1)',
+                    2, 'too large'),
     'missing star label': ('(1 0) = 0.5*', 1, 'Invalid term'),
     'all zero': ('(1 0) = (1 0)\n(0 1) = 0*(0 1) + 0.0*(1 0)',
                  2, 'no calculated beam with a non-zero weight'),
