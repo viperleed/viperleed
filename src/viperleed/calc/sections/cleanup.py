@@ -9,7 +9,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
@@ -34,6 +34,7 @@ from viperleed.calc.lib import fs_utils
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_NAME
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
@@ -75,10 +76,11 @@ _SUPP_DIRS = (
     'compile_logs',
     )
 
-# Files that may be generated automatically and do not need
-# storage into original_inputs.
+# Files that may be generated automatically or are optional, and
+# need no storage into original_inputs if absent.
 OPTIONAL_INPUT_FILES = (
     'BEAMLIST',
+    BEAM_EQUIVALENCE_NAME,
     )
 
 # Files to go in OUT

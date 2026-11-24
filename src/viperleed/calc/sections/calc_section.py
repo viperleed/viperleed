@@ -7,7 +7,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-01-23'
 __license__ = 'GPLv3+'
 
@@ -238,3 +238,7 @@ ALL_INPUT_FILES = set(chain.from_iterable(_REQUIRED_FILES.values()))
 # files will be used in precedence from left to right
 EXPBEAMS_NAMES = ('EXPBEAMS.csv', 'EXPBEAMS')
 ALL_INPUT_FILES.update(set(EXPBEAMS_NAMES))
+
+# optional file assigning calculated beams to experimental beams
+BEAM_EQUIVALENCE_NAME = 'BEAM_EQUIVALENCE'
+ALL_INPUT_FILES.add(BEAM_EQUIVALENCE_NAME)
