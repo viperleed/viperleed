@@ -16,8 +16,8 @@ C      TLEED beams for a superlattice not present in the reference structure
 C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed (inner var. loop)
 
-      PARAMETER( MLMAX = 18 )
-      PARAMETER( MNLMB = 1033942 )
+      PARAMETER( MLMAX = 17 )
+      PARAMETER( MNLMB = 790876 )
       PARAMETER( MNPSI = 5, MNEL = 3 )
       PARAMETER( MNT0 = 8 )
       PARAMETER( MNATOMS = 1 )

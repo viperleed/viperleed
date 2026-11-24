@@ -959,7 +959,8 @@ def _select_lmax(rpars, energies):
             ps_ind = len(rpars.phaseshifts) - 1
         lmax_cands = [rpars.LMAX.min]
         for site_ps in rpars.phaseshifts[ps_ind][1]:
-            lmax_cands.extend(i + 1 for i, v in enumerate(site_ps)
+            # Index i is the angular momentum L
+            lmax_cands.extend(i for i, v in enumerate(site_ps)
                               if abs(v) > rpars.PHASESHIFT_EPS)
         lmax[energy] = min(max(lmax_cands), rpars.LMAX.max)
         if lmax[energy] < _SMALL_LMAX and warn_small:

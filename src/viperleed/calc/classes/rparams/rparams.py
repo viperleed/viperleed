@@ -517,8 +517,9 @@ class Rparams:
                 lmax = 1
                 for el in self.phaseshifts[hi][1]:  # only check highest energy
                     for i, val in enumerate(el):
-                        if abs(val) > self.PHASESHIFT_EPS and (i+1) > lmax:
-                            lmax = i+1
+                        # Index i is the angular momentum L
+                        if abs(val) > self.PHASESHIFT_EPS and i > lmax:
+                            lmax = i
                 if lmax < 8 and not min_set:
                     _LOGGER.debug('Found small LMAX value based on '
                                   f'PHASESHIFT_EPS parameter (LMAX={lmax})')
@@ -531,19 +532,24 @@ class Rparams:
                         )
                 self.LMAX.max = lmax
             else:       # sanity check: are large values ignored?
-                warn = False
-                highval = 0
-                for el in self.phaseshifts[hi][1]:   # highest energy
-                    for i, val in enumerate(el):
-                        if abs(val) > 0.1 and (i+1) > self.LMAX.max:
-                            warn = True
-                            highval = max(highval, abs(val))
-                if warn:
+                # Largest ignored value, its L, and its block
+                highval, l_ignored, ignored_block = 0, None, None
+                for block, site_ps in enumerate(self.phaseshifts[hi][1], 1):
+                    for i, val in enumerate(site_ps):
+                        # Index i is the angular momentum L
+                        if i <= self.LMAX.max or abs(val) <= 0.1:
+                            continue
+                        if abs(val) > highval:
+                            highval = abs(val)
+                            l_ignored, ignored_block = i, block
+                if l_ignored is not None:
                     _LOGGER.warning(
                         'The LMAX value defined in the PARAMETERS '
                         'file leads to large phaseshift values being ignored '
-                        f'(highest value: {highval}). Consider using a higher '
-                        'LMAX, or defining LMAX indirectly via PHASESHIFT_EPS.'
+                        f'(highest value: {highval} for L={l_ignored} in '
+                        f'phase-shift block {ignored_block}). Consider '
+                        'using a higher LMAX, or defining LMAX indirectly via '
+                        'PHASESHIFT_EPS.'
                         )
                     self.setHaltingLevel(1)
             # V0_REAL

@@ -81,9 +81,9 @@ SEARCH_EVAL_TIME = 1
 # Version is not hashable: the keys are str(version).
 _OLD_CHAIN_TL_VERSION = Version('1.6.1')
 CHAIN_R_FACTORS = {
-    str(_OLD_CHAIN_TL_VERSION): {'refcalc': 0.1811, 'superpos': 0.1810},
-    str(tenserleed.CURRENT_TL_VERSION): {'refcalc': 0.1712,
-                                         'superpos': 0.1712},
+    str(_OLD_CHAIN_TL_VERSION): {'refcalc': 0.1776, 'superpos': 0.1778},
+    str(tenserleed.CURRENT_TL_VERSION): {'refcalc': 0.1698,
+                                         'superpos': 0.1693},
     }
 CHAIN_TL_VERSIONS = tuple(Version(v) for v in CHAIN_R_FACTORS)
 CHAIN_DISPLACEMENTS = 'DISPLACEMENTS_z'

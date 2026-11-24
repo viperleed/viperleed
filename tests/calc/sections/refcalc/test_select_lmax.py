@@ -73,7 +73,7 @@ def test_one_lmax(rpars, attrs):
 def test_lmax_per_energy(rpars):
     """Check that LMAX is chosen per energy within the LMAX range."""
     lmax = _select_lmax(rpars, ENERGIES)
-    assert lmax == dict(zip(ENERGIES, (6, 9, 12)))
+    assert lmax == dict(zip(ENERGIES, (6, 8, 12)))
 
 
 def test_lmax_per_energy_supported_max(rpars, mocker, caplog):
@@ -82,7 +82,7 @@ def test_lmax_per_energy_supported_max(rpars, mocker, caplog):
     mocker.patch.object(rpars, 'get_limits', return_value=(1, 10))
     with caplog.at_level(logging.INFO):
         lmax = _select_lmax(rpars, ENERGIES)
-    assert lmax == dict(zip(ENERGIES, (6, 9, 10)))
+    assert lmax == dict(zip(ENERGIES, (6, 8, 10)))
     expect_log = 'LMAX was set to 10'
     assert expect_log in caplog.text
 
@@ -102,7 +102,7 @@ def test_lmax_per_energy_repeated_value(rpars):
     rpars.phaseshifts = [(energy, [site_ps])
                          for energy, _ in rpars.phaseshifts]
     lmax = _select_lmax(rpars, ENERGIES)
-    assert lmax == dict.fromkeys(ENERGIES, n_large)
+    assert lmax == dict.fromkeys(ENERGIES, n_large - 1)  # L = 0...7
 
 
 # The highest phase-shift energy is ENERGIES[-1] + 1

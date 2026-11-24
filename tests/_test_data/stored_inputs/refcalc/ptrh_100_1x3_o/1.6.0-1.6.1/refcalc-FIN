@@ -225,7 +225,7 @@ stored-input 260101-000000
    0.00   0.0                                THETA FI
  0.0010                                      EPS
  10                                          LITER
- 18                                          LMAX
+ 17                                          LMAX
 <PHASESHIFTS: verbatim copy of the work-dir PHASESHIFTS>
    1               IFORM
    0.00000   0.00000  1  1          E =      0.0000  NR.   1
