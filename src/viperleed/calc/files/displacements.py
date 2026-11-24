@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 # Ranges with more steps than this make the search slow and memory
 # hungry, and are most likely typos (e.g., a misplaced decimal point).
 MAX_RECOMMENDED_STEPS = 30
+# First letters of the tags that start a displacement mode: GEO_DELTA,
+# VIB_DELTA, OCC_DELTA, CONSTRAIN
+_MODE_TAGS = 'gvoc'
 
 
 class DisplacementsError(Exception):
@@ -46,6 +49,53 @@ def _warn_many_steps(n_steps, description):
             )
 
 
+def _is_mode_header(line):
+    """Return whether a stripped DISPLACEMENTS line starts a mode."""
+    # Lines starting with '==' delimit search or domain blocks
+    if not line.startswith('=') or line.startswith('=='):
+        return False
+    tag = line[1:].lstrip()
+    return bool(tag) and tag[0].lower() in _MODE_TAGS
+
+
+def _check_has_mode_header(lines, name):
+    """Raise if a block has assignments but no mode tag.
+
+    The mode tags are GEO_DELTA, VIB_DELTA, OCC_DELTA, and CONSTRAIN.
+
+    Parameters
+    ----------
+    lines : Sequence
+        The lines of the DISPLACEMENTS block, as collected by
+        readDISPLACEMENTS.
+    name : str
+        The name of the block, used for error messages.
+
+    Raises
+    ------
+    NoDisplacementsError
+        If `lines` contain assignments, but no line introduces a
+        displacement mode (e.g., ``= GEO_DELTA``). No displacement
+        would be assigned from such a block.
+    """
+    assignments = [ln for ln in lines
+                   if '=' in ln and not ln.startswith('=')]
+    if not assignments:
+        return
+    if any(_is_mode_header(ln) for ln in lines):
+        return
+    block = f' {name!r}' if name else ''
+    logger.error(
+        f'DISPLACEMENTS block{block} contains assignments but no '
+        'GEO_DELTA, VIB_DELTA, OCC_DELTA, or CONSTRAIN tag, so nothing '
+        f'can be assigned. First offending line: {assignments[0]}'
+        )
+    raise NoDisplacementsError(
+        f'DISPLACEMENTS block{block} has no GEO_DELTA, VIB_DELTA, '
+        'OCC_DELTA, or CONSTRAIN tag.'
+        )
+
+
 def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            # TODO: This should probably set rp.fileLoaded['DISPLACEMENTS'] = True
     """
     Reads the DISPLACEMENTS file to rp.disp_blocks without interpreting it.
@@ -66,7 +116,9 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
     RuntimeError
         Raised if unexpected syntax is encountered and cannot be resolved.
     NoDisplacementsError
-        If `filename` contains no valid displacements.
+        If `filename` contains no valid displacements, or if a search
+        block contains assignments but no GEO_DELTA, VIB_DELTA,
+        OCC_DELTA, or CONSTRAIN tag.
 
     Returns
     -------
@@ -193,6 +245,8 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
         raise NoDisplacementsError(f'File {filename} contains '
                                    'no valid displacements.')
     if not rp.domainParams:
+        for lines, name in rp.disp_blocks:
+            _check_has_mode_header(lines, name)
         return
     # in case of domains, now split blocks to domains
     for dp in rp.domainParams:
@@ -241,6 +295,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                 else:
                     dlines[d].append(line)
         for domain in rp.domainParams:
+            _check_has_mode_header(dlines[domain.name], blockname)
             domain.rpars.disp_blocks.append((dlines[domain.name], blockname))
     if not any(lines for domain in rp.domainParams
                for lines, _ in domain.rpars.disp_blocks):
@@ -288,6 +343,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
     uCellState = sl.ucell_mod
     (lines, name) = dispblock
     mode = 0  # 0: not reading; 1: reading geo, 2: reading vib, 3: reading occ
+    has_mode_header = False
     regex = False   # read regular expressions as-is or not
     constraints = []  # collect constraints here first, interpret after loop
     for line in lines:
@@ -297,6 +353,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
         if '=' in line:
             if line[0] == '=':
                 llist = line[1:].split()
+                has_mode_header |= _is_mode_header(line)
                 if llist[0][0].lower() == 'g':
                     mode = 1  # geometry
                     if only_mode and only_mode != "geo":
@@ -322,6 +379,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     rp.setHaltingLevel(1)
                 continue
             elif mode == 0:
+                if not has_mode_header:
+                    logger.warning(
+                        'DISPLACEMENTS file: found assignment before any '
+                        'GEO_DELTA, VIB_DELTA, OCC_DELTA, or CONSTRAIN '
+                        f'tag, line will be skipped: {line}'
+                        )
+                    rp.setHaltingLevel(1)
                 continue
             else:
                 pside = line.split('=')[0].strip()

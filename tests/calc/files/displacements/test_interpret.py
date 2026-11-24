@@ -66,3 +66,15 @@ class TestReadDISPLACEMENTSBlockWarnings:
             displacements.readDISPLACEMENTS_block(rpars, slab, (lines, ''))
         warned = f'{n_steps} steps' in caplog.text
         assert warned is warns
+
+    def test_assignment_before_mode_header(self, ag100, caplog):
+        """Check a warning for assignments before any mode tag."""
+        slab, rpars, *_ = ag100
+        lines = ['Ag z = -0.1 0.1 0.05',
+                 '= GEO_DELTA',
+                 'Ag z = -0.2 0.2 0.1']
+        with caplog.at_level(logging.WARNING):
+            displacements.readDISPLACEMENTS_block(rpars, slab, (lines, ''))
+        assert 'before any' in caplog.text
+        assert 'Ag z = -0.1 0.1 0.05' in caplog.text
+        assert 'Ag z = -0.2 0.2 0.1' not in caplog.text
