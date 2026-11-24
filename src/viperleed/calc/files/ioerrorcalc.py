@@ -329,7 +329,6 @@ def make_errors_figs(errors, formatting=None):
 
         err_x = {}
         err_y = {}
-        err_x_inters = {}  # x-values of intersections with var(R)
         err_x_to_mark = {}
 
         err_legend = _error_legends(mode, mode_errors)
@@ -340,9 +339,6 @@ def make_errors_figs(errors, formatting=None):
         xrange = [x_min - abs(x_max - x_min) * 0.05,
                   x_max + abs(x_max - x_min) * 0.05]
         for err in mode_errors:
-            rmin = err.get_r_min
-            var = err.var_r
-
             err_lin_disp = _plot_x_values(err)
             interp_f = interpolate.interp1d(err_lin_disp,
                                             err.rfacs,
@@ -355,15 +351,11 @@ def make_errors_figs(errors, formatting=None):
             err_x[err] = x[indmark[0]:indmark[-1]+1]
             err_y[err] = y[indmark[0]:indmark[-1]+1]
             err_x_to_mark[err] = [v - indmark[0] for v in indmark]
-            err_x_inters[err] = []
-            if var and any(err_y[err]) > rmin + var:
-                rv = rmin + var
-                err_x_inters[err] = [
-                    x for i, x in enumerate(err_x[err])
-                    if 0 < i and (np.sign(err_y[err][i-1]-rv)
-                                  != np.sign(err_y[err][i]-rv))]
-        # plot combined figure
+        # plot combined figure: R+var line of the lowest R minimum
         rmax = max(r for err in mode_errors for r in err.rfacs)
+        best_err = min(mode_errors, key=lambda err: err.get_r_min)
+        rmin = best_err.get_r_min
+        var = best_err.var_r
         # Pylint can't tell that we will not execute this,
         # as per decorator, if we fail to import matplotlib
         # pylint: disable-next=possibly-used-before-assignment
@@ -380,7 +372,8 @@ def make_errors_figs(errors, formatting=None):
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
             inters = sorted([x for err in mode_errors
-                             for x in err_x_inters[err]]
+                             for x in _crossings(err_x[err], err_y[err],
+                                                 rmin + var)]
                             + [xrange[0], xrange[1]])
             (ind, diff) = max_diff(inters)
             text_x = inters[ind] - diff/2
@@ -428,6 +421,8 @@ def make_errors_figs(errors, formatting=None):
                 [sp.set_linewidth(0.7 * line_width) for ax in axs
                 for sp in ax.spines.values()]
             err = mode_errors.pop(0)
+            rmin = err.get_r_min
+            var = err.var_r
             rmax = max(r for r in err.rfacs)
             x_values = _plot_x_values(err)
             x_min = np.min(x_values)
@@ -437,7 +432,8 @@ def make_errors_figs(errors, formatting=None):
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
                 axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
                                    linewidth=line_width/2)
-                inters = sorted(err_x_inters[err] + [xrange[0], xrange[1]])
+                inters = _crossings(err_x[err], err_y[err], rmin + var)
+                inters = sorted(inters + xrange)
                 (ind, diff) = max_diff(inters)
                 text_x = inters[ind] - diff/2
                 text_y = rmin + var + (rmax-rmin)*0.015
@@ -492,8 +488,7 @@ def make_errors_figs(errors, formatting=None):
                                          fontsize=6*font_size_scale)
 
             # add uncertainties in plot
-            r_min = min(err.rfacs)
-            p_best = x_values[err.rfacs.index(r_min)]
+            p_best = x_values[err.rfacs.index(rmin)]
             error_estimates = [
                 e*_plot_scale(err) if e else e
                 for e in err.get_error_estimates
@@ -539,6 +534,34 @@ def _error_legends(mode, mode_errors):
         else:
             raise ValueError(f'Unknown mode "{mode}"')
     return err_legend
+
+
+def _crossings(x_values, r_values, r_line):
+    """Return the x_values where r_values cross the r_line level.
+
+    Parameters
+    ----------
+    x_values : Sequence of float
+        The abscissae of the curve.
+    r_values : Sequence of float
+        The R factors at x_values. May contain NaN.
+    r_line : float
+        The R-factor level of the horizontal line.
+
+    Returns
+    -------
+    list of float
+        The elements of x_values at which the curve has just crossed
+        r_line, NaN neighbours excluded. Empty if no R factor
+        exceeds r_line.
+    """
+    if not np.nanmax(r_values) > r_line:
+        return []
+    signs = np.sign(np.asarray(r_values) - r_line)
+    known = np.isfinite(signs)
+    return [x for i, x in enumerate(x_values)
+            if i > 0 and known[i-1] and known[i]
+            and signs[i-1] != signs[i]]
 
 
 def _plot_scale(error):
