@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
@@ -17,6 +17,7 @@ from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_NAME
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 
@@ -100,6 +101,20 @@ class TestPreserveOriginalInputs:
         rpars.readParams['DOMAIN'].append('some domain')
         _, logger, _ = run_preserve(ALL_INPUT_FILES,
                                     side_effect=_missing_unexpected_input)
+        logger.warning.assert_not_called()
+        assert rpars.halt < 1
+
+    def test_no_beam_equivalence(self, run_preserve):
+        """Check no complaints when BEAM_EQUIVALENCE is missing."""
+        def _missing_beam_equivalence(src, _):
+            if src == BEAM_EQUIVALENCE_NAME:
+                raise FileNotFoundError
+
+        input_files = ALL_INPUT_FILES - {BEAM_EQUIVALENCE_NAME}
+        _, logger, rpars = run_preserve(
+            input_files,
+            side_effect=_missing_beam_equivalence,
+            )
         logger.warning.assert_not_called()
         assert rpars.halt < 1
 
