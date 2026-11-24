@@ -115,7 +115,7 @@ def readIVBEAMS(filename='IVBEAMS'):
                 'the data will not be read.'
                 )
             continue
-        beam_index = BeamIndex(*(_snap_to_fraction(index)
+        beam_index = BeamIndex(*(snap_to_fraction(index)
                                  for index in beam_index))
         all_indices[beam_index] = None  # Don't care about dict value
     # With floats, Beam also limits the denominator of the indices that
@@ -126,7 +126,7 @@ def readIVBEAMS(filename='IVBEAMS'):
     return beams
 
 
-def _snap_to_fraction(index):
+def snap_to_fraction(index):
     """Return a fractional index rounded to six decimals as a fraction.
 
     Decimals, as writeIVBEAMS writes them, are exact fractions like
@@ -135,7 +135,7 @@ def _snap_to_fraction(index):
     Parameters
     ----------
     index : Fraction
-        One fractional index of a beam, as read from IVBEAMS.
+        One fractional index of a beam, e.g., as read from IVBEAMS.
 
     Returns
     -------

@@ -20,7 +20,7 @@ from quicktions import Fraction
 
 from viperleed.calc.classes.beam import MAX_DENOMINATOR
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
-from viperleed.calc.files.beams import _snap_to_fraction
+from viperleed.calc.files.beams import snap_to_fraction
 from viperleed.calc.lib.string_utils import strip_comments
 
 # One beam index: an integer, a decimal, or a fraction like 1/2
@@ -77,7 +77,7 @@ def parse_beam_label(label):
                'indices in parentheses, e.g., (1/2 -1).')
         raise ValueError(msg)
     try:
-        return tuple(_snap_to_fraction(Fraction(match[group]))
+        return tuple(snap_to_fraction(Fraction(match[group]))
                      for group in ('first', 'second'))
     except ZeroDivisionError:
         msg = f'Invalid beam label {label.strip()!r}: division by zero.'
