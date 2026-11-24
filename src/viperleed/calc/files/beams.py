@@ -24,6 +24,7 @@ import numpy as np
 from quicktions import Fraction
 
 from viperleed.calc.classes.beam import Beam
+from viperleed.calc.classes.beam import MAX_DENOMINATOR
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.calc.lib.string_utils import strip_comments
@@ -32,10 +33,6 @@ from viperleed.gui.classes.beamindex import BeamIndex
 
 
 logger = logging.getLogger(__name__)
-
-# Largest denominator of the fractional beam indices read from IVBEAMS.
-# Same as the default of Beam, used when indices are given as floats.
-_MAX_DENOMINATOR = 99
 
 # Largest difference between a decimal index in IVBEAMS and the
 # fraction it was rounded from: writeIVBEAMS writes six decimals.
@@ -143,11 +140,11 @@ def _snap_to_fraction(index):
     Returns
     -------
     snapped_index : Fraction
-        The fraction with denominator up to _MAX_DENOMINATOR closest
+        The fraction with denominator up to MAX_DENOMINATOR closest
         to `index`, if within the rounding to six decimals, otherwise
         `index` itself.
     """
-    limited = index.limit_denominator(_MAX_DENOMINATOR)
+    limited = index.limit_denominator(MAX_DENOMINATOR)
     if abs(limited - index) <= _DECIMALS_TOLERANCE:
         return limited
     return index
