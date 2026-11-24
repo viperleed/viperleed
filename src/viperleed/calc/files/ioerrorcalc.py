@@ -8,7 +8,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
@@ -35,6 +35,8 @@ if CAN_PLOT:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
+
+_OCC_TO_PERCENT = 100  # lin_disp of occupations is a fraction
 
 
 def extract_var_r(errors):
@@ -332,9 +334,7 @@ def make_errors_figs(errors, formatting=None):
 
         err_legend = _error_legends(mode, mode_errors)
 
-        x_values = [err.lin_disp for err in mode_errors]
-        if mode == "occ":
-            x_values *= 100  # convert to %
+        x_values = [_plot_x_values(err) for err in mode_errors]
         x_min = np.min([np.min(x) for x in x_values])
         x_max = np.max([np.max(x) for x in x_values])
         xrange = [x_min - abs(x_max - x_min) * 0.05,
@@ -343,13 +343,14 @@ def make_errors_figs(errors, formatting=None):
             rmin = err.get_r_min
             var = err.var_r
 
-            interp_f = interpolate.interp1d(err.lin_disp,
+            err_lin_disp = _plot_x_values(err)
+            interp_f = interpolate.interp1d(err_lin_disp,
                                             err.rfacs,
                                             bounds_error=False)
             x = np.arange(x_min, x_max,
                           (xrange[1] - xrange[0])*1e-4)
             y = interp_f(x)
-            indmark = [np.argmin(abs(x - v)) for v in err.lin_disp]
+            indmark = [np.argmin(abs(x - v)) for v in err_lin_disp]
             err_x_to_mark[err] = indmark
             err_x[err] = x[indmark[0]:indmark[-1]+1]
             err_y[err] = y[indmark[0]:indmark[-1]+1]
@@ -428,7 +429,7 @@ def make_errors_figs(errors, formatting=None):
                 for sp in ax.spines.values()]
             err = mode_errors.pop(0)
             rmax = max(r for r in err.rfacs)
-            x_values = err.lin_disp
+            x_values = _plot_x_values(err)
             x_min = np.min(x_values)
             x_max = np.max(x_values)
             xrange = [x_min - abs(x_max - x_min) * 0.05,
@@ -492,8 +493,11 @@ def make_errors_figs(errors, formatting=None):
 
             # add uncertainties in plot
             r_min = min(err.rfacs)
-            p_best = err.lin_disp[err.rfacs.index(r_min)]
-            error_estimates = err.get_error_estimates
+            p_best = x_values[err.rfacs.index(r_min)]
+            error_estimates = [
+                e*_plot_scale(err) if e else e
+                for e in err.get_error_estimates
+                ]
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]
                 draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin),
@@ -537,6 +541,16 @@ def _error_legends(mode, mode_errors):
     return err_legend
 
 
+def _plot_scale(error):
+    """Return the factor to convert lin_disp of error to plot units."""
+    return _OCC_TO_PERCENT if error.mode == 'occ' else 1
+
+
+def _plot_x_values(error):
+    """Return the lin_disp of error in the units shown in plots."""
+    return np.asarray(error.lin_disp) * _plot_scale(error)
+
+
 def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
     r"""Adds annotation for statistical error estimates to individual
     error plots.
@@ -546,7 +560,8 @@ def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
     axis : matplotlib axis
         axis of the error plot to be annotated.
     bound : float
-        Error bound == :math:`p_{min} \pm \sigma(p)`.
+        Error bound == :math:`p_{min} \pm \sigma(p)`, in the units
+        shown in the plot (percent for occupations).
     error : R_Error
         Error object used for error estimation.
     r_interval : float
@@ -554,7 +569,7 @@ def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
         graphical scaling.
     """
     r_min = min(error.rfacs)
-    p_best = error.lin_disp[error.rfacs.index(r_min)]
+    p_best = _plot_x_values(error)[error.rfacs.index(r_min)]
     var_r =error.var_r
 
     # put vertical line at minimum R-factor
