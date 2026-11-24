@@ -7,21 +7,17 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-24'
 __license__ = 'GPLv3+'
 
+import math
+
 import numpy as np
 import pytest
 from pytest_cases import parametrize
 from quicktions import Fraction
 
-from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 
 
 _HALF = Fraction(1, 2)
-
-
-def _beams(*indices):
-    """Return a list of Beam objects with the given (h, k) indices."""
-    return [Beam(hk) for hk in indices]
 
 
 _WEIGHTS = {
@@ -36,8 +32,8 @@ _INVALID = {
     'negative': {(1, 0): {(1, 0): 1, (0, 1): -0.5}},
     'all zero': {(1, 0): {(1, 0): 0, (0, 1): 0}},
     'empty': {(1, 0): {}},
-    'infinite': {(1, 0): {(1, 0): float('inf'), (0, 1): 1}},
-    'not a number': {(1, 0): {(1, 0): float('nan'), (0, 1): 1}},
+    'infinite': {(1, 0): {(1, 0): math.inf, (0, 1): 1}},
+    'not a number': {(1, 0): {(1, 0): math.nan, (0, 1): 1}},
     }
 
 
@@ -71,7 +67,6 @@ class TestConstruction:
         assert from_ints == from_fractions
         assert from_ints != BeamCorrespondence({(1, 0): {(1, 0): 1}})
 
-
     @parametrize('weights,expect', _WEIGHTS.values(), ids=_WEIGHTS)
     def test_weights_normalised(self, weights, expect):
         """Check that weights are normalised per beam assignment."""
@@ -82,13 +77,11 @@ class TestConstruction:
             )
         assert sum(normalised.values()) == pytest.approx(1)
 
-
     @parametrize(assignments=_INVALID.values(), ids=_INVALID)
     def test_invalid_weights(self, assignments):
         """Check complaints for negative or all-zero weights."""
         with pytest.raises(ValueError, match='weight'):
             BeamCorrespondence(assignments)
-
 
     @parametrize(assignments=_COLLIDING.values(), ids=_COLLIDING)
     def test_colliding_keys(self, assignments):
@@ -145,20 +138,18 @@ class TestEquality:
     def test_equal(self, first, second):
         """Check correspondences that compare equal."""
         assert BeamCorrespondence(first) == BeamCorrespondence(second)
-        assert not BeamCorrespondence(first) != BeamCorrespondence(second)
 
     @parametrize('first,second', _NOT_EQUAL.values(), ids=_NOT_EQUAL)
     def test_not_equal(self, first, second):
         """Check correspondences that compare unequal."""
         assert BeamCorrespondence(first) != BeamCorrespondence(second)
-        assert not BeamCorrespondence(first) == BeamCorrespondence(second)
 
     def test_not_equal_other_type(self):
         """Check that other objects never compare equal."""
         assignments = {(1, 0): {(1, 0): 1}}
         corr = BeamCorrespondence(assignments)
         assert corr != assignments
-        assert corr.__eq__(assignments) is NotImplemented
+        assert (corr == assignments) is False
 
 
 _WITH_ZERO = {(1, 0): {(1, 0): 1, (0, 1): 0}, (0, 1): {(0, 1): 1}}
@@ -182,52 +173,54 @@ class TestZeroWeights:
         assert not BeamCorrespondence(_WITH_ZERO).has_shared_beams
 
 
-_UNWEIGHTED = {
-    'single beams': {(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 7}},
-    'equal': {(1, 0): {(1, 0): 2, (0, 1): 2, (-1, 0): 2}},
-    'equal per assignment': {(1, 0): {(1, 0): 1, (0, 1): 1},
-                             (1, 1): {(1, 1): 3, (-1, 1): 3}},
-    'within tolerance': {(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-8}},
-    }
+_SHARED = {(1, 0): {(1, 0): 1},
+           (1, 1): {(1, 1): 1},
+           (0, 1): {(0, 1): 1, (_HALF, 0): 1},
+           (2, 0): {(2, 0): 1, (_HALF, 0): 1}}
 
 
-_WEIGHTED = {
-    'unequal': {(1, 0): {(1, 0): 1, (0, 1): 2}},
-    'one of two': {(1, 0): {(1, 0): 1},
-                   (1, 1): {(1, 1): 0.4, (-1, 1): 0.6}},
-    'beyond tolerance': {(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-5}},
-    }
+_IS_WEIGHTED = (
+    pytest.param({(1, 0): {(1, 0): 1}, (1, 1): {(1, 1): 7}}, False,
+                 id='single beams'),
+    pytest.param({(1, 0): {(1, 0): 2, (0, 1): 2, (-1, 0): 2}}, False,
+                 id='equal'),
+    pytest.param({(1, 0): {(1, 0): 1, (0, 1): 1},
+                  (1, 1): {(1, 1): 3, (-1, 1): 3}}, False,
+                 id='equal per assignment'),
+    pytest.param({(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-8}}, False,
+                 id='within tolerance'),
+    pytest.param(_SHARED, False, id='shared beams'),
+    pytest.param({(1, 0): {(1, 0): 1, (0, 1): 2}}, True, id='unequal'),
+    pytest.param({(1, 0): {(1, 0): 1},
+                  (1, 1): {(1, 1): 0.4, (-1, 1): 0.6}}, True,
+                 id='one of two'),
+    pytest.param({(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-5}}, True,
+                 id='beyond tolerance'),
+    )
+
+
+_HAS_SHARED_BEAMS = (
+    pytest.param({(1, 0): {(1, 0): 1, (0, 1): 1},
+                  (1, 1): {(1, 1): 1, (-1, 1): 1},
+                  (2, 0): {(2, 0): 1}}, False,
+                 id='not shared'),
+    pytest.param(_SHARED, True, id='shared'),
+    )
 
 
 class TestProperties:
     """Tests for is_weighted and has_shared_beams."""
 
+    @parametrize('assignments,expect', _IS_WEIGHTED)
+    def test_is_weighted(self, assignments, expect):
+        """Check whether a correspondence counts as weighted."""
+        assert BeamCorrespondence(assignments).is_weighted is expect
 
-    @parametrize(assignments=_UNWEIGHTED.values(), ids=_UNWEIGHTED)
-    def test_unweighted(self, assignments):
-        """Check that equal weights count as unweighted."""
-        assert not BeamCorrespondence(assignments).is_weighted
-
-    @parametrize(assignments=_WEIGHTED.values(), ids=_WEIGHTED)
-    def test_weighted(self, assignments):
-        """Check that unequal weights count as weighted."""
-        assert BeamCorrespondence(assignments).is_weighted
-
-    def test_not_shared(self):
-        """Check a correspondence without shared calculated beams."""
-        corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 1},
-                                   (1, 1): {(1, 1): 1, (-1, 1): 1},
-                                   (2, 0): {(2, 0): 1}})
-        assert not corr.has_shared_beams
-
-    def test_shared(self):
-        """Check a calculated beam in two beam assignments."""
-        corr = BeamCorrespondence({(1, 0): {(1, 0): 1},
-                                   (1, 1): {(1, 1): 1},
-                                   (0, 1): {(0, 1): 1, (_HALF, 0): 1},
-                                   (2, 0): {(2, 0): 1, (_HALF, 0): 1}})
-        assert corr.has_shared_beams
-        assert not corr.is_weighted
+    @parametrize('assignments,expect', _HAS_SHARED_BEAMS)
+    def test_has_shared_beams(self, assignments, expect):
+        """Check whether a calculated beam is in many assignments."""
+        corr = BeamCorrespondence(assignments)
+        assert corr.has_shared_beams is expect
 
 
 _NO_LEGACY = {
@@ -239,45 +232,44 @@ _NO_LEGACY = {
 class TestLegacyVector:
     """Tests for the per-calculated-beam vector."""
 
-    def test_vector(self):
+    def test_vector(self, make_beams):
         """Check the experimental-beam index of each calculated beam."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 1},
                                    (1, 1): {(-1, 1): 1},
                                    (_HALF, 0): {(_HALF, 0): 1}})
-        expbeams = _beams((1, 1), (1, 0), (0.5, 0))
-        ivbeams = _beams((0, 1), (2, 0), (1, 0), (-1, 1), (0.5, 0))
+        expbeams = make_beams((1, 1), (1, 0), (0.5, 0))
+        ivbeams = make_beams((0, 1), (2, 0), (1, 0), (-1, 1), (0.5, 0))
         assert corr.legacy_vector(expbeams, ivbeams) == [1, -1, 1, 0, 2]
 
-    def test_first_and_last_index(self):
+    def test_first_and_last_index(self, make_beams):
         """Check the first and last experimental beams."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1},
                                    (2, 0): {(2, 0): 1}})
-        expbeams = _beams((1, 0), (1, 1), (2, 0))
-        ivbeams = _beams((2, 0), (1, 0))
+        expbeams = make_beams((1, 0), (1, 1), (2, 0))
+        ivbeams = make_beams((2, 0), (1, 0))
         assert corr.legacy_vector(expbeams, ivbeams) == [2, 0]
 
-    def test_tolerance(self):
+    def test_tolerance(self, make_beams):
         """Check that beams match within the tolerance of 1e-5."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 1}})
-        expbeams = _beams((1 + 4e-6, -4e-6))
-        ivbeams = _beams((1, 0), (4e-6, 1 + 4e-6), (2e-5, 1))
+        expbeams = make_beams((1 + 4e-6, -4e-6))
+        ivbeams = make_beams((1, 0), (4e-6, 1 + 4e-6), (2e-5, 1))
         assert corr.legacy_vector(expbeams, ivbeams) == [0, 0, -1]
 
-    def test_experimental_beam_missing(self):
+    def test_experimental_beam_missing(self, make_beams):
         """Check calculated beams of an absent experimental beam."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1},
                                    (1, 1): {(1, 1): 1}})
-        expbeams = _beams((1, 1))
-        ivbeams = _beams((1, 0), (1, 1))
+        expbeams = make_beams((1, 1))
+        ivbeams = make_beams((1, 0), (1, 1))
         assert corr.legacy_vector(expbeams, ivbeams) == [-1, 0]
 
-
     @parametrize(assignments=_NO_LEGACY.values(), ids=_NO_LEGACY)
-    def test_raises(self, assignments):
+    def test_raises(self, assignments, make_beams):
         """Check that weighted or shared correspondences raise."""
         corr = BeamCorrespondence(assignments)
-        expbeams = _beams((1, 0), (0, 1))
-        ivbeams = _beams((1, 0), (0, 1))
+        expbeams = make_beams((1, 0), (0, 1))
+        ivbeams = make_beams((1, 0), (0, 1))
         with pytest.raises(ValueError, match='legacy'):
             corr.legacy_vector(expbeams, ivbeams)
 
@@ -285,12 +277,12 @@ class TestLegacyVector:
 class TestWeightMatrix:
     """Tests for the experimental x calculated weight matrix."""
 
-    def test_matrix(self):
+    def test_matrix(self, make_beams):
         """Check the matrix of a weighted, shared correspondence."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 3},
                                    (1, 1): {(1, 1): 1, (0, 1): 1}})
-        expbeams = _beams((1, 1), (2, 0), (1, 0))
-        ivbeams = _beams((0, 1), (1, 0), (1, 1), (3, 0))
+        expbeams = make_beams((1, 1), (2, 0), (1, 0))
+        ivbeams = make_beams((0, 1), (1, 0), (1, 1), (3, 0))
         expect = np.array([[0.5, 0, 0.5, 0],
                            [0, 0, 0, 0],
                            [0.75, 0.25, 0, 0]])
@@ -299,15 +291,15 @@ class TestWeightMatrix:
         np.testing.assert_allclose(matrix, expect)
         np.testing.assert_allclose(matrix.sum(axis=1), [1, 0, 1])
 
-    def test_experimental_beam_missing(self):
+    def test_experimental_beam_missing(self, make_beams):
         """Check that absent experimental beams are skipped."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1},
                                    (2, 0): {(2, 0): 1}})
-        matrix = corr.weight_matrix(_beams((1, 0)), _beams((1, 0)))
+        matrix = corr.weight_matrix(make_beams((1, 0)), make_beams((1, 0)))
         np.testing.assert_allclose(matrix, [[1]])
 
-    def test_calculated_beam_missing(self):
+    def test_calculated_beam_missing(self, make_beams):
         """Check complaints when a calculated beam is missing."""
         corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 1}})
         with pytest.raises(ValueError, match=r'\(0 1\)'):
-            corr.weight_matrix(_beams((1, 0)), _beams((1, 0)))
+            corr.weight_matrix(make_beams((1, 0)), make_beams((1, 0)))

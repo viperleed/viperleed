@@ -1,4 +1,4 @@
-"""Characterisation tests for leedbase.getBeamCorrespondence."""
+"""Tests for leedbase.getBeamCorrespondence."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -13,7 +13,6 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc import symmetry
-from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -39,21 +38,16 @@ def _labels(beams):
     return [b.label for b in beams]
 
 
-def _make_beams(*indices):
-    """Return a list of Beam objects with the given (h, k) indices."""
-    return [Beam(hk) for hk in indices]
-
-
 @fixture(name='synthetic')
-def fixture_synthetic(mocker):
+def fixture_synthetic(mocker, make_beams):
     """Return a fake slab and an Rparams, with getSymEqBeams mocked."""
     mocker.patch(f'{_MODULE}.getSymEqBeams', return_value=list(_SYMEQ))
     rpars = Rparams()
     slab = mocker.MagicMock()
 
     def _make(expbeams, ivbeams):
-        rpars.expbeams = _make_beams(*expbeams)
-        rpars.ivbeams = _make_beams(*ivbeams)
+        rpars.expbeams = make_beams(*expbeams)
+        rpars.ivbeams = make_beams(*ivbeams)
         return slab, rpars
     return _make
 
@@ -161,9 +155,18 @@ _AG100_IVBEAMS = (
     )
 
 
-@fixture(name='ag100_init')
-def fixture_ag100_init(data_path):
-    """Return a Ag(100) slab and Rparams after the symmetry search."""
+_AG100_EXPECTED = {
+    # AVERAGE_BEAMS: (correspondence, remaining experimental beams)
+    None: ([0, 0, 1, 1, 2, 2, 3, 4, 4, -1],
+           ['( 1| 0)', '( 1| 1)', '( 2| 0)', '( 2| 1)', '( 3| 0)']),
+    False: ([0, -1, 1, -1, 2, -1, -1, 3, -1, -1],
+            ['( 1| 0)', '( 1| 1)', '( 2| 0)', '( 3| 0)']),
+    }
+
+
+@parametrize(average_beams=_AG100_EXPECTED)
+def test_ag100(data_path, make_beams, average_beams):
+    """Check Ag(100) with and without beam averaging."""
     inputs = data_path / 'Ag(100)' / 'initialization'
     slab = poscar.read(inputs / 'POSCAR')
     rpars = parameters.read(inputs / 'PARAMETERS')
@@ -177,23 +180,7 @@ def fixture_ag100_init(data_path):
     bulk.revert_unit_cell()
     symmetry.findBulkSymmetry(bulk, rpars)
     rpars.expbeams = readOUTBEAMS(str(inputs / 'EXPBEAMS.csv'))
-    rpars.ivbeams = _make_beams(*_AG100_IVBEAMS)
-    return slab, rpars
-
-
-_AG100_EXPECTED = {
-    # AVERAGE_BEAMS: (correspondence, remaining experimental beams)
-    None: ([0, 0, 1, 1, 2, 2, 3, 4, 4, -1],
-           ['( 1| 0)', '( 1| 1)', '( 2| 0)', '( 2| 1)', '( 3| 0)']),
-    False: ([0, -1, 1, -1, 2, -1, -1, 3, -1, -1],
-            ['( 1| 0)', '( 1| 1)', '( 2| 0)', '( 3| 0)']),
-    }
-
-
-@parametrize(average_beams=_AG100_EXPECTED)
-def test_ag100(ag100_init, average_beams):
-    """Check Ag(100) with and without beam averaging."""
-    slab, rpars = ag100_init
+    rpars.ivbeams = make_beams(*_AG100_IVBEAMS)
     rpars.AVERAGE_BEAMS = average_beams
     expected, remaining = _AG100_EXPECTED[average_beams]
     assert getBeamCorrespondence(slab, rpars) == expected
