@@ -366,8 +366,8 @@ def _copy_files_and_directories(files, directories, target):
             pass
         except OSError:
             which = 'file' if item.is_file() else 'directory'
-            _LOGGER.error(f'Error moving {target.name} {which} {item.name}: ',
-                          exc_info=True)
+            _LOGGER.error(f'Error copying {which} {item.name} to '
+                          f'{target.name}: ', exc_info=True)
         else:
             container.add(item)
     return copied_files, copied_directories
