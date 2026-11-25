@@ -530,9 +530,35 @@ def readAUXEXPBEAMS(
 
 
 def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
-    """Writes an IVBEAMS file based on rp.expbeams. Returns
-    those beams in IVBEAMS form. If a BEAM_EQUIVALENCE file was
-    loaded, the beams are all those on its right-hand sides."""
+    """Write an IVBEAMS file with the beams to calculate.
+
+    The beams are those of rp.expbeams (projected to the first domain
+    if beams are averaged) or, if a BEAM_EQUIVALENCE file was loaded,
+    all those on its right-hand sides.
+
+    Parameters
+    ----------
+    sl : Slab or None
+        The slab. Unused for domains or with BEAM_EQUIVALENCE.
+    rp : Rparams
+        The run parameters.
+    filename : str, optional
+        The name of the file to write. Default is 'IVBEAMS'.
+    domains : bool, optional
+        Whether this is a run with multiple structural domains.
+        Default is False.
+
+    Returns
+    -------
+    list of Beam
+        The beams written, or an empty list if the LEED parameters
+        cannot be determined.
+
+    Raises
+    ------
+    Exception
+        If writing the file fails.
+    """
     if rp.fileLoaded['BEAM_EQUIVALENCE']:
         source = 'BEAM_EQUIVALENCE'
         ivbeams = [Beam(hk) for hk in rp.beam_correspondence.calculated_beams]
