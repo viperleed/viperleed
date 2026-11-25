@@ -18,6 +18,9 @@ Note that this will only happen once, so later iterations of the
 program will use the IVBEAMS file created in the first run, if it is
 not deleted manually.
 
+.. versionchanged:: 0.15.0
+   Generated from the :ref:`BEAM_EQUIVALENCE` file, if one is given.
+
 The first line is treated as a header and can contain a comment, all
 other lines contain two numbers indicating a beam. Input format can be
 integer, float, or fractions as ``a/b``:

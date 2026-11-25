@@ -64,3 +64,7 @@ The major steps are listed below in order of execution.
     are compared to each experimental beam in the |R-factor|
     calculation, and store this beam correspondence in
     :ref:`SUPP/BEAM_EQUIVALENCE<beam_equivalence_supp>`.
+
+.. versionchanged:: 0.15.0
+   Read and check the :ref:`BEAM_EQUIVALENCE` file (steps 2 and 9), and
+   store the beam correspondence in |SUPP| (step 10).
