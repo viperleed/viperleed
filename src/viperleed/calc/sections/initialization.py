@@ -56,6 +56,11 @@ from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
 
+# Sections of RUN that compute an R factor (if EXPBEAMS is given):
+# refcalc, search, superpos, domain search, error calculation,
+# full-dynamic optimization, and R factor after refcalc/superpos
+_SECTIONS_WITH_R_FACTOR = (1, 3, 31, 4, 5, 6, 11, 12)
+
 
 class BeamEquivalenceError(Exception):
     """The BEAM_EQUIVALENCE file is inconsistent with other input."""
@@ -856,9 +861,11 @@ def _r_factor_accepts_weights(rp):
     """
     # At initialization, section 0 was already taken out of rp.RUN.
     # Sections 11 and 12 (R factor after refcalc/superpos) are only
-    # inserted later, but 1 and 3/31 always lead to them.
+    # inserted later, but 1 and 3/31 always lead to them. The error
+    # calculation (5) and the full-dynamic optimization (6) compute
+    # R factors themselves.
     runs_r_factor = rp.fileLoaded['EXPBEAMS'] and any(
-        sec in rp.RUN for sec in (1, 3, 31, 4, 11, 12)
+        sec in rp.RUN for sec in _SECTIONS_WITH_R_FACTOR
         )
     # Phase A: no R factor handles weights. The Python R factor will,
     # and then this is the only place to change.

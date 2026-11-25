@@ -39,8 +39,10 @@ _RUNS = {
     'refcalc': [1],
     'search': [3],
     'superpos': [31],
-    'error calc': [4],
-    'no R factor': [2, 5],
+    'domain search': [4],
+    'error calc': [5],
+    'full-dynamic optimization': [6],
+    'no R factor': [2],
     }
 
 
