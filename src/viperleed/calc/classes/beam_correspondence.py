@@ -107,6 +107,17 @@ class BeamCorrespondence:
                 for exp_key, calc_weights in self._assignments.items()}
 
     @property
+    def calculated_beams(self):
+        """Return the (h, k) of all calculated beams, without repeats.
+
+        The beams are in order of first appearance.
+        """
+        beams = {}
+        for calc_weights in self._assignments.values():
+            beams.update(dict.fromkeys(calc_weights))
+        return list(beams)
+
+    @property
     def has_shared_beams(self):
         """Return whether a calculated beam is in many assignments."""
         seen = set()

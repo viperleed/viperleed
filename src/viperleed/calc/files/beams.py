@@ -150,6 +150,35 @@ def snap_to_fraction(index):
     return index
 
 
+def beamlist_to_hks(beamlist):
+    """Return the [h, k] floats of the beams in BEAMLIST lines.
+
+    Parameters
+    ----------
+    beamlist : Sequence of str
+        The lines of a BEAMLIST file. Lines from which two
+        numbers cannot be read are skipped.
+
+    Returns
+    -------
+    list of list of float
+        The h and k indices of each beam.
+    """
+    blfs = []
+    for line in beamlist:
+        llist = line.split()
+        if len(llist) > 1:
+            fl = []
+            for i in range(0, 2):
+                try:
+                    fl.append(float(llist[i]))
+                except (ValueError, IndexError):
+                    pass
+            if len(fl) == 2:
+                blfs.append(fl)
+    return blfs
+
+
 def sortIVBEAMS(sl, rp):
     """Sorts the beams in IVBEAMS such that they appear in the same order as
     in the BEAMLIST. Returns the sorted list."""
@@ -164,20 +193,8 @@ def sortIVBEAMS(sl, rp):
             logger.error("BEAMLIST not found.")
             raise
     err = 1e-3          # since beams are saved as floats, give error tolerance
-    symeq = leedbase.getSymEqBeams(sl, rp)
-    # first, get beamlist as floats
-    blfs = []
-    for line in rp.beamlist:
-        llist = line.split()
-        if len(llist) > 1:
-            fl = []
-            for i in range(0, 2):
-                try:
-                    fl.append(float(llist[i]))
-                except (ValueError, IndexError):
-                    pass
-            if len(fl) == 2:
-                blfs.append(fl)
+    symeq = _get_symmetry_equivalent_beams(sl, rp)
+    blfs = beamlist_to_hks(rp.beamlist)
     # now figure out if there are beams in IVBEAMS without a partner
     not_found = []
     found_equivalent = []
@@ -382,9 +399,20 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
     return beams
 
 
+def _get_symmetry_equivalent_beams(sl, rp):
+    """Return symmetry-equivalent beams, or none with BEAM_EQUIVALENCE.
+
+    With a BEAM_EQUIVALENCE file, beams are never merged based on
+    symmetry: only those with the same (h, k) are considered equal.
+    """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        return []
+    return leedbase.getSymEqBeams(sl, rp)
+
+
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = leedbase.getSymEqBeams(sl, rp)
+    symeq = _get_symmetry_equivalent_beams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue

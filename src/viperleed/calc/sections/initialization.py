@@ -21,6 +21,7 @@ import shutil
 import numpy as np
 
 from viperleed.calc import symmetry
+from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
@@ -48,6 +49,10 @@ from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
+
+
+class BeamEquivalenceError(Exception):
+    """The BEAM_EQUIVALENCE file is inconsistent with other input."""
 
 
 def initialization(sl, rp, subdomain=False):
@@ -377,6 +382,8 @@ def initialization(sl, rp, subdomain=False):
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
             iobeams.checkEXPBEAMS(sl, rp)
+        if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+            _check_beam_equivalence_in_beamlist(rp)
         # write and sort IVBEAMS
         if not rp.fileLoaded["IVBEAMS"]:
             try:
@@ -520,6 +527,8 @@ def init_domains(rp):
     # if EXPBEAMS was loaded, it hasn't been checked yet - check now
     if rp.fileLoaded["EXPBEAMS"]:
         iobeams.checkEXPBEAMS(None, rp, domains=True)
+    if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        _check_beam_equivalence_in_beamlist(rp)
     # write and sort IVBEAMS
     if not rp.fileLoaded["IVBEAMS"]:
         try:
@@ -637,6 +646,42 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
     if slab.has_atoms_in_multiple_c_cells():
         logger.warning(_msg)
         rpars.setHaltingLevel(1)
+
+
+def _check_beam_equivalence_in_beamlist(rp):
+    """Check that the BEAM_EQUIVALENCE file is compatible with BEAMLIST.
+
+    Also warn if AVERAGE_BEAMS was given, as it has no effect.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its beam_correspondence and beamlist
+        attributes are used.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If a calculated beam in BEAM_EQUIVALENCE is not in BEAMLIST.
+    """
+    if 'AVERAGE_BEAMS' in rp.readParams:
+        logger.warning('Parameter AVERAGE_BEAMS is ignored because '
+                       'a BEAM_EQUIVALENCE file is given.')
+    # Same tolerance as in sortIVBEAMS
+    beamlist = [Beam(hk) for hk in iobeams.beamlist_to_hks(rp.beamlist)]
+    missing = [Beam(hk).label
+               for hk in rp.beam_correspondence.calculated_beams
+               if not _has_beam(beamlist, hk, eps=1e-3)]
+    if missing:
+        msg = ('The following calculated beams in BEAM_EQUIVALENCE are '
+               f'not in BEAMLIST: {", ".join(missing)}')
+        logger.error(msg)
+        raise BeamEquivalenceError(msg)
+
+
+def _has_beam(beams, hk, eps):
+    """Return whether any of `beams` has indices `hk`."""
+    return any(b.isEqual_hk(hk, eps=eps) for b in beams)
 
 
 def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):

@@ -255,6 +255,14 @@ class TestProperties:
         corr = BeamCorrespondence(assignments)
         assert corr.has_shared_beams is expect
 
+    def test_calculated_beams(self):
+        """Check calculated beams are unique, in order of appearance."""
+        corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 1},
+                                   (1, 1): {(0, 1): 1, (2, 0): 1}})
+        assert corr.calculated_beams == [
+            (1, 0), (0, 1), (2, 0),
+            ]
+
 
 _NO_LEGACY = {
     'weighted': {(1, 0): {(1, 0): 1, (0, 1): 2}},
