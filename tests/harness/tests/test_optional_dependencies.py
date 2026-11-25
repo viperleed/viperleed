@@ -139,9 +139,10 @@ def test_allow_missing_unknown(pytester, allow):
     """Check that unknown names for --allow-missing are an error."""
     result = _run(pytester, _REQUIRE, *allow)
     assert result.ret == pytest.ExitCode.USAGE_ERROR
+    valid = ', '.join(optional_dependencies.KNOWN_DEPENDENCIES)
     result.stderr.fnmatch_lines([
         (f'*{_ALLOW}: unknown optional dependencies *. '
-         'Valid names are gfortran, mpifort.'),
+         f'Valid names are {valid}.'),
         ])
 
 

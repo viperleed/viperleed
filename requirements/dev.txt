@@ -1,6 +1,11 @@
 # This file contains a list of the required python packages for
 # development of viperleed. Dependencies are categorized by topic.
 
+# Graphical user interface: its tests need a Qt binding. PyQt5, as in
+# the [GUI] extra of viperleed (here directly, as paths in requirement
+# files are relative to where pip runs, not to this file)
+PyQt5>=5.15
+
 # Profiling
 line_profiler   # Profiling code line-by-line
 

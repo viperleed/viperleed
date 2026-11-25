@@ -18,7 +18,14 @@
 #   on Linux in any case, and on Windows where the runner image has
 #   the compiler (today gfortran, not mpifort). Any other missing
 #   dependency still fails.
-#   PyQt5 is installed too, but no test needs it.
+#   PyQt5 is installed too (the [GUI] extra), as the GUI tests need
+#   it. They run without a display (QT_QPA_PLATFORM).
+# - Hence, GUI tests marked needs_display (see tests/harness/qt.py)
+#   are skipped in all jobs. None exists yet. To run them, a job needs
+#   a display, QT_QPA_PLATFORM unset, and `pytest -m needs_display
+#   --show-windows`. Windows and macOS runners have a display; Linux
+#   ones would need a virtual X server (e.g., xvfb-run) and the X
+#   libraries of Qt's xcb platform.
 # - Coverage is uploaded to Codecov from the Linux job. This needs the
 #   Codecov app and the CODECOV_TOKEN secret. A failed upload does not
 #   fail the job.

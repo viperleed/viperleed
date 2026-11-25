@@ -36,6 +36,7 @@ import pytest
 from pytest_cases import fixture
 
 from ... import conftest as root_conftest
+from .. import qt
 from .. import tiers
 
 # The markers of the test suite, for the ini file of sample tests
@@ -47,6 +48,13 @@ markers =
     release
 """
 MODULE = 'test_sample.py::'  # Node-id prefix of the sample tests
+# Options of the nested pytest runs (see run_pytest). The cache is
+# disabled, unless a test needs it (e.g., for --last-failed). The qt
+# plugin of the harness is always loaded: otherwise, pytest-qt (if
+# installed) is loaded automatically, and aborts the run if PyQt5 is
+# not installed.
+PYTESTER_NO_CACHE = ('-p', 'no:cacheprovider')
+PYTESTER_PLUGINS = ('-p', qt.__name__)
 XDIST_ARGS = ('-n', '2')
 # Extra arguments of runs without and with pytest-xdist, keyed by id,
 # for parametrize. The runs with pytest-xdist are slow.
@@ -149,7 +157,8 @@ def run_pytest(pytester, *args, plugin=root_conftest, cache=False,
         Command-line arguments.
     plugin : module, optional
         The plugin to load. Default is tests/conftest.py, which loads
-        all the plugins of the test suite.
+        all the plugins of the test suite. The qt plugin of the harness
+        is loaded in any case (see PYTESTER_PLUGINS).
     cache : bool, optional
         Whether to keep the cache (e.g., for --lf). Default is False.
     own_process : bool, optional
@@ -163,9 +172,9 @@ def run_pytest(pytester, *args, plugin=root_conftest, cache=False,
     result : pytest.RunResult
         The outcome of the run.
     """
-    options = list(args)
+    options = [*args, *PYTESTER_PLUGINS]
     if not cache:
-        options.extend(('-p', 'no:cacheprovider'))
+        options.extend(PYTESTER_NO_CACHE)
     if _in_own_process(args, own_process):
         return pytester.runpytest_subprocess(*options, '-p', plugin.__name__)
     return pytester.runpytest_inprocess(*options, plugins=[plugin])

@@ -4,8 +4,9 @@ Defines fixtures and fixture factories used in multiple tests, and
 loads the plugins with the options and hooks of the test suite, in
 package harness: check_slow.py (--check-slow), quick.py (--quick),
 reference_files.py (--rewrite-references, check_reference),
-release.py (--release), rng_seed.py (--rng-seed) and tier_marks.py
-(slow, release and tensorleed marks, stale-entry guard). The options
+release.py (--release), rng_seed.py (--rng-seed), tier_marks.py
+(slow, release and tensorleed marks, stale-entry guard) and qt.py
+(pytest-qt, if PyQt5 is available). The options
 of harness/optional_dependencies.py (--require-all, --allow-missing)
 and its fixture missing_dependency are hooked up here.
 
@@ -65,6 +66,7 @@ from .helpers import TEST_DATA
 pytest_plugins = (
     'pytester',  # For testing the options themselves
     'tests.harness.check_slow',
+    'tests.harness.qt',
     'tests.harness.quick',
     'tests.harness.reference_files',
     'tests.harness.release',
