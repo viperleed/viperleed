@@ -18,11 +18,42 @@ _BROKEN_FILES = {  # A PyQt5 package whose QtCore cannot be loaded
     'PyQt5/__init__': '',
     'PyQt5/QtCore': "raise ImportError('a library is missing')",
     }
+# QT_QPA_PLATFORM before the run, options, and the test that runs
+_DISPLAY_MARKS = {  # pylint: disable=R6101
+    'default': (None, (), 'test_offscreen'),
+    'minimal with options': ('minimal:a=1', (), 'test_offscreen'),
+    'other platform': ('xcb', (), 'test_display'),
+    'show': (None, (qt.SHOW_WINDOWS_OPTION,), 'test_display'),
+    'show but offscreen': ('offscreen', (qt.SHOW_WINDOWS_OPTION,),
+                           'test_offscreen'),
+    }
 _HIDE_PLUGIN = 'hide_pyqt5'
 _HIDE_FILES = {  # A plugin, loaded before qt, that hides PyQt5
     _HIDE_PLUGIN: "import sys\nsys.modules['PyQt5'] = None\n",
     }
+_MARKED_FILE = """
+import pytest
+
+@pytest.mark.needs_display
+def test_display():
+    pass
+
+@pytest.mark.needs_offscreen
+def test_offscreen():
+    pass
+"""
+# QT_QPA_PLATFORM before the run, options, and its value in the tests
+_PLATFORMS = {  # pylint: disable=R6101
+    'default': (None, (), 'offscreen'),
+    'set': ('xcb', (), 'xcb'),
+    'show': (None, (qt.SHOW_WINDOWS_OPTION,), None),
+    'show and set': ('offscreen', (qt.SHOW_WINDOWS_OPTION,), 'offscreen'),
+    }
 _REQUIRE = optional_dependencies.REQUIRE_ALL_OPTION
+_SKIP_REASONS = {  # The test that runs: why the other one is skipped
+    'test_display': '*Needs a headless Qt platform*',
+    'test_offscreen': f'*Needs a display*{qt.SHOW_WINDOWS_OPTION}*',
+    }
 _TEST_FILE = """
 def test_qtbot(qtbot):
     pass
@@ -39,6 +70,14 @@ def _run_without(pytester, files, *args):
     return run_pytest(pytester, *plugin, *args, '-rsf', own_process=True)
 
 
+def _set_platform(monkeypatch, platform):
+    """Set QT_QPA_PLATFORM to `platform`, or unset it if None."""
+    if platform is None:
+        monkeypatch.delenv(qt.QT_QPA_PLATFORM_ENV, raising=False)
+    else:
+        monkeypatch.setenv(qt.QT_QPA_PLATFORM_ENV, platform)
+
+
 @pytest.mark.slow  # About 1 s (pytester, subprocess)
 @parametrize(args=((), (_REQUIRE,)), ids=('default', 'require-all'))
 def test_broken(pytester, args):
@@ -48,6 +87,17 @@ def test_broken(pytester, args):
     result.stdout.fnmatch_lines([
         '*Cannot use PyQt: PyQt5 is installed, but broken.*library*',
         ])
+
+
+@parametrize('platform,args,runs', _DISPLAY_MARKS.values(),
+             ids=_DISPLAY_MARKS)
+def test_display_marks(platform, args, runs, pytester, monkeypatch):
+    """Check that only the tests suited to the Qt platform run."""
+    _set_platform(monkeypatch, platform)
+    pytester.makepyfile(_MARKED_FILE)
+    result = run_pytest(pytester, *args, '-v', '-rs')
+    result.assert_outcomes(passed=1, skipped=1)
+    result.stdout.fnmatch_lines([f'*::{runs} PASSED*', _SKIP_REASONS[runs]])
 
 
 @pytest.mark.slow  # About 1 s (pytester, subprocess)
@@ -61,6 +111,21 @@ def test_not_installed(pytester, args, outcome):
     result.stdout.fnmatch_lines([
         '*optional dependency PyQt not available: PyQt5 is not installed*',
         ])
+
+
+@parametrize('before,args,expect', _PLATFORMS.values(), ids=_PLATFORMS)
+def test_platform(before, args, expect, pytester, monkeypatch):
+    """Check that tests run offscreen, unless told otherwise."""
+    _set_platform(monkeypatch, before)
+    pytester.makepyfile(f"""
+        import os
+
+        def test_platform():
+            platform = os.environ.get({qt.QT_QPA_PLATFORM_ENV!r})
+            assert platform == {expect!r}
+        """)
+    result = run_pytest(pytester, *args)
+    result.assert_outcomes(passed=1)
 
 
 @pytest.mark.usefixtures('qapp')  # Skip if pytest-qt cannot be used

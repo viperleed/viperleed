@@ -24,6 +24,17 @@ its qapp and qtbot fixtures are replaced by fixtures that skip the
 test via missing_dependency (or fail with --require-all). They make
 the test fail instead if PyQt5 is installed but broken (e.g., a
 library it needs cannot be loaded).
+
+The tests run on Qt's 'offscreen' platform, so that no windows show
+up while testing, and tests that create widgets also run without a
+display. This plugin sets the QT_QPA_PLATFORM environment variable
+accordingly, unless it is set already (e.g., in CI), or unless the
+--show-windows option is given. As Qt takes the platform only once,
+when the QApplication is created, the platform is the same for all
+the tests of a session. Tests that need a real display can be marked
+'needs_display': they are skipped on a headless platform. Tests that
+need a headless platform can be marked 'needs_offscreen': they are
+skipped otherwise.
 """
 
 __authors__ = (
@@ -43,6 +54,14 @@ BINDING = 'PyQt5'  # The Qt binding used by viperleed.gui
 DEPENDENCY = 'PyQt'  # Its name among the optional dependencies
 PYTEST_QT = 'pytest-qt'  # Name of the pytest11 entry point
 PYTEST_QT_API_ENV = 'PYTEST_QT_API'
+QT_QPA_PLATFORM_ENV = 'QT_QPA_PLATFORM'
+SHOW_WINDOWS_OPTION = '--show-windows'
+
+# Qt platforms that show no windows
+_HEADLESS_PLATFORMS = (
+    'minimal',
+    'offscreen',
+    )
 
 # The binding is not installed if any of these is missing. QtCore
 # is missing if only PyQt5-sip and PyQt5-Qt5 are left after
@@ -72,13 +91,54 @@ def is_not_installed(exc):
 
 
 def pytest_addoption(parser, pluginmanager):
-    """Register pytest-qt if it can be used, block it otherwise."""
-    _ = parser  # Unused, but needed to get pluginmanager
+    """Add --show-windows. Register pytest-qt if it can be used."""
+    parser.addoption(
+        SHOW_WINDOWS_OPTION,
+        action='store_true',
+        help=('show the windows of the GUI tests, rather than running '
+              f'them on the offscreen Qt platform ({QT_QPA_PLATFORM_ENV} '
+              'is respected also without this option)'),
+        )
     if _MISSING is not None:
         pluginmanager.set_blocked(PYTEST_QT)  # Also unregisters it
     elif pluginmanager.get_plugin(PYTEST_QT) is None:
         pluginmanager.register(importlib.import_module('pytestqt.plugin'),
                                PYTEST_QT)
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip the tests that cannot run on the current Qt platform."""
+    _ = config  # Unused, but part of the hook
+    headless = _is_headless()
+    platform = os.environ.get(QT_QPA_PLATFORM_ENV)
+    for item in items:
+        if headless and item.get_closest_marker('needs_display'):
+            item.add_marker(pytest.mark.skip(
+                reason=(f'Needs a display, but Qt runs on {platform!r}. '
+                        f'Use {SHOW_WINDOWS_OPTION} (and do not set '
+                        f'{QT_QPA_PLATFORM_ENV} to a headless platform)')
+                ))
+        if not headless and item.get_closest_marker('needs_offscreen'):
+            item.add_marker(pytest.mark.skip(
+                reason='Needs a headless Qt platform, e.g., offscreen'
+                ))
+
+
+def pytest_configure(config):
+    """Register the markers, and use the offscreen Qt platform."""
+    config.addinivalue_line(
+        'markers',
+        'needs_display: needs a real display (run with '
+        f'{SHOW_WINDOWS_OPTION})',
+        )
+    config.addinivalue_line(
+        'markers',
+        'needs_offscreen: needs a headless Qt platform (e.g., offscreen)',
+        )
+    # Before any QApplication is created (also by the subprocess
+    # checks of viperleed.gui.detect_graphics, which inherit it)
+    if not config.getoption(SHOW_WINDOWS_OPTION):
+        os.environ.setdefault(QT_QPA_PLATFORM_ENV, 'offscreen')
 
 
 def _find_missing():
@@ -135,6 +195,13 @@ if _MISSING is not None:
     def fixture_qtbot(missing_dependency):
         """Skip (or fail) the test, as pytest-qt cannot be used."""
         _report_missing(missing_dependency)
+
+
+def _is_headless():
+    """Return whether Qt runs on a platform that shows no windows."""
+    platform = os.environ.get(QT_QPA_PLATFORM_ENV, '')
+    # The name may be followed by options, e.g., 'offscreen:fontengine'
+    return platform.split(':')[0].strip() in _HEADLESS_PLATFORMS
 
 
 def _report_missing(missing_dependency):

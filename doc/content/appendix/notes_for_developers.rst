@@ -222,7 +222,16 @@ Tests of the graphical user interface
 '''''''''''''''''''''''''''''''''''''
 
 The tests in :file:`tests/gui` need PyQt5 (installed with
-``viperleed[GUI]``). Without a display, set ``QT_QPA_PLATFORM=offscreen``.
+``viperleed[GUI]``). They run on the ``offscreen`` platform of Qt: no windows
+show up, and the tests also run without a display. To see the windows, add
+``--show-windows``. A ``QT_QPA_PLATFORM`` :term:`environment variable` that is
+set is always respected. As Qt takes the platform only once, when the
+``QApplication`` is created, it is the same for all the tests of a session.
+Tests that need a real display can be marked with
+``@pytest.mark.needs_display``: they are skipped on a headless platform.
+Tests that need a headless platform can be marked with
+``@pytest.mark.needs_offscreen``: they are skipped otherwise.
+
 Tests that create widgets use the ``qtbot`` and ``qapp`` fixtures of
 `pytest-qt <https://pytest-qt.readthedocs.io>`__ (among the test
 requirements). Without PyQt5, these tests are skipped (or fail with
