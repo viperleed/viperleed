@@ -290,46 +290,14 @@ def _collect_supp_contents(rpars):
         files_to_copy,
         directories_to_copy,
         Path(DEFAULT_SUPP),
+        renamed_files=_SUPP_FILES_RENAMED,
         )
-    copied_renamed = _copy_renamed_files(_SUPP_FILES_RENAMED,
-                                         Path(DEFAULT_SUPP))
     has_files = (
         any(copied_files)
-        or any(copied_renamed)
         or any(any(d.iterdir()) for d in copied_dirs)
         )
     if has_files:
         rpars.manifest.add(DEFAULT_SUPP)
-
-
-def _copy_renamed_files(names, target):
-    """Copy files to target under new names.
-
-    Parameters
-    ----------
-    names : dict
-        Maps the names of files in the current directory to their
-        names in target. Missing files are skipped.
-    target : Path
-        An existing directory.
-
-    Returns
-    -------
-    copied : set
-        The paths of the files that were copied.
-    """
-    copied = set()
-    for name, new_name in names.items():
-        try:
-            shutil.copy2(name, target/new_name)
-        except FileNotFoundError:
-            pass
-        except OSError:
-            _LOGGER.error(f'Error moving {target.name} file {name}: ',
-                          exc_info=True)
-        else:
-            copied.add(Path(name))
-    return copied
 
 
 def _collect_out_contents(rpars):
@@ -348,8 +316,30 @@ def _collect_out_contents(rpars):
         rpars.manifest.add(DEFAULT_OUT)
 
 
-def _copy_files_and_directories(files, directories, target):
-    """Copy files and directories to target, creating it if not existing."""
+def _copy_files_and_directories(files, directories, target,
+                                renamed_files=None):
+    """Copy files and directories to target, creating it if not existing.
+
+    Parameters
+    ----------
+    files : Iterable
+        Paths of the files to copy. Missing files are skipped.
+    directories : Iterable
+        Paths of the directories to copy. Missing ones are skipped.
+    target : Path
+        The directory to copy to.
+    renamed_files : Mapping, optional
+        Maps paths of further files to their names in `target`.
+        Missing files are skipped. Default is None.
+
+    Returns
+    -------
+    copied_files : set
+        The paths of the files that were copied, including those
+        in `renamed_files`.
+    copied_directories : set
+        The paths of the directories that were copied.
+    """
     copied_files, copied_directories = set(), set()
     try:
         target.mkdir(parents=True, exist_ok=True)
@@ -357,11 +347,14 @@ def _copy_files_and_directories(files, directories, target):
         _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
         return copied_files, copied_directories
 
-    for item in (*files, *directories):
+    new_names = {item: item.name for item in (*files, *directories)}
+    new_names.update((Path(item), name)
+                     for item, name in (renamed_files or {}).items())
+    for item, name in new_names.items():
         _copy = shutil.copy2 if item.is_file() else fs_utils.copytree_exists_ok
         container = copied_files if item.is_file() else copied_directories
         try:
-            _copy(item, target/item.name)
+            _copy(item, target/name)
         except FileNotFoundError:
             pass
         except OSError:

@@ -45,5 +45,5 @@ def test_used_beam_equivalence_copy_fails(rpars, workdir, mocker, caplog):
     mocker.patch('shutil.copy2', side_effect=OSError)
     with execute_in_dir(workdir), caplog.at_level(logging.ERROR):
         _collect_supp_contents(rpars)
-    assert f'file {BEAM_EQUIVALENCE_USED_NAME}' in caplog.text
+    assert f'Error copying file {BEAM_EQUIVALENCE_USED_NAME}' in caplog.text
     assert DEFAULT_SUPP not in rpars.manifest
