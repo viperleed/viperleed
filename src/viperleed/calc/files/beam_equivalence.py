@@ -20,6 +20,7 @@ from quicktions import Fraction
 
 from viperleed.calc.classes.beam import MAX_DENOMINATOR
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
+from viperleed.calc.classes.beam_correspondence import weights_are_equal
 from viperleed.calc.files.beams import snap_to_fraction
 from viperleed.calc.lib.string_utils import strip_comments
 
@@ -238,7 +239,7 @@ def format_assignment(exp_key, calc_weights):
     str
         The line, without a trailing newline.
     """
-    equal = len(set(calc_weights.values())) == 1
+    equal = weights_are_equal(calc_weights.values())
     terms = (_format_label(calc_key) if equal
              else f'{_format_weight(weight)}*{_format_label(calc_key)}'
              for calc_key, weight in calc_weights.items())

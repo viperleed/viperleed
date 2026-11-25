@@ -34,6 +34,7 @@ _ASSIGNMENTS = {
     'weighted': {(1, 0): {(1, 0): 1, (0, 1): 2}},
     'shared': {(1, 0): {(1, 0): 1}, (1, 1): {(1, 0): 1, (0, 1): 1}},
     'equal weights': {(1, 0): {(1, 0): 2, (0, 1): 2}, (1, 1): {(1, 1): 3}},
+    'nearly equal weights': {(1, 0): {(1, 0): 1, (0, 1): 1 + 1e-7}},
     }
 _RUNS = {
     'refcalc': [1],
@@ -101,7 +102,8 @@ class TestWeightCheck:
             'shared': '  (1 0) = (1 0)\n  (1 1) = (1 0) + (0 1)',
             }[kind]
         return (f'BEAM_EQUIVALENCE contains {cause}, which the R factor '
-                f'to be run does not support. Offending lines:\n{lines}')
+                'to be run does not support. Offending lines (weights '
+                f'normalised):\n{lines}')
 
     @parametrize('run', _RUNS)
     def test_equal_weights_ok(self, run, rpars_for, in_workdir, caplog):
@@ -109,6 +111,16 @@ class TestWeightCheck:
         rpars = rpars_for(_ASSIGNMENTS['equal weights'], _RUNS[run])
         self._run(None, rpars)
         assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+    @parametrize('run', _RUNS)
+    def test_nearly_equal_weights_ok(self, run, rpars_for, in_workdir,
+                                     caplog):
+        """Check weights equal within tolerance: no error, no weights."""
+        rpars = rpars_for(_ASSIGNMENTS['nearly equal weights'], _RUNS[run])
+        self._run(None, rpars)
+        assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+        written = (in_workdir / BEAM_EQUIVALENCE_USED_NAME).read_text()
+        assert '(1 0) = (1 0) + (0 1)' in written
 
     def test_both_causes(self, rpars_for, in_workdir):
         """Check that the message names both causes and only bad lines."""

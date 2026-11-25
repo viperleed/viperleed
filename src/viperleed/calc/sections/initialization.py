@@ -820,28 +820,24 @@ def _check_beam_equivalence_weights(rp, correspondence):
     """
     if _r_factor_accepts_weights(rp):
         return
-    assignments = correspondence.assignments
-    shared = {calc_key
-              for calc_key in correspondence.calculated_beams
-              if sum(calc_key in weights
-                     for weights in assignments.values()) > 1}
-    offending = {}
-    for exp_key, calc_weights in assignments.items():
-        weighted = len(set(calc_weights.values())) > 1
-        if weighted or not shared.isdisjoint(calc_weights):
-            offending[exp_key] = format_assignment(exp_key, calc_weights)
+    shared = correspondence.shared_beams
+    weighted = correspondence.weighted_assignments
+    offending = [format_assignment(exp_key, calc_weights)
+                 for exp_key, calc_weights
+                 in correspondence.assignments.items()
+                 if exp_key in weighted or not shared.isdisjoint(calc_weights)]
     if not offending:
         return
     causes = []
-    if correspondence.is_weighted:
+    if weighted:
         causes.append('assignment weights')
-    if correspondence.has_shared_beams:
+    if shared:
         causes.append('calculated beams in more than one beam assignment')
-    lines = '\n'.join(f'  {line}' for line in offending.values())
+    lines = '\n'.join(f'  {line}' for line in offending)
     causes = ' and '.join(causes)
     msg = (f'BEAM_EQUIVALENCE contains {causes}, which the '
-           'R factor to be run does not support. Offending lines:\n'
-           f'{lines}')
+           'R factor to be run does not support. Offending lines '
+           f'(weights normalised):\n{lines}')
     logger.error(msg)
     raise BeamEquivalenceError(msg)
 
