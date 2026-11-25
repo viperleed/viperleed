@@ -66,6 +66,11 @@ To run also a :ref:`delta amplitudes calculation<sec_deltas>` or a
 :ref:`DISPLACEMENTS` file that contains the requested
 perturbations of the structure.
 
+Optionally, a :ref:`BEAM_EQUIVALENCE` file defines explicitly which
+calculated beams are compared to each experimental beam in the
+|R-factor| calculation, instead of the automatic assignment based on
+symmetry.
+
 .. note::
     A :ref:`domain calculation<domain_calculation>` , that is, with multiple
     coexisting surface structures, requires a slightly different directory
@@ -190,6 +195,7 @@ execution (unless the ``-k`` command-line flag is given).
     ├── SUPP/
     │   ├── original_inputs/
     │   │   └── ...
+    │   ├── BEAM_EQUIVALENCE <-- beam correspondence used
     │   ├── POSCAR_bulk
     │   ├── POSCAR_bulk_appended
     │   ├── POSCAR_oricell
@@ -198,6 +204,7 @@ execution (unless the ``-k`` command-line flag is given).
     │   ├── Tensors_001.zip
     │   └── ...
     ├── history.info
+    ├── BEAM_EQUIVALENCE     <-- input, optional
     ├── DISPLACEMENTS        <-- input
     ├── EXPBEAMS.csv         <-- input
     ├── IVBEAMS              <-- input, or created by calc

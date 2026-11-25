@@ -13,6 +13,12 @@ AVERAGE_BEAMS
    averaging. Averaging will be performed as if beam incidence was perpendicular
    to the surface.
 
+.. note::
+   AVERAGE_BEAMS is ignored, with a warning, if a :ref:`BEAM_EQUIVALENCE`
+   file is given. That file then defines which calculated beams are
+   compared to each experimental beam, and can also average beams that
+   are not symmetry equivalent.
+
 AVERAGE_BEAMS can be used to turn averaging of symmetry-equivalent beams
 off, or to make it follow a different averaging scheme than would be
 dictated by :ref:`BEAMINCIDENCE`. This can be useful to

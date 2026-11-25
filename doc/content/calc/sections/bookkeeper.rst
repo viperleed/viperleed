@@ -249,7 +249,8 @@ was started.
 .. note::
     |bookkeeper| will archive in the main |history| directory all the
     input files, irrespective of whether they were actually used during
-    the corresponding calculation.
+    the corresponding calculation. This includes optional input files
+    such as :ref:`BEAM_EQUIVALENCE`.
 
 .. _hist_info_example:
 .. code-block:: text
