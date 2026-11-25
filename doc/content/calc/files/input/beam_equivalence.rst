@@ -70,7 +70,7 @@ Assignment weights
     ``0.75*(1 1)`` or ``1/3*(1 0)``. A beam without a weight has weight
     1. Weights are non-negative integers, decimals or fractions; signs
     and exponential notation are not accepted. The weights in each line
-    are normalised to sum to one, so ``2*(1 0) + 2*(0 1)`` is the same
+    are normalized to sum to one, so ``2*(1 0) + 2*(0 1)`` is the same
     as ``(1 0) + (0 1)``, and ``3*(1 1) + (1 -1)`` is the same as
     ``0.75*(1 1) + 0.25*(1 -1)``. A line whose weights are all equal is
     an unweighted average. A calculated beam with weight zero is left
@@ -151,7 +151,7 @@ Therefore, a BEAM_EQUIVALENCE file that contains
 is currently not accepted for any run that computes an |R factor|.
 Unless no experimental data are given (no :ref:`EXPBEAMS.csv<EXPBEAMS>`
 file), the :ref:`initialization` then stops with an error that names
-the cause and lists the offending lines (with normalised weights) if
+the cause and lists the offending lines (with normalized weights) if
 the :ref:`RUN` parameter contains any of the sections reference
 calculation (``1``), structure search (``3``), superpos (``31``),
 domain search (``4``), error calculation (``5``), full-dynamic
