@@ -51,7 +51,7 @@ _HEADER = ('# BEAM_EQUIVALENCE: experimental beam = (weight*) '
            'calculated beam + ...')
 
 
-def parse_beam_label(label):
+def _parse_beam_label(label):
     """Return the (h, k) indices of a beam label as Fractions.
 
     Parameters
@@ -149,7 +149,7 @@ def _parse_assignment(line):
         msg = (f'Invalid line {line!r}. Expected one beam assignment, '
                'e.g., (1 0) = (1 0) + 0.5*(-1 0).')
         raise ValueError(msg) from None
-    exp_key = parse_beam_label(left)
+    exp_key = _parse_beam_label(left)
     calc_weights = {}
     for term in _split_terms(right):
         weight, calc_key = _parse_term(term)
@@ -192,7 +192,7 @@ def _parse_term(term):
     except ZeroDivisionError:
         msg = f'Invalid weight {weight!r}: division by zero.'
         raise ValueError(msg) from None
-    return weight, parse_beam_label(match['label'])
+    return weight, _parse_beam_label(match['label'])
 
 
 def write_beam_equivalence(correspondence, path):

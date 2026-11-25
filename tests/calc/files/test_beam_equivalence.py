@@ -18,7 +18,7 @@ from viperleed.calc import symmetry
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
-from viperleed.calc.files.beam_equivalence import parse_beam_label
+from viperleed.calc.files.beam_equivalence import _parse_beam_label
 from viperleed.calc.files.beam_equivalence import read_beam_equivalence
 from viperleed.calc.files.beam_equivalence import write_beam_equivalence
 from viperleed.calc.files.beams import readOUTBEAMS
@@ -69,13 +69,13 @@ _INVALID_LABELS = {
 
 
 class TestParseBeamLabel:
-    """Tests for parse_beam_label."""
+    """Tests for _parse_beam_label."""
 
     @parametrize('label,expect', _VALID_LABELS.values(),
                  ids=_VALID_LABELS)
     def test_valid(self, label, expect):
         """Check the indices of a valid label."""
-        indices = parse_beam_label(label)
+        indices = _parse_beam_label(label)
         assert indices == expect
         assert all(isinstance(index, Fraction) for index in indices)
 
@@ -86,14 +86,14 @@ class TestParseBeamLabel:
         IVBEAMS, so that they compare equal to it.
         """
         labels = '(0.5 0)', '(1/2, 0)', '(0.500000 | 0)', '(0.5000001 0)'
-        keys = {parse_beam_label(label) for label in labels}
+        keys = {_parse_beam_label(label) for label in labels}
         assert keys == {(_HALF, 0)}
 
     @parametrize(label=_INVALID_LABELS.values(), ids=_INVALID_LABELS)
     def test_invalid(self, label):
         """Check that an invalid label raises ValueError."""
         with pytest.raises(ValueError, match='Invalid beam label'):
-            parse_beam_label(label)
+            _parse_beam_label(label)
 
 
 @fixture(name='read_text')
