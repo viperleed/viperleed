@@ -25,9 +25,6 @@ from viperleed.calc.sections.initialization import (
     _finalize_beam_correspondence,
     )
 
-# pylint: disable-next=unused-import
-from .test_beam_equivalence_checks import factory_make_rpars  # noqa: F401
-
 _INITIALIZATION = 'viperleed.calc.sections.initialization'
 _LEEDBASE = 'viperleed.calc.lib.leedbase'
 _IVBEAMS = [(1, 0), (0, 1), (1, 1)]
@@ -75,7 +72,8 @@ class TestWeightCheck:
     @parametrize('kind', ('weighted', 'shared'))
     @parametrize('run', _RUNS)
     @parametrize('legacy', (True, False))
-    def test_error(self, kind, run, legacy, rpars_for, in_workdir, caplog):
+    @pytest.mark.usefixtures('in_workdir')
+    def test_error(self, kind, run, legacy, rpars_for, caplog):
         """Check an error when an R factor runs, even if not legacy."""
         rpars = rpars_for(_ASSIGNMENTS[kind], _RUNS[run])
         rpars.R_FACTOR_LEGACY = legacy
@@ -107,7 +105,8 @@ class TestWeightCheck:
                 f'normalised):\n{lines}')
 
     @parametrize('run', _RUNS)
-    def test_equal_weights_ok(self, run, rpars_for, in_workdir, caplog):
+    @pytest.mark.usefixtures('in_workdir')
+    def test_equal_weights_ok(self, run, rpars_for, caplog):
         """Check that equal weights within each line are no problem."""
         rpars = rpars_for(_ASSIGNMENTS['equal weights'], _RUNS[run])
         self._run(None, rpars)
@@ -116,15 +115,16 @@ class TestWeightCheck:
     @parametrize('run', _RUNS)
     def test_nearly_equal_weights_ok(self, run, rpars_for, in_workdir,
                                      caplog):
-        """Check weights equal within tolerance: no error, no weights."""
+        """Check nearly equal weights: no error, no weights."""
         rpars = rpars_for(_ASSIGNMENTS['nearly equal weights'], _RUNS[run])
         self._run(None, rpars)
         assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
         written = (in_workdir / BEAM_EQUIVALENCE_USED_NAME).read_text()
         assert '(1 0) = (1 0) + (0 1)' in written
 
-    def test_both_causes(self, rpars_for, in_workdir):
-        """Check that the message names both causes and only bad lines."""
+    @pytest.mark.usefixtures('in_workdir')
+    def test_both_causes(self, rpars_for):
+        """Check that the message names both causes, only bad lines."""
         assignments = {
             (1, 0): {(1, 0): 1, (0, 1): 2},
             (1, 1): {(0, 1): 1},
@@ -153,14 +153,13 @@ class TestUsedFile:
 
     @parametrize('sl', (None, object()), ids=('domains', 'single'))
     def test_automatic_to_supp(self, sl, rpars_for, in_workdir, mocker):
-        """Check SUPP contents after cleanup for an automatic grouping."""
+        """Check SUPP contents after cleanup, automatic grouping."""
         rpars = rpars_for(_ASSIGNMENTS['equal weights'], [2])
         rpars.fileLoaded['BEAM_EQUIVALENCE'] = False
         rpars.beam_correspondence = None
         mocker.patch(f'{_LEEDBASE}.getSymEqBeams', return_value=[])
         _finalize_beam_correspondence(sl, rpars)
-        with execute_in_dir(in_workdir):
-            _collect_supp_contents(rpars)
+        _collect_supp_contents(rpars)
         supp = read_beam_equivalence(
             in_workdir / DEFAULT_SUPP / BEAM_EQUIVALENCE_NAME
             )
