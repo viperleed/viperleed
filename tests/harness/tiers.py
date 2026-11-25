@@ -6,6 +6,11 @@ Attributes
 ----------
 TENSORLEED_FIXTURES : frozenset
     Names of fixtures that run, or need the sources of, TensErLEED.
+MOCKED_CASES : dict
+    Maps fixture names of TENSORLEED_FIXTURES to the case-id parts
+    for which the fixture replaces TensErLEED by stored outputs. The
+    tests that use the fixture are not marked 'tensorleed' for these
+    cases. Stale entries are reported as for RELEASE_CASES.
 SLOW_THRESHOLD : float
     Duration (seconds, call phase) from which a test counts as slow.
 SLOW_BAND : float
@@ -38,8 +43,24 @@ SLOW_BAND = 0.2
 
 TENSORLEED_FIXTURES = frozenset((
     'run_from_ase_refcalc',
+    'run_phaseshift',  # Gets tensorleed_path only for real runs
     'tensorleed_path',
     ))
+
+# Cases of TENSORLEED_FIXTURES that need no TensErLEED, in the same
+# format as RELEASE_CASES: run_phaseshift runs psgen with stored
+# eeasisss outputs for the slabs that take long with the real eeasisss
+# (tests/calc/stored_inputs/stored_eeasisss.py). Their real runs are
+# RELEASE_CASES.
+MOCKED_CASES = {
+    'run_phaseshift': (
+        'poscar-Al2O3_NiAl(111)_cHole_20061025_mocked',
+        'poscar_fe3o4_001_cod_mocked',
+        'poscar_sb_si_111_mocked',
+        'poscar_sto110_4x1_mocked',
+        'poscar_tio2_supercell_mocked',
+        ),
+    }
 
 # Cases that take about SLOW_THRESHOLD or more (call phase, serial
 # run). Each test (node-id prefix) is mapped to the case-id parts,

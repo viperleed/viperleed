@@ -7,6 +7,8 @@ plugins (tier_marks, check_slow and release).
 
 Fixtures
 --------
+mocked_cases
+    An empty dict in place of tiers.MOCKED_CASES.
 release_cases
     An empty dict in place of tiers.RELEASE_CASES.
 run (factory)
@@ -73,6 +75,14 @@ def test_other():
 _SAMPLE_FILES = {'test_sample': _TEST_FILE, 'test_unrelated': _OTHER_FILE}
 
 
+@fixture(name='mocked_cases')
+def fixture_mocked_cases(monkeypatch):
+    """Replace tiers.MOCKED_CASES with a dict that tests can fill."""
+    cases = {}
+    monkeypatch.setattr(tiers, 'MOCKED_CASES', cases)
+    return cases
+
+
 @fixture(name='release_cases')
 def fixture_release_cases(monkeypatch):
     """Replace tiers.RELEASE_CASES with a dict that tests can fill."""
@@ -82,20 +92,24 @@ def fixture_release_cases(monkeypatch):
 
 
 @fixture(name='run')
-def fixture_run(pytester, slow_cases, release_cases):
+def fixture_run(pytester, slow_cases, release_cases, mocked_cases):
     """Return a function that runs sample tests with the tier options.
 
     The function takes the command-line arguments, the `slow` cases
     to put in tiers.SLOW_CASES, the `release` cases to put in
-    tiers.RELEASE_CASES, the `files` to write (default: the
-    sample tests), and the `cache` and `own_process` arguments of
-    run_pytest. A separate process gets `slow` and `release` handed
-    over with a plugin.
+    tiers.RELEASE_CASES, the `mocked` cases to put in
+    tiers.MOCKED_CASES, the `files` to write (default: the sample
+    tests), and the `cache` and `own_process` arguments of
+    run_pytest. A separate process gets the tables handed over with
+    a plugin.
     """
-    def _run(*args, slow=None, release=None, files=None, cache=False,
-             own_process=False):
+    # One keyword per tier table, as the tests name them
+    # pylint: disable-next=too-many-arguments
+    def _run(*args, slow=None, release=None, mocked=None,  # noqa: PLR0913
+             files=None, cache=False, own_process=False):
         slow_cases.update(slow or {})
         release_cases.update(release or {})
+        mocked_cases.update(mocked or {})
         pytester.makeini(INI)
         pytester.makepyfile(**(files or _SAMPLE_FILES))
         options = list(args)
@@ -107,7 +121,8 @@ def fixture_run(pytester, slow_cases, release_cases):
                 _SLOW_PLUGIN:
                     'from tests.harness import tiers\n'
                     f'tiers.SLOW_CASES.update({slow_cases!r})\n'
-                    f'tiers.RELEASE_CASES.update({release_cases!r})\n',
+                    f'tiers.RELEASE_CASES.update({release_cases!r})\n'
+                    f'tiers.MOCKED_CASES.update({mocked_cases!r})\n',
                 })
             options.extend(('-p', _SLOW_PLUGIN))
         return run_pytest(pytester, *options, cache=cache,

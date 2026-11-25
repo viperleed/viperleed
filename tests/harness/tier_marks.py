@@ -52,6 +52,22 @@ def _is_release_case(item, cases):
         )
 
 
+def _needs_tensorleed(item):
+    """Return whether `item` uses TensErLEED.
+
+    It does if it uses a fixture of TENSORLEED_FIXTURES for which it
+    is not a case of MOCKED_CASES.
+    """
+    _, params = _split_case_id(item.nodeid)
+    return any(
+        not any(_has_case(params, part)
+                for part in tiers.MOCKED_CASES.get(fixture, ()))
+        for fixture in tiers.TENSORLEED_FIXTURES.intersection(
+            item.fixturenames
+            )
+        )
+
+
 def pytest_itemcollected(item):
     """Remember the node ids and fixtures of all items.
 
@@ -100,7 +116,7 @@ def _find_stale_slow_cases(collected_items, cases):
     return stale
 
 
-def _find_stale_release_cases(collected, cases):
+def _find_stale_fixture_cases(collected, cases):
     """Return descriptions of `cases` entries matching no case.
 
     Only fixtures that at least one collected item uses are checked,
@@ -111,7 +127,7 @@ def _find_stale_release_cases(collected, cases):
     collected : Iterable
         Pairs of node id and fixture names of all collected items.
     cases : dict
-        The table RELEASE_CASES of tiers.
+        The table RELEASE_CASES or MOCKED_CASES of tiers.
 
     Returns
     -------
@@ -144,7 +160,12 @@ _TABLES = (
     (
         'RELEASE_CASES',
         'the cases that only run with --release',
-        _find_stale_release_cases,
+        _find_stale_fixture_cases,
+        ),
+    (
+        'MOCKED_CASES',
+        'the cases that replace TensErLEED by stored outputs',
+        _find_stale_fixture_cases,
         ),
     )
 
@@ -209,7 +230,7 @@ def pytest_collection_modifyitems(config, items):
     """Mark TensErLEED, slow, and release tests; check the tables."""
     _check_stale_cases(config, items)
     for item in items:
-        if tiers.TENSORLEED_FIXTURES.intersection(item.fixturenames):
+        if _needs_tensorleed(item):
             item.add_marker(pytest.mark.tensorleed)
         if _is_listed_slow(item, tiers.SLOW_CASES):
             item.add_marker(pytest.mark.slow)

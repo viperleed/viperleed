@@ -12,8 +12,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-11'
 __license__ = 'GPLv3+'
 
-import os
-
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize_with_cases
@@ -26,10 +24,9 @@ from ...helpers import CustomTestException
 from ...helpers import PSGEN_SEED
 from ...helpers import private_random
 from ..poscar_slabs import CasePOSCARSlabs as POSCARSlabs
-from .conftest import SYSTEM_NAME
-
-INPUT_NAME = 'eeasisss-input'
-POSIX_SEP = '/'  # Path separator in the references
+from .stored_eeasisss import INPUT_NAME
+from .stored_eeasisss import SYSTEM_NAME
+from .stored_eeasisss import use_forward_slashes
 
 # Cases of POSCARSlabs that carry parameters (presets or mixed sites).
 # Unlike the other stored-input tests, these need only a slab and its
@@ -62,26 +59,9 @@ def fixture_written_input(stub_tree, tmp_path, mocker):
                 pytest.raises(CustomTestException):
             psgen.runPhaseshiftGen_old(slab, rpars)
         written = work / INPUT_NAME
-        _use_forward_slashes(written)
+        use_forward_slashes(written)
         return written
     return _write
-
-
-def _use_forward_slashes(written):
-    """Replace OS-native path separators in `written` with '/'.
-
-    psgen writes the paths of the charge-density files with the
-    separators of the OS (backslashes on Windows, where eeasisss
-    accepts them). The references use forward slashes, so that the
-    same reference holds on every OS.
-
-    Parameters
-    ----------
-    written : Path
-        The file to edit in place.
-    """
-    text = written.read_text(encoding='utf-8')
-    written.write_text(text.replace(os.sep, POSIX_SEP), encoding='utf-8')
 
 
 @parametrize_with_cases('args', cases=CASES)
