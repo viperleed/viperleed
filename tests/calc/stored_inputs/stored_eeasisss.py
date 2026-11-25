@@ -18,7 +18,9 @@ the repository:
     VIPERLEED_TENSORLEED=<tree> python -m \\
         tests.calc.stored_inputs.stored_eeasisss [case_id ...]
 
-and review the changes (e.g., with git) before committing them.
+and review the changes (e.g., with git) before committing them. The
+release tier (test_stored_eeasisss.py) checks, in the same way, that
+the real eeasisss still gives the stored data.
 """
 
 __authors__ = (
@@ -364,8 +366,8 @@ def _store_raw_outputs(store):
     return _run
 
 
-def regenerate(case_id, real_tree):
-    """Rewrite the stored data of a case with the real eeasisss.
+def regenerate(case_id, real_tree, store=None):
+    """Write the stored data of a case anew with the real eeasisss.
 
     Parameters
     ----------
@@ -373,21 +375,82 @@ def regenerate(case_id, real_tree):
         One of MOCKED_CASES.
     real_tree : Path
         The TensErLEED tree with a compiled eeasisss.
+    store : Path, optional
+        The folder to which the data is written. Default is the
+        folder of the stored data of `case_id`, which is overwritten.
     """
     mocked = _mocked(case_id)
-    mocked.stored.mkdir(parents=True, exist_ok=True)
+    if store is None:
+        store = mocked.stored
+    store.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         tree = copy_real_tree(tmp_path, real_tree)
         # Replace the subprocess module seen by psgen, not its run
         # function, which _store_raw_outputs calls
-        run_real = _store_raw_outputs(mocked.stored)
+        run_real = _store_raw_outputs(store)
         with mock.patch.object(psgen, 'subprocess',
                                SimpleNamespace(run=run_real)):
             work, *_ = run_psgen(mocked.slab, mocked.rpars,
                                  tree, tmp_path)
         for name in (INPUT_NAME, REFERENCE):
-            shutil.copyfile(work / name, mocked.stored / name)
+            shutil.copyfile(work / name, store / name)
+
+
+def _check_raw_outputs(written, stored):
+    """Fail if the archives `written` and `stored` hold other files."""
+    with zipfile.ZipFile(written) as written_zip:
+        written_files = {name: written_zip.read(name)
+                         for name in written_zip.namelist()}
+    with zipfile.ZipFile(stored) as stored_zip:
+        stored_files = {name: stored_zip.read(name)
+                        for name in stored_zip.namelist()}
+    differing = sorted(
+        name
+        for name in written_files.keys() | stored_files.keys()
+        if written_files.get(name) != stored_files.get(name)
+        )
+    if not differing:
+        return
+    first = differing[0]
+    names = ', '.join(differing)
+    fail_with_diff(f'{len(differing)} raw output(s) differ from the stored '
+                   f'ones: {names}. If the change is intended, regenerate '
+                   f'the stored eeasisss outputs (see {__name__}).',
+                   stored_files.get(first, b'').decode(_ENCODING),
+                   written_files.get(first, b'').decode(_ENCODING),
+                   fromfile=f'stored: {stored}/{first}',
+                   tofile=f'written: {written}/{first}')
+
+
+def check_stored_data(case_id, real_tree, tmp_path):
+    """Fail if the real eeasisss does not give the stored data.
+
+    The data is written anew as by the regeneration command (see
+    regenerate) into a folder of `tmp_path`, and compared with the
+    stored one: eeasisss input, PHASESHIFTS and raw outputs.
+
+    Parameters
+    ----------
+    case_id : str
+        One of MOCKED_CASES.
+    real_tree : Path
+        The TensErLEED tree with a compiled eeasisss.
+    tmp_path : Path
+        An empty directory for the data written anew.
+
+    Raises
+    ------
+    pytest.fail.Exception
+        If any of the files written differs from the stored one.
+    """
+    written = tmp_path / case_id
+    regenerate(case_id, real_tree, written)
+    stored = STORED_PATH / case_id
+    for name in (INPUT_NAME, REFERENCE):
+        _check_stored(written / name, stored / name)
+    _check_raw_outputs(written / RAW_OUTPUT_ARCHIVE,
+                       stored / RAW_OUTPUT_ARCHIVE)
 
 
 def main(case_ids):

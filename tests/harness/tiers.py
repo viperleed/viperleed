@@ -289,8 +289,9 @@ SLOW_CASES = {
 # run_phaseshift fixture with the real eeasisss for the slabs of
 # MOCKED_CASES a release case: their PHASESHIFTS calculations are the
 # longest ones of the tier (more than 30 s each, serial). The mocked
-# cases run in the default tier, and the release cases check that the
-# stored outputs still agree with eeasisss.
+# cases run in the default tier. That the stored outputs still agree
+# with eeasisss is checked by tests/calc/stored_inputs/
+# test_stored_eeasisss.py, which is marked 'release' directly.
 RELEASE_CASES = {
     'run_phaseshift': (
         'poscar-Al2O3_NiAl(111)_cHole_20061025',
