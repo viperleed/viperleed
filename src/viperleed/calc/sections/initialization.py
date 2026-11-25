@@ -406,7 +406,8 @@ def initialization(sl, rp, subdomain=False):
         rp.ivbeams_sorted = True
     if rp.fileLoaded["BEAM_EQUIVALENCE"]:
         _apply_beam_equivalence(rp)
-    _finalize_beam_correspondence(sl, rp)
+    if not subdomain:  # Per-domain rp objects have no EXPBEAMS
+        _finalize_beam_correspondence(sl, rp)
     # The experimental and calculated beams are final from here on
 
     # Create directory compile_logs in which logs from compilation will be saved
