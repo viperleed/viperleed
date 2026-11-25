@@ -169,6 +169,7 @@ Varga
 vibrational
 wavenumber
 Weinold
+whitespace
 workhistory
 XCode
 Zdenek

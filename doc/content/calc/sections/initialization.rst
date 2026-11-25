@@ -33,7 +33,9 @@ The major steps are listed below in order of execution.
 2.  If found, read an :ref:`EXPBEAMS.csv or EXBEAMS<expbeams>` file containing
     experimental data. If :ref:`theo_energies` is not defined explicitly, pick
     a slightly expanded version of the energy range of the experimental data
-    for use in all calculations.
+    for use in all calculations. If found, also read
+    a :ref:`BEAM_EQUIVALENCE` file that assigns calculated beams to the
+    experimental ones.
 3.  Check whether the calculation involves
     :ref:`multiple structural domains<domain_calculation>`. If so, perform
     steps 4–9 separately for each domain.
@@ -51,4 +53,18 @@ The major steps are listed below in order of execution.
     consistent with the structure and settings. If not, and a phase-shifts
     calculation utility is available, generate new phase shifts automatically.
 9.  Generate the :ref:`BEAMLIST`, :ref:`experiment_symmetry`, and, if not
-    provided by the user, :ref:`IVBEAMS` files.
+    provided by the user, :ref:`IVBEAMS` files. If a
+    :ref:`BEAM_EQUIVALENCE` file was read, check it against the
+    experimental beams, :ref:`BEAMLIST`, and :ref:`IVBEAMS`, and generate
+    :ref:`IVBEAMS` from the calculated beams it lists rather than from
+    the experimental beams. In this case, experimental and calculated
+    beams are not merged because they are symmetry equivalent; see the
+    :ref:`BEAM_EQUIVALENCE` page for details.
+10. If experimental beams are given, determine which calculated beams
+    are compared to each experimental beam in the |R-factor|
+    calculation, and store this beam correspondence in
+    :ref:`SUPP/BEAM_EQUIVALENCE<beam_equivalence_supp>`.
+
+.. versionchanged:: 0.15.0
+   Read and check the :ref:`BEAM_EQUIVALENCE` file (steps 2 and 9), and
+   store the beam correspondence in |SUPP| (step 10).
