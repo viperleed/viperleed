@@ -8,8 +8,10 @@ __created__ = '2026-11-25'
 __license__ = 'GPLv3+'
 
 import pytest
+from pytest_cases import parametrize
 
-from viperleed.calc.sections.initialization import init_domains, initialization
+from viperleed.calc.sections.initialization import init_domains
+from viperleed.calc.sections.initialization import initialization
 
 
 class _StopError(Exception):
@@ -19,7 +21,7 @@ class _StopError(Exception):
 class TestLoadingInInitialization:
     """Check which Rparams objects load BEAM_EQUIVALENCE."""
 
-    @pytest.mark.parametrize('subdomain', [True, False])
+    @parametrize('subdomain', [True, False])
     def test_loaded_only_for_main(self, subdomain, mocker):
         """Check that per-domain Rparams do not load the file."""
         rpars = mocker.MagicMock()

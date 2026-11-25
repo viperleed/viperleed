@@ -7,7 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-25'
 __license__ = 'GPLv3+'
 
-from pytest_cases import fixture, parametrize
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams.rparams import Rparams

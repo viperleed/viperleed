@@ -20,6 +20,8 @@ from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_USED_NAME
 from viperleed.calc.sections.initialization import BeamEquivalenceError
 from viperleed.calc.sections.initialization import initialization
 
+_WEIGHTED = {(1, 0): {(1, 0): 1, (0, 1): 2}}
+
 pytestmark = pytest.mark.tensorleed
 
 
@@ -54,17 +56,15 @@ def factory_init_with_file(ag100, make_section_tempdir, tensorleed_path):
 class TestInitializationWithBeamEquivalence:
     """Tests for the initialization with a loaded BEAM_EQUIVALENCE."""
 
-    _weighted = {(1, 0): {(1, 0): 1, (0, 1): 2}}
-
     @parametrize('run', ([1], [3], [31], [4]))
     def test_weights_error_at_initialization(self, init_with_file, run):
         """Check the error at initialization if an R factor runs."""
         with pytest.raises(BeamEquivalenceError):
-            init_with_file(self._weighted, run)
+            init_with_file(_WEIGHTED, run)
 
     def test_weights_without_r_factor(self, init_with_file):
         """Check that weights are fine if no R factor runs."""
-        tmp, rpars = init_with_file(self._weighted, [2])
+        tmp, rpars = init_with_file(_WEIGHTED, [2])
         used = read_beam_equivalence(tmp / BEAM_EQUIVALENCE_USED_NAME)
         assert used == rpars.beam_correspondence
 
@@ -80,7 +80,7 @@ class TestInitializationWithBeamEquivalence:
                                            (1, 1): {(1, 1): 1}})
 
     def test_ignored_line_not_in_ivbeams(self, init_with_file):
-        """Check no error for an ignored line with beams not in IVBEAMS."""
+        """Check no error for an ignored line not in IVBEAMS."""
         assignments = {(1, 0): {(1, 0): 1}, (9, 9): {(2, 0): 1}}
         _, rpars = init_with_file(assignments, [2],
                                   expbeams=[(1, 0)],

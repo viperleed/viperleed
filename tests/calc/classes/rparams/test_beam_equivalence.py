@@ -11,6 +11,7 @@ import pytest
 from pytest_cases import fixture
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_NAME
 
 
@@ -21,10 +22,10 @@ def fixture_rpars():
 
 
 @fixture(name='in_tmp_dir')
-def fixture_in_tmp_dir(tmp_path, monkeypatch):
+def fixture_in_tmp_dir(tmp_path):
     """Run the test in an empty temporary directory."""
-    monkeypatch.chdir(tmp_path)
-    return tmp_path
+    with execute_in_dir(tmp_path):
+        yield tmp_path
 
 
 class TestTryLoadingBeamEquivalenceFile:
