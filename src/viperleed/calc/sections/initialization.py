@@ -657,24 +657,28 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
 
 
 def _apply_beam_equivalence(rp):
-    """Check IVBEAMS against the BEAM_EQUIVALENCE file.
+    """Check IVBEAMS and EXPBEAMS against the BEAM_EQUIVALENCE file.
 
-    Beams of IVBEAMS that are on no right-hand side are logged.
+    Beams of IVBEAMS that are on no right-hand side are logged. Lines
+    whose experimental beam is not in EXPBEAMS are ignored, and
+    experimental beams on no line are removed from rp.expbeams.
+    The correspondence stored in rp is then the filtered one.
 
     Parameters
     ----------
     rp : Rparams
-        The run parameters. Its beam_correspondence and ivbeams
-        attributes are used.
+        The run parameters. Its beam_correspondence and expbeams
+        attributes are modified. Its ivbeams must be sorted.
 
     Raises
     ------
     BeamEquivalenceError
         If a beam on a right-hand side is missing in IVBEAMS.
     """
-    calc_hks = rp.beam_correspondence.calculated_beams
+    correspondence = rp.beam_correspondence
+    calc_hks = correspondence.calculated_beams
     missing = [Beam(hk).label for hk in calc_hks
-               if not _has_beam(rp.ivbeams, hk, eps=BEAM_EPS)]
+               if not _has_beam(rp.ivbeams, hk)]
     if missing:
         msg = ('The following calculated beams in BEAM_EQUIVALENCE are '
                f'missing in IVBEAMS: {", ".join(missing)}')
@@ -687,6 +691,31 @@ def _apply_beam_equivalence(rp):
         logger.info('The following calculated beams are on no '
                     'right-hand side of BEAM_EQUIVALENCE: '
                     f'{", ".join(unassigned)}')
+    if not rp.fileLoaded['EXPBEAMS']:
+        return
+
+    assignments = correspondence.assignments
+    for exp_hk in list(assignments):
+        if not _has_beam(rp.expbeams, exp_hk):
+            logger.warning(
+                'BEAM_EQUIVALENCE assigns calculated beams to '
+                f'experimental beam {Beam(exp_hk).label}, which is not '
+                'in EXPBEAMS. The line will be ignored.'
+                )
+            del assignments[exp_hk]
+    removed = [b for b in rp.expbeams
+               if not any(b.isEqual_hk(hk, eps=BEAM_EPS)
+                          for hk in assignments)]
+    for beam in removed:
+        logger.warning(
+            f'Experimental beam {beam.label} is not in BEAM_EQUIVALENCE, '
+            'and will not be used in the R factor.'
+            )
+        rp.setHaltingLevel(1)
+        rp.expbeams.remove(beam)
+        logger.warning(f'Beam {beam.label} was removed from set of '
+                       'experimental beams!')
+    rp.beam_correspondence = BeamCorrespondence(assignments)
 
 
 def _check_beam_equivalence_in_beamlist(rp):

@@ -54,7 +54,7 @@ class TestSymmetryMergingSkipped:
 
     @parametrize(use_file=(True, False))
     def test_check_expbeams(self, use_file, rpars):
-        """Check that equivalent experimental beams survive with a file."""
+        """Check equivalent experimental beams survive with a file."""
         _use_file(rpars, use_file)
         rpars.expbeams = [Beam((1, 0)), Beam((0, 1))]
         checkEXPBEAMS(None, rpars)
@@ -72,7 +72,7 @@ class TestSymmetryMergingSkipped:
 
     @parametrize(use_file=(True, False))
     def test_sort_ivbeams_not_in_beamlist(self, use_file, rpars, caplog):
-        """Check that an equivalent beam is renamed only without a file."""
+        """Check an equivalent beam is renamed only without a file."""
         _use_file(rpars, use_file)
         rpars.beamlist = ['  0  0\n', '  1  0\n']
         rpars.ivbeams = [Beam((0, 1))]
