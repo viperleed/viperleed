@@ -664,7 +664,8 @@ def getBeamCorrespondence(sl, rp):
     """Return the experimental-beam index of each calculated beam.
 
     Experimental beams without a calculated counterpart are removed
-    from rp.expbeams. See build_beam_correspondence for details.
+    from rp.expbeams (not when a BEAM_EQUIVALENCE file was loaded).
+    See build_beam_correspondence for details.
 
     Parameters
     ----------
@@ -684,13 +685,18 @@ def getBeamCorrespondence(sl, rp):
 
 
 def build_beam_correspondence(sl, rp):
-    """Return the automatic, symmetry-based beam correspondence.
+    """Return the beam correspondence to use in the R factor.
 
-    Each calculated beam is assigned (with weight 1) to the experimental
-    beam it equals or, failing that, to a symmetry-equivalent one.
-    Experimental beams without a calculated counterpart are removed
-    from rp.expbeams, with a warning, and the halting level is raised
-    to 1.
+    If a BEAM_EQUIVALENCE file was loaded (rp.fileLoaded), this is
+    rp.beam_correspondence, which initialization already filtered
+    against rp.expbeams and rp.ivbeams; nothing is modified. Otherwise,
+    it is the automatic, symmetry-based correspondence.
+
+    In the automatic correspondence, each calculated beam is assigned
+    (with weight 1) to the experimental beam it equals or, failing
+    that, to a symmetry-equivalent one. Experimental beams without a
+    calculated counterpart are removed from rp.expbeams, with a
+    warning, and the halting level is raised to 1.
 
     Parameters
     ----------
@@ -698,7 +704,8 @@ def build_beam_correspondence(sl, rp):
         The slab, used for finding symmetry-equivalent beams.
     rp : Rparams
         The run parameters. Its expbeams and ivbeams attributes
-        are used; expbeams is modified in place.
+        are used; in the automatic case, expbeams is modified
+        in place.
 
     Returns
     -------
@@ -707,6 +714,8 @@ def build_beam_correspondence(sl, rp):
         least one calculated beam assigned, in the order of
         rp.expbeams; all weights are equal.
     """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        return rp.beam_correspondence
     eps = BEAM_EPS  # for comparing beams
     #   make dictionary {theoretical_beam: experimental_beam}
     beamcorr = {}

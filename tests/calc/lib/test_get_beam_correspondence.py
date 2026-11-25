@@ -13,6 +13,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc import symmetry
+from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -186,3 +187,19 @@ def test_ag100(data_path, make_beams, average_beams):
     assert getBeamCorrespondence(slab, rpars) == expected
     assert _labels(rpars.expbeams) == remaining
     assert rpars.halt == 1
+
+
+class TestFromFile:
+    """Tests for getBeamCorrespondence with a BEAM_EQUIVALENCE file."""
+
+    def test_returns_correspondence_of_file(self, synthetic):
+        """Check that the file replaces the automatic correspondence."""
+        slab, rpars = synthetic(expbeams=((1, 0),),
+                                ivbeams=((1, 0), (0, 1)))
+        assert getBeamCorrespondence(slab, rpars) == [0, 0]  # Equivalent
+        rpars.fileLoaded['BEAM_EQUIVALENCE'] = True
+        rpars.beam_correspondence = BeamCorrespondence(
+            {(1, 0): {(1, 0): 1}}
+            )
+        assert getBeamCorrespondence(slab, rpars) == [0, -1]
+        assert len(rpars.expbeams) == 1

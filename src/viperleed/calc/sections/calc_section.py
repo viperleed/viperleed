@@ -241,4 +241,8 @@ ALL_INPUT_FILES.update(set(EXPBEAMS_NAMES))
 
 # optional file assigning calculated beams to experimental beams
 BEAM_EQUIVALENCE_NAME = 'BEAM_EQUIVALENCE'
+# Work-folder file in which the correspondence actually used is
+# written. It differs from BEAM_EQUIVALENCE_NAME to not overwrite
+# an input file; cleanup stores it in SUPP as BEAM_EQUIVALENCE_NAME.
+BEAM_EQUIVALENCE_USED_NAME = f'{BEAM_EQUIVALENCE_NAME}_used'
 ALL_INPUT_FILES.add(BEAM_EQUIVALENCE_NAME)

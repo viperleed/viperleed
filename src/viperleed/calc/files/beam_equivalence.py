@@ -20,6 +20,7 @@ from quicktions import Fraction
 
 from viperleed.calc.classes.beam import MAX_DENOMINATOR
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
+from viperleed.calc.classes.beam_correspondence import weights_are_equal
 from viperleed.calc.files.beams import snap_to_fraction
 from viperleed.calc.lib.string_utils import strip_comments
 
@@ -51,7 +52,7 @@ _HEADER = ('# BEAM_EQUIVALENCE: experimental beam = (weight*) '
            'calculated beam + ...')
 
 
-def parse_beam_label(label):
+def _parse_beam_label(label):
     """Return the (h, k) indices of a beam label as Fractions.
 
     Parameters
@@ -149,7 +150,7 @@ def _parse_assignment(line):
         msg = (f'Invalid line {line!r}. Expected one beam assignment, '
                'e.g., (1 0) = (1 0) + 0.5*(-1 0).')
         raise ValueError(msg) from None
-    exp_key = parse_beam_label(left)
+    exp_key = _parse_beam_label(left)
     calc_weights = {}
     for term in _split_terms(right):
         weight, calc_key = _parse_term(term)
@@ -192,7 +193,7 @@ def _parse_term(term):
     except ZeroDivisionError:
         msg = f'Invalid weight {weight!r}: division by zero.'
         raise ValueError(msg) from None
-    return weight, parse_beam_label(match['label'])
+    return weight, _parse_beam_label(match['label'])
 
 
 def write_beam_equivalence(correspondence, path):
@@ -215,14 +216,35 @@ def write_beam_equivalence(correspondence, path):
     None.
     """
     lines = [_HEADER]
-    for exp_key, calc_weights in correspondence.assignments.items():
-        equal = len(set(calc_weights.values())) == 1
-        terms = (_format_label(calc_key) if equal
-                 else f'{_format_weight(weight)}*{_format_label(calc_key)}'
-                 for calc_key, weight in calc_weights.items())
-        joined = ' + '.join(terms)
-        lines.append(f'{_format_label(exp_key)} = {joined}')
+    lines.extend(format_assignment(exp_key, calc_weights)
+                 for exp_key, calc_weights
+                 in correspondence.assignments.items())
     Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def format_assignment(exp_key, calc_weights):
+    """Return the BEAM_EQUIVALENCE line of one beam assignment.
+
+    Weights are left out if they are all equal.
+
+    Parameters
+    ----------
+    exp_key : tuple
+        The (h, k) Fractions of the experimental beam.
+    calc_weights : dict
+        Weight of each calculated beam, keyed by (h, k) Fractions.
+
+    Returns
+    -------
+    str
+        The line, without a trailing newline.
+    """
+    equal = weights_are_equal(calc_weights.values())
+    terms = (_format_label(calc_key) if equal
+             else f'{_format_weight(weight)}*{_format_label(calc_key)}'
+             for calc_key, weight in calc_weights.items())
+    joined = ' + '.join(terms)
+    return f'{_format_label(exp_key)} = {joined}'
 
 
 def _format_label(key):

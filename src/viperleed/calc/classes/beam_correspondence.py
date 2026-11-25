@@ -46,6 +46,12 @@ class BeamCorrespondence:
     has_shared_beams : bool
         Whether some calculated beam appears in more
         than one beam assignment.
+    shared_beams : set
+        The (h, k) of calculated beams that appear in more
+        than one beam assignment.
+    weighted_assignments : list
+        The (h, k) of experimental beams whose
+        assignment has unequal weights.
     """
 
     def __init__(self, assignments):
@@ -107,20 +113,42 @@ class BeamCorrespondence:
                 for exp_key, calc_weights in self._assignments.items()}
 
     @property
+    def calculated_beams(self):
+        """Return the (h, k) of all calculated beams, without repeats.
+
+        The beams are in order of first appearance.
+        """
+        beams = {}
+        for calc_weights in self._assignments.values():
+            beams.update(dict.fromkeys(calc_weights))
+        return list(beams)
+
+    @property
     def has_shared_beams(self):
         """Return whether a calculated beam is in many assignments."""
-        seen = set()
-        for calc_weights in self._assignments.values():
-            if seen.intersection(calc_weights):
-                return True
-            seen.update(calc_weights)
-        return False
+        return bool(self.shared_beams)
 
     @property
     def is_weighted(self):
         """Return whether some beam assignment has unequal weights."""
-        return not all(_all_equal(calc_weights.values())
-                       for calc_weights in self._assignments.values())
+        return bool(self.weighted_assignments)
+
+    @property
+    def shared_beams(self):
+        """Return the calculated beams that are in many assignments."""
+        seen = set()
+        shared = set()
+        for calc_weights in self._assignments.values():
+            shared.update(seen.intersection(calc_weights))
+            seen.update(calc_weights)
+        return shared
+
+    @property
+    def weighted_assignments(self):
+        """Return the experimental beams with unequal weights."""
+        return [exp_key
+                for exp_key, calc_weights in self._assignments.items()
+                if not weights_are_equal(calc_weights.values())]
 
     def legacy_vector(self, expbeams, ivbeams):
         """Return the experimental-beam index for each calculated beam.
@@ -209,7 +237,7 @@ class BeamCorrespondence:
         return matrix
 
 
-def _all_equal(weights):
+def weights_are_equal(weights):
     """Return whether all `weights` are equal within WEIGHT_REL_TOL."""
     weights = tuple(weights)
     largest = max(weights)
@@ -256,7 +284,7 @@ def _normalised(exp_key, calc_weights):
         msg = (f'The assignment of experimental beam {_format_key(exp_key)} '
                'has no calculated beam with a non-zero weight.')
         raise ValueError(msg)
-    if _all_equal(weights.values()):
+    if weights_are_equal(weights.values()):
         # Unweighted: store exactly 1/n, so that the result
         # does not depend on the scale of the input weights
         return {calc_key: 1 / len(weights) for calc_key in weights}

@@ -38,6 +38,10 @@ logger = logging.getLogger(__name__)
 # fraction it was rounded from: writeIVBEAMS writes six decimals.
 _DECIMALS_TOLERANCE = Fraction(1, 2_000_000)
 
+# Tolerance for matching beams to BEAMLIST, whose
+# indices are stored as floats with few decimals
+BEAMLIST_EPS = 1e-3
+
 
 def averageBeams(beams, weights=None):
     """Takes a list of percentages and a list of lists of Beam objects.
@@ -150,6 +154,35 @@ def snap_to_fraction(index):
     return index
 
 
+def beamlist_to_hks(beamlist):
+    """Return the [h, k] floats of the beams in BEAMLIST lines.
+
+    Parameters
+    ----------
+    beamlist : Sequence of str
+        The lines of a BEAMLIST file. Lines from which two
+        numbers cannot be read are skipped.
+
+    Returns
+    -------
+    list of list of float
+        The h and k indices of each beam.
+    """
+    blfs = []
+    for line in beamlist:
+        llist = line.split()
+        if len(llist) > 1:
+            fl = []
+            for i in range(0, 2):
+                try:
+                    fl.append(float(llist[i]))
+                except (ValueError, IndexError):
+                    pass
+            if len(fl) == 2:
+                blfs.append(fl)
+    return blfs
+
+
 def sortIVBEAMS(sl, rp):
     """Sorts the beams in IVBEAMS such that they appear in the same order as
     in the BEAMLIST. Returns the sorted list."""
@@ -163,21 +196,9 @@ def sortIVBEAMS(sl, rp):
         except FileNotFoundError:
             logger.error("BEAMLIST not found.")
             raise
-    err = 1e-3          # since beams are saved as floats, give error tolerance
-    symeq = leedbase.getSymEqBeams(sl, rp)
-    # first, get beamlist as floats
-    blfs = []
-    for line in rp.beamlist:
-        llist = line.split()
-        if len(llist) > 1:
-            fl = []
-            for i in range(0, 2):
-                try:
-                    fl.append(float(llist[i]))
-                except (ValueError, IndexError):
-                    pass
-            if len(fl) == 2:
-                blfs.append(fl)
+    err = BEAMLIST_EPS
+    symeq = _get_symmetry_equivalent_beams(sl, rp)
+    blfs = beamlist_to_hks(rp.beamlist)
     # now figure out if there are beams in IVBEAMS without a partner
     not_found = []
     found_equivalent = []
@@ -382,13 +403,24 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
     return beams
 
 
+def _get_symmetry_equivalent_beams(sl, rp):
+    """Return symmetry-equivalent beams, or none with BEAM_EQUIVALENCE.
+
+    With a BEAM_EQUIVALENCE file, beams are never merged based on
+    symmetry: only those with the same (h, k) are considered equal.
+    """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        return []
+    return leedbase.getSymEqBeams(sl, rp)
+
+
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = leedbase.getSymEqBeams(sl, rp)
+    symeq = _get_symmetry_equivalent_beams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
-        eqbl = []   # hk of equivalent beams
+        eqbl = [b.hk]   # hk of equivalent beams (always incl. b itself)
         for (hk, i) in symeq:
             if b.isEqual_hk(hk):
                 eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
@@ -498,23 +530,56 @@ def readAUXEXPBEAMS(
 
 
 def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
-    """Writes an IVBEAMS file based on rp.exbeams. Returns
-    those beams in IVBEAMS form."""
-    if not domains:
-        d = [leedbase.getLEEDdict(sl, rp)]
+    """Write an IVBEAMS file with the beams to calculate.
+
+    The beams are those of rp.expbeams (projected to the first domain
+    if beams are averaged) or, if a BEAM_EQUIVALENCE file was loaded,
+    all those on its right-hand sides.
+
+    Parameters
+    ----------
+    sl : Slab or None
+        The slab. Unused for domains or with BEAM_EQUIVALENCE.
+    rp : Rparams
+        The run parameters.
+    filename : str, optional
+        The name of the file to write. Default is 'IVBEAMS'.
+    domains : bool, optional
+        Whether this is a run with multiple structural domains.
+        Default is False.
+
+    Returns
+    -------
+    list of Beam
+        The beams written, or an empty list if the LEED parameters
+        cannot be determined.
+
+    Raises
+    ------
+    Exception
+        If writing the file fails.
+    """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        source = 'BEAM_EQUIVALENCE'
+        ivbeams = [Beam(hk) for hk in rp.beam_correspondence.calculated_beams]
     else:
-        d = [leedbase.getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
-    if any([v is None for v in d]):
-        logger.error("Failed to write IVBEAMS")
-        return []
+        source = 'EXPBEAMS'
+        if not domains:
+            d = [leedbase.getLEEDdict(sl, rp)]
+        else:
+            d = [leedbase.getLEEDdict(dp.slab, dp.rpars)
+                 for dp in rp.domainParams]
+        if any([v is None for v in d]):
+            logger.error("Failed to write IVBEAMS")
+            return []
+        if rp.AVERAGE_BEAMS is not False:
+            makebeams = project_to_first_domain(
+                [b.hkfrac for b in rp.expbeams], *d)
+            ivbeams = [Beam(hk) for hk in makebeams]
+        else:
+            ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
     output = ("  h         k          Beams to calculate, automatically "
-              "generated from EXPBEAMS\n")
-    if rp.AVERAGE_BEAMS is not False:
-        makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
-                                            *d)
-        ivbeams = [Beam(hk) for hk in makebeams]
-    else:
-        ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
+              f"generated from {source}\n")
     for b in ivbeams:
         output += "{: 10.6f} {: 10.6f}\n".format(b.hk[0], b.hk[1])
     try:

@@ -233,7 +233,7 @@ _HAS_SHARED_BEAMS = (
 
 
 class TestProperties:
-    """Tests for is_weighted and has_shared_beams."""
+    """Tests for the properties derived from the assignments."""
 
     def test_is_weighted_order_independent(self):
         """Check that key order does not decide if weights are equal."""
@@ -254,6 +254,28 @@ class TestProperties:
         """Check whether a calculated beam is in many assignments."""
         corr = BeamCorrespondence(assignments)
         assert corr.has_shared_beams is expect
+
+    def test_shared_beams(self):
+        """Check which calculated beams are in many assignments."""
+        corr = BeamCorrespondence(_SHARED)
+        assert corr.shared_beams == {(_HALF, 0)}
+
+    def test_weighted_assignments(self):
+        """Check which assignments have unequal weights."""
+        corr = BeamCorrespondence({
+            (1, 0): {(1, 0): 1, (0, 1): 2},
+            (1, 1): {(1, 1): 1, (2, 0): 1 + 1e-7},
+            (2, 0): {(0, 1): 3, (2, 0): 1},
+            })
+        assert corr.weighted_assignments == [(1, 0), (2, 0)]
+
+    def test_calculated_beams(self):
+        """Check calculated beams are unique, in order of appearance."""
+        corr = BeamCorrespondence({(1, 0): {(1, 0): 1, (0, 1): 1},
+                                   (1, 1): {(0, 1): 1, (2, 0): 1}})
+        assert corr.calculated_beams == [
+            (1, 0), (0, 1), (2, 0),
+            ]
 
 
 _NO_LEGACY = {

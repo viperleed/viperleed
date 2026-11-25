@@ -21,6 +21,9 @@ import shutil
 import numpy as np
 
 from viperleed.calc import symmetry
+from viperleed.calc.classes.beam import Beam
+from viperleed.calc.classes.beam_correspondence import BEAM_EPS
+from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
@@ -37,23 +40,37 @@ from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
+from viperleed.calc.files.beam_equivalence import format_assignment
+from viperleed.calc.files.beam_equivalence import write_beam_equivalence
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.leedbase import build_beam_correspondence
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_USED_NAME
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
+
+# Sections of RUN that compute an R factor (if EXPBEAMS is given):
+# refcalc, search, superpos, domain search, error calculation,
+# full-dynamic optimization, and R factor after refcalc/superpos
+_SECTIONS_WITH_R_FACTOR = (1, 3, 31, 4, 5, 6, 11, 12)
+
+
+class BeamEquivalenceError(Exception):
+    """The BEAM_EQUIVALENCE file is inconsistent with other input."""
 
 
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
         rp.try_loading_expbeams_file()
+        rp.try_loading_beam_equivalence_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -376,6 +393,11 @@ def initialization(sl, rp, subdomain=False):
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
             iobeams.checkEXPBEAMS(sl, rp)
+        if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+            # Ignore lines of experimental beams not in EXPBEAMS
+            # before any other check uses the correspondence
+            _filter_beam_equivalence(rp)
+            _check_beam_equivalence_in_beamlist(rp)
         # write and sort IVBEAMS
         if not rp.fileLoaded["IVBEAMS"]:
             try:
@@ -390,6 +412,11 @@ def initialization(sl, rp, subdomain=False):
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
         rp.ivbeams = iobeams.sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
+    if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        _check_beam_equivalence_in_ivbeams(rp)
+    if not subdomain:  # Per-domain rp objects have no EXPBEAMS
+        _finalize_beam_correspondence(sl, rp)
+    # The experimental and calculated beams are final from here on
 
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
@@ -401,6 +428,7 @@ def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will
     include running the 'normal' initialization for each domain."""
     rp.try_loading_expbeams_file()
+    rp.try_loading_beam_equivalence_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
@@ -518,6 +546,11 @@ def init_domains(rp):
     # if EXPBEAMS was loaded, it hasn't been checked yet - check now
     if rp.fileLoaded["EXPBEAMS"]:
         iobeams.checkEXPBEAMS(None, rp, domains=True)
+    if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        # Ignore lines of experimental beams not in EXPBEAMS
+        # before any other check uses the correspondence
+        _filter_beam_equivalence(rp)
+        _check_beam_equivalence_in_beamlist(rp)
     # write and sort IVBEAMS
     if not rp.fileLoaded["IVBEAMS"]:
         try:
@@ -532,6 +565,10 @@ def init_domains(rp):
     if not rp.ivbeams_sorted:
         rp.ivbeams = iobeams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
+    if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        _check_beam_equivalence_in_ivbeams(rp)
+    _finalize_beam_correspondence(None, rp)
+    # The experimental and calculated beams are final from here on
 
     rp.updateDerivedParams()  # Also sets LMAX
     if not rp.LMAX.has_max:
@@ -635,6 +672,231 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
     if slab.has_atoms_in_multiple_c_cells():
         logger.warning(_msg)
         rpars.setHaltingLevel(1)
+
+
+def _check_beam_equivalence_in_ivbeams(rp):
+    """Check IVBEAMS against the BEAM_EQUIVALENCE file.
+
+    Beams of IVBEAMS that are on no right-hand side are logged.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its beam_correspondence and ivbeams
+        attributes are used. Its ivbeams must be sorted.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If a beam on a right-hand side is missing in IVBEAMS.
+    """
+    calc_hks = rp.beam_correspondence.calculated_beams
+    missing = [Beam(hk).label for hk in calc_hks
+               if not _has_beam(rp.ivbeams, hk)]
+    if missing:
+        msg = ('The following calculated beams in BEAM_EQUIVALENCE are '
+               f'missing in IVBEAMS: {", ".join(missing)}')
+        logger.error(msg)
+        raise BeamEquivalenceError(msg)
+    unassigned = [b.label for b in rp.ivbeams
+                  if not any(b.isEqual_hk(hk, eps=BEAM_EPS)
+                             for hk in calc_hks)]
+    if unassigned:
+        logger.info('The following calculated beams are on no '
+                    'right-hand side of BEAM_EQUIVALENCE: '
+                    f'{", ".join(unassigned)}')
+
+
+def _filter_beam_equivalence(rp):
+    """Match the BEAM_EQUIVALENCE file with EXPBEAMS.
+
+    Lines whose experimental beam is not in EXPBEAMS are ignored, and
+    experimental beams on no line are removed from rp.expbeams. The
+    correspondence stored in rp is then the filtered one. Nothing is
+    done if no EXPBEAMS file was loaded.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its beam_correspondence and expbeams
+        attributes are modified.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If EXPBEAMS was loaded and no line is left, i.e., no
+        left-hand side of BEAM_EQUIVALENCE is in EXPBEAMS.
+    """
+    if not rp.fileLoaded['EXPBEAMS']:
+        return
+    assignments = rp.beam_correspondence.assignments
+    for exp_hk in list(assignments):
+        if not _has_beam(rp.expbeams, exp_hk):
+            logger.warning(
+                'BEAM_EQUIVALENCE assigns calculated beams to '
+                f'experimental beam {Beam(exp_hk).label}, which is not '
+                'in EXPBEAMS. The line will be ignored.'
+                )
+            del assignments[exp_hk]
+    if not assignments:
+        msg = ('No left-hand side of BEAM_EQUIVALENCE is in EXPBEAMS, '
+               'so every line of BEAM_EQUIVALENCE would be ignored. '
+               'Check that BEAM_EQUIVALENCE matches EXPBEAMS.')
+        logger.error(msg)
+        raise BeamEquivalenceError(msg)
+    removed = [b for b in rp.expbeams
+               if not any(b.isEqual_hk(hk, eps=BEAM_EPS)
+                          for hk in assignments)]
+    for beam in removed:
+        logger.warning(
+            f'Experimental beam {beam.label} is not in BEAM_EQUIVALENCE, '
+            'and will not be used in the R factor.'
+            )
+        rp.setHaltingLevel(1)
+        rp.expbeams.remove(beam)
+        logger.warning(f'Beam {beam.label} was removed from set of '
+                       'experimental beams!')
+    rp.beam_correspondence = BeamCorrespondence(assignments)
+
+
+def _check_beam_equivalence_in_beamlist(rp):
+    """Check that the BEAM_EQUIVALENCE file is compatible with BEAMLIST.
+
+    Also warn if AVERAGE_BEAMS was given, as it has no effect.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its beam_correspondence and beamlist
+        attributes are used.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If a calculated beam in BEAM_EQUIVALENCE is not in BEAMLIST.
+    """
+    if 'AVERAGE_BEAMS' in rp.readParams:
+        logger.warning('Parameter AVERAGE_BEAMS is ignored because '
+                       'a BEAM_EQUIVALENCE file is given.')
+    beamlist = [Beam(hk) for hk in iobeams.beamlist_to_hks(rp.beamlist)]
+    missing = [Beam(hk).label
+               for hk in rp.beam_correspondence.calculated_beams
+               if not _has_beam(beamlist, hk, eps=iobeams.BEAMLIST_EPS)]
+    if missing:
+        msg = ('The following calculated beams in BEAM_EQUIVALENCE are '
+               f'not in BEAMLIST: {", ".join(missing)}')
+        logger.error(msg)
+        raise BeamEquivalenceError(msg)
+
+
+def _finalize_beam_correspondence(sl, rp):
+    """Build, check, and store the beam correspondence used in the run.
+
+    Does nothing without EXPBEAMS. Otherwise, the correspondence is
+    built here (see leedbase.build_beam_correspondence) so that
+    experimental beams without a calculated counterpart are reported
+    and removed at initialization. It is then written to
+    BEAM_EQUIVALENCE_USED_NAME in the current directory, unless it is
+    empty.
+
+    Parameters
+    ----------
+    sl : Slab or None
+        The slab, or None for runs with domains.
+    rp : Rparams
+        The run parameters. Its expbeams may be modified.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If the correspondence cannot be used by the R factor
+        that will run.
+    """
+    if not rp.fileLoaded['EXPBEAMS']:
+        return
+    correspondence = build_beam_correspondence(sl, rp)
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        _check_beam_equivalence_weights(rp, correspondence)
+    if not correspondence.assignments:
+        logger.warning('No experimental beam has a calculated beam '
+                       'assigned. The beam correspondence is not '
+                       'written to file.')
+        return
+    try:
+        write_beam_equivalence(correspondence, BEAM_EQUIVALENCE_USED_NAME)
+    except OSError:
+        logger.error(f'Failed to write {BEAM_EQUIVALENCE_USED_NAME}.',
+                     exc_info=True)
+
+
+def _check_beam_equivalence_weights(rp, correspondence):
+    """Check that the R factor to run can use the correspondence.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters.
+    correspondence : BeamCorrespondence
+        The correspondence from the BEAM_EQUIVALENCE file.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If the correspondence has weights or calculated beams in more
+        than one beam assignment, and an R factor that cannot handle
+        them will run.
+    """
+    if _r_factor_accepts_weights(rp):
+        return
+    shared = correspondence.shared_beams
+    weighted = correspondence.weighted_assignments
+    offending = [format_assignment(exp_key, calc_weights)
+                 for exp_key, calc_weights
+                 in correspondence.assignments.items()
+                 if exp_key in weighted or not shared.isdisjoint(calc_weights)]
+    if not offending:
+        return
+    causes = []
+    if weighted:
+        causes.append('assignment weights')
+    if shared:
+        causes.append('calculated beams in more than one beam assignment')
+    lines = '\n'.join(f'  {line}' for line in offending)
+    causes = ' and '.join(causes)
+    msg = (f'BEAM_EQUIVALENCE contains {causes}, which the '
+           'R factor to be run does not support. Offending lines '
+           f'(weights normalised):\n{lines}')
+    logger.error(msg)
+    raise BeamEquivalenceError(msg)
+
+
+def _r_factor_accepts_weights(rp):
+    """Return whether the R factor to run takes assignment weights.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters, with EXPBEAMS loaded. Its RUN is used.
+
+    Returns
+    -------
+    bool
+        True if no R factor will run.
+    """
+    # At initialization, section 0 was already taken out of rp.RUN.
+    # Sections 11 and 12 (R factor after refcalc/superpos) are only
+    # inserted later, but 1 and 3/31 always lead to them. The error
+    # calculation (5) and the full-dynamic optimization (6) compute
+    # R factors themselves.
+    runs_r_factor = any(sec in rp.RUN for sec in _SECTIONS_WITH_R_FACTOR)
+    # None of the R factors supports weights or shared beams yet.
+    # This is the place to change when one does.
+    return not runs_r_factor
+
+
+def _has_beam(beams, hk, eps=BEAM_EPS):
+    """Return whether any of `beams` has indices `hk`."""
+    return any(b.isEqual_hk(hk, eps=eps) for b in beams)
 
 
 def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
