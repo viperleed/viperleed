@@ -12,8 +12,10 @@ well as those on which the structural optimization will run.
 If no IVBEAMS file is found, but the file with experimental |IV| curves
 (\ :ref:`EXPBEAMS` file) is present, an IVBEAMS file will be generated
 from the EXPBEAMS file. If a :ref:`BEAM_EQUIVALENCE` file is given,
-the IVBEAMS file is instead generated from the calculated beams listed
-in it, and a user-given IVBEAMS file must contain all of them.
+the IVBEAMS file is instead generated from the calculated beams on the
+right-hand sides of its lines that are not ignored, leaving out those
+with weight zero, and a user-given IVBEAMS file must contain all of
+them.
 Note that this will only happen once, so later iterations of the
 program will use the IVBEAMS file created in the first run, if it is
 not deleted manually.

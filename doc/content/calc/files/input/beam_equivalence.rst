@@ -13,8 +13,8 @@ explicitly which calculated beams are compared to each experimental
 beam in the |R-factor| calculation.
 
 Without a BEAM_EQUIVALENCE file, |calc| finds this correspondence
-automatically: each experimental beam (from the
-:ref:`EXPBEAMS.csv<EXPBEAMS>` file) is compared to the calculated beam
+automatically: each experimental beam (from the :ref:`EXPBEAMS` file,
+with or without the ``.csv`` extension) is compared to the calculated beam
 (from the :ref:`IVBEAMS` file) with the same indices or, failing that,
 with a symmetry-equivalent one (see also :ref:`AVERAGE_BEAMS<averagebeams>`
 and :ref:`BEAMINCIDENCE`). If a BEAM_EQUIVALENCE file is present, it
@@ -74,7 +74,9 @@ Assignment weights
     as ``(1 0) + (0 1)``, and ``3*(1 1) + (1 -1)`` is the same as
     ``0.75*(1 1) + 0.25*(1 -1)``. A line whose weights are all equal is
     an unweighted average. A calculated beam with weight zero is left
-    out of the line, as if it was not written. See
+    out of the average and of the :ref:`IVBEAMS` file generated from
+    BEAM_EQUIVALENCE; it still counts as written when checking that no
+    calculated beam appears twice on the same line. See
     :ref:`below<beam_equivalence_weights>` for the |R-factor|
     calculations that currently accept unequal weights.
 
@@ -104,12 +106,15 @@ lines (but see :ref:`below<beam_equivalence_weights>`).
 Example: rotational domains
 ===========================
 
-Consider a (2×1) overlayer on a square substrate that forms two
-rotational domains, rotated by 90° with respect to each other, with
-70 % and 30 % of the surface area. If the beam incidence is
-perpendicular to the surface, the |IV| curves of the second domain are
-those of the first one with the beam indices rotated by 90°. Instead of
-running a :ref:`domain calculation<domain_calculation>`, it is then
+Consider a (2×1) overlayer that forms two rotational domains, rotated
+by 90° with respect to each other, with 70 % and 30 % of the surface
+area. The substrate, including its bulk, has a fourfold rotation axis
+perpendicular to the surface, as for fcc(100) or bcc(100). If the beam
+incidence is perpendicular to the surface, the |IV| curves of the
+second domain are then those of the first one with the beam indices
+rotated by 90°. As in a :ref:`domain calculation<domain_calculation>`,
+the domains are assumed to be large enough that their intensities add
+incoherently. Instead of running a domain calculation, it is then
 sufficient to calculate the first domain only, and to assign its beams
 to the experimental beams as follows:
 
@@ -149,7 +154,7 @@ Therefore, a BEAM_EQUIVALENCE file that contains
 -   a calculated beam on the right-hand side of more than one line
 
 is currently not accepted for any run that computes an |R factor|.
-Unless no experimental data are given (no :ref:`EXPBEAMS.csv<EXPBEAMS>`
+Unless no experimental data are given (no :ref:`EXPBEAMS`
 file), the :ref:`initialization` then stops with an error that names
 the cause and lists the offending lines (with normalized weights) if
 the :ref:`RUN` parameter contains any of the sections reference
@@ -160,8 +165,6 @@ This is the case for both values of
 :ref:`R_FACTOR_LEGACY<rfactorlegacy>`. Such a file can still be used,
 e.g., with ``RUN = 0`` (initialization only) or for a
 :ref:`delta-amplitudes calculation<sec_deltas>` alone (``RUN = 2``).
-Weights and shared calculated beams are planned to become available
-with the Python |R-factor| implementation.
 
 
 How the file is used
@@ -169,25 +172,28 @@ How the file is used
 
 The BEAM_EQUIVALENCE file is read during the :ref:`initialization`. Its
 experimental beams are matched to those of the
-:ref:`EXPBEAMS.csv<EXPBEAMS>` file, and its calculated beams to those of
+:ref:`EXPBEAMS` file, and its calculated beams to those of
 the :ref:`BEAMLIST` and :ref:`IVBEAMS` files:
 
 -   A line whose experimental beam is not in the
-    :ref:`EXPBEAMS.csv<EXPBEAMS>` file is ignored, with a warning. If
+    :ref:`EXPBEAMS` file is ignored, with a warning. If
     this leaves no line at all, |calc| stops with an error (also for
     ``RUN = 0``).
--   An experimental beam in the :ref:`EXPBEAMS.csv<EXPBEAMS>` file that
+-   An experimental beam in the :ref:`EXPBEAMS` file that
     is on no left-hand side is not used in the |R-factor| calculation,
     with a warning.
 -   If a calculated beam on a right-hand side is not in the
     :ref:`BEAMLIST`, |calc| stops with an error listing these beams.
--   If no :ref:`IVBEAMS` file is given, it is generated from all the
-    calculated beams on the right-hand sides (rather than from the
-    :ref:`EXPBEAMS.csv<EXPBEAMS>` file). If an :ref:`IVBEAMS` file is
-    given but lacks some of these beams, |calc| stops with an error
-    listing them. Beams of the :ref:`IVBEAMS` file that are on no
-    right-hand side are calculated, but not used in the |R factor|;
-    they are listed in the log at the ``INFO`` level.
+-   If no :ref:`IVBEAMS` file is given, but an :ref:`EXPBEAMS` file
+    is, the :ref:`IVBEAMS` file is generated from the calculated beams
+    on the right-hand sides of the lines that are not ignored, leaving
+    out those with weight zero (rather than from the experimental
+    beams). As usual, a generated :ref:`IVBEAMS` file is used again in
+    later runs: delete it after editing the BEAM_EQUIVALENCE file.
+    If an :ref:`IVBEAMS` file is given but lacks some of these beams,
+    |calc| stops with an error listing them. Beams of the :ref:`IVBEAMS`
+    file that are on no right-hand side are calculated, but not used in
+    the |R factor|; they are listed in the log at the ``INFO`` level.
 -   The :ref:`AVERAGE_BEAMS<averagebeams>` parameter has no effect, and
     a warning is issued if it is given in the :ref:`PARAMETERS` file.
 -   Experimental or calculated beams are never merged because they are
@@ -219,7 +225,7 @@ weights are left out of lines whose weights are all equal.
 Copying this file to the input folder and running again reproduces the
 same |R-factor| input. It does not necessarily reproduce every warning
 or the same :ref:`HALTING` level. For example, if the
-:ref:`EXPBEAMS.csv<EXPBEAMS>` file contains symmetry-equivalent beams,
+:ref:`EXPBEAMS` file contains symmetry-equivalent beams,
 the automatic correspondence discards them with a warning that stops
 the run at the default :ref:`HALTING` level, while with the
 BEAM_EQUIVALENCE file they are on no left-hand side and are left out
