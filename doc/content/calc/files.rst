@@ -49,6 +49,11 @@ depending on the work-segment (:ref:`see above<work-segments>`).
     |                               | electron scattering \      | automatically \      |
     |                               | phase shifts               | if needed            |
     +-------------------------------+----------------------------+----------------------+
+    | :ref:`BEAM_EQUIVALENCE`       | Which calculated beams \   | Optional; replaces \ |
+    |                               | are compared to each \     | the automatic, \     |
+    |                               | experimental beam          | symmetry-based \     |
+    |                               |                            | assignment           |
+    +-------------------------------+----------------------------+----------------------+
 
 .. toctree::
    :hidden:
@@ -206,6 +211,10 @@ These files are stored in the ``SUPP`` subfolder of the root directory.
 +------------------------------------------+-----------------------------------+
 | :ref:`phaseshiftplots`                   | Plots of PHASESHIFTS, generated \ |
 |                                          | during initialization             |
++------------------------------------------+-----------------------------------+
+| :ref:`BEAM_EQUIVALENCE\                  | Calculated beams compared to \    |
+| <beam_equivalence_supp>`                 | each experimental beam in the \   |
+|                                          | |R-factor| calculation            |
 +------------------------------------------+-----------------------------------+
 
 
