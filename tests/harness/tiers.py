@@ -286,10 +286,17 @@ SLOW_CASES = {
 # fixture is mapped to case-id parts, in the same format as for
 # SLOW_CASES. A test is a 'release' case if it uses the fixture and its
 # case id has one of the parts. This makes any consumer of the
-# run_phaseshift fixture for the Al2O3 slab a release case: its
-# PHASESHIFTS calculation is by far the longest one of the tier.
+# run_phaseshift fixture with the real eeasisss for the slabs of
+# MOCKED_CASES a release case: their PHASESHIFTS calculations are the
+# longest ones of the tier (more than 30 s each, serial). The mocked
+# cases run in the default tier, and the release cases check that the
+# stored outputs still agree with eeasisss.
 RELEASE_CASES = {
     'run_phaseshift': (
         'poscar-Al2O3_NiAl(111)_cHole_20061025',
+        'poscar_fe3o4_001_cod',
+        'poscar_sb_si_111',
+        'poscar_sto110_4x1',
+        'poscar_tio2_supercell',
         ),
     }
