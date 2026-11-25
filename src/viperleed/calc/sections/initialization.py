@@ -54,6 +54,7 @@ def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
         rp.try_loading_expbeams_file()
+        rp.try_loading_beam_equivalence_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -401,6 +402,7 @@ def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will
     include running the 'normal' initialization for each domain."""
     rp.try_loading_expbeams_file()
+    rp.try_loading_beam_equivalence_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
