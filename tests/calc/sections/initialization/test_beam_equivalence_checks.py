@@ -137,6 +137,15 @@ class TestFilter:
             (half, 0): {(half, 0): 1.0},
             }
 
+    def test_all_lines_ignored(self, make_rpars):
+        """Check the error if no left-hand side is in EXPBEAMS."""
+        rpars = make_rpars({(9, 9): {(1, 0): 1}, (8, 8): {(1, 1): 1}},
+                           expbeams=[(1, 0), (1, 1)],
+                           ivbeams=[(1, 0), (1, 1)])
+        with pytest.raises(BeamEquivalenceError,
+                           match='No left-hand side of BEAM_EQUIVALENCE'):
+            _filter_beam_equivalence(rpars)
+
     def test_no_expbeams_file(self, make_rpars, caplog):
         """Check that the correspondence is kept without EXPBEAMS."""
         rpars = make_rpars({(1, 0): {(1, 0): 1}}, ivbeams=[(1, 0)])

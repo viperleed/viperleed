@@ -106,3 +106,10 @@ class TestDomainsBeamEquivalence:
             'weighted', text, run=run, expect_fail=True)
         assert 'BEAM_EQUIVALENCE contains' in _log_text(work)
         assert rpars.runHistory == [0]
+
+    def test_all_lines_ignored(self, run_domains_init):
+        """Check the error if no left-hand side is in EXPBEAMS."""
+        text = '(9 9) = (1 0)\n(8 8) = (1 1)\n'
+        *_, work = run_domains_init('all_ignored', text,
+                                    expect_fail=True)
+        assert 'No left-hand side of BEAM_EQUIVALENCE' in _log_text(work)

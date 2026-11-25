@@ -720,6 +720,12 @@ def _filter_beam_equivalence(rp):
     rp : Rparams
         The run parameters. Its beam_correspondence and expbeams
         attributes are modified.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If EXPBEAMS was loaded and no line is left, i.e., no
+        left-hand side of BEAM_EQUIVALENCE is in EXPBEAMS.
     """
     if not rp.fileLoaded['EXPBEAMS']:
         return
@@ -732,6 +738,12 @@ def _filter_beam_equivalence(rp):
                 'in EXPBEAMS. The line will be ignored.'
                 )
             del assignments[exp_hk]
+    if not assignments:
+        msg = ('No left-hand side of BEAM_EQUIVALENCE is in EXPBEAMS, '
+               'so every line of BEAM_EQUIVALENCE would be ignored. '
+               'Check that BEAM_EQUIVALENCE matches EXPBEAMS.')
+        logger.error(msg)
+        raise BeamEquivalenceError(msg)
     removed = [b for b in rp.expbeams
                if not any(b.isEqual_hk(hk, eps=BEAM_EPS)
                           for hk in assignments)]

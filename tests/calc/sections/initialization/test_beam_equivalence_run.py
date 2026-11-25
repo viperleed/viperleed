@@ -88,3 +88,14 @@ class TestInitializationWithBeamEquivalence:
         assert rpars.beam_correspondence == BeamCorrespondence(
             {(1, 0): {(1, 0): 1}}
             )
+
+    @parametrize(run=([0], [1]))
+    @parametrize(ivbeams=(None, [(1, 0), (1, 1), (2, 0)]))
+    def test_all_lines_ignored(self, init_with_file, run, ivbeams):
+        """Check the error if no left-hand side is in EXPBEAMS."""
+        assignments = {(9, 9): {(1, 0): 1}, (8, 8): {(1, 1): 1}}
+        with pytest.raises(BeamEquivalenceError,
+                           match='No left-hand side of BEAM_EQUIVALENCE'):
+            init_with_file(assignments, run,
+                           expbeams=[(1, 0), (1, 1)],
+                           ivbeams=ivbeams)
