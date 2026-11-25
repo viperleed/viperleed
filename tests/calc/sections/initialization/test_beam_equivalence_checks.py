@@ -16,10 +16,13 @@ from quicktions import Fraction
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.sections.initialization import BeamEquivalenceError
-from viperleed.calc.sections.initialization import _apply_beam_equivalence
 from viperleed.calc.sections.initialization import (
     _check_beam_equivalence_in_beamlist,
     )
+from viperleed.calc.sections.initialization import (
+    _check_beam_equivalence_in_ivbeams,
+    )
+from viperleed.calc.sections.initialization import _filter_beam_equivalence
 
 _MODULE = 'viperleed.calc.sections.initialization'
 _BEAMLIST = ['  0  0\n', '  1  0\n', '  0  1\n', '  1  1\n']
@@ -70,15 +73,15 @@ class TestBeamlistCheck:
         assert 'AVERAGE_BEAMS is ignored' in caplog.text
 
 
-class TestApplyIvbeams:
-    """Tests for the IVBEAMS part of _apply_beam_equivalence."""
+class TestIvbeamsCheck:
+    """Tests for _check_beam_equivalence_in_ivbeams."""
 
     def test_missing_beams(self, make_rpars, caplog):
         """Check the error listing beams of the file not in IVBEAMS."""
         rpars = make_rpars({(1, 0): {(1, 0): 1, (0, 1): 1, (1, 1): 1}},
                            ivbeams=[(1, 0)])
         with pytest.raises(BeamEquivalenceError):
-            _apply_beam_equivalence(rpars)
+            _check_beam_equivalence_in_ivbeams(rpars)
         errors = [r for r in caplog.records if r.levelno == logging.ERROR]
         assert len(errors) == 1
         assert 'missing in IVBEAMS: ( 0| 1), ( 1| 1)' in errors[0].message
@@ -88,7 +91,7 @@ class TestApplyIvbeams:
         rpars = make_rpars({(1, 0): {(1, 0): 1}},
                            ivbeams=[(1, 0), (0, 1), (1, 1)])
         with caplog.at_level(logging.INFO):
-            _apply_beam_equivalence(rpars)
+            _check_beam_equivalence_in_ivbeams(rpars)
         records = [r for r in caplog.records if 'right-hand' in r.message]
         assert len(records) == 1
         assert records[0].levelno == logging.INFO
@@ -99,19 +102,19 @@ class TestApplyIvbeams:
         rpars = make_rpars({(1, 0): {(1, 0): 1, (0, 1): 1}},
                            ivbeams=[(1, 0), (0, 1)])
         with caplog.at_level(logging.DEBUG):
-            _apply_beam_equivalence(rpars)
+            _check_beam_equivalence_in_ivbeams(rpars)
         assert not caplog.records
 
 
-class TestApplyExpbeams:
-    """Tests for the EXPBEAMS part of _apply_beam_equivalence."""
+class TestFilter:
+    """Tests for _filter_beam_equivalence."""
 
     def test_left_hand_side_not_in_expbeams(self, make_rpars, caplog):
         """Check that a line with an unknown beam is ignored."""
         rpars = make_rpars({(1, 0): {(1, 0): 1}, (1, 1): {(0, 1): 1}},
                            expbeams=[(1, 0)], ivbeams=[(1, 0), (0, 1)])
         with caplog.at_level(logging.WARNING):
-            _apply_beam_equivalence(rpars)
+            _filter_beam_equivalence(rpars)
         assert rpars.beam_correspondence == BeamCorrespondence(
             {(1, 0): {(1, 0): 1}}
             )
@@ -126,7 +129,7 @@ class TestApplyExpbeams:
                            expbeams=[(1, 0), (2, 0), (1, 1)],
                            ivbeams=[(1, 0)])
         with caplog.at_level(logging.WARNING):
-            _apply_beam_equivalence(rpars)
+            _filter_beam_equivalence(rpars)
         assert [b.hkfrac for b in rpars.expbeams] == [(1, 0)]
         assert rpars.halt == 1
         assert [r.message for r in caplog.records] == [
@@ -146,7 +149,7 @@ class TestApplyExpbeams:
                             (3, 0): {(3, 0): 1}},
                            expbeams=[(1, 0), (half, 0)],
                            ivbeams=[(1, 0), (0, 1), (half, 0), (3, 0)])
-        _apply_beam_equivalence(rpars)
+        _filter_beam_equivalence(rpars)
         assert rpars.beam_correspondence.assignments == {
             (1, 0): {(1, 0): 0.25, (0, 1): 0.75},
             (half, 0): {(half, 0): 1.0},
@@ -157,6 +160,6 @@ class TestApplyExpbeams:
         rpars = make_rpars({(1, 0): {(1, 0): 1}}, ivbeams=[(1, 0)])
         before = rpars.beam_correspondence
         with caplog.at_level(logging.WARNING):
-            _apply_beam_equivalence(rpars)
+            _filter_beam_equivalence(rpars)
         assert rpars.beam_correspondence is before
         assert not caplog.records

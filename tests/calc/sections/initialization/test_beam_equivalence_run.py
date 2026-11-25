@@ -31,12 +31,18 @@ def factory_init_with_file(ag100, make_section_tempdir, tensorleed_path):
     rpars.TL_VERSION = CURRENT_TL_VERSION
     tmp = make_section_tempdir('Ag(100)', 'init_beam_equivalence')
 
-    def _run(assignments, run):
+    def _run(assignments, run, expbeams=None, ivbeams=None):
         rpars.RUN = list(run)
-        rpars.expbeams = [Beam(hk) for hk in assignments]
+        if expbeams is None:
+            expbeams = assignments
+        rpars.expbeams = [Beam(hk) for hk in expbeams]
         for beam in rpars.expbeams:
             beam.intens = {50.0: 1.0, 100.0: 1.0}
         rpars.fileLoaded['EXPBEAMS'] = True
+        if ivbeams is not None:
+            rpars.ivbeams = [Beam(hk) for hk in ivbeams]
+            rpars.ivbeams_sorted = False
+            rpars.fileLoaded['IVBEAMS'] = True
         rpars.fileLoaded['BEAM_EQUIVALENCE'] = True
         rpars.beam_correspondence = BeamCorrespondence(assignments)
         with execute_in_dir(tmp):
@@ -61,3 +67,24 @@ class TestInitializationWithBeamEquivalence:
         tmp, rpars = init_with_file(self._weighted, [2])
         used = read_beam_equivalence(tmp / BEAM_EQUIVALENCE_USED_NAME)
         assert used == rpars.beam_correspondence
+
+    def test_ignored_line_not_checked(self, init_with_file):
+        """Check that a line of a beam not in EXPBEAMS is not used."""
+        assignments = {(1, 0): {(1, 0): 1},
+                       (1, 1): {(1, 1): 1},
+                       (5, 5): {(2, 2): 1, (3, 1): 2}}
+        tmp, _ = init_with_file(assignments, [1],
+                                expbeams=[(1, 0), (1, 1)])
+        used = read_beam_equivalence(tmp / BEAM_EQUIVALENCE_USED_NAME)
+        assert used == BeamCorrespondence({(1, 0): {(1, 0): 1},
+                                           (1, 1): {(1, 1): 1}})
+
+    def test_ignored_line_not_in_ivbeams(self, init_with_file):
+        """Check no error for an ignored line with beams not in IVBEAMS."""
+        assignments = {(1, 0): {(1, 0): 1}, (9, 9): {(2, 0): 1}}
+        _, rpars = init_with_file(assignments, [2],
+                                  expbeams=[(1, 0)],
+                                  ivbeams=[(1, 0)])
+        assert rpars.beam_correspondence == BeamCorrespondence(
+            {(1, 0): {(1, 0): 1}}
+            )

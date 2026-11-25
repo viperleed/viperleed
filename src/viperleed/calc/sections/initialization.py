@@ -394,6 +394,9 @@ def initialization(sl, rp, subdomain=False):
         if rp.fileLoaded["EXPBEAMS"]:
             iobeams.checkEXPBEAMS(sl, rp)
         if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+            # Ignore lines of experimental beams not in EXPBEAMS
+            # before any other check uses the correspondence
+            _filter_beam_equivalence(rp)
             _check_beam_equivalence_in_beamlist(rp)
         # write and sort IVBEAMS
         if not rp.fileLoaded["IVBEAMS"]:
@@ -410,7 +413,7 @@ def initialization(sl, rp, subdomain=False):
         rp.ivbeams = iobeams.sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
     if rp.fileLoaded["BEAM_EQUIVALENCE"]:
-        _apply_beam_equivalence(rp)
+        _check_beam_equivalence_in_ivbeams(rp)
     if not subdomain:  # Per-domain rp objects have no EXPBEAMS
         _finalize_beam_correspondence(sl, rp)
     # The experimental and calculated beams are final from here on
@@ -544,6 +547,9 @@ def init_domains(rp):
     if rp.fileLoaded["EXPBEAMS"]:
         iobeams.checkEXPBEAMS(None, rp, domains=True)
     if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        # Ignore lines of experimental beams not in EXPBEAMS
+        # before any other check uses the correspondence
+        _filter_beam_equivalence(rp)
         _check_beam_equivalence_in_beamlist(rp)
     # write and sort IVBEAMS
     if not rp.fileLoaded["IVBEAMS"]:
@@ -560,7 +566,7 @@ def init_domains(rp):
         rp.ivbeams = iobeams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
     if rp.fileLoaded["BEAM_EQUIVALENCE"]:
-        _apply_beam_equivalence(rp)
+        _check_beam_equivalence_in_ivbeams(rp)
     _finalize_beam_correspondence(None, rp)
     # The experimental and calculated beams are final from here on
 
@@ -668,27 +674,23 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
         rpars.setHaltingLevel(1)
 
 
-def _apply_beam_equivalence(rp):
-    """Check IVBEAMS and EXPBEAMS against the BEAM_EQUIVALENCE file.
+def _check_beam_equivalence_in_ivbeams(rp):
+    """Check IVBEAMS against the BEAM_EQUIVALENCE file.
 
-    Beams of IVBEAMS that are on no right-hand side are logged. Lines
-    whose experimental beam is not in EXPBEAMS are ignored, and
-    experimental beams on no line are removed from rp.expbeams.
-    The correspondence stored in rp is then the filtered one.
+    Beams of IVBEAMS that are on no right-hand side are logged.
 
     Parameters
     ----------
     rp : Rparams
-        The run parameters. Its beam_correspondence and expbeams
-        attributes are modified. Its ivbeams must be sorted.
+        The run parameters. Its beam_correspondence and ivbeams
+        attributes are used. Its ivbeams must be sorted.
 
     Raises
     ------
     BeamEquivalenceError
         If a beam on a right-hand side is missing in IVBEAMS.
     """
-    correspondence = rp.beam_correspondence
-    calc_hks = correspondence.calculated_beams
+    calc_hks = rp.beam_correspondence.calculated_beams
     missing = [Beam(hk).label for hk in calc_hks
                if not _has_beam(rp.ivbeams, hk)]
     if missing:
@@ -703,10 +705,25 @@ def _apply_beam_equivalence(rp):
         logger.info('The following calculated beams are on no '
                     'right-hand side of BEAM_EQUIVALENCE: '
                     f'{", ".join(unassigned)}')
+
+
+def _filter_beam_equivalence(rp):
+    """Match the BEAM_EQUIVALENCE file with EXPBEAMS.
+
+    Lines whose experimental beam is not in EXPBEAMS are ignored, and
+    experimental beams on no line are removed from rp.expbeams. The
+    correspondence stored in rp is then the filtered one. Nothing is
+    done if no EXPBEAMS file was loaded.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its beam_correspondence and expbeams
+        attributes are modified.
+    """
     if not rp.fileLoaded['EXPBEAMS']:
         return
-
-    assignments = correspondence.assignments
+    assignments = rp.beam_correspondence.assignments
     for exp_hk in list(assignments):
         if not _has_beam(rp.expbeams, exp_hk):
             logger.warning(
