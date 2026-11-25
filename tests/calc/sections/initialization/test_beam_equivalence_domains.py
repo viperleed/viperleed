@@ -39,7 +39,7 @@ def factory_run_domains_init(mocker, data_path, make_section_tempdir,
                         wraps=section_loop)
     source = data_path / 'domains' / 'silver_and_bismuth' / 'initialization'
 
-    def _run(tag, beam_equivalence=None, run=(0,), expect_fail=False):
+    def _run(tag, beam_equivalence=None, run=(0,), *, expect_fail=False):
         home = make_section_tempdir('silver_and_bismuth', tag)
         for path in source.iterdir():
             if path.is_file():
@@ -100,7 +100,7 @@ class TestDomainsBeamEquivalence:
 
     @parametrize(run=((0, 4), (0, 1)))
     def test_weights_error(self, run_domains_init, run):
-        """Check that weights are rejected for runs needing a search."""
+        """Check that weights are rejected for runs with an R factor."""
         text = '(1 0) = 1*(1 0) + 2*(1 1)\n(2 0) = (2 0)\n'
         _, rpars, work = run_domains_init(
             'weighted', text, run=run, expect_fail=True)
