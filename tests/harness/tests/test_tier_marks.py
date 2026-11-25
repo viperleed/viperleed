@@ -24,6 +24,32 @@ def test_cases(case):
 def test_other():
     pass
 """
+# Sample tests for pytester: they mimic a parametrized fixture with
+# plain pytest, as the plugin must handle any, not only pytest_cases
+_MOCKED_FILE = """
+import pytest
+
+@pytest.fixture(params=['a', 'b-c'])
+def tensorleed_path(request):
+    return request.param
+
+def test_tl(tensorleed_path):
+    pass
+"""
+_MOCKED_AND_REAL_FILE = """
+import pytest
+
+@pytest.fixture(params=['a', 'b-c'])
+def run_phaseshift(request):
+    return request.param
+
+@pytest.fixture
+def tensorleed_path():
+    return 'tree'
+
+def test_tl(run_phaseshift, tensorleed_path):
+    pass
+"""
 
 
 class TestStaleSlowCases:
@@ -51,7 +77,8 @@ class TestStaleSlowCases:
             1,
             ),
         }
-    # The tables are the `slow` and `release` arguments of the run fixture
+    # The tables are the `slow`, `release` and `mocked` arguments of
+    # the run fixture
     _stale = {
         'slow-test': (
             {'slow': {MODULE + 'test_renamed': ('a',)}},
@@ -65,6 +92,11 @@ class TestStaleSlowCases:
             ),
         'release-case': (  # 'case' is the argument of test_cases
             {'release': {'case': ('a', 'renamed')}},
+            '*case[[]renamed] (no such case)',
+            '[a]',
+            ),
+        'mocked-case': (
+            {'mocked': {'case': ('a', 'renamed')}},
             '*case[[]renamed] (no such case)',
             '[a]',
             ),
@@ -107,3 +139,31 @@ class TestStaleSlowCases:
         """Check that a fixture that no test uses is not stale."""
         result = run(release={'renamed': ('a',)})
         result.assert_outcomes(passed=4)
+
+
+# Test ids collected with the arguments, for _MOCKED_FILE
+_MOCKED_COLLECTED = {
+    'tensorleed': (('-m', 'tensorleed'), 'test_tl[[]a]'),
+    'not-tensorleed': (('-m', 'not tensorleed'), 'test_tl[[]b-c]'),
+    }
+
+
+@parametrize('args,collected', _MOCKED_COLLECTED.values(),
+             ids=_MOCKED_COLLECTED)
+def test_mocked_case_not_tensorleed(run, args, collected):
+    """Check that cases of MOCKED_CASES are not marked tensorleed."""
+    result = run('--collect-only', '-q', *args,
+                 mocked={'tensorleed_path': ('b-c',)},
+                 files={'test_sample': _MOCKED_FILE})
+    result.stdout.fnmatch_lines([f'{MODULE}{collected}',
+                                 '1/2 tests collected*'])
+
+
+def test_mocked_case_with_real_fixture_tensorleed(run):
+    """Check that a case of MOCKED_CASES using TensErLEED is marked."""
+    result = run('--collect-only', '-q', '-m', 'tensorleed',
+                 mocked={'run_phaseshift': ('b-c',)},
+                 files={'test_sample': _MOCKED_AND_REAL_FILE})
+    result.stdout.fnmatch_lines([f'{MODULE}test_tl[[]a]',
+                                 f'{MODULE}test_tl[[]b-c]',
+                                 '2 tests collected*'])

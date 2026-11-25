@@ -20,7 +20,8 @@ optional_dependencies
 quick
     The --quick option (quick tier): deselect the 'slow' tests.
 reference_files
-    The check_reference fixture and the --rewrite-references option.
+    The check_reference fixture, its fail_with_diff, and the
+    --rewrite-references option.
 release
     The --release option (release tier): also run the 'release'
     tests.

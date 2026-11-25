@@ -4,6 +4,8 @@ Provides the fixture `check_reference`, which compares a file written
 by a test to its stored reference, text for text, and the option
 --rewrite-references. Tests must therefore pin whatever depends on the
 time or on the location of the run (e.g., timestamps and paths).
+Its failure, with a diff of the texts, is fail_with_diff, also
+for other comparisons of written and stored files.
 
 With the option, a reference that differs from the written file (or
 does not exist yet) is overwritten with the written file instead of
@@ -92,19 +94,41 @@ def fixture_check_reference(request):
             pytest.fail(f'Missing reference file {reference}. Run with '
                         f'{REWRITE_OPTION} to create it from {written}.',
                         pytrace=False)
-        diff = difflib.unified_diff(
-            reference_text.splitlines(),
-            written_text.splitlines(),
-            fromfile=f'reference: {reference}',
-            tofile=f'written: {written}',
-            lineterm='',
-            )
-        pytest.fail('Written file differs from its reference. '
-                    f'Run with {REWRITE_OPTION} to update the reference.\n'
-                    + '\n'.join(diff),
-                    pytrace=False)
+        fail_with_diff('Written file differs from its reference. '
+                       f'Run with {REWRITE_OPTION} to update the reference.',
+                       reference_text,
+                       written_text,
+                       fromfile=f'reference: {reference}',
+                       tofile=f'written: {written}')
 
     return _check
+
+
+def fail_with_diff(message, expected, written, fromfile, tofile):
+    """Fail a test with `message` and the diff of two texts.
+
+    Parameters
+    ----------
+    message : str
+        What differs, and how to update the expected text.
+    expected : str
+        The expected text (e.g., of a stored reference file).
+    written : str
+        The text written by the test.
+    fromfile, tofile : str
+        Labels of `expected` and `written` in the unified diff.
+
+    Raises
+    ------
+    pytest.fail.Exception
+        Always, with `message` followed by the diff.
+    """
+    diff = difflib.unified_diff(expected.splitlines(),
+                                written.splitlines(),
+                                fromfile=fromfile,
+                                tofile=tofile,
+                                lineterm='')
+    pytest.fail(f'{message}\n' + '\n'.join(diff), pytrace=False)
 
 
 def _rewritten_paths(report):

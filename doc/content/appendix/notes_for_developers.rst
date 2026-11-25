@@ -120,17 +120,29 @@ and only run with the option ``--release``:
     python -m pytest tests -m tensorleed --release  # TensErLEED + release
 
 Tests go in the release tier if they take very long and add little over the
-other TensErLEED tests (currently, the calculation of the phase shifts of the
-:math:`\mathrm{Al_2O_3}/\mathrm{NiAl}(111)` slab with a core hole). The cases
-are listed in :file:`tests/harness/tiers.py` (``RELEASE_CASES``) by fixture
-(``run_phaseshift``) and case id, so that every test that uses the fixture
-for that slab is a release test. Entries that match no case of a collected
-test are reported as stale, like those of ``SLOW_CASES``. Naming a release
-case by node id or with ``-m release`` also needs ``--release``; otherwise
-nothing runs (a serial run says why). The option
-combines with ``-n``, ``--quick`` and ``-m``: ``--release`` only removes the
-deselection of release tests, so ``-m tensorleed`` without it remains the
-command for the TensErLEED tier.
+other TensErLEED tests (currently, the calculations of the phase shifts of the
+five slabs that take more than 30 seconds each). The cases are listed in
+:file:`tests/harness/tiers.py` (``RELEASE_CASES``) by fixture
+(``run_phaseshift``) and case id, so that every test that uses the fixture for
+those slabs is a release test. Entries that match no case of a collected test
+are reported as stale, like those of ``SLOW_CASES``. The same tests run in the
+default tier for these slabs with the stored outputs of EEASiSSS in place of
+EEASiSSS (``MOCKED_CASES`` in :file:`tests/harness/tiers.py`; see
+:file:`tests/calc/stored_inputs/stored_eeasisss.py` for how to regenerate the
+stored outputs). The release tests run EEASiSSS itself for these slabs. The
+release tier also checks that the stored outputs are up to date
+(:file:`tests/calc/stored_inputs/test_stored_eeasisss.py`, marked ``release``):
+for each of the five slabs, it writes the stored data anew with EEASiSSS, as
+the regeneration command does, and compares it with the committed files (input
+of EEASiSSS, its raw outputs, and :file:`PHASESHIFTS`). The input is compared
+exactly; numbers in the raw outputs and in :file:`PHASESHIFTS` may differ by
+one unit in their last printed digit (``LAST_DIGIT_TOLERANCE``), as EEASiSSS
+may round differently with another compiler or OS. Naming a release case
+by node id or with ``-m release`` also needs ``--release``; otherwise nothing
+runs (a serial run says why). The option combines with
+``-n``, ``--quick`` and ``-m``: ``--release`` only removes the deselection of
+release tests, so ``-m tensorleed`` without it remains the command for the
+TensErLEED tier.
 
 The TensErLEED tier also contains a full chain for :term:`TensErLEED` v1.6.1
 and for the most recent version

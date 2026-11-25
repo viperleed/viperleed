@@ -16,7 +16,7 @@ poscars_path
     Path to the data directory containing POSCAR files.
 run_phaseshift
     An Rparams, a Slab, and the results of generating phaseshifts
-    with them.
+    with them, with the real eeasisss or with its stored outputs.
 tensorleed_path
     Path to the top-level tree with tensor-LEED source code.
 """
@@ -45,6 +45,7 @@ from ..helpers import PSGEN_SEED
 from ..helpers import exclude_tags
 from ..helpers import private_random
 from . import poscar_slabs
+from .stored_inputs import stored_eeasisss
 from .tags import CaseTag
 
 
@@ -97,23 +98,31 @@ def mock_path(mocker):
 # Notice that we need to exclude POSCARs without information as some
 # are known to make this fail because of "too small interlayer spacing"
 # For Fe3O4 this is because parameter presets are needed. For graphene,
-# only one layer is present in the POSCAR.
-_PHASESHIFT_SETTINGS = {'cases': poscar_slabs.CasePOSCARSlabs,
+# only one layer is present in the POSCAR. The cases of
+# CASES_MOCKED_EEASISSS run psgen with stored eeasisss outputs (see
+# stored_inputs/stored_eeasisss.py): these slabs take long with the
+# real eeasisss.
+_PHASESHIFT_SETTINGS = {'cases': (poscar_slabs.CasePOSCARSlabs,
+                                  *stored_eeasisss.CASES_MOCKED_EEASISSS),
                         'filter': exclude_tags(CaseTag.NO_INFO),
                         'scope': 'session'}
 
 
 @pytest_cases.fixture(scope='session')
 @pytest_cases.parametrize_with_cases('args', **_PHASESHIFT_SETTINGS)
-def run_phaseshift(args, tensorleed_path, tmp_path_factory):
+def run_phaseshift(args, request, tmp_path_factory):
     """Execute a PHASESHIFTS calculation.
+
+    The tensorleed_path fixture is requested only for the cases that
+    run the real eeasisss, so that the mocked ones need no TensErLEED
+    tree. tests/harness/tiers.py marks the tests accordingly.
 
     Parameters
     ----------
     args : pytest_cases.Case
-        Slab, Rparams and other (unused) info.
-    tensorleed_path : pytest.fixture
-        The path to the directory containing the Fortran code.
+        Slab, Rparams and other (unused) info, or a MockedSlab.
+    request : pytest.fixture
+        To get the TensErLEED tree for the cases that need it.
     tmp_path_factory : pytest.fixture
         To run the PHASESHIFTS calculation in a fresh directory.
 
@@ -132,8 +141,11 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
         The PHASESHIFTS that were generated.
     """
     slab, rpars, *_ = args
-    rpars.paths.tensorleed = tensorleed_path
     tmp_path = tmp_path_factory.mktemp(basename='phaseshifts', numbered=True)
+    if isinstance(args, stored_eeasisss.MockedSlab):
+        yield (rpars, slab, *stored_eeasisss.run_mocked(args, tmp_path))
+        return
+    rpars.paths.tensorleed = request.getfixturevalue('tensorleed_path')
     rpars.initTheoEnergies()
     executable = 'eeasisss'
 

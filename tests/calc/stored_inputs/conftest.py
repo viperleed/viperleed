@@ -34,7 +34,6 @@ __license__ = 'GPLv3+'
 import copy
 from dataclasses import dataclass
 from dataclasses import field
-import os
 from pathlib import Path
 import shutil
 from types import SimpleNamespace
@@ -54,7 +53,6 @@ from viperleed.calc.lib import checksums
 from viperleed.calc.lib import time_utils
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
-from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
@@ -66,12 +64,12 @@ from ..poscar_slabs import CasePOSCARSlabs
 from .cases_stored_inputs import DISPLACEMENTS
 from .cases_stored_inputs import PRESET_FILES
 from .cases_stored_inputs import tagged_inputs
+from .stored_eeasisss import SYSTEM_NAME
+from .stored_eeasisss import make_stub_tree
 
-SYSTEM_NAME = 'stored-input'
 # The clock is pinned to this time, so that the timestamps written to
 # the inputs (format DateTimeFormat.FILE_SUFFIX) are '260101-000000'.
 PINNED_TIME = time.struct_time((2026, 1, 1, 0, 0, 0, 3, 1, -1))
-WINDOWS = 'nt'  # Value of os.name on Windows, as psgen checks it
 N_CORES = 1
 THEO_ENERGIES = 50, 350, 3  # As in the PARAMETERS of the stored cases
 TENSOR_INDEX = 1  # As after a reference calculation
@@ -237,16 +235,7 @@ class InitializedCase:
 @fixture(name='stub_tree')
 def fixture_stub_tree(tmp_path):
     """Return a fake TensErLEED directory with stub eeasisss/data."""
-    tree = tmp_path / 'TensErLEED'
-    tree.mkdir()
-    executable = 'eeasisss.exe' if os.name == WINDOWS else 'eeasisss'
-    (tree / executable).touch()
-    (tree / 'seSernelius').touch()
-    for element in PERIODIC_TABLE:
-        element_dir = tree / 'atom_density_files' / element
-        element_dir.mkdir(parents=True)
-        (element_dir / f'chgden{element}').touch()
-    return tree
+    return make_stub_tree(tmp_path)
 
 
 @fixture(autouse=True, name='pinned_clock')
