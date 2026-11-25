@@ -864,7 +864,7 @@ def _r_factor_accepts_weights(rp):
     Parameters
     ----------
     rp : Rparams
-        The run parameters. Its RUN and fileLoaded are used.
+        The run parameters, with EXPBEAMS loaded. Its RUN is used.
 
     Returns
     -------
@@ -876,11 +876,9 @@ def _r_factor_accepts_weights(rp):
     # inserted later, but 1 and 3/31 always lead to them. The error
     # calculation (5) and the full-dynamic optimization (6) compute
     # R factors themselves.
-    runs_r_factor = rp.fileLoaded['EXPBEAMS'] and any(
-        sec in rp.RUN for sec in _SECTIONS_WITH_R_FACTOR
-        )
-    # Phase A: no R factor handles weights. The Python R factor will,
-    # and then this is the only place to change.
+    runs_r_factor = any(sec in rp.RUN for sec in _SECTIONS_WITH_R_FACTOR)
+    # None of the R factors supports weights or shared beams yet.
+    # This is the place to change when one does.
     return not runs_r_factor
 
 
