@@ -169,6 +169,7 @@ class TestReadIVBEAMSRoundTrip:
         hkfracs = itertools.product(self._fractions, repeat=2)
         rpars = SimpleNamespace(
             AVERAGE_BEAMS=False,
+            fileLoaded={'BEAM_EQUIVALENCE': False},
             expbeams=[Beam(hkfrac) for hkfrac in hkfracs],
             )
         ivbeams_file = tmp_path/'IVBEAMS'

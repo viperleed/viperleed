@@ -526,23 +526,30 @@ def readAUXEXPBEAMS(
 
 
 def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
-    """Writes an IVBEAMS file based on rp.exbeams. Returns
-    those beams in IVBEAMS form."""
-    if not domains:
-        d = [leedbase.getLEEDdict(sl, rp)]
+    """Writes an IVBEAMS file based on rp.expbeams. Returns
+    those beams in IVBEAMS form. If a BEAM_EQUIVALENCE file was
+    loaded, the beams are all those on its right-hand sides."""
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        source = 'BEAM_EQUIVALENCE'
+        ivbeams = [Beam(hk) for hk in rp.beam_correspondence.calculated_beams]
     else:
-        d = [leedbase.getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
-    if any([v is None for v in d]):
-        logger.error("Failed to write IVBEAMS")
-        return []
+        source = 'EXPBEAMS'
+        if not domains:
+            d = [leedbase.getLEEDdict(sl, rp)]
+        else:
+            d = [leedbase.getLEEDdict(dp.slab, dp.rpars)
+                 for dp in rp.domainParams]
+        if any([v is None for v in d]):
+            logger.error("Failed to write IVBEAMS")
+            return []
+        if rp.AVERAGE_BEAMS is not False:
+            makebeams = project_to_first_domain(
+                [b.hkfrac for b in rp.expbeams], *d)
+            ivbeams = [Beam(hk) for hk in makebeams]
+        else:
+            ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
     output = ("  h         k          Beams to calculate, automatically "
-              "generated from EXPBEAMS\n")
-    if rp.AVERAGE_BEAMS is not False:
-        makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
-                                            *d)
-        ivbeams = [Beam(hk) for hk in makebeams]
-    else:
-        ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
+              f"generated from {source}\n")
     for b in ivbeams:
         output += "{: 10.6f} {: 10.6f}\n".format(b.hk[0], b.hk[1])
     try:

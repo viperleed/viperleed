@@ -8,12 +8,15 @@ __created__ = '2026-11-25'
 __license__ = 'GPLv3+'
 
 from pytest_cases import fixture, parametrize
+from quicktions import Fraction
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.beams import checkEXPBEAMS
+from viperleed.calc.files.beams import readIVBEAMS
 from viperleed.calc.files.beams import sortIVBEAMS
+from viperleed.calc.files.beams import writeIVBEAMS
 
 _MODULE = 'viperleed.calc.files.beams'
 
@@ -83,3 +86,36 @@ class TestSymmetryMergingSkipped:
             assert [b.hkfrac for b in sorted_beams] == [(1, 0)]
             assert 'renaming' in caplog.text
 
+
+class TestWriteIvbeamsFromFile:
+    """Tests for the IVBEAMS generated from BEAM_EQUIVALENCE."""
+
+    @parametrize(domains=(True, False))
+    def test_union_of_right_hand_sides(self, domains, rpars, mocker, tmp_path):
+        """Check IVBEAMS holds all calculated beams of the file."""
+        rpars.fileLoaded['BEAM_EQUIVALENCE'] = True
+        rpars.beam_correspondence = BeamCorrespondence({
+            (1, 0): {(1, 0): 1, (0, 1): 1},
+            (1, 1): {(0, 1): 1, (Fraction(1, 2), 0): 1},
+            })
+        rpars.expbeams = [Beam((1, 0)), Beam((1, 1))]
+        leed_dict = mocker.patch(f'{_MODULE}.leedbase.getLEEDdict')
+        filename = tmp_path/'IVBEAMS'
+        ivbeams = writeIVBEAMS(None, rpars, filename=filename,
+                               domains=domains)
+        expect = [(1, 0), (0, 1), (Fraction(1, 2), 0)]
+        assert [b.hkfrac for b in ivbeams] == expect
+        assert [b.hkfrac for b in readIVBEAMS(filename)] == expect
+        assert 'BEAM_EQUIVALENCE' in filename.read_text().splitlines()[0]
+        leed_dict.assert_not_called()
+
+    def test_sorted_in_beamlist_order(self, rpars, tmp_path):
+        """Check that the generated beams are sorted by sortIVBEAMS."""
+        rpars.fileLoaded['BEAM_EQUIVALENCE'] = True
+        rpars.beam_correspondence = BeamCorrespondence(
+            {(0, 1): {(0, 1): 1}, (1, 0): {(1, 0): 1}}
+            )
+        rpars.ivbeams = writeIVBEAMS(None, rpars, filename=tmp_path/'IVBEAMS')
+        assert [b.hkfrac for b in rpars.ivbeams] == [(0, 1), (1, 0)]
+        sorted_beams = sortIVBEAMS(None, rpars)
+        assert [b.hkfrac for b in sorted_beams] == [(1, 0), (0, 1)]

@@ -15,6 +15,7 @@ from pytest_cases import fixture
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.sections.initialization import BeamEquivalenceError
+from viperleed.calc.sections.initialization import _apply_beam_equivalence
 from viperleed.calc.sections.initialization import (
     _check_beam_equivalence_in_beamlist,
     )
@@ -66,4 +67,37 @@ class TestBeamlistCheck:
             _check_beam_equivalence_in_beamlist(rpars)
         assert len(caplog.records) == 1
         assert 'AVERAGE_BEAMS is ignored' in caplog.text
+
+
+class TestApplyIvbeams:
+    """Tests for the IVBEAMS part of _apply_beam_equivalence."""
+
+    def test_missing_beams(self, make_rpars, caplog):
+        """Check the error listing all right-hand-side beams not in IVBEAMS."""
+        rpars = make_rpars({(1, 0): {(1, 0): 1, (0, 1): 1, (1, 1): 1}},
+                           ivbeams=[(1, 0)])
+        with pytest.raises(BeamEquivalenceError):
+            _apply_beam_equivalence(rpars)
+        errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert 'missing in IVBEAMS: ( 0| 1), ( 1| 1)' in errors[0].message
+
+    def test_calculated_beams_on_no_right_hand_side(self, make_rpars, caplog):
+        """Check the info log for unassigned calculated beams."""
+        rpars = make_rpars({(1, 0): {(1, 0): 1}},
+                           ivbeams=[(1, 0), (0, 1), (1, 1)])
+        with caplog.at_level(logging.INFO):
+            _apply_beam_equivalence(rpars)
+        records = [r for r in caplog.records if 'right-hand' in r.message]
+        assert len(records) == 1
+        assert records[0].levelno == logging.INFO
+        assert '( 0| 1), ( 1| 1)' in records[0].message
+
+    def test_all_assigned_no_log(self, make_rpars, caplog):
+        """Check that no message is emitted if everything is assigned."""
+        rpars = make_rpars({(1, 0): {(1, 0): 1, (0, 1): 1}},
+                           ivbeams=[(1, 0), (0, 1)])
+        with caplog.at_level(logging.DEBUG):
+            _apply_beam_equivalence(rpars)
+        assert not caplog.records
 

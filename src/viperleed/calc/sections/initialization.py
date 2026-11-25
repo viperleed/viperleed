@@ -22,6 +22,8 @@ import numpy as np
 
 from viperleed.calc import symmetry
 from viperleed.calc.classes.beam import Beam
+from viperleed.calc.classes.beam_correspondence import BEAM_EPS
+from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
@@ -398,6 +400,9 @@ def initialization(sl, rp, subdomain=False):
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
         rp.ivbeams = iobeams.sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
+    if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        _apply_beam_equivalence(rp)
+    # The experimental and calculated beams are final from here on
 
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
@@ -543,6 +548,9 @@ def init_domains(rp):
     if not rp.ivbeams_sorted:
         rp.ivbeams = iobeams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
+    if rp.fileLoaded["BEAM_EQUIVALENCE"]:
+        _apply_beam_equivalence(rp)
+    # The experimental and calculated beams are final from here on
 
     rp.updateDerivedParams()  # Also sets LMAX
     if not rp.LMAX.has_max:
@@ -648,6 +656,39 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
         rpars.setHaltingLevel(1)
 
 
+def _apply_beam_equivalence(rp):
+    """Check IVBEAMS against the BEAM_EQUIVALENCE file.
+
+    Beams of IVBEAMS that are on no right-hand side are logged.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its beam_correspondence and ivbeams
+        attributes are used.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If a beam on a right-hand side is missing in IVBEAMS.
+    """
+    calc_hks = rp.beam_correspondence.calculated_beams
+    missing = [Beam(hk).label for hk in calc_hks
+               if not _has_beam(rp.ivbeams, hk, eps=BEAM_EPS)]
+    if missing:
+        msg = ('The following calculated beams in BEAM_EQUIVALENCE are '
+               f'missing in IVBEAMS: {", ".join(missing)}')
+        logger.error(msg)
+        raise BeamEquivalenceError(msg)
+    unassigned = [b.label for b in rp.ivbeams
+                  if not any(b.isEqual_hk(hk, eps=BEAM_EPS)
+                             for hk in calc_hks)]
+    if unassigned:
+        logger.info('The following calculated beams are on no '
+                    'right-hand side of BEAM_EQUIVALENCE: '
+                    f'{", ".join(unassigned)}')
+
+
 def _check_beam_equivalence_in_beamlist(rp):
     """Check that the BEAM_EQUIVALENCE file is compatible with BEAMLIST.
 
@@ -679,7 +720,7 @@ def _check_beam_equivalence_in_beamlist(rp):
         raise BeamEquivalenceError(msg)
 
 
-def _has_beam(beams, hk, eps):
+def _has_beam(beams, hk, eps=BEAM_EPS):
     """Return whether any of `beams` has indices `hk`."""
     return any(b.isEqual_hk(hk, eps=eps) for b in beams)
 
