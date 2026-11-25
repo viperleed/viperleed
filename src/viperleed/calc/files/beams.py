@@ -38,6 +38,10 @@ logger = logging.getLogger(__name__)
 # fraction it was rounded from: writeIVBEAMS writes six decimals.
 _DECIMALS_TOLERANCE = Fraction(1, 2_000_000)
 
+# Tolerance for matching beams to BEAMLIST, whose
+# indices are stored as floats with few decimals
+BEAMLIST_EPS = 1e-3
+
 
 def averageBeams(beams, weights=None):
     """Takes a list of percentages and a list of lists of Beam objects.
@@ -192,7 +196,7 @@ def sortIVBEAMS(sl, rp):
         except FileNotFoundError:
             logger.error("BEAMLIST not found.")
             raise
-    err = 1e-3          # since beams are saved as floats, give error tolerance
+    err = BEAMLIST_EPS
     symeq = _get_symmetry_equivalent_beams(sl, rp)
     blfs = beamlist_to_hks(rp.beamlist)
     # now figure out if there are beams in IVBEAMS without a partner

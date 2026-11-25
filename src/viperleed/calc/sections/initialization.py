@@ -766,11 +766,10 @@ def _check_beam_equivalence_in_beamlist(rp):
     if 'AVERAGE_BEAMS' in rp.readParams:
         logger.warning('Parameter AVERAGE_BEAMS is ignored because '
                        'a BEAM_EQUIVALENCE file is given.')
-    # Same tolerance as in sortIVBEAMS
     beamlist = [Beam(hk) for hk in iobeams.beamlist_to_hks(rp.beamlist)]
     missing = [Beam(hk).label
                for hk in rp.beam_correspondence.calculated_beams
-               if not _has_beam(beamlist, hk, eps=1e-3)]
+               if not _has_beam(beamlist, hk, eps=iobeams.BEAMLIST_EPS)]
     if missing:
         msg = ('The following calculated beams in BEAM_EQUIVALENCE are '
                f'not in BEAMLIST: {", ".join(missing)}')
