@@ -28,6 +28,7 @@ from viperleed.calc.sections.initialization import (
 # pylint: disable-next=unused-import
 from .test_beam_equivalence_checks import factory_make_rpars  # noqa: F401
 
+_INITIALIZATION = 'viperleed.calc.sections.initialization'
 _LEEDBASE = 'viperleed.calc.lib.leedbase'
 _IVBEAMS = [(1, 0), (0, 1), (1, 1)]
 _ASSIGNMENTS = {
@@ -181,6 +182,17 @@ class TestUsedFile:
             )
         assert supp == rpars.beam_correspondence
         assert input_file.read_text() == '# input\n(1 0) = (1 0)\n'
+
+    def test_write_fails(self, rpars_for, in_workdir, mocker, caplog):
+        """Check that a failure to write the file is only logged."""
+        rpars = rpars_for(_ASSIGNMENTS['equal weights'], [2])
+        mocker.patch(f'{_INITIALIZATION}.write_beam_equivalence',
+                     side_effect=OSError)
+        _finalize_beam_correspondence(None, rpars)
+        errors = [r.message for r in caplog.records
+                  if r.levelno == logging.ERROR]
+        assert errors == [f'Failed to write {BEAM_EQUIVALENCE_USED_NAME}.']
+        assert not (in_workdir / BEAM_EQUIVALENCE_USED_NAME).exists()
 
     def test_empty_not_written(self, rpars_for, in_workdir, mocker, caplog):
         """Check that an empty correspondence is not written."""
