@@ -215,14 +215,35 @@ def write_beam_equivalence(correspondence, path):
     None.
     """
     lines = [_HEADER]
-    for exp_key, calc_weights in correspondence.assignments.items():
-        equal = len(set(calc_weights.values())) == 1
-        terms = (_format_label(calc_key) if equal
-                 else f'{_format_weight(weight)}*{_format_label(calc_key)}'
-                 for calc_key, weight in calc_weights.items())
-        joined = ' + '.join(terms)
-        lines.append(f'{_format_label(exp_key)} = {joined}')
+    lines.extend(format_assignment(exp_key, calc_weights)
+                 for exp_key, calc_weights
+                 in correspondence.assignments.items())
     Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def format_assignment(exp_key, calc_weights):
+    """Return the BEAM_EQUIVALENCE line of one beam assignment.
+
+    Weights are left out if they are all equal.
+
+    Parameters
+    ----------
+    exp_key : tuple
+        The (h, k) Fractions of the experimental beam.
+    calc_weights : dict
+        Weight of each calculated beam, keyed by (h, k) Fractions.
+
+    Returns
+    -------
+    str
+        The line, without a trailing newline.
+    """
+    equal = len(set(calc_weights.values())) == 1
+    terms = (_format_label(calc_key) if equal
+             else f'{_format_weight(weight)}*{_format_label(calc_key)}'
+             for calc_key, weight in calc_weights.items())
+    joined = ' + '.join(terms)
+    return f'{_format_label(exp_key)} = {joined}'
 
 
 def _format_label(key):

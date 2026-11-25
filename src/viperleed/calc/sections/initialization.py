@@ -40,6 +40,7 @@ from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
+from viperleed.calc.files.beam_equivalence import format_assignment
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.math_utils import angle
@@ -402,6 +403,7 @@ def initialization(sl, rp, subdomain=False):
         rp.ivbeams_sorted = True
     if rp.fileLoaded["BEAM_EQUIVALENCE"]:
         _apply_beam_equivalence(rp)
+    _finalize_beam_correspondence(sl, rp)
     # The experimental and calculated beams are final from here on
 
     # Create directory compile_logs in which logs from compilation will be saved
@@ -550,6 +552,7 @@ def init_domains(rp):
         rp.ivbeams_sorted = True
     if rp.fileLoaded["BEAM_EQUIVALENCE"]:
         _apply_beam_equivalence(rp)
+    _finalize_beam_correspondence(None, rp)
     # The experimental and calculated beams are final from here on
 
     rp.updateDerivedParams()  # Also sets LMAX
@@ -747,6 +750,97 @@ def _check_beam_equivalence_in_beamlist(rp):
                f'not in BEAMLIST: {", ".join(missing)}')
         logger.error(msg)
         raise BeamEquivalenceError(msg)
+
+
+def _finalize_beam_correspondence(sl, rp):
+    """Check that the beam correspondence can be used in the run.
+
+    Does nothing unless both EXPBEAMS and BEAM_EQUIVALENCE were loaded.
+
+    Parameters
+    ----------
+    sl : Slab or None
+        The slab, or None for runs with domains.
+    rp : Rparams
+        The run parameters.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If the correspondence cannot be used by the R factor
+        that will run.
+    """
+    if rp.fileLoaded['EXPBEAMS'] and rp.fileLoaded['BEAM_EQUIVALENCE']:
+        _check_beam_equivalence_weights(rp, rp.beam_correspondence)
+
+
+def _check_beam_equivalence_weights(rp, correspondence):
+    """Check that the R factor to run can use the correspondence.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters.
+    correspondence : BeamCorrespondence
+        The correspondence from the BEAM_EQUIVALENCE file.
+
+    Raises
+    ------
+    BeamEquivalenceError
+        If the correspondence has weights or calculated beams in more
+        than one beam assignment, and an R factor that cannot handle
+        them will run.
+    """
+    if _r_factor_accepts_weights(rp):
+        return
+    assignments = correspondence.assignments
+    shared = {calc_key
+              for calc_key in correspondence.calculated_beams
+              if sum(calc_key in weights
+                     for weights in assignments.values()) > 1}
+    offending = {}
+    for exp_key, calc_weights in assignments.items():
+        weighted = len(set(calc_weights.values())) > 1
+        if weighted or not shared.isdisjoint(calc_weights):
+            offending[exp_key] = format_assignment(exp_key, calc_weights)
+    if not offending:
+        return
+    causes = []
+    if correspondence.is_weighted:
+        causes.append('assignment weights')
+    if correspondence.has_shared_beams:
+        causes.append('calculated beams in more than one beam assignment')
+    lines = '\n'.join(f'  {line}' for line in offending.values())
+    causes = ' and '.join(causes)
+    msg = (f'BEAM_EQUIVALENCE contains {causes}, which the '
+           'R factor to be run does not support. Offending lines:\n'
+           f'{lines}')
+    logger.error(msg)
+    raise BeamEquivalenceError(msg)
+
+
+def _r_factor_accepts_weights(rp):
+    """Return whether the R factor to run takes assignment weights.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters. Its RUN and fileLoaded are used.
+
+    Returns
+    -------
+    bool
+        True if no R factor will run.
+    """
+    # At initialization, section 0 was already taken out of rp.RUN.
+    # Sections 11 and 12 (R factor after refcalc/superpos) are only
+    # inserted later, but 1 and 3/31 always lead to them.
+    runs_r_factor = rp.fileLoaded['EXPBEAMS'] and any(
+        sec in rp.RUN for sec in (1, 3, 31, 4, 11, 12)
+        )
+    # Phase A: no R factor handles weights. The Python R factor will,
+    # and then this is the only place to change.
+    return not runs_r_factor
 
 
 def _has_beam(beams, hk, eps=BEAM_EPS):
