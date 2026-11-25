@@ -34,7 +34,7 @@ def _log_text(work):
 @fixture(name='run_domains_init')
 def factory_run_domains_init(mocker, data_path, make_section_tempdir,
                              tensorleed_path):
-    """Return a function running calc on the silver_and_bismuth domains."""
+    """Return a function running calc on silver_and_bismuth."""
     loop = mocker.patch('viperleed.calc.run.section_loop',
                         wraps=section_loop)
     source = data_path / 'domains' / 'silver_and_bismuth' / 'initialization'
