@@ -388,7 +388,7 @@ def checkEXPBEAMS(sl, rp, domains=False):
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
-        eqbl = []   # hk of equivalent beams
+        eqbl = [b.hk]   # hk of equivalent beams (always incl. b itself)
         for (hk, i) in symeq:
             if b.isEqual_hk(hk):
                 eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
