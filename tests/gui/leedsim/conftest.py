@@ -10,6 +10,9 @@ __license__ = 'GPLv3+'
 from pytest_cases import fixture
 
 
+# Used by the tests of the old main window and of the energy block.
+# When the old main window (mainwindow_old) is dropped, move this
+# fixture to the class in widgets/test_energyblock.py.
 @fixture(name='check_aligned')
 def fixture_check_aligned():
     """Return a function that checks the alignment of a widget.
@@ -24,6 +27,9 @@ def fixture_check_aligned():
     return _check
 
 
+# Used by the tests of both the new and the old main window. When the
+# old one (mainwindow_old) is dropped, move this fixture to the class
+# of the new one in test_mainwindow.py.
 @fixture(name='check_annotations_follow_move')
 def fixture_check_annotations_follow_move(qtc, qtg):
     """Return a function that checks that annotations follow a window.
