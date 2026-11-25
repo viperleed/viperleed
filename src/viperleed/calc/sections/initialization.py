@@ -41,14 +41,17 @@ from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beam_equivalence import format_assignment
+from viperleed.calc.files.beam_equivalence import write_beam_equivalence
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.leedbase import build_beam_correspondence
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_USED_NAME
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
@@ -753,16 +756,21 @@ def _check_beam_equivalence_in_beamlist(rp):
 
 
 def _finalize_beam_correspondence(sl, rp):
-    """Check that the beam correspondence can be used in the run.
+    """Build, check, and store the beam correspondence used in the run.
 
-    Does nothing unless both EXPBEAMS and BEAM_EQUIVALENCE were loaded.
+    Does nothing without EXPBEAMS. Otherwise, the correspondence is
+    built here (see leedbase.build_beam_correspondence) so that
+    experimental beams without a calculated counterpart are reported
+    and removed at initialization. It is then written to
+    BEAM_EQUIVALENCE_USED_NAME in the current directory, unless it is
+    empty.
 
     Parameters
     ----------
     sl : Slab or None
         The slab, or None for runs with domains.
     rp : Rparams
-        The run parameters.
+        The run parameters. Its expbeams may be modified.
 
     Raises
     ------
@@ -770,8 +778,21 @@ def _finalize_beam_correspondence(sl, rp):
         If the correspondence cannot be used by the R factor
         that will run.
     """
-    if rp.fileLoaded['EXPBEAMS'] and rp.fileLoaded['BEAM_EQUIVALENCE']:
-        _check_beam_equivalence_weights(rp, rp.beam_correspondence)
+    if not rp.fileLoaded['EXPBEAMS']:
+        return
+    correspondence = build_beam_correspondence(sl, rp)
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        _check_beam_equivalence_weights(rp, correspondence)
+    if not correspondence.assignments:
+        logger.warning('No experimental beam has a calculated beam '
+                       'assigned. The beam correspondence is not '
+                       'written to file.')
+        return
+    try:
+        write_beam_equivalence(correspondence, BEAM_EQUIVALENCE_USED_NAME)
+    except OSError:
+        logger.error(f'Failed to write {BEAM_EQUIVALENCE_USED_NAME}.',
+                     exc_info=True)
 
 
 def _check_beam_equivalence_weights(rp, correspondence):

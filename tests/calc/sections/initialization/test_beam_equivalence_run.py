@@ -13,8 +13,10 @@ from pytest_cases import parametrize
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
+from viperleed.calc.files.beam_equivalence import read_beam_equivalence
 from viperleed.calc.files.tenserleed import CURRENT_TL_VERSION
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_USED_NAME
 from viperleed.calc.sections.initialization import BeamEquivalenceError
 from viperleed.calc.sections.initialization import initialization
 
@@ -53,3 +55,9 @@ class TestInitializationWithBeamEquivalence:
         """Check the error at initialization if an R factor runs."""
         with pytest.raises(BeamEquivalenceError):
             init_with_file(self._weighted, run)
+
+    def test_weights_without_r_factor(self, init_with_file):
+        """Check that weights are fine if no R factor runs."""
+        tmp, rpars = init_with_file(self._weighted, [2])
+        used = read_beam_equivalence(tmp / BEAM_EQUIVALENCE_USED_NAME)
+        assert used == rpars.beam_correspondence

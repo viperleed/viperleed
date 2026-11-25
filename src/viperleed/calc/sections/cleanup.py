@@ -35,6 +35,7 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_NAME
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_USED_NAME
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
@@ -70,6 +71,12 @@ _SUPP_FILES = (
     'superpos-PARAM',
     'VIBROCC_generated',
     )
+
+# Work-folder files that go in SUPP under a different name. They are
+# not collected into the manifest, nor copied back to the input folder.
+_SUPP_FILES_RENAMED = {
+    BEAM_EQUIVALENCE_USED_NAME: BEAM_EQUIVALENCE_NAME,
+    }
 
 _SUPP_DIRS = (
     ORIGINAL_INPUTS_DIR_NAME,
@@ -284,12 +291,45 @@ def _collect_supp_contents(rpars):
         directories_to_copy,
         Path(DEFAULT_SUPP),
         )
+    copied_renamed = _copy_renamed_files(_SUPP_FILES_RENAMED,
+                                         Path(DEFAULT_SUPP))
     has_files = (
         any(copied_files)
+        or any(copied_renamed)
         or any(any(d.iterdir()) for d in copied_dirs)
         )
     if has_files:
         rpars.manifest.add(DEFAULT_SUPP)
+
+
+def _copy_renamed_files(names, target):
+    """Copy files to target under new names.
+
+    Parameters
+    ----------
+    names : dict
+        Maps the names of files in the current directory to their
+        names in target. Missing files are skipped.
+    target : Path
+        An existing directory.
+
+    Returns
+    -------
+    copied : set
+        The paths of the files that were copied.
+    """
+    copied = set()
+    for name, new_name in names.items():
+        try:
+            shutil.copy2(name, target/new_name)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            _LOGGER.error(f'Error moving {target.name} file {name}: ',
+                          exc_info=True)
+        else:
+            copied.add(Path(name))
+    return copied
 
 
 def _collect_out_contents(rpars):
@@ -521,7 +561,8 @@ def _find_next_workistory_contents(rpars, prerun):
             if f not in rpars.manifest
             and f not in rpars.files_to_out
             and f not in _IOFILES
-            and (f.endswith('.log') or f in _OUT_FILES or f in _SUPP_FILES)
+            and (f.endswith('.log') or f in _OUT_FILES or f in _SUPP_FILES
+                 or f in _SUPP_FILES_RENAMED)
             ]
         directories = [d for d in all_dirs if d in (DEFAULT_SUPP, DEFAULT_OUT)]
     else:
