@@ -407,7 +407,8 @@ running
 
     python -m pip install --upgrade -r requirements/dev.txt
 
-in your local copy of the |repo|.
+in your local copy of the |repo|. These include PyQt5, needed by the tests of
+the graphical user interface (see `Tests of the graphical user interface`_).
 
 
 Keeping copyright years up to date
