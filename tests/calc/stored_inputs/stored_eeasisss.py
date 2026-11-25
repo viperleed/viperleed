@@ -20,7 +20,8 @@ the repository:
 
 and review the changes (e.g., with git) before committing them. The
 release tier (test_stored_eeasisss.py) checks, in the same way, that
-the real eeasisss still gives the stored data.
+the real eeasisss still gives the stored data, within a tolerance of
+LAST_DIGIT_TOLERANCE units in the last printed digit.
 """
 
 __authors__ = (
@@ -31,8 +32,10 @@ __created__ = '2026-11-25'
 __license__ = 'GPLv3+'
 
 from collections import namedtuple
+from decimal import Decimal
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -41,6 +44,7 @@ from types import SimpleNamespace
 from unittest import mock
 import zipfile
 
+import pytest
 from pytest_cases import case
 
 from viperleed.calc import psgen
@@ -74,6 +78,14 @@ WINDOWS_SUFFIX = '.exe'  # Of EXECUTABLE on Windows, as psgen adds it
 POSIX_SEP = '/'  # Path separator in the stored inputs
 _ENCODING = 'utf-8'
 _ZIP_DATE = (1980, 1, 1, 0, 0, 0)  # Earliest allowed: reproducible
+
+# The release check (check_stored_data) accepts numbers printed by
+# eeasisss that differ from the stored ones by at most this many units
+# of their last printed digit: eeasisss compiled with another compiler
+# or on another OS may round differently.
+LAST_DIGIT_TOLERANCE = 1
+_NUMBER = re.compile(r'[-+]?\d*\.\d+(?:[EeDd][-+]?\d+)?')
+_NUMBERS = re.compile(f'(?:{_NUMBER.pattern})+')
 
 # Case ids (as in the run_phaseshift fixture) of the slabs whose
 # eeasisss outputs are stored. Each id is also the name of the folder
@@ -397,30 +409,118 @@ def regenerate(case_id, real_tree, store=None):
             shutil.copyfile(work / name, store / name)
 
 
-def _check_raw_outputs(written, stored):
-    """Fail if the archives `written` and `stored` hold other files."""
-    with zipfile.ZipFile(written) as written_zip:
-        written_files = {name: written_zip.read(name)
-                         for name in written_zip.namelist()}
-    with zipfile.ZipFile(stored) as stored_zip:
-        stored_files = {name: stored_zip.read(name)
-                        for name in stored_zip.namelist()}
-    differing = sorted(
-        name
-        for name in written_files.keys() | stored_files.keys()
-        if written_files.get(name) != stored_files.get(name)
-        )
+def _tokens(text):
+    """Yield (line number, token, is number) for the tokens of `text`.
+
+    Tokens are separated by whitespace. A token made only of numbers
+    with a decimal point (e.g., '-0.6222-0.1719', two fixed-width
+    Fortran fields without a space between them) is split into these
+    numbers. Other tokens (e.g., integers, names) are not numbers.
+    """
+    for line_nr, line in enumerate(text.splitlines(), start=1):
+        for token in line.split():
+            if not _NUMBERS.fullmatch(token):
+                yield line_nr, token, False
+                continue
+            for number in _NUMBER.findall(token):
+                yield line_nr, number, True
+
+
+def _to_decimal(number):
+    """Return a Decimal from a Fortran-printed `number`."""
+    return Decimal(number.upper().replace('D', 'E'))
+
+
+def _numbers_close(stored, written):
+    """Return whether two printed numbers agree within the tolerance.
+
+    They agree if they are printed with the same number of decimals
+    (i.e., their last printed digits have the same place value), and
+    differ by at most LAST_DIGIT_TOLERANCE units of that last digit.
+    """
+    stored_value = _to_decimal(stored)
+    written_value = _to_decimal(written)
+    exponent = stored_value.as_tuple().exponent
+    if written_value.as_tuple().exponent != exponent:
+        return False
+    unit = Decimal(1).scaleb(exponent)
+    return abs(written_value - stored_value) <= LAST_DIGIT_TOLERANCE * unit
+
+
+def first_mismatch(stored, written):
+    """Return where text `written` differs from `stored`, or None.
+
+    The texts are compared token by token (see _tokens): numbers
+    with the same printed precision and within LAST_DIGIT_TOLERANCE
+    units of their last printed digit, all other tokens exactly.
+    Whitespace is not compared.
+
+    Parameters
+    ----------
+    stored : str
+        The expected text.
+    written : str
+        The text to compare with `stored`.
+
+    Returns
+    -------
+    mismatch : str or None
+        A description of the first difference, or None if the texts
+        agree.
+    """
+    stored_tokens = list(_tokens(stored))
+    written_tokens = list(_tokens(written))
+    if len(stored_tokens) != len(written_tokens):
+        return (f'{len(written_tokens)} tokens instead of '
+                f'{len(stored_tokens)}')
+    for stored_token, written_token in zip(stored_tokens, written_tokens):
+        line_nr, expected, expected_is_number = stored_token
+        _, token, is_number = written_token
+        if token == expected:
+            continue
+        if (is_number and expected_is_number
+                and _numbers_close(expected, token)):
+            continue
+        return f'line {line_nr}: {token!r} instead of {expected!r}'
+    return None
+
+
+def _read_archive(archive_path):
+    """Return {name: text} for the files of a raw-output archive."""
+    with zipfile.ZipFile(archive_path) as archive:
+        return {name: archive.read(name).decode(_ENCODING)
+                for name in archive.namelist()}
+
+
+def _check_eeasisss_outputs(written, stored):
+    """Fail if outputs in folder `written` differ from those `stored`.
+
+    PHASESHIFTS and the raw outputs are compared with first_mismatch.
+    The names of the raw outputs must be the same.
+    """
+    written_files = _read_archive(written / RAW_OUTPUT_ARCHIVE)
+    stored_files = _read_archive(stored / RAW_OUTPUT_ARCHIVE)
+    for folder, files in ((written, written_files), (stored, stored_files)):
+        files[REFERENCE] = (folder / REFERENCE).read_text(encoding=_ENCODING)
+    differing = {}
+    for name in written_files.keys() | stored_files.keys():
+        if name not in stored_files:
+            differing[name] = 'not among the stored files'
+        elif name not in written_files:
+            differing[name] = 'not written'
+        else:
+            mismatch = first_mismatch(stored_files[name], written_files[name])
+            if mismatch:
+                differing[name] = mismatch
     if not differing:
         return
-    first = differing[0]
-    names = ', '.join(differing)
-    fail_with_diff(f'{len(differing)} raw output(s) differ from the stored '
-                   f'ones: {names}. If the change is intended, regenerate '
-                   f'the stored eeasisss outputs (see {__name__}).',
-                   stored_files.get(first, b'').decode(_ENCODING),
-                   written_files.get(first, b'').decode(_ENCODING),
-                   fromfile=f'stored: {stored}/{first}',
-                   tofile=f'written: {written}/{first}')
+    details = '\n'.join(f'{name}: {mismatch}'
+                        for name, mismatch in sorted(differing.items()))
+    pytest.fail(f'{len(differing)} file(s) differ from the stored ones '
+                'by more than the tolerance. If the change is intended, '
+                'regenerate the stored eeasisss outputs (see '
+                f'{__name__}).\n{details}',
+                pytrace=False)
 
 
 def check_stored_data(case_id, real_tree, tmp_path):
@@ -428,7 +528,10 @@ def check_stored_data(case_id, real_tree, tmp_path):
 
     The data is written anew as by the regeneration command (see
     regenerate) into a folder of `tmp_path`, and compared with the
-    stored one: eeasisss input, PHASESHIFTS and raw outputs.
+    stored one: the eeasisss input (written by viperleed) exactly,
+    PHASESHIFTS and the raw outputs (written by eeasisss) within
+    LAST_DIGIT_TOLERANCE (see first_mismatch), since eeasisss may
+    print slightly different numbers on another OS or compiler.
 
     Parameters
     ----------
@@ -442,15 +545,14 @@ def check_stored_data(case_id, real_tree, tmp_path):
     Raises
     ------
     pytest.fail.Exception
-        If any of the files written differs from the stored one.
+        If any of the files written differs from the stored one
+        (beyond the tolerance for those of eeasisss).
     """
     written = tmp_path / case_id
     regenerate(case_id, real_tree, written)
     stored = STORED_PATH / case_id
-    for name in (INPUT_NAME, REFERENCE):
-        _check_stored(written / name, stored / name)
-    _check_raw_outputs(written / RAW_OUTPUT_ARCHIVE,
-                       stored / RAW_OUTPUT_ARCHIVE)
+    _check_stored(written / INPUT_NAME, stored / INPUT_NAME)
+    _check_eeasisss_outputs(written, stored)
 
 
 def main(case_ids):

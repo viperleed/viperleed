@@ -134,7 +134,10 @@ release tier also checks that the stored outputs are up to date
 (:file:`tests/calc/stored_inputs/test_stored_eeasisss.py`, marked ``release``):
 for each of the five slabs, it writes the stored data anew with EEASiSSS, as
 the regeneration command does, and compares it with the committed files (input
-of EEASiSSS, its raw outputs, and :file:`PHASESHIFTS`). Naming a release case
+of EEASiSSS, its raw outputs, and :file:`PHASESHIFTS`). The input is compared
+exactly; numbers in the raw outputs and in :file:`PHASESHIFTS` may differ by
+one unit in their last printed digit (``LAST_DIGIT_TOLERANCE``), as EEASiSSS
+may round differently with another compiler or OS. Naming a release case
 by node id or with ``-m release`` also needs ``--release``; otherwise nothing
 runs (a serial run says why). The option combines with
 ``-n``, ``--quick`` and ``-m``: ``--release`` only removes the deselection of
