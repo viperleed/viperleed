@@ -694,8 +694,7 @@ def _log_auto_layer_cuts(rpars, slab, user_auto_cuts):
     """
     if not user_auto_cuts:
         return
-    # pylint: disable-next=protected-access  # Same cuts as create_layers
-    cuts = slab._get_layer_cut_positions(rpars, bulk_cuts=())
+    cuts = slab.get_layer_cut_positions(rpars)
     cuts_str = ' '.join(f'{cut:.4f}' for cut in cuts)
     logger.info('Layer cuts (fractions of c), including automatically '
                 f'detected ones: {cuts_str}')
