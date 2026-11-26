@@ -227,6 +227,33 @@ def test_lowercase_layer_in_geo_line():
     assert lower.targets[0].layers == (2,)
 
 
+@pytest.mark.parametrize(
+    'line_type, line, exp_offsets_line',
+    (
+        (GeoDeltaLine, 'O 1 z offset = 0.1', 'geo O 1 z = 0.1'),
+        (GeoDeltaLine, 'O 1 L(2) z Offset = 0.1', 'geo O 1 L(2) z = 0.1'),
+        (
+            GeoDeltaLine,
+            'O 1, N 2 xy offset = 0.1 0.2',
+            'geo O 1, N 2 xy = 0.1 0.2',
+        ),
+        (GeoDeltaLine, 'O 1 z offset = clear', 'geo O 1 z = 0'),
+        (VibDeltaLine, 'O 1 offset = 0.1', 'vib O 1 = 0.1'),
+        (VibDeltaLine, 'O 1-2 L(1) offset = -0.05', 'vib O 1-2 L(1) = -0.05'),
+    ),
+)
+def test_inline_offset_suggests_offsets_line(
+    line_type, line, exp_offsets_line
+):
+    with pytest.raises(DisplacementsSyntaxError) as exc_info:
+        line_type(line)
+    message = str(exc_info.value)
+    assert line in message
+    assert f'"{exp_offsets_line}"' in message
+    # The suggestion is itself a valid line in the OFFSETS block
+    assert OffsetsLine(exp_offsets_line)
+
+
 def test_geo_single_value_is_invalid():
     with pytest.raises(DisplacementsSyntaxError):
         GeoDeltaLine('O 1 z = 0.1')

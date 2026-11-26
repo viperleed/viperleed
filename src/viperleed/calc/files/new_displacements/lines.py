@@ -243,6 +243,34 @@ class ParsedLine(ABC):
                 )
                 raise TypeError(msg)
 
+    def _reject_inline_offset(self, mode):
+        """Raise if the line has an in-line 'offset' keyword.
+
+        Parameters
+        ----------
+        mode : {'geo', 'vib'}
+            The perturbation mode of the line, used to suggest the
+            equivalent line for the OFFSETS block.
+
+        Raises
+        ------
+        DisplacementsSyntaxError
+            If the left-hand side ends with 'offset'.
+        """
+        lhs_parts = self._lhs.split()
+        if len(lhs_parts) < 2 or lhs_parts[-1].lower() != 'offset':
+            return
+        value = self._rhs.strip()
+        if value.lower() in ('clear', 'original'):
+            value = '0'
+        equivalent = f'{mode} {" ".join(lhs_parts[:-1])} = {value}'
+        msg = (
+            f'In-line "offset" is not supported: "{self.raw_line}". '
+            'Offsets are set in the OFFSETS block. Write '
+            f'"{equivalent}" there instead.'
+        )
+        raise DisplacementsSyntaxError(msg)
+
     def _parse_targets(self, targets_str):
         target_parts = targets_str.split(',')
         try:
@@ -348,6 +376,7 @@ class GeoDeltaLine(ParsedLine):
 
     def __init__(self, line):
         super().__init__(line)
+        self._reject_inline_offset('geo')
 
         # Left hand side
         # check if the last part is a direction
@@ -388,6 +417,7 @@ class VibDeltaLine(ParsedLine):
 
     def __init__(self, line):
         super().__init__(line)
+        self._reject_inline_offset('vib')
 
         # Left hand side
         # check if the last part is a direction
