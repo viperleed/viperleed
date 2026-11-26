@@ -14,6 +14,11 @@ from viperleed.calc.files.new_displacements.errors import (
     OffsetsNotAtBeginningError,
 )
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
+from viperleed.calc.files.new_displacements.file import (
+    _unparsable_line_message,
+)
+from viperleed.calc.files.new_displacements.lines import ModeHeaderLine
+from viperleed.calc.files.new_displacements.lines import OffsetsHeaderLine
 from viperleed.calc.files.new_displacements.segments import LoopBlock
 from viperleed.calc.files.new_displacements.segments import SearchBlock
 from viperleed.calc.files.new_displacements.tokens.direction import (
@@ -142,3 +147,15 @@ def test_reset_iterator(displacements_file_path):
     first_pass = _exhaust(df)
     df.reset_iterator()
     assert _exhaust(df) == first_pass
+
+
+@parametrize(
+    'line',
+    (ModeHeaderLine('= GEO_DELTA'), OffsetsHeaderLine('= OFFSETS')),
+    ids=('mode', 'offsets'),
+)
+def test_unparsable_line_message_quotes_line(line):
+    """Check that the generic error quotes the line, not its repr."""
+    msg = _unparsable_line_message(line)
+    assert f'"{line}"' in msg
+    assert ' object at 0x' not in msg

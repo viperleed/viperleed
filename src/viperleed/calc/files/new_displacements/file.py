@@ -120,9 +120,9 @@ class DisplacementsFile(NodeMixin):
                     new_segment.parent = self
                     break
                 else:
-                    # if we reach here, the line was not processed
-                    msg = f'Unable to parse line: {header_line!r}.'
-                    raise DisplacementsSyntaxError(msg)
+                    raise DisplacementsSyntaxError(
+                        _unparsable_line_message(header_line)
+                    )
 
         self._validate()
         logger.info('DISPLACEMENTS file read successfully using new parser.')
@@ -206,3 +206,8 @@ class DisplacementsFile(NodeMixin):
         search_block = self.children[self._child_id]
         self._child_id += 1
         return search_block
+
+
+def _unparsable_line_message(line):
+    """Return an error message for a `line` found at top level."""
+    return f'Unable to parse line "{line}".'
