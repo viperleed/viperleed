@@ -47,10 +47,6 @@ _SUPPORTED_DISPLACEMENTS_FILES = tuple(
     pytest.param(p, marks=_NO_SEARCH_HEADER_XFAIL)
     if p.name == 'DISPLACEMENTS_no_header' else p
     for p in DISPLACEMENTS_FILES
-    if 'xfail' not in p.name
-)
-_UNSUPPORTED_DISPLACEMENTS_FILES = tuple(
-    p for p in DISPLACEMENTS_FILES if 'xfail' in p.name
 )
 
 
@@ -67,17 +63,6 @@ def displacements_file_id(file_path):
     ids=displacements_file_id,
 )
 def displacements_file_path(file_path):
-    """Fixture to provide a path to a DISPLACEMENTS file."""
-    return file_path
-
-
-@fixture
-@pytest.mark.parametrize(
-    'file_path',
-    _UNSUPPORTED_DISPLACEMENTS_FILES,
-    ids=displacements_file_id,
-)
-def displacements_file_path_xfail(file_path):
     """Fixture to provide a path to a DISPLACEMENTS file."""
     return file_path
 

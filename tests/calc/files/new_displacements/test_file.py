@@ -16,11 +16,17 @@ from viperleed.calc.files.new_displacements.errors import (
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.files.new_displacements.segments import LoopBlock
 from viperleed.calc.files.new_displacements.segments import SearchBlock
+from viperleed.calc.files.new_displacements.tokens.direction import (
+    FractionalDirectionToken,
+)
 
 from ....helpers import TEST_DATA
 
 NESTED_LOOPS_PATH = (
     TEST_DATA / 'DISPLACEMENTS/Cu_111/DISPLACEMENTS_nested_loops'
+)
+LATERAL_1_PATH = (
+    TEST_DATA / 'DISPLACEMENTS/Pt_111_10x10_Te/DISPLACEMENTS_lateral_1'
 )
 
 
@@ -101,15 +107,15 @@ def test_next_nested_loops_sequence(rfacs, expected):
         disp_file.next(current_rfac=rfacs[-1])
 
 
-@pytest.mark.xfail(
-    reason='Fractional directions not yet supported', strict=False
-)
-def test_read_from_unsupported_file(displacements_file_path_xfail):
-    """Test reading a file and checking its validity."""
-
-    # try and read the unsupported file, which should raise an error
-    df = DisplacementsFile()
-    df.read(displacements_file_path_xfail)
+def test_read_fractional_directions():
+    """Check the directions read from a file with ab[i j] directions."""
+    disp_file = DisplacementsFile()
+    disp_file.read(LATERAL_1_PATH)
+    search, = disp_file.children
+    a_dir = FractionalDirectionToken('ab[1 0]')
+    a2b_dir = FractionalDirectionToken('ab[2 1]')
+    directions = [line.direction for line in search.geo_delta_lines]
+    assert directions == [a_dir, a_dir, a2b_dir, a2b_dir, a_dir, a2b_dir]
 
 
 def _exhaust(displacements_file):
