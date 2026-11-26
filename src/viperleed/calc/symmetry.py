@@ -16,6 +16,9 @@ import numpy as np
 import scipy.spatial as sps
 
 from viperleed.calc.classes.atom_containers import AtomList
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    BeamIncidence,
+    )
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files import parameters
@@ -1282,9 +1285,13 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         sl.ucell[i, j] = 0
             sl.update_cartesian_from_fractional()
             # modify BEAM_INCIDENCE
-            if rp.THETA != 0:
+            incidence = rp.BEAM_INCIDENCE
+            if incidence.theta != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
-                rp.PHI += np.degrees(ang)
+                rp.BEAM_INCIDENCE = BeamIncidence(
+                    incidence.theta,
+                    incidence.phi + np.degrees(ang),
+                    )
                 parameters.modify(rp, "BEAM_INCIDENCE")
     return
 

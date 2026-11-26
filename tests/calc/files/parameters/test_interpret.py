@@ -234,7 +234,8 @@ class TestAverageBeams(_TestInterpretBase):
     param = 'AVERAGE_BEAMS'
     valid = {'off': ('off', False),
              'all': ('all', (0.0, 0.0)),
-             'custom': ('45.0 60', (45.0, 60.0)), }
+             'custom': ('45.0 60', (45.0, 60.0)),
+             'negative theta': ('-30 30', (30.0, 210.0)), }
     invalid = {
         'invalid input': ('invalid input', err.ParameterFloatConversionError),
         }
@@ -283,10 +284,11 @@ class TestBeamIncidence(_TestInterpretBase):
 
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
-        """Check interpretation of valid BEAM_INCIDENCE into THETA and PHI."""
+        """Check interpretation of valid BEAM_INCIDENCE."""
         self.interpret(interpreter, val)
         rpars = interpreter.rpars
-        assert (rpars.THETA, rpars.PHI) == expect
+        incidence = rpars.BEAM_INCIDENCE
+        assert (incidence.theta, incidence.phi) == expect
 
     @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):

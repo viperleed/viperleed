@@ -640,15 +640,16 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
 def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
     """Check if phi is ambiguous and warn if so."""
     angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
-    if angle_between_first_uc_vec_and_x > angle_eps and rp.THETA > angle_eps:
+    theta, phi = rp.BEAM_INCIDENCE.theta, rp.BEAM_INCIDENCE.phi
+    if angle_between_first_uc_vec_and_x > angle_eps and theta > angle_eps:
         logger.info(
-            f"Detected non-zero angle theta ({rp.THETA:.2f})° and "
+            f'Detected non-zero angle theta ({theta:.2f})° and '
             f"an angle of {angle_between_first_uc_vec_and_x:.2f}° "
             "between the first unit cell vector and the x direction of "
             "the coordinate system in the POSCAR file.\n"
             "Make sure the angle phi is interpreted correctly: "
-            f"Phi is {rp.PHI:.2f}° from x, which is "
-            f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
+            f'Phi is {phi:.2f}° from x, which is '
+            f'{(phi + angle_between_first_uc_vec_and_x):.2f}° from a.\n'
             "See the ViPErLEED documentation for the parameter BEAM_INCIDENCE "
             "for details."
             )
@@ -711,9 +712,7 @@ def _check_domain_consistent(domain, main_rpars):
         domain.refcalc_required = True
         inconsistent_params.append('LMAX')
     # check beam incidence
-    beam_incidence_domain = (domain.rpars.THETA, domain.rpars.PHI)
-    beam_incidence_main = (main_rpars.THETA, main_rpars.PHI)
-    if beam_incidence_domain != beam_incidence_main:
+    if domain.rpars.BEAM_INCIDENCE != main_rpars.BEAM_INCIDENCE:
         logger.info(f'{cmessage}BEAM_INCIDENCE is mismatched.')
         domain.refcalc_required = True
         inconsistent_params.append('BEAM_INCIDENCE')
@@ -802,8 +801,7 @@ def _inherit_from_main(domains, main_rpars, inconsistent_params_by_domain):
     inherited_params = {
         # attr to inherit: what to write
         'THEO_ENERGIES': 'THEO_ENERGIES',
-        'THETA': 'BEAM_INCIDENCE',
-        'PHI': 'BEAM_INCIDENCE',
+        'BEAM_INCIDENCE': 'BEAM_INCIDENCE',
         'N_CORES': None,  # Don't write: determined at runtime
         }
     inherited = (

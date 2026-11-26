@@ -53,6 +53,11 @@ from .defaults import NO_VALUE
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
+# Register BEAM_INCIDENCE with SpecialParameter, so that the
+# default BEAM_INCIDENCE is a BeamIncidence also when the
+# PARAMETERS interpreter has not been imported
+# pylint: disable-next=unused-import
+from .special.beam_incidence import BeamIncidence  # noqa: F401
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
@@ -102,6 +107,7 @@ class Rparams:
         # FROM PARAMETERS FILE
         self.ATTENUATION_EPS = 0.001
         self.AVERAGE_BEAMS = None
+        self.BEAM_INCIDENCE = self.get_default('BEAM_INCIDENCE')
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
@@ -133,7 +139,6 @@ class Rparams:
         self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['d'] # changed in updateDerivedParams
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
-        self.PHI = DEFAULTS['PHI']           # from BEAM_INCIDENCE
         self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'font_size': 10, 'legend': 'all', 'line_width': 1,
                         'overbar': False, 'perpage': 2,
@@ -173,7 +178,6 @@ class Rparams:
         # THEO_ENERGIES: the default values without experimental
         # beams is set in section INIT via self.initTheoEnergies
         self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
-        self.THETA = DEFAULTS['THETA']        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = False
         self.TL_VERSION = self.get_default('TL_VERSION')
         self.T_EXPERIMENT = None

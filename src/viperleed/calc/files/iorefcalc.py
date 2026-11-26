@@ -7,7 +7,7 @@ reference calculation.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -427,7 +427,8 @@ def writeAUXNONSTRUCT(sl, rp):
     output += (formatter['tst'].write([rp.ATTENUATION_EPS]).ljust(18)
                + '>>>>> ! <<<<<              TST\n')
     output += formatter['beamnums'].write(beamnums)+'\n'
-    output += (formatter['incidence'].write([rp.THETA, rp.PHI]).ljust(45)
+    output += (formatter['incidence'].write([rp.BEAM_INCIDENCE.theta,
+                                             rp.BEAM_INCIDENCE.phi]).ljust(45)
                + 'THETA FI\n')
     output += formatter['eps'].write([rp.BULKDOUBLING_EPS]).ljust(45) + 'EPS\n'
     output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)

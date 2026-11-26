@@ -12,7 +12,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
 
@@ -226,8 +226,8 @@ class ModifiedParameterValue:
 
     def _format_beam_incidence_value(self):
         """Return a formatted version of BEAM_INCIDENCE."""
-        theta, phi = self._raw_value
-        return f'THETA {theta:.4f}, PHI {phi:.4f}'
+        incidence = self._raw_value
+        return f'THETA {incidence.theta:.4f}, PHI {incidence.phi:.4f}'
 
     def _format_bulk_repeat_value(self):
         """Return a formatted version of BULK_REPEAT."""
@@ -268,11 +268,6 @@ class ModifiedParameterValue:
         if getter is None:
             raise ValueError(f'No raw-value getter for {self.param}')
         return getter(rpars)
-
-    @staticmethod
-    def _get_raw_value_beam_incidence(rpars):
-        """Return theta and phi."""
-        return rpars.THETA, rpars.PHI
 
 
 class ParametersFileEditor(AbstractContextManager):

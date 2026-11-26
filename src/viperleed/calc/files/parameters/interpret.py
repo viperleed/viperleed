@@ -28,6 +28,9 @@ import re
 import numpy as np
 
 from viperleed import __version__
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    BeamIncidence,
+    )
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
@@ -564,14 +567,16 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
         # Otherwise, try to parse the value
         angles = self._parse_incidence_angles(param, assignment)
-        self.rpars.AVERAGE_BEAMS = angles['THETA'], angles['PHI']
+        incidence = BeamIncidence(angles['THETA'], angles['PHI'])
+        self.rpars.AVERAGE_BEAMS = incidence.theta, incidence.phi
 
     def interpret_beam_incidence(self, assignment):
         """Assign parameter BEAM_INCIDENCE."""
         param = 'BEAM_INCIDENCE'
         self._ensure_no_flags_assignment(assignment)
         angles = self._parse_incidence_angles(param, assignment)
-        self.rpars.THETA, self.rpars.PHI = angles['THETA'], angles['PHI']
+        self.rpars.BEAM_INCIDENCE = BeamIncidence(angles['THETA'],
+                                                  angles['PHI'])
 
     def interpret_bulk_repeat(self, assignment):
         """Assign parameter BULK_REPEAT."""
@@ -1966,7 +1971,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise new_exc(assignment.parameter,
                           message=assignment.values_str) from exc
 
-    def _parse_incidence_angles(self, param, assignment):                       # TODO: Issue #147
+    def _parse_incidence_angles(self, param, assignment):
         """Return a dictionary with incidence angles from an assignment."""
         bounds = {'THETA': NumericBounds(type_=float, range_=(-90, 90),
                                          out_of_range_event='fail'),
@@ -2004,11 +2009,6 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 bounds=bounds[name],
                 return_only=True,
                 )
-
-        # Check for negative theta and adjust phi
-        if angles['THETA'] < 0:
-            angles['THETA'] = abs(angles['THETA'])
-            angles['PHI'] = (angles['PHI'] + 180) % 360
         return angles
 
     def _check_n_incidence_angles_ok(self, param, right_side):

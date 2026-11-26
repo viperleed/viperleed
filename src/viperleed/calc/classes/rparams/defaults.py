@@ -11,7 +11,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 
@@ -65,12 +65,11 @@ DEFAULTS = {
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
     'SYMMETRY_FIX': '',
-    'THETA': 0,   # perpendicular incidence
     'TL_VERSION': None,
-    'PHI': 0,     # not needed in case of perpendicular incidence
     'ZIP_COMPRESSION_LEVEL': 2,
 
     # SPECIAL PARAMETERS
+    'BEAM_INCIDENCE': (0, 0),  # (THETA, PHI): perpendicular incidence
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: from data
     'LAYER_CUTS': 'dz(1.2)',
     'LMAX': (NO_VALUE, NO_VALUE),

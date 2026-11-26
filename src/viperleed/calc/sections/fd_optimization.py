@@ -16,6 +16,13 @@ import shutil
 import numpy as np
 from numpy.polynomial import Polynomial
 
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    BeamIncidence,
+    )
+from viperleed.calc.classes.rparams.special.beam_incidence import (
+    FULL_TURN,
+    MAX_THETA,
+    )
 from viperleed.calc.files import iofdopt
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -32,6 +39,7 @@ _FD_COMMON_INPUT_FILES = (
     'BEAMLIST',
     'PHASESHIFTS',
     )
+_INCIDENCE_ANGLES = {'phi', 'theta'}
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +49,47 @@ class FullDynamicCalculationError(Exception):
 
 class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
     """Raised when the optimization is out of bounds."""
+
+
+def _replace_incidence_angle(rpars, which, value):
+    """Return rpars.BEAM_INCIDENCE with one of its angles replaced.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The parameters holding the current BEAM_INCIDENCE.
+    which : {'theta', 'phi'}
+        Which angle to replace.
+    value : float
+        The new value of the angle, in degrees. A theta beyond
+        grazing incidence (i.e., larger than 90 degrees or smaller
+        than -90 degrees) is clipped to grazing incidence.
+
+    Returns
+    -------
+    incidence : BeamIncidence
+        The new incidence. A negative theta is turned into a
+        positive one with phi rotated by 180 degrees. Phi is
+        brought into [0, 360) degrees.
+    """
+    incidence = rpars.BEAM_INCIDENCE
+    angles = {'theta': incidence.theta,
+              'phi': incidence.phi,
+              which: value}  # Replaces one of the two
+    theta = _clip_theta(angles['theta'])
+    return _with_phi_below_full_turn(BeamIncidence(theta, angles['phi']))
+
+
+def _clip_theta(theta):
+    """Return `theta` limited to grazing incidence."""
+    return min(max(theta, -MAX_THETA), MAX_THETA)
+
+
+def _with_phi_below_full_turn(incidence):
+    """Return a BeamIncidence like `incidence` with phi in [0, 360)."""
+    if incidence.phi < FULL_TURN:
+        return incidence
+    return BeamIncidence(incidence.theta, incidence.phi % FULL_TURN)
 
 
 def get_fd_r(slab, rpars, workdir):
@@ -65,12 +114,7 @@ def get_fd_r(slab, rpars, workdir):
         R-factor for each individual beam.
     """
     rpars.TENSOR_OUTPUT = [0]
-    # internally transform theta, phi to within range
-    if rpars.THETA < 0:
-        rpars.THETA = abs(rpars.THETA)
-        rpars.PHI += 180
-    rpars.THETA = min(rpars.THETA, 90.)
-    rpars.PHI = rpars.PHI % 360
+    rpars.BEAM_INCIDENCE = _with_phi_below_full_turn(rpars.BEAM_INCIDENCE)
     main_work = Path.cwd()
     with execute_in_dir(workdir, mkdir=True):
         make_compile_logs_dir(rpars)
@@ -159,9 +203,9 @@ def fd_optimization(sl, rp):
     if which == "v0i":
         x0 = rp.V0_IMAG
     elif which == "theta":
-        x0 = rp.THETA
+        x0 = rp.BEAM_INCIDENCE.theta
     elif which == "phi":
-        x0 = rp.PHI
+        x0 = rp.BEAM_INCIDENCE.phi
     else:
         x0 = 1.   # geometry: x is a scaling factor
 
@@ -277,10 +321,8 @@ def fd_optimization(sl, rp):
         if which == "v0i":
             x = max(0, x)
             trp.V0_IMAG = x
-        elif which == "theta":
-            trp.THETA = x
-        elif which == "phi":
-            trp.PHI = x
+        elif which in _INCIDENCE_ANGLES:
+            trp.BEAM_INCIDENCE = _replace_incidence_angle(trp, which, x)
         else:       # geometry: x is a scaling factor for the unit cell
             x = max(0.1, x)
             apply_scaling(tsl, trp, which, x)
@@ -335,12 +377,8 @@ def fd_optimization(sl, rp):
     if which == "v0i":
         rp.V0_IMAG = new_min
         parameters.modify(rp, "V0_IMAG", comment=comment)
-    elif which in ("theta", "phi"):
-        setattr(rp, which.upper(), new_min)
-        if rp.THETA < 0:
-            rp.THETA = abs(rp.THETA)
-            rp.PHI += 180
-        rp.PHI = rp.PHI % 360
+    elif which in _INCIDENCE_ANGLES:
+        rp.BEAM_INCIDENCE = _replace_incidence_angle(rp, which, new_min)
         parameters.modify(rp, "BEAM_INCIDENCE", comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
