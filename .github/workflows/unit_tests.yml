@@ -26,9 +26,12 @@
 #   --show-windows`. Windows and macOS runners have a display; Linux
 #   ones would need a virtual X server (e.g., xvfb-run) and the X
 #   libraries of Qt's xcb platform.
-# - Coverage is uploaded to Codecov from the Linux job. This needs the
-#   Codecov app and the CODECOV_TOKEN secret. A failed upload does not
-#   fail the job.
+# - Coverage is uploaded to Codecov from every job, so that code that
+#   runs only on Windows (or only on Linux) is covered too. Codecov
+#   merges the uploads of a commit; each carries the platform as a
+#   flag (Linux, Windows), to see the coverage of one platform alone.
+#   This needs the Codecov app and the CODECOV_TOKEN secret. A failed
+#   upload does not fail the job.
 # - Require the check "Tests" (job all-tests) in the
 #   rulesets: it fails unless every job of the matrix succeeded, and
 #   its name does not change with the operating systems or the Python
@@ -77,7 +80,6 @@ jobs:
           - platform: Linux
             os: ubuntu-latest
             python-version: '3.x'
-            coverage: true
           - platform: Windows
             os: windows-latest
             python-version: '3.7'
@@ -111,20 +113,19 @@ jobs:
           pip install -r requirements/tests.txt -e '.[GUI]'
       - name: Run the default test tier
         env:
-          # Coverage only where it is uploaded
-          COVERAGE_OPTIONS: ${{ matrix.coverage && '--cov-report=xml' || '--no-cov' }}
           # Optional dependencies that this job does not install
           ALLOW_MISSING_OPTION: ${{ matrix.allow-missing && format('--allow-missing={0}', matrix.allow-missing) || '' }}
         run: >-
           pytest tests -n auto --require-all $ALLOW_MISSING_OPTION -rfEs
-          $COVERAGE_OPTIONS
+          --cov-report=xml
       - name: Upload coverage to Codecov
-        if: ${{ matrix.coverage }}
         continue-on-error: true
         uses: codecov/codecov-action@v7
         with:
           files: coverage.xml
           disable_search: true
+          flags: ${{ matrix.platform }}
+          name: ${{ matrix.platform }}, Python ${{ matrix.python-version }}
           token: ${{ secrets.CODECOV_TOKEN }}
 
   pytest-serial:
