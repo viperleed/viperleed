@@ -61,7 +61,7 @@ def test_parse_valid_targets(
         # numeric without label
         '1 2 3',
         '2',
-        '[1 0 0'
+        '[1 0 0',
         # layer without label
         'L(1)',
         # non-integer in numeric list
