@@ -21,33 +21,33 @@ from viperleed.calc.lib.parallelization import log_blas_thread_env
 _DEFAULT = '1'  # BLAS thread limit if not set by the user
 _UNRELATED = {'PATH': '/some/path', 'VIPERLEED_SOME_VARIABLE': 'value'}
 _USER_VARIABLES = (
-    'OPENBLAS_NUM_THREADS',
     'GOTO_NUM_THREADS',
     'MKL_NUM_THREADS',
     'OMP_NUM_THREADS',
+    'OPENBLAS_NUM_THREADS',
     )
 _BLANK = ('', '  ')  # Values that count as not set
 _LIMITS = {  # Set if no variable is set by the user
-    'OPENBLAS_NUM_THREADS': _DEFAULT,
     'MKL_NUM_THREADS': _DEFAULT,
     'OMP_NUM_THREADS': _DEFAULT,
+    'OPENBLAS_NUM_THREADS': _DEFAULT,
     }
 # User environment (without OMP_NUM_THREADS) and variables
 # expected to be set automatically
 _PER_LIBRARY = {
-    'MKL': ({'MKL_NUM_THREADS': '2'},
-            {'OPENBLAS_NUM_THREADS': _DEFAULT, 'OMP_NUM_THREADS': _DEFAULT}),
-    'OPENBLAS': ({'OPENBLAS_NUM_THREADS': '4'},
-                 {'MKL_NUM_THREADS': _DEFAULT, 'OMP_NUM_THREADS': _DEFAULT}),
     'GOTO': ({'GOTO_NUM_THREADS': '4'},
              {'MKL_NUM_THREADS': _DEFAULT, 'OMP_NUM_THREADS': _DEFAULT}),
-    'OPENBLAS+GOTO': ({'OPENBLAS_NUM_THREADS': '4', 'GOTO_NUM_THREADS': '2'},
-                      {'MKL_NUM_THREADS': _DEFAULT,
-                       'OMP_NUM_THREADS': _DEFAULT}),
+    'MKL': ({'MKL_NUM_THREADS': '2'},
+            {'OMP_NUM_THREADS': _DEFAULT, 'OPENBLAS_NUM_THREADS': _DEFAULT}),
+    'MKL+GOTO': ({'GOTO_NUM_THREADS': '4', 'MKL_NUM_THREADS': 'garbage'},
+                 {'OMP_NUM_THREADS': _DEFAULT}),
     'MKL+OPENBLAS': ({'MKL_NUM_THREADS': '2', 'OPENBLAS_NUM_THREADS': '0'},
                      {'OMP_NUM_THREADS': _DEFAULT}),
-    'MKL+GOTO': ({'MKL_NUM_THREADS': 'garbage', 'GOTO_NUM_THREADS': '4'},
-                 {'OMP_NUM_THREADS': _DEFAULT}),
+    'OPENBLAS': ({'OPENBLAS_NUM_THREADS': '4'},
+                 {'MKL_NUM_THREADS': _DEFAULT, 'OMP_NUM_THREADS': _DEFAULT}),
+    'OPENBLAS+GOTO': ({'GOTO_NUM_THREADS': '2', 'OPENBLAS_NUM_THREADS': '4'},
+                      {'MKL_NUM_THREADS': _DEFAULT,
+                       'OMP_NUM_THREADS': _DEFAULT}),
     }
 
 
@@ -149,19 +149,19 @@ class TestLogBlasThreadEnv:
         caplog.set_level(logging.DEBUG)
         log_blas_thread_env('some calculations')
         expect_log = ('BLAS thread limit for some calculations: '
-                      'OPENBLAS_NUM_THREADS=1, OMP_NUM_THREADS=1, '
-                      'MKL_NUM_THREADS=1')
+                      'MKL_NUM_THREADS=1, OMP_NUM_THREADS=1, '
+                      'OPENBLAS_NUM_THREADS=1')
         assert expect_log in caplog.text
         assert all(r.levelno == logging.DEBUG for r in caplog.records)
         assert os.environ == before
 
     @parametrize('user_env,user_set,automatic', (
         ({'MKL_NUM_THREADS': '2'}, 'MKL_NUM_THREADS=2',
-         'OPENBLAS_NUM_THREADS=1, OMP_NUM_THREADS=1'),
+         'OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1'),
         ({'OPENBLAS_NUM_THREADS': '4'}, 'OPENBLAS_NUM_THREADS=4',
-         'OMP_NUM_THREADS=1, MKL_NUM_THREADS=1'),
+         'MKL_NUM_THREADS=1, OMP_NUM_THREADS=1'),
         ({'GOTO_NUM_THREADS': '4'}, 'GOTO_NUM_THREADS=4',
-         'OMP_NUM_THREADS=1, MKL_NUM_THREADS=1'),
+         'MKL_NUM_THREADS=1, OMP_NUM_THREADS=1'),
         ), ids=('MKL', 'OPENBLAS', 'GOTO'))
     def test_per_library(self, user_env, user_set, automatic,
                          patch_environ, caplog):

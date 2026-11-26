@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 # Environment variables that limit the number of threads used by
 # the BLAS/LAPACK (and OpenMP) libraries of TensErLEED executables
 BLAS_THREAD_VARIABLES = (
-    'OPENBLAS_NUM_THREADS',
-    'OMP_NUM_THREADS',
     'MKL_NUM_THREADS',
+    'OMP_NUM_THREADS',
+    'OPENBLAS_NUM_THREADS',
     )
 # Variables the user may set to choose the number of BLAS threads.
 # OMP_NUM_THREADS is shared by all libraries: if the user set it,
@@ -40,17 +40,17 @@ BLAS_THREAD_VARIABLES = (
 # unless the user set one of its own variables: OpenBLAS and MKL
 # prefer their own variables over OMP_NUM_THREADS.
 USER_BLAS_THREAD_VARIABLES = (
-    'OPENBLAS_NUM_THREADS',
     'GOTO_NUM_THREADS',
     'MKL_NUM_THREADS',
     'OMP_NUM_THREADS',
+    'OPENBLAS_NUM_THREADS',
     )
 _SHARED_BLAS_THREAD_VARIABLE = 'OMP_NUM_THREADS'
 # The variable set for each library, and those that, if set by the
 # user, leave the number of threads of that library to the user
 _LIBRARY_BLAS_THREAD_VARIABLES = {
-    'OPENBLAS_NUM_THREADS': ('OPENBLAS_NUM_THREADS', 'GOTO_NUM_THREADS'),
     'MKL_NUM_THREADS': ('MKL_NUM_THREADS',),
+    'OPENBLAS_NUM_THREADS': ('GOTO_NUM_THREADS', 'OPENBLAS_NUM_THREADS'),
     }
 _DEFAULT_BLAS_THREADS = '1'
 
