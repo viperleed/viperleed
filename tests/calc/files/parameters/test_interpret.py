@@ -1539,6 +1539,17 @@ class TestVLJParameters(_TestInterpretBase):
             'grad_damping': 0.5,
         }
 
+    @parametrize(algo=('SLSQP', 'BFGS'))
+    def test_interpret_vlj_algo_grad_damping_deprecated(self, algo,
+                                                        interpreter, caplog):
+        """Check that grad_damping warns once that it has no effect."""
+        assignment = Assignment('grad_damping 0.5', 'VLJ_ALGO', flags_str=algo)
+        with caplog.at_level(logging.WARNING):
+            interpreter.interpret_vlj_algo(assignment)
+        warnings = [r for r in caplog.records if 'grad_damping' in r.message]
+        assert len(warnings) == 1
+        assert 'no effect' in warnings[0].message
+
     def test_interpret_vlj_batch(self, interpreter):
         """Check assignment of valid VLJ_BATCH."""
         assignment = Assignment('energies 4, atoms 2', 'VLJ_BATCH')

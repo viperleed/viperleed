@@ -1212,6 +1212,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(2)
             raise ParameterUnknownFlagError(param, f"{flag!r}") from None
         # print(parsed_value)  # Debugging line
+        if flag == 'grad_damping':
+            _LOGGER.warning(
+                f'{param} {algo}: grad_damping is deprecated and has no '
+                'effect. It will be removed in a future version.'
+                )
         self.rpars.vlj_algo_settings[algo][flag] = parsed_value
 
     def _interpret_vlj_algo_cmaes(self, flag_value_pair):
