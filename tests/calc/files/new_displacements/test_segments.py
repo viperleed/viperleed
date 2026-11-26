@@ -104,3 +104,32 @@ def test_loop_with_only_loop_child_complains():
         match='Loop block cannot contain only another loop block',
     ):
         loop_block.read_lines(lines)
+
+
+def test_loop_reset_iterator():
+    """Check that reset_iterator restarts a finished loop."""
+    header = LoopMarkerLine('<loop>')
+    lines = iter(
+        [
+            SearchHeaderLine('== SEARCH first'),
+            SectionHeaderLine('= GEO_DELTA'),
+            GeoDeltaLine('Fe 1 z = 0.0 0.1'),
+            SearchHeaderLine('== SEARCH second'),
+            SectionHeaderLine('= VIB_DELTA'),
+            VibDeltaLine('Fe 1 = 0.0 0.1'),
+            LoopMarkerLine('</loop>'),
+        ]
+    )
+    loop_block = LoopBlock(header)
+    loop_block.read_lines(lines)
+    first, second = loop_block.children
+    # The first pass improves the R factor, so the loop repeats
+    # once, then stops when the R factor stays the same.
+    expected = (first, second, first, second)
+    returned = tuple(loop_block.next(0.5) for _ in expected)
+    assert returned == expected
+    with pytest.raises(StopIteration):
+        loop_block.next(0.5)
+
+    loop_block.reset_iterator()
+    assert loop_block.next(0.5) is first

@@ -47,3 +47,21 @@ def test_next(displacements_file_path):
         while True:
             line = df.next(current_rfac=0.1)
             assert line is not None
+
+
+def _exhaust(displacements_file):
+    """Return all search blocks that next() yields until it stops."""
+    blocks = []
+    with pytest.raises(StopIteration):
+        while True:
+            blocks.append(displacements_file.next(current_rfac=0.1))
+    return blocks
+
+
+def test_reset_iterator(displacements_file_path):
+    """Check that reset_iterator restarts a finished file."""
+    df = DisplacementsFile()
+    df.read(displacements_file_path)
+    first_pass = _exhaust(df)
+    df.reset_iterator()
+    assert _exhaust(df) == first_pass
