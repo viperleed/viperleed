@@ -149,6 +149,18 @@ class TestGeoDeltaLine:
         with pytest.raises(exp_error):
             GeoDeltaLine(bad_line)
 
+    _invalid_cartesian = (
+        'yx', 'xz', 'yz', 'zyx', 'xx[1 2]', 'xyx[1 0 5]', 'zz[1 1]',
+        'zyx[1 0 0]', 'x[1]', 'z[-1]', 'x[0]', 'zz', 'xxy',
+        'xy[0 0]', 'xy[1 0 0]',
+    )
+
+    @parametrize(direction=_invalid_cartesian)
+    def test_invalid_cartesian_direction(self, direction):
+        """Check that only the Cartesian forms of the base are accepted."""
+        with pytest.raises(DisplacementsSyntaxError):
+            GeoDeltaLine(f'O 1 {direction} = -0.1 0.1')
+
 
 class TestVibDeltaLine:
     @pytest.mark.parametrize(

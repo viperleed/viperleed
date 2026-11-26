@@ -54,9 +54,14 @@ DIRECTION_PATTERN = (
     # longer, more specific first:
     rf'azi\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
     rf'|r\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
-    # Frame letters with optional bracket. Also catches invalid ones
-    # (e.g., 'c', 'az') so that the direction token can complain.
-    rf'|[xyzabc]+(?:{_DIRECTION_BRACKETS_RE})?'
+    # Cartesian shorthands: only the forms with x, y, z in order
+    rf'|xyz(?:{_DIRECTION_BRACKETS_RE})?'
+    rf'|xy(?:{_DIRECTION_BRACKETS_RE})?'
+    r'|[xyz]'
+    # Frame letters with at least one of a, b, c, and optional bracket.
+    # Also catches invalid ones (e.g., 'c', 'az') so that the direction
+    # token can complain.
+    rf'|[xyzabc]*[abc][xyzabc]*(?:{_DIRECTION_BRACKETS_RE})?'
     # bare bracketed vector
     rf'|{_DIRECTION_BRACKETS_RE}'
     r'))'
@@ -242,7 +247,7 @@ class ParsedLine(ABC):
     def _parse_direction(self, dir_str):
         try:
             return make_direction_token(dir_str)
-        except TokenParserError as err:
+        except (TokenParserError, ValueError) as err:
             msg = (
                 'Unable to parse <direction> token from line in '
                 f'{self.block_name} block: {self.raw_line}.'

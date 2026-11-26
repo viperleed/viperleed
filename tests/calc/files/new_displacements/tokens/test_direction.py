@@ -7,6 +7,7 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.tokens.direction import (
     CartesianDirectionToken,
@@ -64,6 +65,13 @@ def test_invalid_labels():
 def test_invalid_vector_format():
     with pytest.raises(ValueError):
         CartesianDirectionToken('xy[1,2]')  # invalid separator
+
+
+@parametrize(direction_str=('xx[1 2]', 'xyx[1 0 5]', 'zz[1 1]'))
+def test_invalid_duplicate_bracket_directions(direction_str):
+    """Check that a repeated letter in a vector direction is rejected."""
+    with pytest.raises(ValueError, match='Duplicate'):
+        CartesianDirectionToken(direction_str)
 
 
 def test_zero_vector():

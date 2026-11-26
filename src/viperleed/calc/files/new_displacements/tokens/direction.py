@@ -149,6 +149,7 @@ class CartesianDirectionToken(DirectionToken):
                 msg = f'Invalid direction format: {direction_str}'
                 raise ValueError(msg)
             dirs = match['dir']
+            _check_no_duplicate_directions(dirs, direction_str)
             vecs = [float(v) for v in match['vec'].split()]
             if len(dirs) != len(vecs):
                 msg = (
@@ -163,9 +164,7 @@ class CartesianDirectionToken(DirectionToken):
         if not all(c in SIMPLE_DIRECTIONS for c in direction_str):
             msg = f'Invalid direction: {direction_str}'
             raise ValueError(msg)
-        if len(set(direction_str)) != len(direction_str):
-            msg = f'Duplicate directions in direction string: {direction_str}'
-            raise ValueError(msg)
+        _check_no_duplicate_directions(direction_str, direction_str)
         if len(direction_str) > 3:
             msg = f'Direction string too long: {direction_str} (max 3 allowed)'
             raise ValueError(msg)
@@ -375,6 +374,13 @@ def _check_unsupported_directions(direction_str):
             f'(a, b) components. Invalid direction: {direction_str}'
         )
         raise DirectionTokenParserError(msg)
+
+
+def _check_no_duplicate_directions(letters, direction_str):
+    """Raise ValueError if `letters` contains a letter more than once."""
+    if len(set(letters)) != len(letters):
+        msg = f'Duplicate directions in direction string: {direction_str}'
+        raise ValueError(msg)
 
 
 def _frame_letters(direction_str):
