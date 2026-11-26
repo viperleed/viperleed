@@ -79,7 +79,7 @@ def test_zero_vector():
         CartesianDirectionToken('xyz[0 0 0]')
 
 
-@pytest.mark.parametrize(
+@parametrize(
     ('direction_str', 'match'),
     [
         ('c', 'c unit-cell vector'),
@@ -100,7 +100,7 @@ def test_invalid_fractional(direction_str, match):
         make_direction_token(direction_str)
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'direction_str',
     ['ab[1 2 3]', 'ab[1]', 'ab[0 0]', 'ab[1,2]', 'ba[1 0]', 'x'],
 )
@@ -110,7 +110,7 @@ def test_invalid_fractional_token(direction_str):
         FractionalDirectionToken(direction_str)
 
 
-@pytest.mark.parametrize('direction_str', ['a', 'b', 'ab', 'ab[1 0]', '[1 0]'])
+@parametrize('direction_str', ['a', 'b', 'ab', 'ab[1 0]', '[1 0]'])
 def test_cartesian_rejects_fractional(direction_str):
     """Test that CartesianDirectionToken rejects fractional input."""
     with pytest.raises(DirectionTokenParserError, match='fractional'):
@@ -120,7 +120,7 @@ def test_cartesian_rejects_fractional(direction_str):
 class TestFractional:
     """Tests for FractionalDirectionToken and its dispatching."""
 
-    @pytest.mark.parametrize(
+    @parametrize(
         ('direction_str', 'expect_type'),
         [
             ('x', CartesianDirectionToken),
@@ -136,7 +136,7 @@ class TestFractional:
         """Test that make_direction_token picks the right class."""
         assert isinstance(make_direction_token(direction_str), expect_type)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         ('first', 'second'),
         [
             ('a', 'ab[1 0]'),
@@ -152,7 +152,7 @@ class TestFractional:
         """Test equality of equivalent fractional directions."""
         assert make_direction_token(first) == make_direction_token(second)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         ('first', 'second'),
         [
             ('a', 'b'),
@@ -166,7 +166,7 @@ class TestFractional:
         """Test inequality of different directions."""
         assert make_direction_token(first) != make_direction_token(second)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         ('direction_str', 'dof'),
         [('a', 1), ('b', 1), ('ab', 2), ('ab[0.5 1]', 1), ('[1 -1]', 1)],
     )
@@ -229,7 +229,7 @@ class TestFractional:
         assert projector == pytest.approx(xy_plane.T @ xy_plane)
 
 
-@pytest.mark.parametrize(
+@parametrize(
     ('first', 'second'),
     [('x', 'xy[1 0]'), ('y', 'xy[0 1]'), ('z', 'xyz[0 0 1]')],
 )

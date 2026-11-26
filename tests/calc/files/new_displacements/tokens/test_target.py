@@ -8,6 +8,7 @@ __license__ = 'GPLv3+'
 import re
 
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.tokens.target import (
     TargetingError,
@@ -128,7 +129,7 @@ def test_eq_layer_specifier():
     assert a == b
 
 
-@pytest.mark.parametrize(
+@parametrize(
     ('first', 'second', 'equal'),
     [
         ('O 1 3 L(2)', 'O L(2) 1 3', True),

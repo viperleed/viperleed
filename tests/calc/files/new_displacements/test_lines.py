@@ -157,7 +157,7 @@ class TestGeoDeltaLine:
 
     @parametrize(direction=_invalid_cartesian)
     def test_invalid_cartesian_direction(self, direction):
-        """Check that only the Cartesian forms of the base are accepted."""
+        """Check that unordered or repeated x, y, z are rejected."""
         with pytest.raises(DisplacementsSyntaxError):
             GeoDeltaLine(f'O 1 {direction} = -0.1 0.1')
 
