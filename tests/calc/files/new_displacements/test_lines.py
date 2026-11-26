@@ -430,6 +430,11 @@ class TestConstraintLine:
         with pytest.raises(DisplacementsSyntaxError):
             ConstraintLine(bad_line)
 
+    def test_offset_in_constrain_line(self):
+        with pytest.raises(DisplacementsSyntaxError,
+                           match=r'do not support "offset".*OFFSETS block'):
+            ConstraintLine('geo A = offset 0.1')
+
 
 @pytest.mark.parametrize(
     'input_str, exp_targets, exp_direction',

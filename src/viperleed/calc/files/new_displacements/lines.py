@@ -497,11 +497,11 @@ class ConstraintLine(ParsedLine):
         self.targets = self._parse_targets(targets_str)
 
     def _treat_rhs(self):
-        # check for deprecated 'offset' tag
+        # check for an 'offset' tag, which CONSTRAIN never supported
         if 'offset' in self._rhs.lower():
             msg = (
-                'Offset assignment in the CONSTRAIN block is deprecated. '
-                'Use the OFFSETS block instead.'
+                'CONSTRAIN lines do not support "offset". Offsets are '
+                'set in the OFFSETS block.'
             )
             raise DisplacementsSyntaxError(msg)
 
