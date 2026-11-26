@@ -155,13 +155,13 @@ class TestLogBlasThreadEnv:
         assert os.environ == before
 
     @parametrize('user_env,user_set,automatic', (
+        ({'GOTO_NUM_THREADS': '4'}, 'GOTO_NUM_THREADS=4',
+         'MKL_NUM_THREADS=1, OMP_NUM_THREADS=1'),
         ({'MKL_NUM_THREADS': '2'}, 'MKL_NUM_THREADS=2',
          'OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1'),
         ({'OPENBLAS_NUM_THREADS': '4'}, 'OPENBLAS_NUM_THREADS=4',
          'MKL_NUM_THREADS=1, OMP_NUM_THREADS=1'),
-        ({'GOTO_NUM_THREADS': '4'}, 'GOTO_NUM_THREADS=4',
-         'MKL_NUM_THREADS=1, OMP_NUM_THREADS=1'),
-        ), ids=('MKL', 'OPENBLAS', 'GOTO'))
+        ), ids=('GOTO', 'MKL', 'OPENBLAS'))
     def test_per_library(self, user_env, user_set, automatic,
                          patch_environ, caplog):
         """Check the info message if the user set one library only."""
