@@ -111,6 +111,29 @@ def test_lowercase_layer(lower, upper):
     assert TargetToken(lower).layers is not None
 
 
+@pytest.mark.parametrize(
+    'raw, bad_number',
+    (
+        ('O L(0)', '0'),
+        ('O L(-1)', '-1'),
+        ('O L(0-2)', '0'),
+        ('O L(2) L(0)', '0'),
+        ('O 0', '0'),
+        ('O 0-3', '0'),
+        ('O 1 0', '0'),
+        ('O -2', '-2'),
+    ),
+)
+def test_non_positive_number_raises(raw, bad_number):
+    with pytest.raises(TargetingError, match=rf'number {bad_number}\b'):
+        TargetToken(raw)
+
+
+@pytest.mark.parametrize('raw', ('O L(1)', 'O 1', 'O L(1-2) 1-3'))
+def test_smallest_numbers_accepted(raw):
+    TargetToken(raw)
+
+
 def test_empty_string_raises():
     with pytest.raises(TargetingError, match='Target string is empty'):
         TargetToken('')

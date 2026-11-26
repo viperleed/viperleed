@@ -90,9 +90,9 @@ class TargetToken(DisplacementsFileToken):
         # numbers: a malformed or glued-on L(...) fails to read below.
         nums_spec = LAYER_REGEX.sub(' ', specs).strip()
         if layer_specs:
-            self.layers = _read_ints(' '.join(layer_specs), specs)
+            self.layers = _read_ints(' '.join(layer_specs), specs, 'layer')
         if nums_spec:
-            self.nums = _read_ints(nums_spec, specs)
+            self.nums = _read_ints(nums_spec, specs, 'atom')
 
     def __str__(self):
         """Return a string representation of the TargetToken object."""
@@ -113,13 +113,41 @@ class TargetToken(DisplacementsFileToken):
         )
 
 
-def _read_ints(ranges, specs):
-    """Return a tuple of the integers in `ranges`, part of `specs`."""
+def _read_ints(ranges, specs, kind):
+    """Return a tuple of the positive integers in `ranges`.
+
+    Parameters
+    ----------
+    ranges : str
+        The numbers and ranges to read.
+    specs : str
+        The part of the target that contains `ranges`. Used in
+        error messages.
+    kind : {'atom', 'layer'}
+        What the numbers are. Used in error messages.
+
+    Returns
+    -------
+    tuple of int
+
+    Raises
+    ------
+    TargetingError
+        If `ranges` cannot be read, or contains a number below 1.
+    """
     try:
-        return tuple(read_int_range(ranges))
+        numbers = tuple(read_int_range(ranges))
     except ValueError as err:
         msg = f'Invalid target specification: "{specs}".'
         raise TargetingError(msg) from err
+    for number in numbers:
+        if number < 1:
+            msg = (
+                f'Invalid target specification: "{specs}". Invalid {kind} '
+                f'number {number}: {kind} numbers start at 1.'
+            )
+            raise TargetingError(msg)
+    return numbers
 
 
 def _generate_label_match_regex(label):
