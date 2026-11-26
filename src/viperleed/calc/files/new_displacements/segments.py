@@ -293,6 +293,13 @@ class LoopBlock(DisplacementsSegmentABC):
             if isinstance(child, LoopBlock):
                 child.reset_iterator()
 
+    @property
+    def subsegments(self):
+        """Return the possible subsegments; none once the loop is closed."""
+        if self.lines:
+            return ()
+        return self._subsegments
+
     @staticmethod
     def is_my_header_line(line):
         """Loops are started by Loop start lines."""

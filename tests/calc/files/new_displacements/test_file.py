@@ -11,6 +11,8 @@ from viperleed.calc.files.new_displacements.errors import (
     AlreadyReadError,
 )
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
+from viperleed.calc.files.new_displacements.segments import LoopBlock
+from viperleed.calc.files.new_displacements.segments import SearchBlock
 
 
 def test_read_from_file(displacements_file_path, subtests):
@@ -24,6 +26,43 @@ def test_read_from_file(displacements_file_path, subtests):
     with subtests.test('read() called again'), pytest.raises(AlreadyReadError):
         # check that read() cannot be called again
         df.read(displacements_file_path)
+
+
+def test_read_nested_loops(tmp_path):
+    """Check that <loop> markers read from a file give nested LoopBlocks."""
+    path = tmp_path / 'DISPLACEMENTS_nested_loops'
+    path.write_text(
+        '<loop>\n'
+        '== SEARCH a\n'
+        '= GEO_DELTA\n'
+        'Fe 1 z = 0.0 0.1\n'
+        '<loop>\n'
+        '== SEARCH b\n'
+        '= GEO_DELTA\n'
+        'Fe 1 z = 0.0 0.1\n'
+        '</loop>\n'
+        '== SEARCH c\n'
+        '= GEO_DELTA\n'
+        'Fe 1 z = 0.0 0.1\n'
+        '</loop>\n'
+        '== SEARCH d\n'
+        '= GEO_DELTA\n'
+        'Fe 1 z = 0.0 0.1\n'
+    )
+    df = DisplacementsFile()
+    df.read(path)
+
+    outer, last = df.children
+    assert isinstance(outer, LoopBlock)
+    assert isinstance(last, SearchBlock)
+    assert last.label == 'd'
+    first, inner, third = outer.children
+    assert isinstance(first, SearchBlock)
+    assert isinstance(inner, LoopBlock)
+    assert isinstance(third, SearchBlock)
+    assert [c.label for c in (first, third)] == ['a', 'c']
+    assert [type(c) for c in inner.children] == [SearchBlock]
+    assert inner.children[0].label == 'b'
 
 
 @pytest.mark.xfail(
