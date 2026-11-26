@@ -32,6 +32,16 @@ class PerturbationMode(str, Enum):
         ----------
         mode_string : str
             The string to convert. Case-insensitive.
+
+        Returns
+        -------
+        PerturbationMode
+            The mode whose value is `mode_string`.
+
+        Raises
+        ------
+        PerturbationModeError
+            If `mode_string` names no known mode.
         """
         try:
             return cls(mode_string.lower())

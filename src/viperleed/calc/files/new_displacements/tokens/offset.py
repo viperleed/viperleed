@@ -56,6 +56,16 @@ class OffsetToken(DisplacementsFileToken):
         ----------
         *offsets : float
             The offset values.
+
+        Returns
+        -------
+        OffsetToken
+            A token holding `offsets`.
+
+        Raises
+        ------
+        OffsetTokenParserError
+            If there are not 1 to 3 values, or any is not numeric.
         """
         inst = cls.__new__(cls)
         inst.offset = cls._validate_offsets(offsets, offsets)

@@ -114,7 +114,23 @@ class LinearOperationToken(DisplacementsFileToken):
 
     @classmethod
     def from_array(cls, arr):
-        """Alternate constructor using numeric values directly."""
+        """Alternate constructor using numeric values directly.
+
+        Parameters
+        ----------
+        arr : array_like
+            Numeric data with 1, 4, or 9 elements.
+
+        Returns
+        -------
+        LinearOperationToken
+            A token whose `arr` is the 1x1, 2x2, or 3x3 matrix.
+
+        Raises
+        ------
+        LinearOperationTokenParserError
+            If `arr` is not numeric or has the wrong size.
+        """
         inst = cls.__new__(cls)
         inst.arr = cls._validate_array(arr, arr)
         return inst
