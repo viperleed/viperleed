@@ -77,6 +77,12 @@ DIRECTION_PATTERN = (
     r'))'
 )
 _DIR_AT_END = re.compile(rf'\s+(?P<dir>{DIRECTION_PATTERN})\s*$')
+# A target part (atom or layer numbers/ranges) written after a direction
+_TARGET_PART_RE = r'(?:L\s*\([^)]*\)|\d+(?:-\d+)?)'
+_DIR_BEFORE_TARGET = re.compile(
+    rf'^(?P<targets>.*?)\s+(?P<dir>{DIRECTION_PATTERN})'
+    rf'\s+(?P<rest>{_TARGET_PART_RE}(?:[\s,]+{_TARGET_PART_RE})*)$'
+)
 
 
 class HeaderLine(ABC):
@@ -284,6 +290,36 @@ class ParsedLine(ABC):
         )
         raise DisplacementsSyntaxError(msg)
 
+    def _reject_direction_before_targets(self, lhs, prefix=''):
+        """Raise if `lhs` has target parts after the direction.
+
+        Parameters
+        ----------
+        lhs : str
+            The part of the left-hand side after the mode (if any).
+        prefix : str, optional
+            Text (e.g., the mode) written before `lhs` in the line,
+            used to show the corrected line.
+
+        Raises
+        ------
+        DisplacementsSyntaxError
+            If a direction is followed by atom or layer numbers.
+        """
+        match = _DIR_BEFORE_TARGET.match(lhs.strip())
+        if not match:
+            return
+        reordered = (
+            f'{prefix}{match["targets"]} {match["rest"]} {match["dir"]}'
+            f' = {self._rhs.strip()}'
+        )
+        msg = (
+            f'Invalid {self.block_name} line: "{self.raw_line}". The '
+            'direction must come after all targets. Write '
+            f'"{reordered}".'
+        )
+        raise DisplacementsSyntaxError(msg)
+
     def _parse_targets(self, targets_str):
         target_parts = targets_str.split(',')
         try:
@@ -390,6 +426,7 @@ class GeoDeltaLine(ParsedLine):
     def __init__(self, line):
         super().__init__(line)
         self._reject_inline_offset('geo')
+        self._reject_direction_before_targets(self._lhs)
 
         # Left hand side
         # check if the last part is a direction
@@ -831,6 +868,9 @@ class OffsetsLine(ParsedLine):
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         self.mode_token = self._parse_mode(parts[0])
+        self._reject_direction_before_targets(
+            ' '.join(parts[1:]), prefix=f'{parts[0]} '
+        )
         targets_str, dir_str = separate_direction_from_targets(
             ' '.join(parts[1:])
         )

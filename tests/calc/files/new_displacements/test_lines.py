@@ -754,6 +754,52 @@ def test_constraint_header_alias(header):
     assert ModeHeaderLine(header).section == 'CONSTRAIN'
 
 
+_DIRECTION_FIRST = {
+    'geo_layer': (
+        GeoDeltaLine,
+        'Cu_def xy L(2-4) = -0.10 0.10 0.01',
+        'Cu_def L(2-4) xy = -0.10 0.10 0.01',
+    ),
+    'geo_atoms': (
+        GeoDeltaLine,
+        'O z 1 2 = -0.1 0.1',
+        'O 1 2 z = -0.1 0.1',
+    ),
+    'offset_geo': (
+        OffsetsLine,
+        'geo O ab[1 0] L(1) = 0.1',
+        'geo O L(1) ab[1 0] = 0.1',
+    ),
+}
+
+
+@parametrize(
+    'line_cls, line, expected',
+    _DIRECTION_FIRST.values(),
+    ids=_DIRECTION_FIRST,
+)
+def test_direction_before_targets_message(line_cls, line, expected):
+    """Check that a direction before targets shows the fixed line."""
+    with pytest.raises(DisplacementsSyntaxError) as exc_info:
+        line_cls(line)
+    assert f'Write "{expected}"' in exc_info.value.message
+    assert f'"{line}"' in exc_info.value.message
+
+
+@parametrize(
+    'line',
+    (
+        'O 1 xy[1 0] = -0.1 0.1 0.05',
+        'O L(1) z = -0.1 0.1 0.05',
+        'O 1 2 ab[1 0] = -0.1 0.1 0.05',
+        'Cu_def L(2-4) xy = -0.10 0.10 0.01',
+    ),
+)
+def test_direction_after_targets_ok(line):
+    """Check that lines with the direction last are still read."""
+    GeoDeltaLine(line)
+
+
 class TestLoopMarkerLine:
     """Tests for the LoopMarkerLine class."""
 

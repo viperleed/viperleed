@@ -29,6 +29,7 @@ from viperleed.calc.files.new_displacements.tokens.direction import (
     FractionalDirectionToken,
 )
 
+from ....helpers import REPO_ROOT
 from ....helpers import TEST_DATA
 
 NESTED_LOOPS_PATH = (
@@ -58,6 +59,21 @@ def test_read_constraint_alias_file():
     df = DisplacementsFile()
     df.read(PTRH_PATH)
     assert any(isinstance(b, ConstraintBlock) for b in df.descendants)
+
+ROUGH_PATH = (
+    REPO_ROOT / 'doc/_static/example_systems/Cu(111)-Te'
+    / 'DISPLACEMENTS_rough_1'
+)
+
+
+def test_read_direction_before_target_file():
+    """Check that the old Cu(111)-Te file gives the reordered line."""
+    with pytest.raises(DisplacementsSyntaxError) as exc_info:
+        DisplacementsFile().read(ROUGH_PATH)
+    assert (
+        'Write "Cu_def L(2-4) xy = -0.10 0.10 0.01"'
+        in exc_info.value.message
+    )
 
 
 _OFFSETS = '== OFFSETS\n    geo Cu_surf z = 0.05\n'
