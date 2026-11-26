@@ -10,6 +10,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.errors import (
     AlreadyReadError,
+    OffsetsNotAtBeginningError,
 )
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.files.new_displacements.segments import LoopBlock
@@ -33,6 +34,27 @@ def test_read_from_file(displacements_file_path, subtests):
     with subtests.test('read() called again'), pytest.raises(AlreadyReadError):
         # check that read() cannot be called again
         df.read(displacements_file_path)
+
+
+_OFFSETS = '== OFFSETS\n    geo Cu_surf z = 0.05\n'
+_SEARCH = '== SEARCH a\n    = GEO_DELTA\n    Cu_surf z = -0.1 0.1 0.05\n'
+
+
+@parametrize(
+    'contents, msg',
+    (
+        (_OFFSETS + _OFFSETS + _SEARCH,
+         'There can only be one OFFSETS block at the beginning'),
+        (_SEARCH + _OFFSETS,
+         'The OFFSETS block must be at the beginning of the file'),
+    ),
+)
+def test_read_offsets_misplaced(contents, msg, tmp_path):
+    """Check the error for a duplicated or late OFFSETS block."""
+    path = tmp_path / 'DISPLACEMENTS'
+    path.write_text(contents)
+    with pytest.raises(OffsetsNotAtBeginningError, match=msg):
+        DisplacementsFile().read(path)
 
 
 def test_read_nested_loops():

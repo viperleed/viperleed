@@ -51,8 +51,6 @@ class DisplacementsFile(NodeMixin):
         super().__init__()
         self.name = self._render_name
         self._has_been_read = False
-        # an OFFSETS block is only allowed at the very beginning of the file
-        # we check this by setting this flag to True after the first block
 
         # attributes related to iterating over the search blocks
         self._child_id = 0
@@ -133,30 +131,16 @@ class DisplacementsFile(NodeMixin):
         if not self.children:
             raise DisplacementsSyntaxError('The file is empty.')
 
-        # check if there is more than one OFFSETS block
-        if (
-            len(
-                [
-                    block
-                    for block in self.descendants
-                    if isinstance(block, OffsetsBlock)
-                ]
-            )
-            > 1
-        ):
+        offset_blocks = [
+            b for b in self.descendants if isinstance(b, OffsetsBlock)
+        ]
+        if len(offset_blocks) > 1:
             raise OffsetsNotAtBeginningError(
                 'There can only be one OFFSETS block at the beginning of the '
                 'DISPLACEMENTS file.'
             )
 
         # Check if the first segment is an OFFSETS block
-        offset_blocks = [
-            b for b in self.descendants if isinstance(b, OffsetsBlock)
-        ]
-        if len(offset_blocks) > 1:
-            raise DisplacementsSyntaxError(
-                'Only one OFFSETS block is allowed in the DISPLACEMENTS file.'
-            )
         if offset_blocks and offset_blocks[0] is not self.children[0]:
             raise OffsetsNotAtBeginningError(
                 'The OFFSETS block must be at the beginning of the file.'
