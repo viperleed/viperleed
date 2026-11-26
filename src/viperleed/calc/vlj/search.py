@@ -138,6 +138,9 @@ def vlj_search(slab, rpars):
         f'potential shift of {used_v0r:.2f} eV.'
     )
 
+    # Keep the best result over all optimizers: a later optimizer
+    # in the chain may end up worse than an earlier one.
+    best_name, best_result = None, None
     for optimizer_id, (optimizer, result) in enumerate(optimizer_iterator):
         logger.info(
             f'Optimizer {optimizer.name} finished with best '
@@ -165,29 +168,32 @@ def vlj_search(slab, rpars):
             f'TLOpt_{optimizer_id}_{optimizer.name}_history.npz'
         )
 
-        # determine integer and fractional beams
-        integer_fractional_mask = determine_integer_or_fractional(rpars)
-        integer_fractional_R = calculator.R(
-            result.best_x, groups=integer_fractional_mask, num_groups=2
-        )
-        # update rpars with the best R
-        rpars.stored_R['superpos'] = (
-            result.best_R,
-            integer_fractional_R[0],
-            integer_fractional_R[1],
-        )
+        if best_result is None or result.best_R < best_result.best_R:
+            best_name, best_result = optimizer.name, result
+
+    # determine integer and fractional beams
+    integer_fractional_mask = determine_integer_or_fractional(rpars)
+    integer_fractional_R = calculator.R(
+        best_result.best_x, groups=integer_fractional_mask, num_groups=2
+    )
+    # update rpars with the best R
+    rpars.stored_R['superpos'] = (
+        best_result.best_R,
+        integer_fractional_R[0],
+        integer_fractional_R[1],
+    )
 
     # Finished optimization
     logger.info(
-        f'Finished optimization with best R = {result.best_R:.4f} '
+        f'Finished optimization with best R = {best_result.best_R:.4f} '
         f'({rpars.stored_R["superpos"][1]:.4f}, '
-        f'{rpars.stored_R["superpos"][2]:.4f})'
+        f'{rpars.stored_R["superpos"][2]:.4f}) from optimizer {best_name}'
     )
-    logger.debug(f'Best parameter vector:\n{result.best_x}')
+    logger.debug(f'Best parameter vector:\n{best_result.best_x}')
 
     # apply the final result to the slab object
     logger.debug('Applying final result to slab object.')
-    calculator.apply_to_slab(slab, rpars, result.best_x)
+    calculator.apply_to_slab(slab, rpars, best_result.best_x)
 
     # write the updated POSCAR and VIBROCC files to work
     poscar.write(slab, 'POSCAR', comments='all')
