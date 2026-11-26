@@ -15,7 +15,13 @@ from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 from .base import DisplacementsFileToken, TokenParserError
 
 CART_DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
+FRACTIONAL_DIRECTION_PATTERN = (
+    r'^(?P<dir>ab)?\[(?P<vec>[\d\s\.\-eE]+)\]$'
+)
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
+FRACTIONAL_DIRECTIONS = ('a', 'b')
+FRACTIONAL_PLANE = 'ab'
+UNSUPPORTED_C_DIRECTION = 'c'
 
 
 class DirectionTokenParserError(TokenParserError):
@@ -123,6 +129,12 @@ class CartesianDirectionToken(DirectionToken):
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
+        if _is_fractional(direction_str):
+            msg = (
+                f'{direction_str!r} is a fractional direction. Use '
+                'FractionalDirectionToken or make_direction_token.'
+            )
+            raise DirectionTokenParserError(msg)
 
         # Vector direction like 'xyz[1 2 3]'
         if '[' in direction_str:
@@ -179,27 +191,210 @@ class CartesianDirectionToken(DirectionToken):
         return vec / norm
 
 
+class FractionalDirectionToken(DirectionToken):
+    """Class to parse directions in fractional (unit-cell) coordinates.
+
+    Fractional directions are given in terms of the in-plane unit-cell
+    vectors a and b. The direction specifier can be one of:
+    - 'ab'
+        The plane spanned by a and b.
+    - 'a', 'b', 'ab[i j]', '[i j]'
+        A 1D vector along i*a + j*b. 'a' is the same as 'ab[1 0]' and
+        '[1 0]', 'b' the same as 'ab[0 1]' and '[0 1]'. The components
+        'i' and 'j' may be floating-point numbers.
+
+    Cartesian vectors are only available once the unit cell is known,
+    via `get_vectors_xyz` and `get_vectors_zxy`.
+
+    Parameters
+    ----------
+    direction_str : str
+        The direction string to parse.
+
+    Attributes
+    ----------
+    dof : int
+        The number of degrees of freedom (DOF), either 1 or 2.
+    components : ndarray, shape (dof, 2)
+        The fractional components of the vectors spanning the direction
+        space. For a 1D direction, the components are normalized to
+        unit length (the length of a direction is irrelevant).
+
+    Raises
+    ------
+    DirectionTokenParserError
+        If the direction string is empty, invalid, not fractional, or
+        if the number of components is not two.
+    """
+
+    def __init__(self, direction_str):
+        _dir_str = direction_str.strip()
+        if not _dir_str:
+            raise DirectionTokenParserError('Empty direction token.')
+        self.direction_str = _dir_str
+        self.components, self.dof = self._parse_direction(_dir_str)
+
+    def __eq__(self, other):
+        """Compare two FractionalDirectionToken objects for equality."""
+        if not isinstance(other, FractionalDirectionToken):
+            return NotImplemented
+        return self.dof == other.dof and np.allclose(
+            self.components, other.components
+        )
+
+    def __str__(self):
+        """Return a string representation of this token."""
+        return (
+            f'FractionalDirectionToken(components={self.components}, '
+            f'dof={self.dof})'
+        )
+
+    def get_vectors_xyz(self, ab_cell):
+        """Return Cartesian vectors spanning the direction, xyz order.
+
+        Parameters
+        ----------
+        ab_cell : Sequence
+            Shape (2, 2). The in-plane unit cell, with the a and b
+            vectors as columns (like `Slab.ab_cell`).
+
+        Returns
+        -------
+        vectors : ndarray, shape (dof, 3)
+            Orthonormal vectors spanning the direction space, in the
+            xyz convention. For a 1D direction 'ab[i j]', this is the
+            normalized i*a + j*b.
+        """
+        in_plane = self.components @ np.asarray(ab_cell, dtype=float).T
+        vectors = np.zeros((self.dof, 3))
+        vectors[:, :2] = _orthonormalize(in_plane)
+        return vectors
+
+    def get_vectors_zxy(self, ab_cell):
+        """Return Cartesian vectors in zxy (LEED) convention.
+
+        See `get_vectors_xyz` for the meaning of `ab_cell`.
+        """
+        return _xyz_to_zxy(self.get_vectors_xyz(ab_cell))
+
+    def _parse_direction(self, direction_str):
+        _check_unsupported_directions(direction_str)
+        if not _is_fractional(direction_str):
+            msg = f'Not a fractional direction: {direction_str}'
+            raise DirectionTokenParserError(msg)
+        if direction_str in FRACTIONAL_DIRECTIONS:  # 'a' or 'b'
+            index = FRACTIONAL_DIRECTIONS.index(direction_str)
+            return np.eye(2)[[index]], 1
+        if direction_str == FRACTIONAL_PLANE:
+            return np.eye(2), 2
+        match = re.match(FRACTIONAL_DIRECTION_PATTERN, direction_str)
+        if not match:
+            msg = f'Invalid direction format: {direction_str}'
+            raise DirectionTokenParserError(msg)
+        try:
+            comps = [float(v) for v in match['vec'].split()]
+        except ValueError as exc:
+            msg = f'Invalid direction components: {direction_str}'
+            raise DirectionTokenParserError(msg) from exc
+        if len(comps) != len(FRACTIONAL_DIRECTIONS):
+            msg = (
+                'Fractional directions need exactly two components. '
+                f'Invalid direction: {direction_str}'
+            )
+            raise DirectionTokenParserError(msg)
+        comps = np.array(comps)
+        norm = np.linalg.norm(comps)
+        if norm < DISPLACEMENTS_FILE_EPS:
+            msg = f'Zero-length vector: {direction_str}'
+            raise DirectionTokenParserError(msg)
+        return np.array([comps / norm]), 1
+
+
+def make_direction_token(direction_str):
+    """Return the direction token that `direction_str` describes.
+
+    Parameters
+    ----------
+    direction_str : str
+        The direction string to parse. Cartesian directions ('x', 'xy',
+        'xyz[1 2 3]', ...) give a CartesianDirectionToken, fractional
+        ones ('a', 'b', 'ab', 'ab[1 2]', '[1 2]') a
+        FractionalDirectionToken.
+
+    Returns
+    -------
+    DirectionToken
+        The parsed direction token.
+
+    Raises
+    ------
+    DirectionTokenParserError
+        If `direction_str` is empty or is a direction that is not
+        supported (azimuthal, radial, along c, or mixing the Cartesian
+        and fractional frames).
+    ValueError
+        If `direction_str` is a malformed Cartesian direction.
+    """
+    _dir_str = direction_str.strip()
+    if not _dir_str:
+        raise DirectionTokenParserError('Empty direction token.')
+    _check_unsupported_directions(_dir_str)
+    if _is_fractional(_dir_str):
+        return FractionalDirectionToken(_dir_str)
+    return CartesianDirectionToken(_dir_str)
+
+
 def _check_unsupported_directions(direction_str):
-    # TODO: remove this function once we support azimuthal and radial directions
-    # and instead dispatch the appropriate token parser.
-
-    # Azimuthal & radial directions are currently not supported
-    azi_rad_labels = ['azi', 'r']
-    if any(label in direction_str for label in azi_rad_labels):
+    """Raise if `direction_str` is a direction we do not support."""
+    # TODO: remove the azi/r check once we support azimuthal and
+    # radial directions, and dispatch the appropriate token instead.
+    if direction_str.startswith(('azi', 'r')):
         msg = (
-            'Azimuthal and radial directions are currently not supported. '
+            'Azimuthal and radial directions are not yet supported. '
             f'Invalid direction: {direction_str}'
         )
         raise DirectionTokenParserError(msg)
-
-    # Fractional directions are currently not supported
-    fractional_labels = ['a', 'b', 'c']
-    if any(label in direction_str for label in fractional_labels):
+    frame = _frame_letters(direction_str)
+    if UNSUPPORTED_C_DIRECTION in frame:
         msg = (
-            'Fractional directions are currently not supported. '
-            f'Invalid direction: {direction_str}'
+            'Directions involving the c unit-cell vector are not '
+            f'supported. Invalid direction: {direction_str}'
         )
         raise DirectionTokenParserError(msg)
+    is_fractional = any(c in FRACTIONAL_DIRECTIONS for c in frame)
+    is_cartesian = any(c in SIMPLE_DIRECTIONS for c in frame)
+    if is_fractional and is_cartesian:
+        msg = (
+            'Directions cannot mix Cartesian (x, y, z) and fractional '
+            f'(a, b) components. Invalid direction: {direction_str}'
+        )
+        raise DirectionTokenParserError(msg)
+
+
+def _frame_letters(direction_str):
+    """Return the letters before the '[' of `direction_str`."""
+    return direction_str.split('[', maxsplit=1)[0].strip()
+
+
+def _is_fractional(direction_str):
+    """Return whether `direction_str` is in fractional coordinates."""
+    frame = _frame_letters(direction_str)
+    if not frame:  # Bare '[i j]'
+        return direction_str.startswith('[')
+    return all(c in FRACTIONAL_DIRECTIONS for c in frame)
+
+
+def _orthonormalize(vectors):
+    """Return orthonormal vectors spanning the same space as `vectors`.
+
+    Gram-Schmidt on the rows of `vectors`, which keeps the first one
+    parallel to its input.
+    """
+    result = []
+    for vec in vectors:
+        orthogonal = vec - sum(np.dot(vec, v) * v for v in result)
+        result.append(orthogonal / np.linalg.norm(orthogonal))
+    return np.array(result)
 
 
 def _xyz_to_zxy(vecs):

@@ -18,7 +18,7 @@ from viperleed.calc.files.new_displacements.errors import (
 )
 from viperleed.calc.files.new_displacements.tokens.base import TokenParserError
 from viperleed.calc.files.new_displacements.tokens.direction import (
-    CartesianDirectionToken,
+    make_direction_token,
 )
 from viperleed.calc.files.new_displacements.tokens.element import ElementToken
 from viperleed.calc.files.new_displacements.tokens.linear_operation import (
@@ -54,16 +54,11 @@ DIRECTION_PATTERN = (
     # longer, more specific first:
     rf'azi\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
     rf'|r\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
-    # 3-letter shorthands *with* optional bracket
-    rf'|xyz(?:{_DIRECTION_BRACKETS_RE})?'
-    rf'|abc(?:{_DIRECTION_BRACKETS_RE})?'
-    # 2-letter shorthands *with* optional bracket
-    rf'|xy(?:{_DIRECTION_BRACKETS_RE})?'
-    rf'|ab(?:{_DIRECTION_BRACKETS_RE})?'
+    # Frame letters with optional bracket. Also catches invalid ones
+    # (e.g., 'c', 'az') so that the direction token can complain.
+    rf'|[xyzabc]+(?:{_DIRECTION_BRACKETS_RE})?'
     # bare bracketed vector
     rf'|{_DIRECTION_BRACKETS_RE}'
-    # single-letter shorthands
-    r'|[xyzabc]'
     r'))'
 )
 _DIR_AT_END = re.compile(rf'\s+(?P<dir>{DIRECTION_PATTERN})\s*$')
@@ -246,7 +241,7 @@ class ParsedLine(ABC):
 
     def _parse_direction(self, dir_str):
         try:
-            return CartesianDirectionToken(dir_str)
+            return make_direction_token(dir_str)
         except TokenParserError as err:
             msg = (
                 'Unable to parse <direction> token from line in '

@@ -23,6 +23,7 @@ from viperleed.calc.files.new_displacements.lines import (
 )
 from viperleed.calc.files.new_displacements.tokens.direction import (
     CartesianDirectionToken,
+    FractionalDirectionToken,
 )
 from viperleed.calc.files.new_displacements.tokens.element import ElementToken
 from viperleed.calc.files.new_displacements.tokens.linear_operation import (
@@ -76,6 +77,34 @@ class TestGeoDeltaLine:
                 RangeToken.from_floats(-0.5, 0.5),
                 id='layer-selector',
             ),
+            pytest.param(
+                'O 1 ab[1 2] = -0.1 0.1',
+                [TargetToken('O 1')],
+                FractionalDirectionToken('ab[1 2]'),
+                RangeToken.from_floats(-0.1, 0.1),
+                id='fractional-vector',
+            ),
+            pytest.param(
+                'O 1 [0.5 1] = -0.1 0.1',
+                [TargetToken('O 1')],
+                FractionalDirectionToken('ab[1 2]'),
+                RangeToken.from_floats(-0.1, 0.1),
+                id='bare-fractional-vector',
+            ),
+            pytest.param(
+                'O, Fe b = -0.1 0.1',
+                [TargetToken('O'), TargetToken('Fe')],
+                FractionalDirectionToken('ab[0 1]'),
+                RangeToken.from_floats(-0.1, 0.1),
+                id='fractional-b',
+            ),
+            pytest.param(
+                'O ab = -0.1 0.1',
+                [TargetToken('O')],
+                FractionalDirectionToken('ab'),
+                RangeToken.from_floats(-0.1, 0.1),
+                id='fractional-plane',
+            ),
         ],
     )
     def test_geodelta_parametrized(
@@ -87,7 +116,7 @@ class TestGeoDeltaLine:
         for target, exp_target in zip(geo.targets, exp_targets):
             assert target == exp_target
         # direction
-        assert isinstance(geo.direction, CartesianDirectionToken)
+        assert isinstance(geo.direction, type(exp_direction))
         assert geo.direction == exp_direction
         # range
         assert isinstance(geo.range, RangeToken)
@@ -107,6 +136,12 @@ class TestGeoDeltaLine:
                 'A y = foo bar',
                 DisplacementsSyntaxError,
                 id='non-numeric RHS',
+            ),
+            pytest.param('A c = 0 1', DisplacementsSyntaxError, id='c'),
+            pytest.param('A abc = 0 1', DisplacementsSyntaxError, id='abc'),
+            pytest.param('A az = 0 1', DisplacementsSyntaxError, id='az'),
+            pytest.param(
+                'A azi(ab[1 0]) = 0 1', DisplacementsSyntaxError, id='azi'
             ),
         ],
     )
@@ -451,6 +486,14 @@ class TestConstraintLine:
         ('Label xy', 'Label', 'xy'),
         # Bracketed vector direction
         ('T1 xy[1 0]', 'T1', 'xy[1 0]'),
+        # Fractional directions
+        ('T1 2 ab', 'T1 2', 'ab'),
+        ('T1 L(1) ab[1 2]', 'T1 L(1)', 'ab[1 2]'),
+        ('T1 [1 2]', 'T1', '[1 2]'),
+        ('T1 [0.5 -1]', 'T1', '[0.5 -1]'),
+        # Invalid frames are still split off (and rejected later)
+        ('T1 bc', 'T1', 'bc'),
+        ('T1 xb', 'T1', 'xb'),
         # 3D vector
         ('T2 xyz[1 2 -1]', 'T2', 'xyz[1 2 -1]'),
         # azi(...) form
