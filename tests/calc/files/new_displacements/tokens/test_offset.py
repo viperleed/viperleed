@@ -61,3 +61,15 @@ def test_from_floats_and_equality():
     assert a == b
     c = OffsetToken.from_floats(5.1)
     assert a != c
+
+
+def test_from_floats_invalid_count():
+    with pytest.raises(OffsetTokenParserError, match='expect 1-3 floats'):
+        OffsetToken.from_floats(1, 2, 3, 4)
+    with pytest.raises(OffsetTokenParserError, match='expect 1-3 floats'):
+        OffsetToken.from_floats()
+
+
+def test_from_floats_non_numeric():
+    with pytest.raises(OffsetTokenParserError, match='Non-numeric value'):
+        OffsetToken.from_floats('foo')
