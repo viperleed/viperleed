@@ -213,6 +213,20 @@ class TestVibDeltaLine:
         with pytest.raises(DisplacementsSyntaxError):
             VibDeltaLine('O 1 = foo')
 
+    @parametrize(
+        'value', ('nan', 'inf', '-inf', 'infinity', '1_0', '1e999', '0x1')
+    )
+    def test_single_value_not_plain_finite(self, value):
+        """Non-finite and non-decimal single values are rejected."""
+        with pytest.raises(DisplacementsSyntaxError):
+            VibDeltaLine(f'O 1 = {value}')
+
+    @parametrize('rhs', ('nan 1', '0 inf', '1_0 2', '0 1 nan'))
+    def test_range_not_plain_finite(self, rhs):
+        """Non-finite and non-decimal range values are rejected."""
+        with pytest.raises(DisplacementsSyntaxError):
+            VibDeltaLine(f'O 1 = {rhs}')
+
     def test_str_shows_targets_and_range(self):
         line = 'X,Y = 2 4 1'
         vib = VibDeltaLine(line)
@@ -435,6 +449,12 @@ class TestOccDeltaLine:
         assert occ.element_ranges == explicit.element_ranges
         assert occ.element_ranges[0][1] == RangeToken.from_floats(0.8, 0.8)
 
+    @parametrize('value', ('1.5', '-0.1', '2', 'nan', 'inf', '1_0'))
+    def test_single_value_invalid_occupation(self, value):
+        """Occupations outside [0, 1] or non-finite are invalid."""
+        with pytest.raises(DisplacementsSyntaxError):
+            OccDeltaLine(f'O 1 = O {value}')
+
     def test_str_contains_elements_and_ranges(self):
         line = 'A,B = Fe 0.0 1.0, Ni 0.0 0.2'
         occ = OccDeltaLine(line)
@@ -574,6 +594,58 @@ class TestConstraintLine:
         assert con.fixed_value is None
         assert con.fixed_element is None
         assert con.link_target == TargetToken('O 2')
+
+    def test_occ_integer_is_link(self):
+        """An integer after the element is a link to an atom number."""
+        con = ConstraintLine('occ O 1 = O 2')
+        assert con.link_target == TargetToken('O 2')
+        assert con.fixed_value is None
+        assert con.fixed_element is None
+
+    def test_occ_non_integer_freezes(self):
+        """A non-integer after the element freezes the occupation."""
+        con = ConstraintLine('occ O 1 = O 1.0')
+        assert con.fixed_value == 1.0
+        assert con.fixed_element == ElementToken('O')
+        assert con.link_target is None
+
+    @parametrize('line', ('occ O 1 = O 0', 'occ O 1 = N 0'))
+    def test_occ_invalid_integer_asks_for_decimal(self, line):
+        """An integer that is no valid target suggests a decimal."""
+        with pytest.raises(DisplacementsSyntaxError, match=r'\.0'):
+            ConstraintLine(line)
+
+    @parametrize('mode', ('geo', 'vib', 'occ'))
+    @parametrize(
+        'value', ('nan', 'inf', '-inf', 'infinity', '1_0', '1e999', '0.5.1')
+    )
+    def test_fixed_value_not_plain_finite(self, mode, value):
+        """Non-finite and non-decimal fixed values are rejected."""
+        rhs = f'O {value}' if mode == 'occ' else value
+        with pytest.raises(DisplacementsSyntaxError):
+            ConstraintLine(f'{mode} O 1 = {rhs}')
+
+    @parametrize('value', ('2.5', '-0.5', '1.0001'))
+    def test_fixed_occupation_out_of_range(self, value):
+        """Fixed occupations outside [0, 1] are rejected."""
+        with pytest.raises(DisplacementsSyntaxError, match=r'\[0, 1\]'):
+            ConstraintLine(f'occ O 1 = O {value}')
+
+    @parametrize(
+        'line, exp_str',
+        (
+            ('geo O 1 = 0', '= 0.0)'),
+            ('vib O 1 = 0.05', '= 0.05'),
+            ('occ O 1 = O 0.0', '= ElementToken'),
+            ('geo O 1 = ind(3)', 'ind(3)'),
+            ('geo O 1 = O 2', 'TargetToken'),
+        ),
+    )
+    def test_str_of_value_constraints(self, line, exp_str):
+        """The string form shows each kind of right-hand side."""
+        text = str(ConstraintLine(line))
+        assert exp_str in text
+        assert 'None' not in text
 
     @pytest.mark.parametrize('mode', ('geo', 'vib', 'occ'))
     @pytest.mark.parametrize('rhs', ('ind(2)', 'IND(2)', 'Ind( 2 )'))

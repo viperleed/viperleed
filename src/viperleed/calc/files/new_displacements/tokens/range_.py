@@ -7,7 +7,11 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
-from .base import DisplacementsFileToken, TokenParserError
+from .base import (
+    DisplacementsFileToken,
+    TokenParserError,
+    parse_plain_float,
+)
 
 
 class RangeTokenParserError(TokenParserError):
@@ -44,7 +48,7 @@ class RangeToken(DisplacementsFileToken):
         attrs = ('start', 'stop', 'step')
         for part, attr in zip(parts, attrs):
             try:
-                value = float(part)
+                value = parse_plain_float(part)
             except ValueError as err:
                 msg = f'Non-numeric value in range: "{range_str}"'
                 raise RangeTokenParserError(msg) from err

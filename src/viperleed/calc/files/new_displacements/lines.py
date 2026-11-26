@@ -16,7 +16,10 @@ from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.files.new_displacements.errors import (
     DisplacementsSyntaxError,
 )
-from viperleed.calc.files.new_displacements.tokens.base import TokenParserError
+from viperleed.calc.files.new_displacements.tokens.base import (
+    TokenParserError,
+    parse_plain_float,
+)
 from viperleed.calc.files.new_displacements.tokens.direction import (
     make_direction_token,
 )
@@ -52,6 +55,8 @@ _ZERO_OFFSET_WORDS = {'clear', 'original'}
 
 # precompiled direction-at-end regex for separating out the direction token
 _FLOAT_RE = r'-?(?:\d+(?:\.\d*)?|\.\d+)'
+_ELEMENT_AND_VALUE = 2  # parts of an occupation rhs
+_INTEGER_RE = re.compile(r'[+-]?\d+')
 _DIRECTION_BRACKETS_RE = rf'\[\s*{_FLOAT_RE}(?:\s+{_FLOAT_RE})*\s*\]'
 DIRECTION_PATTERN = (
     r'(?P<direction>('
@@ -507,10 +512,14 @@ class OccDeltaLine(ParsedLine):
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise DisplacementsSyntaxError(msg) from err
-        return (
-            self._parse_element(elem_str),
-            self._parse_range(range_str, single_value=True),
-        )
+        range_token = self._parse_range(range_str, single_value=True)
+        if len(range_str.split()) == 1 and not 0 <= range_token.start <= 1:
+            msg = (
+                f'Fixed occupation in line "{self.raw_line}" must be in '
+                f'the range [0, 1], got {range_token.start}.'
+            )
+            raise DisplacementsSyntaxError(msg)
+        return self._parse_element(elem_str), range_token
 
 
 class ConstraintLine(ParsedLine):
@@ -651,7 +660,7 @@ class ConstraintLine(ParsedLine):
             return
 
         # A number is never a target, but a '-' makes it look like a label
-        if self._treat_fixed_value(numeric_only=True):
+        if self._treat_fixed_value():
             return
 
         self._treat_link()
@@ -689,8 +698,7 @@ class ConstraintLine(ParsedLine):
                 continue
             break
         else:
-            if self._treat_fixed_value(numeric_only=False):
-                return
+            self._reject_integer_occupation()
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         if len(link_targets) != 1:
@@ -709,36 +717,76 @@ class ConstraintLine(ParsedLine):
             else LinearOperationToken.from_array(np.eye(1))
         )
 
-    def _treat_fixed_value(self, numeric_only):
+    def _treat_fixed_value(self):
         """Read the rhs as <value> (geo, vib) or <element> <value> (occ).
 
-        Parameters
-        ----------
-        numeric_only : bool
-            Only consider <value>, i.e., the geo and vib forms.
+        An occupation given as an integer is not a fixed value, but a
+        link to an atom number (e.g., "O 2").
 
         Returns
         -------
         bool
             Whether the rhs is a fixed value. If so, the fixed-value
             attributes are set.
+
+        Raises
+        ------
+        DisplacementsSyntaxError
+            If the value looks like a number but is not a finite number
+            in plain decimal notation, or if a fixed occupation is
+            outside [0, 1].
         """
         parts = self._rhs.split()
         is_occ = self.mode_token.mode is PerturbationMode.OCC
-        if is_occ and numeric_only:
-            return False
         if len(parts) != 1 + is_occ:
             return False
         try:
-            value = float(parts[-1])
+            float(parts[-1])
         except ValueError:
             return False
+        if is_occ and _INTEGER_RE.fullmatch(parts[-1]):
+            return False
+        value = self._parse_fixed_number(parts[-1])
         if is_occ:
+            if not 0 <= value <= 1:
+                msg = (
+                    f'Fixed occupation in line "{self.raw_line}" must be '
+                    f'in the range [0, 1], got {value}.'
+                )
+                raise DisplacementsSyntaxError(msg)
             self.fixed_element = self._parse_element(parts[0])
         self.fixed_value = value
         self.link_target = None
         self.linear_operation = None
         return True
+
+    def _parse_fixed_number(self, value_str):
+        """Return a float from `value_str`, or raise a syntax error."""
+        try:
+            return parse_plain_float(value_str)
+        except ValueError as err:
+            msg = (
+                f'Invalid value "{value_str}" in line "{self.raw_line}". '
+                'Fixed values must be finite numbers in plain decimal '
+                'notation (e.g., 0.5).'
+            )
+            raise DisplacementsSyntaxError(msg) from err
+
+    def _reject_integer_occupation(self):
+        """Raise if the rhs is an <element> and an integer non-target."""
+        parts = self._rhs.split()
+        if (
+            self.mode_token.mode is PerturbationMode.OCC
+            and len(parts) == _ELEMENT_AND_VALUE
+            and _INTEGER_RE.fullmatch(parts[1])
+        ):
+            msg = (
+                f'Invalid line "{self.raw_line}": "{parts[1]}" is read as '
+                'an atom number, which is not a valid target. To freeze '
+                f'the occupation of {parts[0]}, write a non-integer value '
+                f'(e.g., "{parts[0]} {parts[1]}.0").'
+            )
+            raise DisplacementsSyntaxError(msg)
 
     def _format_lhs_str(self):
         return ', '.join(str(t) for t in self.targets)
