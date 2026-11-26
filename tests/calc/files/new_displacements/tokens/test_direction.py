@@ -192,7 +192,8 @@ class TestFractional:
         old = comps[0]*abst[0] + comps[1]*abst[1]
         old = old / np.linalg.norm(old)
         cartesian = token.to_cartesian(self._hex_ab_cell)
-        assert isinstance(cartesian, CartesianDirectionToken)
+        # pylint: disable-next=unidiomatic-typecheck
+        assert type(cartesian) is CartesianDirectionToken
         assert cartesian.dof == 1
         assert cartesian.vectors_xyz.shape == (1, 3)
         assert cartesian.vectors_xyz[0] == pytest.approx([*old, 0])
@@ -212,7 +213,8 @@ class TestFractional:
             self._hex_ab_cell
         )
         vectors = cartesian.vectors_xyz
-        assert isinstance(cartesian, CartesianDirectionToken)
+        # pylint: disable-next=unidiomatic-typecheck
+        assert type(cartesian) is CartesianDirectionToken
         assert cartesian.dof == 2
         assert vectors.shape == (2, 3)
         assert vectors @ vectors.T == pytest.approx(np.eye(2))
@@ -227,6 +229,47 @@ class TestFractional:
         xy_plane = CartesianDirectionToken('xy').vectors_xyz
         projector = cartesian.vectors_xyz.T @ cartesian.vectors_xyz
         assert projector == pytest.approx(xy_plane.T @ xy_plane)
+
+
+_INVALID_VECTORS = {
+    'not numeric': (('a', 0, 0),),
+    'ragged': ((1, 0, 0), (0, 1)),
+    'one dimensional': (1, 0, 0),
+    'two components': ((1, 0),),
+    'no vectors': np.zeros((0, 3)),
+    'four vectors': np.eye(4, 3),
+    'not normalized': ((2, 0, 0),),
+    'not orthogonal': ((1, 0, 0), (1, 0, 0)),
+}
+
+
+class TestFromVectors:
+    """Tests for CartesianDirectionToken.from_vectors."""
+
+    @parametrize(direction_str=('x', 'xy', 'xyz', 'xy[1 1]', 'xyz[1 -2 3]'))
+    def test_equals_parsed(self, direction_str):
+        """Check that the vectors of a parsed token give an equal one."""
+        parsed = CartesianDirectionToken(direction_str)
+        token = CartesianDirectionToken.from_vectors(parsed.vectors_xyz)
+        # pylint: disable-next=unidiomatic-typecheck
+        assert type(token) is CartesianDirectionToken
+        assert token == parsed
+        assert token.dof == parsed.dof
+        assert token.vectors_zxy == pytest.approx(parsed.vectors_zxy)
+
+    def test_direction_str(self):
+        """Check that the source string is kept, empty by default."""
+        vectors = ((1, 0, 0),)
+        token = CartesianDirectionToken.from_vectors(vectors)
+        assert not token.direction_str
+        token = CartesianDirectionToken.from_vectors(vectors, 'a')
+        assert token.direction_str == 'a'
+
+    @parametrize(vectors=_INVALID_VECTORS.values(), ids=_INVALID_VECTORS)
+    def test_invalid(self, vectors):
+        """Check complaints for vectors that span no valid direction."""
+        with pytest.raises(DirectionTokenParserError):
+            CartesianDirectionToken.from_vectors(vectors)
 
 
 @parametrize(

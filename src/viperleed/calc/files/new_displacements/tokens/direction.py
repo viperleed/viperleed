@@ -108,8 +108,56 @@ class CartesianDirectionToken(DirectionToken):
         _dir_str = direction_str.strip()
         if not _dir_str:
             raise DirectionTokenParserError('Empty direction token.')
-        self.direction_str = _dir_str
-        self._vectors, self.dof = self._parse_direction(_dir_str)
+        self._set_state(_dir_str, *self._parse_direction(_dir_str))
+
+    @classmethod
+    def from_vectors(cls, vectors_xyz, direction_str=''):
+        """Alternate constructor using orthonormal vectors directly.
+
+        Parameters
+        ----------
+        vectors_xyz : array_like
+            Shape (dof, 3), with 1 <= dof <= 3. Orthonormal vectors,
+            in the xyz convention, spanning the direction space.
+        direction_str : str, optional
+            The string the direction was read from, if any. It is only
+            kept for reference. Default is an empty string.
+
+        Returns
+        -------
+        CartesianDirectionToken
+            A token whose `vectors_xyz` are `vectors_xyz`.
+
+        Raises
+        ------
+        DirectionTokenParserError
+            If `vectors_xyz` is not numeric, does not have shape
+            (dof, 3) with 1 <= dof <= 3, or its vectors are not
+            orthonormal.
+        """
+        try:
+            vectors = np.array(vectors_xyz, dtype=float)
+        except (TypeError, ValueError) as exc:
+            msg = f'Vectors are not numeric: {vectors_xyz!r}'
+            raise DirectionTokenParserError(msg) from exc
+        if vectors.ndim != 2 or vectors.shape[1] != 3:
+            msg = f'Vectors must have shape (dof, 3), not {vectors.shape}'
+            raise DirectionTokenParserError(msg)
+        dof = len(vectors)
+        if not 1 <= dof <= 3:
+            msg = f'Expected one to three vectors, got {dof}'
+            raise DirectionTokenParserError(msg)
+        is_orthonormal = np.allclose(
+            vectors @ vectors.T,
+            np.eye(dof),
+            atol=DISPLACEMENTS_FILE_EPS,
+        )
+        if not is_orthonormal:
+            msg = f'Vectors are not orthonormal: {vectors.tolist()}'
+            raise DirectionTokenParserError(msg)
+        inst = cls.__new__(cls)
+        cls._set_state(inst, direction_str, vectors, dof)
+        return inst
 
     def __eq__(self, other):
         """Compare two CartesianDirectionToken objects for equality."""
@@ -132,6 +180,12 @@ class CartesianDirectionToken(DirectionToken):
     def vectors_zxy(self):
         """Return the vectors in zxy convention (LEED convention)."""
         return _xyz_to_zxy(self._vectors)
+
+    def _set_state(self, direction_str, vectors, dof):
+        """Store the source string, the xyz vectors and their number."""
+        self.direction_str = direction_str
+        self._vectors = vectors
+        self.dof = dof
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
@@ -277,7 +331,10 @@ class FractionalDirectionToken(DirectionToken):
         in_plane = self.components @ np.asarray(ab_cell, dtype=float).T
         vectors = np.zeros((self.dof, 3))
         vectors[:, :2] = _orthonormalize(in_plane)
-        return _ResolvedCartesianDirectionToken(self.direction_str, vectors)
+        return CartesianDirectionToken.from_vectors(
+            vectors,
+            direction_str=self.direction_str,
+        )
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
@@ -310,19 +367,6 @@ class FractionalDirectionToken(DirectionToken):
             msg = f'Zero-length vector: {direction_str}'
             raise DirectionTokenParserError(msg)
         return np.array([comps / norm]), 1
-
-
-class _ResolvedCartesianDirectionToken(CartesianDirectionToken):
-    """A Cartesian direction token with given orthonormal vectors."""
-
-    def __init__(self, direction_str, vectors_xyz):
-        """Initialize from the source string and the xyz vectors."""
-        self._given_vectors = np.asarray(vectors_xyz, dtype=float)
-        super().__init__(direction_str)
-
-    def _parse_direction(self, _direction_str):
-        """Return the given vectors and their number."""
-        return self._given_vectors, len(self._given_vectors)
 
 
 def make_direction_token(direction_str):
