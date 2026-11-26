@@ -1,7 +1,7 @@
 """Module element of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-13'
 __license__ = 'GPLv3+'
 
@@ -14,6 +14,8 @@ class ElementTokenParserError(TokenParserError):
     """Class for parsing Errors in the ElementToken."""
 
 
+# TODO: Consider support for explicit vacancy elements "Vac".
+#       See discussion in #428.
 class ElementToken(DisplacementsFileToken):
     """Class to parse and represent the <element> token.
 
@@ -31,8 +33,14 @@ class ElementToken(DisplacementsFileToken):
         The string containing the element to be parsed.
     """
 
-    def __init__(self, element_str: str):
-        """Construct an ElementToken from a string."""
+    def __init__(self, element_str):
+        """Construct an ElementToken from a string.
+
+        Parameters
+        ----------
+        element_str : str
+            Element symbol or name.
+        """
         _element_str = element_str.strip()
         # first get atomic number
         try:

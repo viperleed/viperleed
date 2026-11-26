@@ -1,8 +1,8 @@
 """Module linear_operation of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)')
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-14'
 __license__ = 'GPLv3+'
 
@@ -14,6 +14,7 @@ import numpy as np
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
 from .base import DisplacementsFileToken, TokenParserError
+
 
 class LinearOperationTokenParserError(TokenParserError):
     """Class for parsing Errors in the LinearOperationToken."""
@@ -41,10 +42,17 @@ class LinearOperationToken(DisplacementsFileToken):
             # add commas between adjacent numbers:
             #  "<num>   <num>" -> "<num>, <num>"
             num_pattern = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
-            cleaned = re.sub(rf'({num_pattern})\s+(?={num_pattern})', r'\1, ',
-                             cleaned)
+            cleaned = re.sub(
+                rf'({num_pattern})\s+(?={num_pattern})',
+                r'\1, ',
+                cleaned,
+            )
             # add commas between brackets
-            cleaned = re.sub(r'\]\s+\[', '], [', cleaned)
+            cleaned = re.sub(
+                r'\]\s+\[',
+                '], [',
+                cleaned,
+            )
 
         # parse to expression
         try:
@@ -53,11 +61,35 @@ class LinearOperationToken(DisplacementsFileToken):
             msg = f'Could not parse linear operation "{op_str.strip()}".'
             raise LinearOperationTokenParserError(msg) from err
 
+        self.arr = self._validate_array(parsed, op_str.strip())
+
+    @staticmethod
+    def _validate_array(values, description):
+        """Return a square float array from `values`, or raise.
+
+        Parameters
+        ----------
+        values : object
+            Numeric data to convert. Must have 1, 4, or 9 elements.
+        description : object
+            Identifies `values` in error messages (a string, or the
+            values themselves).
+
+        Returns
+        -------
+        numpy.ndarray
+            A 1x1, 2x2, or 3x3 array.
+
+        Raises
+        ------
+        LinearOperationTokenParserError
+            If `values` is not numeric or has the wrong size.
+        """
         try:
-            arr = np.array(parsed, dtype=float)
+            arr = np.array(values, dtype=float)
         except ValueError as err:
             msg = (
-                f'Unable to convert linear operation "{op_str.strip()}" to '
+                f'Unable to convert linear operation "{description}" to '
                 'a numeric array.'
             )
             raise LinearOperationTokenParserError(msg) from err
@@ -67,26 +99,40 @@ class LinearOperationToken(DisplacementsFileToken):
         # (2x2), or (3x3) matrix.
         if arr.size == 1:
             # single value is a 1x1 matrix
-            arr = arr.reshape((1, 1))
-        elif arr.size == 4:
+            return arr.reshape((1, 1))
+        if arr.size == 4:
             # 2x2 matrix
-            arr = arr.reshape((2, 2))
-        elif arr.size == 9:
+            return arr.reshape((2, 2))
+        if arr.size == 9:
             # 3x3 matrix
-            arr = arr.reshape((3, 3))
-        else:
-            msg = (
-                f'Invalid linear operation format: "{op_str.strip()}". '
-                'Expected a 1x1, 2x2, or 3x3 matrix.'
-            )
-            raise LinearOperationTokenParserError(msg)
-        self.arr = arr
+            return arr.reshape((3, 3))
+        msg = (
+            f'Invalid linear operation format: "{description}". '
+            'Expected a 1x1, 2x2, or 3x3 matrix.'
+        )
+        raise LinearOperationTokenParserError(msg)
 
     @classmethod
-    def from_array(cls, arr) -> 'LinearOperationToken':
-        """Alternate constructor using numeric values directly."""
+    def from_array(cls, arr):
+        """Alternate constructor using numeric values directly.
+
+        Parameters
+        ----------
+        arr : array_like
+            Numeric data with 1, 4, or 9 elements.
+
+        Returns
+        -------
+        LinearOperationToken
+            A token whose `arr` is the 1x1, 2x2, or 3x3 matrix.
+
+        Raises
+        ------
+        LinearOperationTokenParserError
+            If `arr` is not numeric or has the wrong size.
+        """
         inst = cls.__new__(cls)
-        inst.arr = np.array(arr, dtype=float)
+        inst.arr = cls._validate_array(arr, arr)
         return inst
 
     def __eq__(self, other):

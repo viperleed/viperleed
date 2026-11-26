@@ -1,13 +1,17 @@
 """Module range_ of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-15'
 __license__ = 'GPLv3+'
 
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
-from .base import DisplacementsFileToken, TokenParserError
+from .base import (
+    DisplacementsFileToken,
+    TokenParserError,
+    parse_plain_float,
+)
 
 
 class RangeTokenParserError(TokenParserError):
@@ -44,7 +48,7 @@ class RangeToken(DisplacementsFileToken):
         attrs = ('start', 'stop', 'step')
         for part, attr in zip(parts, attrs):
             try:
-                value = float(part)
+                value = parse_plain_float(part)
             except ValueError as err:
                 msg = f'Non-numeric value in range: "{range_str}"'
                 raise RangeTokenParserError(msg) from err
@@ -56,7 +60,7 @@ class RangeToken(DisplacementsFileToken):
         return self.step is not None
 
     @classmethod
-    def from_floats(cls, start, stop, step=None) -> 'RangeToken':
+    def from_floats(cls, start, stop, step=None):
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
         inst.start = start

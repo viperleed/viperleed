@@ -1,7 +1,7 @@
 """Module total_occupation of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-07-18'
 __license__ = 'GPLv3+'
 
@@ -31,8 +31,14 @@ class TotalOccupationToken(DisplacementsFileToken):
         The string containing the total occupation to be parsed.
     """
 
-    def __init__(self, total_occupation_str: str):
-        """Construct a TotalOccupationToken from a string."""
+    def __init__(self, total_occupation_str):
+        """Construct a TotalOccupationToken from a string.
+
+        Parameters
+        ----------
+        total_occupation_str : str
+            The total occupation as text.
+        """
         try:
             total_occupation_value = float(total_occupation_str.strip())
         except ValueError as err:

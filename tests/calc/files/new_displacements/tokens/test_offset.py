@@ -1,7 +1,7 @@
 """Tests for module offset of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-12'
 __license__ = 'GPLv3+'
 
@@ -61,3 +61,15 @@ def test_from_floats_and_equality():
     assert a == b
     c = OffsetToken.from_floats(5.1)
     assert a != c
+
+
+def test_from_floats_invalid_count():
+    with pytest.raises(OffsetTokenParserError, match='expect 1-3 floats'):
+        OffsetToken.from_floats(1, 2, 3, 4)
+    with pytest.raises(OffsetTokenParserError, match='expect 1-3 floats'):
+        OffsetToken.from_floats()
+
+
+def test_from_floats_non_numeric():
+    with pytest.raises(OffsetTokenParserError, match='Non-numeric value'):
+        OffsetToken.from_floats('foo')

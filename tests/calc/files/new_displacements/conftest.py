@@ -1,29 +1,32 @@
 """Test configuration for calc/files/new_displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-15'
+__license__ = 'GPLv3+'
 
 from operator import attrgetter
 
-import pytest
-from pytest_cases import fixture
+from pytest_cases import fixture, parametrize
 
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
+    ModeHeaderLine,
     OccDeltaLine,
     SearchHeaderLine,
-    SectionHeaderLine,
     VibDeltaLine,
 )
-from viperleed.calc.files.new_displacements.tokens import (
+from viperleed.calc.files.new_displacements.tokens.direction import (
     CartesianDirectionToken,
-    ElementToken,
-    LinearOperationToken,
-    ModeToken,
-    RangeToken,
-    TargetToken,
 )
+from viperleed.calc.files.new_displacements.tokens.element import ElementToken
+from viperleed.calc.files.new_displacements.tokens.linear_operation import (
+    LinearOperationToken,
+)
+from viperleed.calc.files.new_displacements.tokens.mode import ModeToken
+from viperleed.calc.files.new_displacements.tokens.range_ import RangeToken
+from viperleed.calc.files.new_displacements.tokens.target import TargetToken
 
 from ....helpers import TEST_DATA
 
@@ -32,14 +35,22 @@ MOCK_DISPLACEMENTS_PATH = TEST_DATA / 'DISPLACEMENTS/DISPLACEMENTS_mixed'
 _CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / 'Cu_111'
 _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
 
-DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
+DISPLACEMENTS_FILES = tuple(
+    _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
+)
+
+
+def displacements_file_id(file_path):
+    """Return a case ID for a DISPLACEMENTS file."""
+    rel_path = file_path.relative_to(_MOCK_DISPLACEMENTS_PATH).as_posix()
+    return str(rel_path)
 
 
 @fixture
-@pytest.mark.parametrize(
+@parametrize(
     'file_path',
     DISPLACEMENTS_FILES,
-    ids=attrgetter('name'),
+    ids=displacements_file_id,
 )
 def displacements_file_path(file_path):
     """Fixture to provide a path to a DISPLACEMENTS file."""
@@ -48,10 +59,10 @@ def displacements_file_path(file_path):
 
 @fixture
 def mock_displacements_path_and_lines():
-    path = MOCK_DISPLACEMENTS_PATH
+    path = _MOCK_DISPLACEMENTS_PATH / 'DISPLACEMENTS_mixed'
     expected_lines = [
         (SearchHeaderLine, {'label': 'my_search_label'}),
-        (SectionHeaderLine, {'section': 'GEO_DELTA'}),
+        (ModeHeaderLine, {'section': 'GEO_DELTA'}),
         (
             GeoDeltaLine,
             {
@@ -68,7 +79,7 @@ def mock_displacements_path_and_lines():
                 'range': RangeToken('0.03 -0.03 0.003'),
             },
         ),
-        (SectionHeaderLine, {'section': 'VIB_DELTA'}),
+        (ModeHeaderLine, {'section': 'VIB_DELTA'}),
         (
             VibDeltaLine,
             {
@@ -97,7 +108,7 @@ def mock_displacements_path_and_lines():
                 'range': RangeToken('0.05 -0.05'),
             },
         ),
-        (SectionHeaderLine, {'section': 'OCC_DELTA'}),
+        (ModeHeaderLine, {'section': 'OCC_DELTA'}),
         (
             OccDeltaLine,
             {
@@ -117,7 +128,7 @@ def mock_displacements_path_and_lines():
                 ),
             },
         ),
-        (SectionHeaderLine, {'section': 'CONSTRAIN'}),
+        (ModeHeaderLine, {'section': 'CONSTRAIN'}),
         (
             ConstraintLine,
             {
@@ -145,7 +156,7 @@ def mock_displacements_cu_111_realistic_path_and_lines():
     path = _CU_111_SIMPLE_PATH
     expected_lines = [
         (SearchHeaderLine, {'label': 'test'}),
-        (SectionHeaderLine, {'section': 'GEO_DELTA'}),
+        (ModeHeaderLine, {'section': 'GEO_DELTA'}),
         (
             GeoDeltaLine,
             {
@@ -154,7 +165,7 @@ def mock_displacements_cu_111_realistic_path_and_lines():
                 'range': RangeToken('-0.1 0.1 0.05'),
             },
         ),
-        (SectionHeaderLine, {'section': 'VIB_DELTA'}),
+        (ModeHeaderLine, {'section': 'VIB_DELTA'}),
         (
             VibDeltaLine,
             {

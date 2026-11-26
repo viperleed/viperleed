@@ -1,7 +1,7 @@
 """Module segments of viperleed.calc.files.new_displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-06-17'
 __license__ = 'GPLv3+'
 
@@ -15,14 +15,16 @@ import numpy as np
 
 from .errors import DisplacementsSyntaxError, UnknownDisplacementsSegmentError
 from .lines import (
+    LOOP_END,
+    LOOP_START,
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
+    ModeHeaderLine,
     OccDeltaLine,
     OffsetsHeaderLine,
     OffsetsLine,
     SearchHeaderLine,
-    SectionHeaderLine,
     VibDeltaLine,
 )
 
@@ -67,6 +69,25 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
         return tuple(self._lines)
 
     def read_lines(self, lines):
+        """Consume lines belonging to this segment from an iterator.
+
+        Lines that belong to this segment, or to one of its
+        subsegments, are collected. Reading stops at the first line
+        that belongs to neither, or when `lines` is exhausted, and
+        the segment is validated.
+
+        Parameters
+        ----------
+        lines : iterator
+            The lines to read. It is consumed up to the first line
+            that does not belong to this segment.
+
+        Returns
+        -------
+        iterator
+            The lines not consumed, starting with the one that ended
+            this segment.
+        """
         while True:
             try:
                 line = next(lines)
@@ -102,11 +123,11 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 
     @abstractmethod
     def validate_segment(self):
-        """Check the segments contents run before returning to parent."""
+        """Validate the segment."""
 
     @abstractmethod
     def _belongs_to_me(self, line):
-        """Return whether `line` is a header for this segment."""
+        """Return whether `line` is a content line of this segment."""
 
 
 class LineContainer(DisplacementsSegmentABC):
@@ -121,7 +142,7 @@ class LineContainer(DisplacementsSegmentABC):
     def _render_name(self):
         sep = '\n\t'
         return (
-            f'{self.header}'
+            f'{self.header()}'
             + sep
             + f'{sep.join(line.raw_line for line in self._lines)}'
         )
@@ -148,7 +169,7 @@ class DeltaBlock(LineContainer):
     def is_my_header_line(cls, line):
         """Check if the line is a header for this DELTA block."""
         return (
-            isinstance(line, SectionHeaderLine)
+            isinstance(line, ModeHeaderLine)
             and line.section == cls.header()
         )
 
@@ -158,7 +179,8 @@ class DeltaBlock(LineContainer):
 
     def validate_segment(self):
         if not self._lines:
-            raise DisplacementsSyntaxError(f'Found empty {self.header} block.')
+            msg = f'Found empty {self.header()} block.'
+            raise DisplacementsSyntaxError(msg)
 
 
 class GeoDeltaBlock(DeltaBlock):
@@ -198,8 +220,17 @@ class SearchBlock(DisplacementsSegmentABC):
     def __init__(self, header_line):
         """Initialize the SearchBlock with a header line."""
         super().__init__(header_line)
-        self.label = header_line.label
         self.parent = None  # Parent can be set later if needed
+
+    @property
+    def label(self):
+        """Return the label of this search block, as in its header."""
+        return self._header.label
+
+    @label.setter
+    def label(self, new_label):
+        """Set the label of this search block and of its header."""
+        self._header.label = new_label
 
     @staticmethod
     def is_my_header_line(line):
@@ -234,10 +265,19 @@ class SearchBlock(DisplacementsSegmentABC):
         return self._get_block_lines(VibDeltaBlock)
 
     def validate_segment(self):
-        """Check the segments contents run before returning to parent."""
+        """Validate the segment."""
         if not self.children:
             msg = f'Empty search block: {self.label!r}.'
             raise DisplacementsSyntaxError(msg)
+
+        # check that children are of allowed types
+        for child in self.children:
+            if not isinstance(child, self.subsegments):
+                msg = (
+                    f'Invalid block type {type(child).__name__} found in '
+                    f'search block: "{self.label}".'
+                )
+                raise DisplacementsSyntaxError(msg)
 
         # check that there is at most one block of each type
         for block_type in self.subsegments:
@@ -248,7 +288,7 @@ class SearchBlock(DisplacementsSegmentABC):
             ]
             if len(blocks) > 1:
                 msg = (
-                    f'Multiple {block_type.header} blocks found in search '
+                    f'Multiple {block_type.header()} blocks found in search '
                     f"block: '{self.label}'."
                 )
                 raise DisplacementsSyntaxError(msg)
@@ -275,40 +315,52 @@ class LoopBlock(DisplacementsSegmentABC):
         self._subsegments = (SearchBlock, LoopBlock)
 
     def reset_iterator(self):
+        """Reset this loop and nested loops to their freshly-read state.
+
+        This includes forgetting the R factor of earlier passes, e.g.,
+        when the search repeats after a new reference calculation.
         """
-        Reset to the beginning of the displacement file, e.g. when search
-        repeats after a new reference calculation.
-        """
+        self._last_rfac = np.inf
         self._current_child_id = 0
         for child in self.children:
             if isinstance(child, LoopBlock):
                 child.reset_iterator()
 
+    @property
+    def subsegments(self):
+        """Return possible subsegments, none if the loop is closed."""
+        if self.lines:
+            return ()
+        return self._subsegments
+
     @staticmethod
     def is_my_header_line(line):
         """Loops are started by Loop start lines."""
-        return isinstance(line, LoopMarkerLine) and line.kind == 'start'
+        return isinstance(line, LoopMarkerLine) and line.kind == LOOP_START
 
     def _belongs_to_me(self, line):
         """Loop end lines belong to this block."""
-        # is the loop already closed?
-        if self.lines and self.lines[-1].kind == 'end':
+        # the loop is closed once its end marker has been read
+        last_line = self.lines[-1] if self.lines else None
+        if (
+            isinstance(last_line, LoopMarkerLine)
+            and last_line.kind == LOOP_END
+        ):
             return False
         # if not, check if this is the end line
-        is_end_line = isinstance(line, LoopMarkerLine) and line.kind == 'end'
-        if is_end_line:
-            # accept no more subsegments after this
-            self._subsegments = ()
-        return is_end_line
+        return isinstance(line, LoopMarkerLine) and line.kind == LOOP_END
 
     @property
     def _render_name(self):
         return 'Loop Block'
 
     def validate_segment(self):
+        """Validate the loop block."""
         # loop block must contain exactly one line – the end loop marker
         if len(self.lines) < 1:
-            raise DisplacementsSyntaxError('Unfinished loop block.')
+            raise DisplacementsSyntaxError(
+                'Found "<loop>" without a matching "</loop>".'
+            )
         # it must contain at least one search block
         if not self.children:
             raise DisplacementsSyntaxError('Loop block cannot be empty.')
@@ -324,8 +376,8 @@ class LoopBlock(DisplacementsSegmentABC):
             # if all children have been processed, check convergence
             # specifically do not use abs() here - break if we increased
             if self._last_rfac - current_rfac >= r_fac_eps:
-                # if converged, reset the child index and call next()
-                self._current_child_id = 0
+                # if improved, run another pass, with fresh nested loops
+                self.reset_iterator()
                 self._last_rfac = current_rfac
                 return self.next(current_rfac, r_fac_eps)
             raise StopIteration

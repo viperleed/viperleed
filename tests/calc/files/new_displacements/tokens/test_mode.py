@@ -1,7 +1,10 @@
 """Tests for module viperleed.calc.files.new_displacements.tokens.mode."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-13'
+__license__ = 'GPLv3+'
+
 
 import pytest
 
@@ -10,7 +13,7 @@ from viperleed.calc.files.new_displacements.tokens.mode import ModeToken
 
 
 @pytest.mark.parametrize(
-    'type_str, expected_enum',
+    'mode_str, expected_enum',
     [
         ('geo', PerturbationMode.GEO),
         ('vib', PerturbationMode.VIB),
@@ -18,8 +21,8 @@ from viperleed.calc.files.new_displacements.tokens.mode import ModeToken
         ('dom', PerturbationMode.DOM),
     ],
 )
-def test_valid_mode_strings(type_str, expected_enum):
-    token = ModeToken(type_str)
+def test_valid_mode_strings(mode_str, expected_enum):
+    token = ModeToken(mode_str)
     assert token.mode is expected_enum
     # str representation should mention the enum
     rep = str(token)

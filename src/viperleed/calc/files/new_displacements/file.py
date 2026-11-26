@@ -1,19 +1,30 @@
 """Module file of viperleed.calc.files.new_displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-04'
 __license__ = 'GPLv3+'
 
+import itertools
 import logging
 
-from anytree import NodeMixin, RenderTree
+from anytree import (
+    NodeMixin,
+    PreOrderIter,
+    RenderTree,
+)
 from anytree.render import ContStyle
 
 from .errors import (
     AlreadyReadError,
     DisplacementsSyntaxError,
     OffsetsNotAtBeginningError,
+)
+from .lines import (
+    LOOP_END,
+    LoopMarkerLine,
+    ModeHeaderLine,
+    SearchHeaderLine,
 )
 from .reader import DisplacementsReader
 from .segments import LoopBlock, OffsetsBlock, SearchBlock
@@ -51,8 +62,6 @@ class DisplacementsFile(NodeMixin):
         super().__init__()
         self.name = self._render_name
         self._has_been_read = False
-        # an OFFSETS block is only allowed at the very beginning of the file
-        # we check this by setting this flag to True after the first block
 
         # attributes related to iterating over the search blocks
         self._child_id = 0
@@ -63,9 +72,10 @@ class DisplacementsFile(NodeMixin):
             raise ValueError('File has not been read yet. Call read() first.')
 
     def reset_iterator(self):
-        """
-        Reset to the beginning of the displacement file, e.g. when search
-        repeats after a new reference calculation.
+        """Reset to the beginning of the DISPLACEMENTS file.
+
+        This is needed, e.g., when the search repeats after a new
+        reference calculation.
         """
         self._child_id = 0
         for child in self.children:
@@ -108,55 +118,88 @@ class DisplacementsFile(NodeMixin):
         self._has_been_read = True
 
         with DisplacementsReader(filename) as reader:
+            lines = itertools.chain(reader)
             while True:
                 try:
-                    header_line = next(reader)
+                    header_line = next(lines)
                 except StopIteration:
                     break
+                if isinstance(header_line, ModeHeaderLine):
+                    # Mode blocks before the first search header form
+                    # an implicit search block
+                    if self._has_search_blocks():
+                        msg = (
+                            f'Line "{header_line}" is not inside a search '
+                            'block. Start a new one with '
+                            '"== SEARCH <label>" before it.'
+                        )
+                        raise DisplacementsSyntaxError(msg)
+                    lines = itertools.chain([header_line], lines)
+                    header_line = SearchHeaderLine('== SEARCH')
                 for segment_class in TOP_LEVEL_SEGMENTS:
                     if not segment_class.is_my_header_line(header_line):
                         continue
                     new_segment = segment_class(header_line)
-                    reader = new_segment.read_lines(reader)
+                    lines = new_segment.read_lines(lines)
                     new_segment.parent = self
                     break
                 else:
-                    # if we reach here, the line was not processed
-                    msg = f'Unable to parse line: {header_line!r}.'
-                    raise DisplacementsSyntaxError(msg)
+                    raise DisplacementsSyntaxError(
+                        _unparsable_line_message(header_line)
+                    )
 
+        self._name_unnamed_search_blocks()
         self._validate()
         logger.info('DISPLACEMENTS file read successfully using new parser.')
+
+    def _has_search_blocks(self):
+        """Return whether any search block has been read so far."""
+        return any(isinstance(b, SearchBlock) for b in self.descendants)
+
+    def _name_unnamed_search_blocks(self):
+        """Give every search block a unique label.
+
+        Labels given by the user are kept, except that a repeated one
+        gets the first free suffix ' 2', ' 3', ... (as the old reader
+        does). Blocks without a label are named search_<position>, with
+        <position> their 1-based index among all search blocks. If that
+        name is taken, <position> is increased until it is free.
+        """
+        blocks = [b for b in PreOrderIter(self) if isinstance(b, SearchBlock)]
+        used = set()
+        for block in blocks:
+            if not block.label:
+                continue
+            label, suffix = block.label, 2
+            while label in used:
+                label = f'{block.label} {suffix}'
+                suffix += 1
+            block.label = label
+            used.add(label)
+        for position, block in enumerate(blocks, start=1):
+            if block.label:
+                continue
+            number = position
+            while f'search_{number}' in used:
+                number += 1
+            block.label = f'search_{number}'
+            used.add(block.label)
 
     def _validate(self):
         """Validate the file structure."""
         if not self.children:
             raise DisplacementsSyntaxError('The file is empty.')
 
-        # check if there is more than one OFFSETS block
-        if (
-            len(
-                [
-                    block
-                    for block in self.descendants
-                    if isinstance(block, OffsetsBlock)
-                ]
-            )
-            > 1
-        ):
+        offset_blocks = [
+            b for b in self.descendants if isinstance(b, OffsetsBlock)
+        ]
+        if len(offset_blocks) > 1:
             raise OffsetsNotAtBeginningError(
                 'There can only be one OFFSETS block at the beginning of the '
                 'DISPLACEMENTS file.'
             )
 
         # Check if the first segment is an OFFSETS block
-        offset_blocks = [
-            b for b in self.descendants if isinstance(b, OffsetsBlock)
-        ]
-        if len(offset_blocks) > 1:
-            raise DisplacementsSyntaxError(
-                'Only one OFFSETS block is allowed in the DISPLACEMENTS file.'
-            )
         if offset_blocks and offset_blocks[0] is not self.children[0]:
             raise OffsetsNotAtBeginningError(
                 'The OFFSETS block must be at the beginning of the file.'
@@ -221,3 +264,10 @@ class DisplacementsFile(NodeMixin):
         search_block = self.children[self._child_id]
         self._child_id += 1
         return search_block
+
+
+def _unparsable_line_message(line):
+    """Return an error message for a `line` found at top level."""
+    if isinstance(line, LoopMarkerLine) and line.kind == LOOP_END:
+        return f'Found "{line}" without a matching "<loop>".'
+    return f'Unable to parse line "{line}".'

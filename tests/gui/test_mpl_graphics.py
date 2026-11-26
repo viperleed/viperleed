@@ -145,7 +145,8 @@ class TestImportMatplotlib:
         result = import_matplotlib()
         assert result is mock_backend
         mock_import.assert_called_once_with('matplotlib')
-        mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use)
+        mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use,
+                                                    force=False)
 
 
 class TestImportFigureCanvas:

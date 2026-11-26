@@ -1,7 +1,7 @@
 """Module tl_backend of viperleed.calc.files.new_displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-15'
 __license__ = 'GPLv3+'
 
@@ -39,8 +39,8 @@ class TensorLEEDBackend(ABC):
             msg = f"{cls.__name__} must define a class attribute 'name'."
             raise TypeError(msg)
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def replace_search_block(cls, search_block):
         """Check if the backend can handle the given search block.
 

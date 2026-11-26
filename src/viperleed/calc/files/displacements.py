@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -158,6 +158,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                 s = "xy"
             else:
                 s = "ab"
+            _warn_deprecated_plane_shorthand(i, s)
             copyblock[0].append(line.replace(s, s+"[0 1]", 1))
             line = line.replace(s, s+"[1 0]", 1)
 
@@ -229,6 +230,16 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                for lines, _ in domain.rpars.disp_blocks):
         raise NoDisplacementsError(f'File {filename} contains '
                                    'no valid displacements.')
+
+
+def _warn_deprecated_plane_shorthand(line_index, plane):
+    """Warn that a bare 'xy' or 'ab' plane gives two search blocks."""
+    logger.warning(
+        f'DISPLACEMENTS file line {line_index+1}: A bare {plane!r} '
+        'direction is a deprecated shorthand for two search blocks, one '
+        f'along {plane}[1 0] and one along {plane}[0 1]. Write these two '
+        'search blocks explicitly instead.'
+        )
 
 
 def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):

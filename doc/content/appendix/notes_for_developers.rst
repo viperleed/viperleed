@@ -218,6 +218,39 @@ marking. It only reports: it changes neither the selection nor the exit
 status. It also works with ``-n`` (:program:`pytest-xdist`).
 
 
+Tests of the graphical user interface
+'''''''''''''''''''''''''''''''''''''
+
+The tests in :file:`tests/gui` need PyQt5 (installed with
+``viperleed[GUI]``). They run on the ``offscreen`` platform of Qt: no windows
+show up, and the tests also run without a display. To see the windows, add
+``--show-windows``. A ``QT_QPA_PLATFORM`` :term:`environment variable` that is
+set is always respected. As Qt takes the platform only once, when the
+``QApplication`` is created, it is the same for all the tests of a session.
+Tests that need a real display can be marked with
+``@pytest.mark.needs_display``: they are skipped on a headless platform.
+Tests that need a headless platform can be marked with
+``@pytest.mark.needs_offscreen``: they are skipped otherwise.
+
+Tests that create widgets use the ``qtbot`` and ``qapp`` fixtures of
+`pytest-qt <https://pytest-qt.readthedocs.io>`__ (among the test
+requirements). Without PyQt5, these tests are skipped (or fail with
+``--require-all``) rather than aborting the whole test session, as
+:program:`pytest-qt` would do otherwise (see :file:`tests/harness/qt.py`).
+Test modules import the GUI modules that need Qt via the ``import_with_qt``
+fixture (and the Qt modules via the ``qtc``, ``qtg``, and ``qtw`` fixtures)
+of :file:`tests/gui/conftest.py`, rather than at the top, so that they can
+be collected without PyQt5. The smoke tests in
+:file:`tests/gui/test_smoke.py` import all GUI modules, and create, show,
+and close all their widgets. They find these automatically: a new widget that
+needs arguments to be created is skipped until a factory for it is added to
+``_FACTORIES`` in that module.
+
+Tests that fail because of a bug of the GUI that is not fixed yet are marked
+as expected failures with the marks of :file:`tests/gui/known_bugs.py`. When
+fixing one of these bugs, remove its mark, there and where it is used.
+
+
 Continuous integration
 ''''''''''''''''''''''
 
@@ -374,7 +407,8 @@ running
 
     python -m pip install --upgrade -r requirements/dev.txt
 
-in your local copy of the |repo|.
+in your local copy of the |repo|. These include PyQt5, needed by the tests of
+the graphical user interface (see `Tests of the graphical user interface`_).
 
 
 Keeping copyright years up to date
