@@ -37,6 +37,13 @@ DISPLACEMENTS_FILE_SECTION = {
     'CONSTRAIN': ConstraintLine,
 }
 
+_ABBREVIATED_HEADERS = {
+    'g': '= GEO_DELTA',
+    'v': '= VIB_DELTA',
+    'o': '= OCC_DELTA',
+    'c': '= CONSTRAIN',
+}
+
 LoopMarker = Enum('LoopMarker', ['LOOP_START', 'LOOP_END'])
 
 logger = logging.getLogger(__name__)
@@ -74,6 +81,7 @@ class DisplacementsReader(InputFileReader):
         # headers have been validated by their own parsers: only
         # other lines can contain invalid or deprecated syntax
         if new_header is None:
+            _check_dropped_header(line)
             _check_line_generally_valid(stripped_line)
 
         # update current mode if a new header is found
@@ -100,6 +108,40 @@ class DisplacementsReader(InputFileReader):
                 f'"{self._current_section}".'
             )
             raise DisplacementsSyntaxError(msg) from err
+
+
+def _check_dropped_header(line):
+    """Complain if `line` is a header written in an unsupported form."""
+    stripped = line.strip()
+    if not stripped.startswith('='):
+        return
+    words = stripped.lstrip('=').split()
+    if not words:
+        return
+    word = words[0].lower()
+    if stripped.startswith('=='):
+        if 'search'.startswith(word):
+            msg = (
+                f'Cannot parse header "{stripped}": headers cannot be '
+                'abbreviated. Write "== SEARCH <label>".'
+            )
+            raise DisplacementsSyntaxError(msg)
+        return
+    if word == 'regex':
+        msg = (
+            f'Cannot parse header "{stripped}": "= REGEX" is not '
+            'supported. Use "*" wildcards in the atom labels instead.'
+        )
+        raise DisplacementsSyntaxError(msg)
+    full_name = _ABBREVIATED_HEADERS.get(word[0])
+    if word.startswith('off'):
+        full_name = '= OFFSETS'
+    if full_name:
+        msg = (
+            f'Cannot parse header "{stripped}": headers cannot be '
+            f'abbreviated. Write "{full_name}".'
+        )
+        raise DisplacementsSyntaxError(msg)
 
 
 def _read_header(line):

@@ -81,3 +81,37 @@ def test_displacements_reader_sym_delta_deprecated(tmp_path):
     path.write_text('== SEARCH a\n= SYM_DELTA\n')
     with pytest.raises(DisplacementsSyntaxError, match='SYMMETRY_FIX'):
         _compare_lines(path, [])
+
+
+_DROPPED_HEADERS = {
+    'search': ('== S a', '== SEARCH'),
+    'search_long': ('== SEAR a', '== SEARCH'),
+    'geo': ('= G', '= GEO_DELTA'),
+    'geo_long': ('= GEO', '= GEO_DELTA'),
+    'vib': ('= V', '= VIB_DELTA'),
+    'occ': ('= O', '= OCC_DELTA'),
+    'constrain': ('= C', '= CONSTRAIN'),
+    'offsets': ('= OFF', '= OFFSETS'),
+    'regex_on': ('= REGEX on', r'"\*" wildcards'),
+    'regex_off': ('= regex off', r'"\*" wildcards'),
+}
+
+
+@parametrize('header, msg', _DROPPED_HEADERS.values(), ids=_DROPPED_HEADERS)
+def test_displacements_reader_dropped_header(header, msg, tmp_path):
+    """Check errors for abbreviated headers and = REGEX."""
+    path = tmp_path / 'DISPLACEMENTS'
+    path.write_text(f'{header}\nO 1 = 0.1\n')
+    raises = pytest.raises(DisplacementsSyntaxError, match=msg)
+    with raises as err, DisplacementsReader(path) as reader:
+        list(reader)
+    assert f'"{header}"' in err.value.message
+
+
+@parametrize('header', ('== SEARCH a', '== search a', '= geo_delta'))
+def test_displacements_reader_full_headers_ok(header, tmp_path):
+    """Check that full headers, in any case, are still accepted."""
+    path = tmp_path / 'DISPLACEMENTS'
+    path.write_text(f'{header}\n')
+    with DisplacementsReader(path) as reader:
+        assert len(list(reader)) == 1
