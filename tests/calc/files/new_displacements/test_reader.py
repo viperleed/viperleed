@@ -5,6 +5,12 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __license__ = 'GPLv3+'
 
 
+from viperleed.calc.files.new_displacements.lines import (
+    GeoDeltaLine,
+    LoopMarkerLine,
+    SearchHeaderLine,
+    SectionHeaderLine,
+)
 from viperleed.calc.files.new_displacements.reader import DisplacementsReader
 
 
@@ -31,3 +37,25 @@ def test_displacements_reader_simple(
 ):
     path, expected_lines = mock_displacements_cu_111_realistic_path_and_lines
     _compare_lines(path, expected_lines)
+
+
+def test_displacements_reader_loop_markers(tmp_path):
+    """Check that loop markers (which contain no '=') are read."""
+    path = tmp_path / 'DISPLACEMENTS_loop'
+    path.write_text(
+        '<loop>\n'
+        '== SEARCH a\n'
+        '= GEO_DELTA\n'
+        'Fe 1 z = 0.0 0.1\n'
+        '</loop>\n'
+    )
+    _compare_lines(
+        path,
+        [
+            (LoopMarkerLine, {'kind': 'start'}),
+            (SearchHeaderLine, {'label': 'a'}),
+            (SectionHeaderLine, {'section': 'GEO_DELTA'}),
+            (GeoDeltaLine, {}),
+            (LoopMarkerLine, {'kind': 'end'}),
+        ],
+    )

@@ -70,8 +70,15 @@ class DisplacementsReader(InputFileReader):
         if not stripped_line:
             raise ShouldSkipLineError
 
-        # check for invalid or deprecated syntax
-        _check_line_generally_valid(stripped_line)
+        # loop markers are the only lines that contain no '='
+        try:
+            marker = LoopMarkerLine(line)
+        except DisplacementsSyntaxError:
+            # check for invalid or deprecated syntax
+            _check_line_generally_valid(stripped_line)
+        else:
+            self._current_section = None
+            return marker
 
         # check for search headers, loop markers and section headers
         new_header = None
