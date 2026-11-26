@@ -78,7 +78,8 @@ The SLSQP (Sequential Least Squares Programming) algorithm is a gradient-based
 optimization algorithm that is well-suited for constrained optimization
 problems. viperleed-jax uses the implementation of SLSQP from the
 `SciPy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize>`__
-library.
+library. SLSQP stops when the R factor changes by less than 1e-8 in one
+iteration, with or without gradients.
 
 **Default:** ``grad True``
 
@@ -88,8 +89,7 @@ Available setting for ``SLSQP`` are:
 
 -  ``grad_damping``: Deprecated, has no effect. It is still accepted, with a
    warning, and will be removed in a future version. The gradient is never
-   damped. SLSQP stops when the R factor changes by less than 1e-8
-   in one iteration.
+   damped, and the setting does not change when SLSQP stops.
 
 
 BFGS
