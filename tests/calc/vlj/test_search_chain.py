@@ -18,6 +18,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.vlj import search
 
 
@@ -34,13 +35,15 @@ class TestOptimizerChainBestResult:
     @pytest.fixture(name='run_chain')
     def fixture_run_chain(self, tmp_path, monkeypatch, mocker):
         """Return a function that runs vlj_search with a fake chain."""
-        def _run(chain):
+        def _run(chain, r_factor_type=RFactorType.PENDRY):
             monkeypatch.chdir(tmp_path)
             (tmp_path / 'Tensors/Tensors_001').mkdir(parents=True)
             rpars = mocker.MagicMock(TENSOR_INDEX=1, last_R=None,
+                                     R_FACTOR_TYPE=r_factor_type,
                                      stored_R={}, files_to_out=set())
             slab = mocker.MagicMock(name='slab')
             calculator = mocker.MagicMock(name='calculator')
+            _run.calculator = calculator
             calculator.R.side_effect = (
                 # Integer and fractional R are the x they were called at
                 lambda x, groups=None, **_: 0.5 if groups is None
@@ -152,3 +155,10 @@ class TestOptimizerChainBestResult:
         rpars, final_x = run_chain(chain)
         assert rpars.stored_R['superpos'] == (0.11, 0.1, 0.2)
         np.testing.assert_array_equal(final_x[0], [0.1, 0.2])
+
+    @pytest.mark.parametrize('r_type', RFactorType)
+    def test_rfactor_name_passed(self, run_chain, r_type):
+        """Check that the calculator is given the name of the R factor."""
+        chain = (('CMAES', self._result(0.11, [0.1, 0.2])),)
+        run_chain(chain, r_factor_type=r_type)
+        run_chain.calculator.set_rfactor.assert_called_once_with(r_type.name)
