@@ -162,7 +162,6 @@ class TestGfortranFindsOpenblas:
         assert kwargs['check']
         assert kwargs['timeout'] > 0
 
-
     def test_not_windows(self, mocker):
         """Check that the probe refuses to run off Windows."""
         mocker.patch(self.on_windows, return_value=False)
