@@ -73,17 +73,18 @@ _ADVICE_GEO_NO_DIRECTION = (
     'A geometric offset in the OFFSETS block needs a direction: write '
     '"geo <targets> <direction> = <value>" there.'
 )
+_GEO, _VIB, _OCC = 'geo', 'vib', 'occ'
 _ADVICE_NO_EQUIVALENT = {
-    'geo': (
+    _GEO: (
         'Offsets are set in the OFFSETS block, where a geometric offset '
         'takes one value per component of its direction: write '
         '"geo <targets> <direction> = <values>" there.'
     ),
-    'vib': (
+    _VIB: (
         'Offsets are set in the OFFSETS block: write '
         '"vib <targets> = <value>" there.'
     ),
-    'occ': (
+    _OCC: (
         'Offsets are set in the OFFSETS block. An occupation offset '
         'there has one value and no element: write '
         '"occ <targets> = <value>".'
@@ -93,7 +94,10 @@ _ADVICE_NO_EQUIVALENT = {
 # precompiled direction-at-end regex for separating out the direction token
 _FLOAT_RE = r'-?(?:\d+(?:\.\d*)?|\.\d+)'
 _ELEMENT_AND_VALUE = 2  # parts of an occupation rhs
+LOOP_START = 'start'
+LOOP_END = 'end'
 _INTEGER_RE = re.compile(r'[+-]?\d+')
+_FIXED_INDEX_PATTERN = re.compile(r'ind\(\s*(\d+)\s*\)', re.IGNORECASE)
 _DIRECTION_BRACKETS_RE = rf'\[\s*{_FLOAT_RE}(?:\s+{_FLOAT_RE})*\s*\]'
 DIRECTION_PATTERN = (
     r'(?P<direction>('
@@ -224,14 +228,12 @@ class LoopMarkerLine(HeaderLine):
         line : str
             The text of the loop marker line.
         """
-        stripped_line = line.strip().lower()
-        if LOOP_START_PATTERN.fullmatch(stripped_line):
-            self.kind = 'start'
-        elif LOOP_END_PATTERN.fullmatch(stripped_line):
-            self.kind = 'end'
-        else:
+        tags = self.split_tags(line)
+        if len(tags) != 1:
             msg = f'Invalid loop marker line: "{line}".'
             raise DisplacementsSyntaxError(msg)
+        is_start = LOOP_START_PATTERN.fullmatch(tags[0])
+        self.kind = LOOP_START if is_start else LOOP_END
 
     @staticmethod
     def split_tags(line):
@@ -255,12 +257,12 @@ class LoopMarkerLine(HeaderLine):
 
     @staticmethod
     def is_marker(line):
-        """Return whether `line` consists only of loop start/end tags."""
+        """Return whether `line` has only loop start/end tags."""
         return bool(LoopMarkerLine.split_tags(line))
 
     def __str__(self):
         """Return the string representation of the loop marker."""
-        if self.kind == 'start':
+        if self.kind == LOOP_START:
             return '<loop>'
         return '</loop>'
 
@@ -366,25 +368,23 @@ class ParsedLine(ABC):
         if first.startswith('cont'):
             return _ADVICE_DROP_CONT
         if first in _ZERO_OFFSET_WORDS or _is_zero(first):
-            if mode == 'geo' and not has_direction:
+            if mode == _GEO and not has_direction:
                 return _ADVICE_DROP_ZERO
             value = '0'
         candidates = [value]
-        if mode == 'geo' and len(words) > 1:
+        if mode == _GEO and len(words) > 1:
             candidates.append(first)
         for candidate in candidates:
             equivalent = f'{mode} {targets} = {candidate}'
-            try:
-                OffsetsLine(equivalent)
-            except DisplacementsSyntaxError:
+            if not _is_valid_offsets_line(equivalent):
                 continue
             note = ''
             if candidate != value:
                 note = 'Only the first value of an offset is used. '
             return f'{note}Write "{equivalent}" in the OFFSETS block instead.'
-        if mode == 'vib' and len(words) > 1:
+        if mode == _VIB and len(words) > 1:
             return _ADVICE_VIB_RANGE.format(targets=targets, value=value)
-        if mode == 'geo' and not has_direction:
+        if mode == _GEO and not has_direction:
             return _ADVICE_GEO_NO_DIRECTION
         return _ADVICE_NO_EQUIVALENT[mode]
 
@@ -407,9 +407,9 @@ class ParsedLine(ABC):
         match = _DIR_BEFORE_TARGET.match(lhs.strip())
         if not match:
             return
+        targets, rest, direction = match.group('targets', 'rest', 'dir')
         reordered = (
-            f'{prefix}{match["targets"]} {match["rest"]} {match["dir"]}'
-            f' = {self._rhs.strip()}'
+            f'{prefix}{targets} {rest} {direction} = {self._rhs.strip()}'
         )
         msg = (
             f'Invalid {self.block_name} line: "{self.raw_line}". The '
@@ -439,7 +439,7 @@ class ParsedLine(ABC):
             )
             raise DisplacementsSyntaxError(msg) from err
 
-    def _parse_range(self, range_str, single_value=False):
+    def _parse_range(self, range_str, *, single_value=False):
         """Return a RangeToken for `range_str`.
 
         If `single_value` is True, a lone number is read as the fixed
@@ -578,7 +578,6 @@ class VibDeltaLine(ParsedLine):
 
         # Right hand side
         _check_moire_tag(self._rhs)
-        # parse to a range (a single value is a fixed one)
         self.range = self._parse_range(self._rhs, single_value=True)
 
     def _format_lhs_str(self):
@@ -594,8 +593,9 @@ class OccDeltaLine(ParsedLine):
     Lines in the OCC_DELTA block are of the form:
         <target> [, <target>] = <element> <range> [, <element> <range> ...]
     where <target>, <element> and <range> are tokens that are parsed by the
-    `Targets`, `Element` and `RangeToken` classes, respectively. A single
-    value for an element is read as a fixed range, i.e., <value> <value>.
+    `Targets`, `Element` and `RangeToken` classes, respectively. A
+    single value for an element is read as a fixed range, i.e.,
+    <value> <value>.
     """
 
     block_name = 'OCC_DELTA'
@@ -798,17 +798,16 @@ class ConstraintLine(ParsedLine):
             self._treat_fixed_index()
             return
 
-        # A number is never a target, but a '-' makes it look like a label
+        # A number is never a target, but a '-' makes it look like
+        # a label
         if self._treat_fixed_value():
             return
 
         self._treat_link()
 
     def _treat_fixed_index(self):
-        """Read the rhs as ind(<index>) with a positive integer index."""
-        match = re.fullmatch(
-            r'ind\(\s*(\d+)\s*\)', self._rhs.lower().strip()
-        )
+        """Read the rhs as ind(<n>), with n a positive integer."""
+        match = _FIXED_INDEX_PATTERN.fullmatch(self._rhs.strip())
         if not match or int(match.group(1)) < 1:
             msg = (
                 f'Invalid index constraint in line "{self.raw_line}". '
@@ -820,7 +819,7 @@ class ConstraintLine(ParsedLine):
         self.linear_operation = None
 
     def _treat_link(self):
-        """Read the rhs as [<linear_operation>] <target> or a fixed value."""
+        """Read the rhs as [<linear_operation>] <target>."""
         # The default case is to treat it as [<linear_operation>] <target>
         # It's not immediately obvious where to split the tokens since both
         # token types may contain spaces.
@@ -857,7 +856,7 @@ class ConstraintLine(ParsedLine):
         )
 
     def _treat_fixed_value(self):
-        """Read the rhs as <value> (geo, vib) or <element> <value> (occ).
+        """Read the rhs as <value> or, for occ, <element> <value>.
 
         An occupation given as an integer is not a fixed value, but a
         link to an atom number (e.g., "O 2").
@@ -877,7 +876,8 @@ class ConstraintLine(ParsedLine):
         """
         parts = self._rhs.split()
         is_occ = self.mode_token.mode is PerturbationMode.OCC
-        if len(parts) != 1 + is_occ:
+        n_expected = _ELEMENT_AND_VALUE if is_occ else 1
+        if len(parts) != n_expected:
             return False
         try:
             float(parts[-1])
@@ -912,7 +912,7 @@ class ConstraintLine(ParsedLine):
             raise DisplacementsSyntaxError(msg) from err
 
     def _reject_integer_occupation(self):
-        """Raise if the rhs is an <element> and an integer non-target."""
+        """Raise if the rhs is an <element> and an integer."""
         parts = self._rhs.split()
         if (
             self.mode_token.mode is PerturbationMode.OCC
@@ -1016,10 +1016,19 @@ class OffsetsLine(ParsedLine):
         return f'{self.offset}'
 
 
+def _is_valid_offsets_line(text):
+    """Return whether `text` is a valid line for the OFFSETS block."""
+    try:
+        OffsetsLine(text)
+    except DisplacementsSyntaxError:
+        return False
+    return True
+
+
 def _is_zero(text):
     """Return whether `text` is a number equal to zero."""
     try:
-        return float(text) == 0
+        return not float(text)
     except ValueError:
         return False
 

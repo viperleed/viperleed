@@ -15,6 +15,8 @@ import numpy as np
 
 from .errors import DisplacementsSyntaxError, UnknownDisplacementsSegmentError
 from .lines import (
+    LOOP_END,
+    LOOP_START,
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
@@ -333,16 +335,19 @@ class LoopBlock(DisplacementsSegmentABC):
     @staticmethod
     def is_my_header_line(line):
         """Loops are started by Loop start lines."""
-        return isinstance(line, LoopMarkerLine) and line.kind == 'start'
+        return isinstance(line, LoopMarkerLine) and line.kind == LOOP_START
 
     def _belongs_to_me(self, line):
         """Loop end lines belong to this block."""
         # the loop is closed once its end marker has been read
         last_line = self.lines[-1] if self.lines else None
-        if isinstance(last_line, LoopMarkerLine) and last_line.kind == 'end':
+        if (
+            isinstance(last_line, LoopMarkerLine)
+            and last_line.kind == LOOP_END
+        ):
             return False
         # if not, check if this is the end line
-        return isinstance(line, LoopMarkerLine) and line.kind == 'end'
+        return isinstance(line, LoopMarkerLine) and line.kind == LOOP_END
 
     @property
     def _render_name(self):

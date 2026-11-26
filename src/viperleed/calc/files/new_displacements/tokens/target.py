@@ -17,6 +17,8 @@ LAYER_REGEX = re.compile(
     r'(?<!\S)L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)(?!\S)', re.IGNORECASE
 )
 
+_LAYER_OR_BRACKET = re.compile(r'L\(|\[', re.IGNORECASE)
+
 
 class TargetingError(TokenParserError):
     """Base class for errors in the targeting module."""
@@ -61,11 +63,7 @@ class TargetToken(DisplacementsFileToken):
         site_str = parts[0]
 
         # do not allow numeric or layer-only targets
-        if (
-            site_str[0].isdigit()
-            or 'L(' in site_str.upper()
-            or '[' in site_str
-        ):
+        if site_str[0].isdigit() or _LAYER_OR_BRACKET.search(site_str):
             msg = f'Target must start with a non-numeric label, got: "{site_str}"'
             raise TargetingError(msg)
 

@@ -18,6 +18,7 @@ from viperleed.calc.files.new_displacements.errors import (
 )
 from viperleed.calc.files.new_displacements.lines import (
     LOOP_END_PATTERN,
+    LOOP_START,
     LOOP_START_PATTERN,
     ConstraintLine,
     GeoDeltaLine,
@@ -139,7 +140,6 @@ class DisplacementsReader(InputFileReader):
             )
             raise DisplacementsSyntaxError(msg) from err
 
-
     def _check_follows_loop_start(self, line, header):
         """Complain if `<loop>` is not followed by a search header."""
         if self._follows_loop_start and not _may_follow_loop_start(header):
@@ -150,7 +150,7 @@ class DisplacementsReader(InputFileReader):
             )
             raise DisplacementsSyntaxError(msg)
         self._follows_loop_start = (
-            isinstance(header, LoopMarkerLine) and header.kind == 'start'
+            isinstance(header, LoopMarkerLine) and header.kind == LOOP_START
         )
 
 

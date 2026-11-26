@@ -8,7 +8,11 @@ __license__ = 'GPLv3+'
 import itertools
 import logging
 
-from anytree import NodeMixin, PreOrderIter, RenderTree
+from anytree import (
+    NodeMixin,
+    PreOrderIter,
+    RenderTree,
+)
 from anytree.render import ContStyle
 
 from .errors import (
@@ -16,7 +20,12 @@ from .errors import (
     DisplacementsSyntaxError,
     OffsetsNotAtBeginningError,
 )
-from .lines import LoopMarkerLine, ModeHeaderLine, SearchHeaderLine
+from .lines import (
+    LOOP_END,
+    LoopMarkerLine,
+    ModeHeaderLine,
+    SearchHeaderLine,
+)
 from .reader import DisplacementsReader
 from .segments import LoopBlock, OffsetsBlock, SearchBlock
 
@@ -109,9 +118,10 @@ class DisplacementsFile(NodeMixin):
         self._has_been_read = True
 
         with DisplacementsReader(filename) as reader:
+            lines = itertools.chain(reader)
             while True:
                 try:
-                    header_line = next(reader)
+                    header_line = next(lines)
                 except StopIteration:
                     break
                 if isinstance(header_line, ModeHeaderLine):
@@ -124,13 +134,13 @@ class DisplacementsFile(NodeMixin):
                             '"== SEARCH <label>" before it.'
                         )
                         raise DisplacementsSyntaxError(msg)
-                    reader = itertools.chain([header_line], reader)
+                    lines = itertools.chain([header_line], lines)
                     header_line = SearchHeaderLine('== SEARCH')
                 for segment_class in TOP_LEVEL_SEGMENTS:
                     if not segment_class.is_my_header_line(header_line):
                         continue
                     new_segment = segment_class(header_line)
-                    reader = new_segment.read_lines(reader)
+                    lines = new_segment.read_lines(lines)
                     new_segment.parent = self
                     break
                 else:
@@ -258,6 +268,6 @@ class DisplacementsFile(NodeMixin):
 
 def _unparsable_line_message(line):
     """Return an error message for a `line` found at top level."""
-    if isinstance(line, LoopMarkerLine) and line.kind == 'end':
+    if isinstance(line, LoopMarkerLine) and line.kind == LOOP_END:
         return f'Found "{line}" without a matching "<loop>".'
     return f'Unable to parse line "{line}".'
