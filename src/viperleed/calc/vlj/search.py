@@ -139,8 +139,9 @@ def vlj_search(slab, rpars):
     )
 
     # Keep the best result over all optimizers: a later optimizer
-    # in the chain may end up worse than an earlier one.
-    best_name, best_result = None, None
+    # in the chain may end up worse than an earlier one. A NaN R
+    # counts as the worst, as NaN compares False with anything.
+    best_name, best_result, best_r = None, None, np.inf
     for optimizer_id, (optimizer, result) in enumerate(optimizer_iterator):
         logger.info(
             f'Optimizer {optimizer.name} finished with best '
@@ -168,8 +169,9 @@ def vlj_search(slab, rpars):
             f'TLOpt_{optimizer_id}_{optimizer.name}_history.npz'
         )
 
-        if best_result is None or result.best_R < best_result.best_R:
-            best_name, best_result = optimizer.name, result
+        r_factor = np.nan_to_num(result.best_R, nan=np.inf)
+        if best_result is None or r_factor < best_r:
+            best_name, best_result, best_r = optimizer.name, result, r_factor
 
     # determine integer and fractional beams
     integer_fractional_mask = determine_integer_or_fractional(rpars)

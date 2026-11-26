@@ -118,3 +118,19 @@ class TestOptimizerChainBestResult:
         rpars, final_x = run_chain(chain)
         assert rpars.stored_R['superpos'] == (0.11, 0.1, 0.2)
         np.testing.assert_array_equal(final_x[0], [0.1, 0.2])
+
+    def test_first_nan(self, run_chain):
+        """Check that a NaN R of an earlier result counts as the worst."""
+        chain = (('BFGS', self._result(np.nan, [0.1, 0.2])),
+                 ('SLSQP', self._result(0.11, [0.3, 0.4])))
+        rpars, final_x = run_chain(chain)
+        assert rpars.stored_R['superpos'] == (0.11, 0.3, 0.4)
+        np.testing.assert_array_equal(final_x[0], [0.3, 0.4])
+
+    def test_last_nan(self, run_chain):
+        """Check that a later NaN R does not replace a finite one."""
+        chain = (('CMAES', self._result(0.11, [0.1, 0.2])),
+                 ('SLSQP', self._result(np.nan, [0.3, 0.4])))
+        rpars, final_x = run_chain(chain)
+        assert rpars.stored_R['superpos'] == (0.11, 0.1, 0.2)
+        np.testing.assert_array_equal(final_x[0], [0.1, 0.2])
