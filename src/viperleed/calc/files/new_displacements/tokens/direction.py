@@ -51,7 +51,7 @@ class DirectionToken(DisplacementsFileToken):
     Cartesian and fractional frames (e.g., 'az') are rejected.
 
     Comment by @michele-riva: we can introduce some syntax leniency and
-    accept also the following:
+    accept also the following (none of them is accepted yet):
 
     - various permutations of the letters when displacing in the 2D
       plane (i.e. ba == ab, zy == yz, etc):
@@ -171,15 +171,6 @@ class CartesianDirectionToken(DirectionToken):
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return np.array(vecs), len(vecs)
 
-    @classmethod
-    def _from_vectors(cls, direction_str, vectors_xyz):
-        """Return a token for already orthonormal `vectors_xyz`."""
-        token = cls.__new__(cls)
-        token.direction_str = direction_str
-        token._vectors = np.asarray(vectors_xyz, dtype=float)
-        token.dof = len(token._vectors)
-        return token
-
     @staticmethod
     def _get_basis_vector(label):
         return {
@@ -210,6 +201,7 @@ class FractionalDirectionToken(DirectionToken):
 
     Fractional directions are given in terms of the in-plane unit-cell
     vectors a and b. The direction specifier can be one of:
+
     - 'ab'
         The plane spanned by a and b.
     - 'a', 'b', 'ab[i j]', '[i j]'
@@ -242,6 +234,7 @@ class FractionalDirectionToken(DirectionToken):
     """
 
     def __init__(self, direction_str):
+        """Initialize from a fractional direction string."""
         _dir_str = direction_str.strip()
         if not _dir_str:
             raise DirectionTokenParserError('Empty direction token.')
@@ -284,11 +277,7 @@ class FractionalDirectionToken(DirectionToken):
         in_plane = self.components @ np.asarray(ab_cell, dtype=float).T
         vectors = np.zeros((self.dof, 3))
         vectors[:, :2] = _orthonormalize(in_plane)
-        # pylint: disable-next=protected-access  # Same module
-        return CartesianDirectionToken._from_vectors(
-            self.direction_str,
-            vectors,
-        )
+        return _ResolvedCartesianDirectionToken(self.direction_str, vectors)
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
@@ -321,6 +310,19 @@ class FractionalDirectionToken(DirectionToken):
             msg = f'Zero-length vector: {direction_str}'
             raise DirectionTokenParserError(msg)
         return np.array([comps / norm]), 1
+
+
+class _ResolvedCartesianDirectionToken(CartesianDirectionToken):
+    """A Cartesian direction token with given orthonormal vectors."""
+
+    def __init__(self, direction_str, vectors_xyz):
+        """Initialize from the source string and the xyz vectors."""
+        self._given_vectors = np.asarray(vectors_xyz, dtype=float)
+        super().__init__(direction_str)
+
+    def _parse_direction(self, _direction_str):
+        """Return the given vectors and their number."""
+        return self._given_vectors, len(self._given_vectors)
 
 
 def make_direction_token(direction_str):
@@ -385,7 +387,7 @@ def _check_unsupported_directions(direction_str):
 
 
 def _check_no_duplicate_directions(letters, direction_str):
-    """Raise ValueError if `letters` contains a letter more than once."""
+    """Raise ValueError if a letter is in `letters` more than once."""
     if len(set(letters)) != len(letters):
         msg = f'Duplicate directions in direction string: {direction_str}'
         raise ValueError(msg)
