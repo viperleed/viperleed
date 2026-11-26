@@ -328,7 +328,7 @@ class LoopBlock(DisplacementsSegmentABC):
 
     def _belongs_to_me(self, line):
         """Loop end lines belong to this block."""
-        # is the loop already closed?
+        # the loop is closed once its end marker has been read
         last_line = self.lines[-1] if self.lines else None
         if isinstance(last_line, LoopMarkerLine) and last_line.kind == 'end':
             return False
