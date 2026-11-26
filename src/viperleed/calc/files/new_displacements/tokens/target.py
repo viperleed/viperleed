@@ -11,8 +11,11 @@ from viperleed.calc.lib.string_utils import read_int_range
 
 from .base import DisplacementsFileToken, TokenParserError
 
-# An L(...) group, separated by whitespace from what is around it
-LAYER_REGEX = r'(?<!\S)L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)(?!\S)'
+# An L(...) or l(...) group, separated by whitespace from what is
+# around it
+LAYER_REGEX = re.compile(
+    r'(?<!\S)L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)(?!\S)', re.IGNORECASE
+)
 
 
 class TargetingError(TokenParserError):
@@ -58,7 +61,11 @@ class TargetToken(DisplacementsFileToken):
         site_str = parts[0]
 
         # do not allow numeric or layer-only targets
-        if site_str[0].isdigit() or 'L(' in site_str or '[' in site_str:
+        if (
+            site_str[0].isdigit()
+            or 'L(' in site_str.upper()
+            or '[' in site_str
+        ):
             msg = f'Target must start with a non-numeric label, got: "{site_str}"'
             raise TargetingError(msg)
 
@@ -78,10 +85,10 @@ class TargetToken(DisplacementsFileToken):
         (e.g., 'L(1)2' is invalid). The target is their union: the
         atoms with the given numbers, plus those in the given layers.
         """
-        layer_specs = [m['ranges'] for m in re.finditer(LAYER_REGEX, specs)]
+        layer_specs = [m['ranges'] for m in LAYER_REGEX.finditer(specs)]
         # Whatever is not a whitespace-separated L(...) must be atom
         # numbers: a malformed or glued-on L(...) fails to read below.
-        nums_spec = re.sub(LAYER_REGEX, ' ', specs).strip()
+        nums_spec = LAYER_REGEX.sub(' ', specs).strip()
         if layer_specs:
             self.layers = _read_ints(' '.join(layer_specs), specs)
         if nums_spec:

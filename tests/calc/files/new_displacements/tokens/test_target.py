@@ -89,11 +89,26 @@ def test_parse_valid_targets(
         'O 1L(2)3',
         'O L(1)L(2)',
         'O 1L(2)',
+        'O 1l(2)',
+        'l(1)',
     ],
 )
 def test_invalid_target_raises(raw):
     with pytest.raises(TargetingError):
         TargetToken(raw)
+
+
+@pytest.mark.parametrize(
+    'lower, upper',
+    (
+        ('O l(2)', 'O L(2)'),
+        ('O 1 l(2-3) 5', 'O 1 L(2-3) 5'),
+        ('O l( 2 ) l(4)', 'O L( 2 ) L(4)'),
+    ),
+)
+def test_lowercase_layer(lower, upper):
+    assert TargetToken(lower) == TargetToken(upper)
+    assert TargetToken(lower).layers is not None
 
 
 def test_empty_string_raises():

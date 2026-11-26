@@ -220,6 +220,13 @@ class TestVibDeltaLine:
         assert 'RangeToken' in rep
 
 
+def test_lowercase_layer_in_geo_line():
+    lower = GeoDeltaLine('O l(2) z = -0.1 0.1 0.05')
+    upper = GeoDeltaLine('O L(2) z = -0.1 0.1 0.05')
+    assert lower.targets == upper.targets
+    assert lower.targets[0].layers == (2,)
+
+
 def test_geo_single_value_is_invalid():
     with pytest.raises(DisplacementsSyntaxError):
         GeoDeltaLine('O 1 z = 0.1')
