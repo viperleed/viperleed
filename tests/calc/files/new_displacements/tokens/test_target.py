@@ -64,7 +64,10 @@ def test_parse_valid_targets(
         '[1 0 0'
         # layer without label
         'L(1)',
-        # wrongly formatted layer
+        # non-integer in numeric list
+        'A one two',
+        # malformed layer spec
+        'A L()',
     ],
 )
 def test_invalid_target_raises(raw):
@@ -114,15 +117,6 @@ def test_selection_regex_matching():
     assert regex.match('A1')
     assert regex.match('ABCXYZ')
     assert not regex.match('B')
-
-
-def test_invalid_number_format_raises():
-    with pytest.raises(TargetingError):
-        # non-integer in numeric list
-        TargetToken('A one two')
-    with pytest.raises(TargetingError):
-        # malformed layer spec
-        TargetToken('A L()')
 
 
 def test_generate_label_match_regex_wildcards():
