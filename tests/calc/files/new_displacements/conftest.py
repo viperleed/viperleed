@@ -39,15 +39,6 @@ _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
 DISPLACEMENTS_FILES = tuple(
     _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
 )
-_NO_SEARCH_HEADER_XFAIL = pytest.mark.xfail(
-    reason="A file without '== SEARCH' (implicit search block) is not "
-           "yet supported",
-)
-_SUPPORTED_DISPLACEMENTS_FILES = tuple(
-    pytest.param(p, marks=_NO_SEARCH_HEADER_XFAIL)
-    if p.name == 'DISPLACEMENTS_no_header' else p
-    for p in DISPLACEMENTS_FILES
-)
 
 
 def displacements_file_id(file_path):
@@ -59,7 +50,7 @@ def displacements_file_id(file_path):
 @fixture
 @pytest.mark.parametrize(
     'file_path',
-    _SUPPORTED_DISPLACEMENTS_FILES,
+    DISPLACEMENTS_FILES,
     ids=displacements_file_id,
 )
 def displacements_file_path(file_path):

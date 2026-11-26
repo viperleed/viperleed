@@ -165,6 +165,27 @@ def _search_labels(df):
     return [b.label for b in df.descendants if isinstance(b, SearchBlock)]
 
 
+def test_read_implicit_search_block(tmp_path):
+    """Check that mode blocks lacking '== SEARCH' make a search block."""
+    implicit = _read_text(_MODES, tmp_path)
+    explicit = _read_text('== SEARCH\n' + _MODES, tmp_path)
+    assert str(implicit) == str(explicit)
+    assert len(implicit.children) == 1
+    assert isinstance(implicit.children[0], SearchBlock)
+
+
+def test_read_implicit_then_explicit_search_block(tmp_path):
+    """Check that '== SEARCH' after mode lines starts a new block."""
+    df = _read_text(_MODES + _SEARCH, tmp_path)
+    assert _search_labels(df) == ['search_1', 'a']
+
+
+def test_read_implicit_search_block_after_offsets(tmp_path):
+    """Check that mode blocks right after OFFSETS are a search block."""
+    df = _read_text(_OFFSETS + _MODES, tmp_path)
+    assert _search_labels(df) == ['search_1']
+
+
 def test_read_unnamed_search_blocks(tmp_path):
     """Check that unnamed '== SEARCH' blocks are distinct and named."""
     df = _read_text(

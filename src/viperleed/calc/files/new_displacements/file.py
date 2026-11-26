@@ -5,6 +5,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-04'
 __license__ = 'GPLv3+'
 
+import itertools
 import logging
 
 from anytree import NodeMixin, PreOrderIter, RenderTree
@@ -15,6 +16,7 @@ from .errors import (
     DisplacementsSyntaxError,
     OffsetsNotAtBeginningError,
 )
+from .lines import ModeHeaderLine, SearchHeaderLine
 from .reader import DisplacementsReader
 from .segments import LoopBlock, OffsetsBlock, SearchBlock
 
@@ -112,6 +114,18 @@ class DisplacementsFile(NodeMixin):
                     header_line = next(reader)
                 except StopIteration:
                     break
+                if isinstance(header_line, ModeHeaderLine):
+                    # Mode blocks before the first search header form
+                    # an implicit search block
+                    if self._has_search_blocks():
+                        msg = (
+                            f'Line "{header_line}" is not inside a search '
+                            'block. Start a new one with '
+                            '"== SEARCH <label>" before it.'
+                        )
+                        raise DisplacementsSyntaxError(msg)
+                    reader = itertools.chain([header_line], reader)
+                    header_line = SearchHeaderLine('== SEARCH')
                 for segment_class in TOP_LEVEL_SEGMENTS:
                     if not segment_class.is_my_header_line(header_line):
                         continue
@@ -127,6 +141,10 @@ class DisplacementsFile(NodeMixin):
         self._name_unnamed_search_blocks()
         self._validate()
         logger.info('DISPLACEMENTS file read successfully using new parser.')
+
+    def _has_search_blocks(self):
+        """Return whether any search block has been read so far."""
+        return any(isinstance(b, SearchBlock) for b in self.descendants)
 
     def _name_unnamed_search_blocks(self):
         """Give blocks without a label the name search_<position>."""
