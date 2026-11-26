@@ -61,9 +61,10 @@ class DisplacementsFile(NodeMixin):
             raise ValueError('File has not been read yet. Call read() first.')
 
     def reset_iterator(self):
-        """
-        Reset to the beginning of the displacement file, e.g. when search
-        repeats after a new reference calculation.
+        """Reset to the beginning of the DISPLACEMENTS file.
+
+        This is needed, e.g., when the search repeats after a new
+        reference calculation.
         """
         self._child_id = 0
         for child in self.children:
