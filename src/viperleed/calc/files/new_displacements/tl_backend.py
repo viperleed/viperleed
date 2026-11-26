@@ -39,8 +39,8 @@ class TensorLEEDBackend(ABC):
             msg = f"{cls.__name__} must define a class attribute 'name'."
             raise TypeError(msg)
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def replace_search_block(cls, search_block):
         """Check if the backend can handle the given search block.
 
