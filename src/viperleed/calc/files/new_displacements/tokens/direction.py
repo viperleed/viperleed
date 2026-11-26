@@ -171,6 +171,15 @@ class CartesianDirectionToken(DirectionToken):
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return np.array(vecs), len(vecs)
 
+    @classmethod
+    def _from_vectors(cls, direction_str, vectors_xyz):
+        """Return a token for already orthonormal `vectors_xyz`."""
+        token = cls.__new__(cls)
+        token.direction_str = direction_str
+        token._vectors = np.asarray(vectors_xyz, dtype=float)
+        token.dof = len(token._vectors)
+        return token
+
     @staticmethod
     def _get_basis_vector(label):
         return {
@@ -209,7 +218,7 @@ class FractionalDirectionToken(DirectionToken):
         'i' and 'j' may be floating-point numbers.
 
     Cartesian vectors are only available once the unit cell is known,
-    via `get_vectors_xyz` and `get_vectors_zxy`.
+    via `to_cartesian`.
 
     Parameters
     ----------
@@ -254,8 +263,8 @@ class FractionalDirectionToken(DirectionToken):
             f'dof={self.dof})'
         )
 
-    def get_vectors_xyz(self, ab_cell):
-        """Return Cartesian vectors spanning the direction, xyz order.
+    def to_cartesian(self, ab_cell):
+        """Return the Cartesian direction token for a given unit cell.
 
         Parameters
         ----------
@@ -265,22 +274,21 @@ class FractionalDirectionToken(DirectionToken):
 
         Returns
         -------
-        vectors : ndarray, shape (dof, 3)
-            Orthonormal vectors spanning the direction space, in the
-            xyz convention. For a 1D direction 'ab[i j]', this is the
-            normalized i*a + j*b.
+        CartesianDirectionToken
+            The same direction in Cartesian coordinates. Its
+            `vectors_xyz` are orthonormal vectors spanning the
+            direction space: for a 1D direction 'ab[i j]', the
+            normalized i*a + j*b; for the 'ab' plane, the first
+            vector is along a.
         """
         in_plane = self.components @ np.asarray(ab_cell, dtype=float).T
         vectors = np.zeros((self.dof, 3))
         vectors[:, :2] = _orthonormalize(in_plane)
-        return vectors
-
-    def get_vectors_zxy(self, ab_cell):
-        """Return Cartesian vectors in zxy (LEED) convention.
-
-        See `get_vectors_xyz` for the meaning of `ab_cell`.
-        """
-        return _xyz_to_zxy(self.get_vectors_xyz(ab_cell))
+        # pylint: disable-next=protected-access  # Same module
+        return CartesianDirectionToken._from_vectors(
+            self.direction_str,
+            vectors,
+        )
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)

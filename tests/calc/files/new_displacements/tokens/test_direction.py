@@ -181,8 +181,9 @@ class TestFractional:
         assert token.components[0] == pytest.approx(expected)
 
     _hex_ab_cell = np.array([[2.77, -1.385], [0, 2.399]])  # a, b columns
+    _a_direction = (1, 0, 0)  # a is along x
 
-    @pytest.mark.parametrize('comps', [(1, 2), (1, 0), (0, 1), (2, -1)])
+    @parametrize(comps=((1, 2), (1, 0), (0, 1), (2, -1)))
     def test_hexagonal_matches_old_reader(self, comps):
         """Check the Cartesian vector against the old reader."""
         token = FractionalDirectionToken(f'ab[{comps[0]} {comps[1]}]')
@@ -190,21 +191,42 @@ class TestFractional:
         abst = self._hex_ab_cell.T
         old = comps[0]*abst[0] + comps[1]*abst[1]
         old = old / np.linalg.norm(old)
-        vectors = token.get_vectors_xyz(self._hex_ab_cell)
-        assert vectors.shape == (1, 3)
-        assert vectors[0] == pytest.approx([*old, 0])
-        assert token.get_vectors_zxy(self._hex_ab_cell)[0] == pytest.approx(
-            [0, *old]
-        )
+        cartesian = token.to_cartesian(self._hex_ab_cell)
+        assert isinstance(cartesian, CartesianDirectionToken)
+        assert cartesian.dof == 1
+        assert cartesian.vectors_xyz.shape == (1, 3)
+        assert cartesian.vectors_xyz[0] == pytest.approx([*old, 0])
+        assert cartesian.vectors_zxy[0] == pytest.approx([0, *old])
 
-    def test_plane_vectors(self):
-        """Check that 'ab' gives an orthonormal basis of the plane."""
-        vectors = FractionalDirectionToken('ab').get_vectors_xyz(
+    def test_single_vector_along_a(self):
+        """Check that 'a' gives the normalized a vector."""
+        cartesian = FractionalDirectionToken('a').to_cartesian(
             self._hex_ab_cell
         )
+        assert cartesian.dof == 1
+        assert cartesian.vectors_xyz[0] == pytest.approx(self._a_direction)
+
+    def test_plane_vectors(self):
+        """Check that 'ab' gives an orthonormal basis, first along a."""
+        cartesian = FractionalDirectionToken('ab').to_cartesian(
+            self._hex_ab_cell
+        )
+        vectors = cartesian.vectors_xyz
+        assert isinstance(cartesian, CartesianDirectionToken)
+        assert cartesian.dof == 2
         assert vectors.shape == (2, 3)
         assert vectors @ vectors.T == pytest.approx(np.eye(2))
         assert vectors[:, 2] == pytest.approx([0, 0])
+        assert vectors[0] == pytest.approx(self._a_direction)
+
+    def test_plane_equals_cartesian_plane(self):
+        """Check that 'ab' spans the same plane as 'xy'."""
+        cartesian = FractionalDirectionToken('ab').to_cartesian(
+            self._hex_ab_cell
+        )
+        xy_plane = CartesianDirectionToken('xy').vectors_xyz
+        projector = cartesian.vectors_xyz.T @ cartesian.vectors_xyz
+        assert projector == pytest.approx(xy_plane.T @ xy_plane)
 
 
 @pytest.mark.parametrize(
