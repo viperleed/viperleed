@@ -70,28 +70,11 @@ class DisplacementsReader(InputFileReader):
         if not stripped_line:
             raise ShouldSkipLineError
 
+        new_header = _read_header(line)
         # loop markers are the only lines that contain no '='
-        try:
-            marker = LoopMarkerLine(line)
-        except DisplacementsSyntaxError:
+        if not isinstance(new_header, LoopMarkerLine):
             # check for invalid or deprecated syntax
             _check_line_generally_valid(stripped_line)
-        else:
-            self._current_section = None
-            return marker
-
-        # check for search headers, loop markers and section headers
-        new_header = None
-        for header in (
-            OffsetsHeaderLine,
-            SearchHeaderLine,
-            LoopMarkerLine,
-            SectionHeaderLine,
-        ):
-            try:
-                new_header = header(line)
-            except DisplacementsSyntaxError:
-                continue
 
         # update current section if a new header is found
         if isinstance(new_header, (LoopMarkerLine, SearchHeaderLine)):
@@ -117,6 +100,21 @@ class DisplacementsReader(InputFileReader):
                 f'"{self._current_section}".'
             )
             raise DisplacementsSyntaxError(msg) from err
+
+
+def _read_header(line):
+    """Return a header or loop marker read from `line`, or None."""
+    for header in (
+        LoopMarkerLine,
+        OffsetsHeaderLine,
+        SearchHeaderLine,
+        SectionHeaderLine,
+    ):
+        try:
+            return header(line)
+        except DisplacementsSyntaxError:
+            continue
+    return None
 
 
 def _check_line_generally_valid(line):
