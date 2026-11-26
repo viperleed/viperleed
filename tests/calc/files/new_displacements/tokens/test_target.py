@@ -40,7 +40,7 @@ from viperleed.calc.files.new_displacements.tokens.target import (
         ('A L(1 4-5 7)', re.compile(r'^A'), None, (1, 4, 5, 7)),
         # wildcard label
         ('* 1-2', re.compile(r'^\w*'), (1, 2), None),
-        # numbers and layers: their union (D-013)
+        # numbers and layers: their union
         ('O 1 3 L(2)', re.compile(r'^O'), (1, 3), (2,)),
         ('O L(1) 5-6', re.compile(r'^O'), (5, 6), (1,)),
         ('A L(1-2) 3', re.compile(r'^A'), (3,), (1, 2)),
