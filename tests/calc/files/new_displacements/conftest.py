@@ -18,14 +18,16 @@ from viperleed.calc.files.new_displacements.lines import (
     SectionHeaderLine,
     VibDeltaLine,
 )
-from viperleed.calc.files.new_displacements.tokens import (
+from viperleed.calc.files.new_displacements.tokens.direction import (
     CartesianDirectionToken,
-    ElementToken,
-    LinearOperationToken,
-    ModeToken,
-    RangeToken,
-    TargetToken,
 )
+from viperleed.calc.files.new_displacements.tokens.element import ElementToken
+from viperleed.calc.files.new_displacements.tokens.linear_operation import (
+    LinearOperationToken,
+)
+from viperleed.calc.files.new_displacements.tokens.mode import ModeToken
+from viperleed.calc.files.new_displacements.tokens.range_ import RangeToken
+from viperleed.calc.files.new_displacements.tokens.target import TargetToken
 
 from ....helpers import TEST_DATA
 
