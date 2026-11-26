@@ -149,6 +149,33 @@ def test_reset_iterator(displacements_file_path):
     assert _exhaust(df) == first_pass
 
 
+_MODES = '= GEO_DELTA\n    Cu_surf z = -0.1 0.1 0.05\n'
+
+
+def _read_text(contents, tmp_path):
+    """Return a DisplacementsFile read from a file with `contents`."""
+    path = tmp_path / 'DISPLACEMENTS'
+    path.write_text(contents)
+    df = DisplacementsFile()
+    df.read(path)
+    return df
+
+
+def _search_labels(df):
+    return [b.label for b in df.descendants if isinstance(b, SearchBlock)]
+
+
+def test_read_unnamed_search_blocks(tmp_path):
+    """Check that unnamed '== SEARCH' blocks are distinct and named."""
+    df = _read_text(
+        '== SEARCH\n' + _MODES + '== SEARCH\n' + _MODES,
+        tmp_path,
+    )
+    first, second = df.children
+    assert first is not second
+    assert _search_labels(df) == ['search_1', 'search_2']
+
+
 @parametrize(
     'line',
     (ModeHeaderLine('= GEO_DELTA'), OffsetsHeaderLine('= OFFSETS')),

@@ -33,7 +33,7 @@ from viperleed.calc.files.new_displacements.tokens.total_occupation import (
 )
 
 SEARCH_HEADER_PATTERN = re.compile(
-    r'^==\s+(?i:search)\s+(?P<label>.*)$', re.IGNORECASE
+    r'^==\s+(?i:search)(?:\s+(?P<label>.*))?$', re.IGNORECASE
 )
 MODE_HEADER_PATTERN = re.compile(
     r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$',
@@ -110,7 +110,8 @@ class SearchHeaderLine(HeaderLine):
 
     The search header line is of the form:
         == SEARCH <label>
-    where <label> is a string that identifies the search block.
+    where <label> is a string that identifies the search block. The
+    label is optional: if missing, `label` is an empty string.
     """
 
     def __init__(self, line):
@@ -119,7 +120,7 @@ class SearchHeaderLine(HeaderLine):
         if not match:
             msg = f'Invalid search header line: "{line}".'
             raise DisplacementsSyntaxError(msg)
-        self.label = match['label'].strip()
+        self.label = (match['label'] or '').strip()
 
     def __str__(self):
         """Return the string representation of the search header."""

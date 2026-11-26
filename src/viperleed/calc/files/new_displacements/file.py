@@ -7,7 +7,7 @@ __license__ = 'GPLv3+'
 
 import logging
 
-from anytree import NodeMixin, RenderTree
+from anytree import NodeMixin, PreOrderIter, RenderTree
 from anytree.render import ContStyle
 
 from .errors import (
@@ -124,8 +124,18 @@ class DisplacementsFile(NodeMixin):
                         _unparsable_line_message(header_line)
                     )
 
+        self._name_unnamed_search_blocks()
         self._validate()
         logger.info('DISPLACEMENTS file read successfully using new parser.')
+
+    def _name_unnamed_search_blocks(self):
+        """Give blocks without a label the name search_<position>."""
+        search_blocks = (
+            b for b in PreOrderIter(self) if isinstance(b, SearchBlock)
+        )
+        for position, block in enumerate(search_blocks, start=1):
+            if not block.label:
+                block.label = f'search_{position}'
 
     def _validate(self):
         """Validate the file structure."""
