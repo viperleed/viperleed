@@ -12,19 +12,21 @@ import subprocess
 
 import pytest
 
+from importlib import import_module
+from importlib.util import find_spec
+
+import pytest
+
 from viperleed.calc.files import vibrocc
+from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.symmetry import enforceSymmetry
 from viperleed.calc.symmetry import findSymmetry
 from viperleed.calc.vlj import search
 
-viperleed_jax = pytest.importorskip('viperleed_jax')
-
-# pylint: disable=wrong-import-position,wrong-import-order
-# The plugin is optional: import it only after the skip above
-from viperleed.calc.files.new_displacements.file import DisplacementsFile
-from viperleed_jax.from_objects import setup_tl_parameter_space
-from viperleed_jax.transformation_tree import tree
-# pylint: enable=wrong-import-position,wrong-import-order
+# The plugin is optional, and importing it swaps the numerical backend
+# of the R-factor library: import it only inside the tests that need it
+pytestmark = pytest.mark.skipif(find_spec('viperleed_jax') is None,
+                                reason='viperleed_jax plugin not installed')
 
 _DISPLACEMENTS = '''\
 == SEARCH z
@@ -32,6 +34,12 @@ _DISPLACEMENTS = '''\
 = GEO_DELTA
 Ag L(1-4)   z = -0.2 0.2 0.01
 '''
+
+
+@pytest.fixture(name='tree')
+def fixture_tree():
+    """Return the plugin's module with the parameter-space tree."""
+    return import_module('viperleed_jax.transformation_tree.tree')
 
 
 @pytest.fixture(name='ag100_parameter_space')
@@ -43,7 +51,8 @@ def fixture_ag100_parameter_space(ag100, data_path, tmp_path):
     slab.full_update(rpars)
     findSymmetry(slab, rpars)
     enforceSymmetry(slab, rpars)
-    parameter_space = setup_tl_parameter_space(slab, rpars)
+    from_objects = import_module('viperleed_jax.from_objects')
+    parameter_space = from_objects.setup_tl_parameter_space(slab, rpars)
     displacements = tmp_path / 'DISPLACEMENTS'
     displacements.write_text(_DISPLACEMENTS)
     disp_file = DisplacementsFile()
@@ -55,7 +64,7 @@ def fixture_ag100_parameter_space(ag100, data_path, tmp_path):
 class TestExportParameterSpace:
     """Tests for the graphical export of the plugin's ParameterSpace."""
 
-    def test_export_called(self, ag100_parameter_space, monkeypatch):
+    def test_export_called(self, ag100_parameter_space, tree, monkeypatch):
         """Check that the plugin's export writes the expected file."""
         written = []
         monkeypatch.setattr(tree.UniqueDotExporter, 'to_picture',
@@ -69,7 +78,7 @@ class TestExportParameterSpace:
         }
 
     @pytest.mark.parametrize('error', _dot_errors.values(), ids=_dot_errors)
-    def test_dot_failure_warns(self, error, ag100_parameter_space,
+    def test_dot_failure_warns(self, error, ag100_parameter_space, tree,
                                monkeypatch, caplog):
         """Check that a failure of the `dot` tool only logs a warning."""
         def _fail(*_):
