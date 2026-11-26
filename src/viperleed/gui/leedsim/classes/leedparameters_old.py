@@ -1,17 +1,16 @@
-"""Module leedparameters of viperleed.guilib.leedsim.
-
-========================================
-   ViPErLEED Graphical User Interface
-========================================
-*** module guilib.leedsim.leedparameters ***
-
-Created: 2021-01-23
-Author: Michele Riva
+"""Module leedparameters of viperleed.gui.leedsim.
 
 This module contains the definition of the LEEDParameters class and
 LEEDParametersList, that fully represent a viperleed.LEEDPattern and
 viperleed.LEEDPatternList.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2021-01-23'
+__license__ = 'GPLv3+'
 
 from collections.abc import MutableMapping, MutableSequence
 from configparser import ConfigParser
