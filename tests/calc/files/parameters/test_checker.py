@@ -145,22 +145,21 @@ class TestNCoresChecked:
 class TestBackendSearchRunSegments:
     """Check that RUN is cleaned up for the ViPErLEED-JAX search backend."""
 
-    _deltas_msg = 'Delta-amplitude calculations are not supported'
+    _cases = {
+        # (backend, expected RUN, warns about deltas)
+        'vlj removes deltas': (SearchBackend.VLJ, [0, 1, 3], True),
+        'tensorleed unchanged': (SearchBackend.TENSERLEED, [0, 1, 2, 3],
+                                 False),
+        }
 
-    def test_vlj_removes_deltas(self, checker, rpars_with_attrs, caplog):
-        """Check that delta-amplitude segments are removed with a warning."""
-        rpars = rpars_with_attrs(BACKEND={'search': SearchBackend.VLJ},
+    @pytest.mark.parametrize('backend,expect_run,warns',
+                             _cases.values(), ids=_cases)
+    def test_delta_segments(self, backend, expect_run, warns,
+                            checker, rpars_with_attrs, caplog):
+        """Check that only the vlj backend removes delta segments."""
+        rpars = rpars_with_attrs(BACKEND={'search': backend},
                                  RUN=[0, 1, 2, 3])
         checker.check_parameter_conflicts(rpars)
-        assert rpars.RUN == [0, 1, 3]
-        assert self._deltas_msg in caplog.text
-
-    def test_tensorleed_unchanged(self, checker, rpars_with_attrs, caplog):
-        """Check that RUN is left alone for the TensErLEED backend."""
-        rpars = rpars_with_attrs(
-            BACKEND={'search': SearchBackend.TENSERLEED},
-            RUN=[0, 1, 2, 3],
-            )
-        checker.check_parameter_conflicts(rpars)
-        assert rpars.RUN == [0, 1, 2, 3]
-        assert self._deltas_msg not in caplog.text
+        assert rpars.RUN == expect_run
+        msg = 'Delta-amplitude calculations are not supported'
+        assert (msg in caplog.text) == warns
