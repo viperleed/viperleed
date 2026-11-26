@@ -125,7 +125,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 
     @abstractmethod
     def _belongs_to_me(self, line):
-        """Return whether `line` is a header for this segment."""
+        """Return whether `line` is a content line of this segment."""
 
 
 class LineContainer(DisplacementsSegmentABC):
