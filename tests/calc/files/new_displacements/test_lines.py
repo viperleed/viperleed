@@ -5,6 +5,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-04-10'
 __license__ = 'GPLv3+'
 
+import re
+
 import numpy as np
 import pytest
 from pytest_cases import parametrize
@@ -574,8 +576,30 @@ class TestConstraintLine:
         assert con.link_target == TargetToken('O 2')
 
     @pytest.mark.parametrize('mode', ('geo', 'vib', 'occ'))
-    def test_ind_is_accepted(self, mode):
-        ConstraintLine(f'{mode} O 1 = ind(2)')
+    @pytest.mark.parametrize('rhs', ('ind(2)', 'IND(2)', 'Ind( 2 )'))
+    def test_fixed_index(self, mode, rhs):
+        con = ConstraintLine(f'{mode} O 1 = {rhs}')
+        assert con.fixed_index == 2
+        assert con.link_target is None
+        assert con.linear_operation is None
+        assert con.fixed_value is None
+        assert con.fixed_element is None
+        assert 'ind(2)' in str(con)
+
+    @pytest.mark.parametrize(
+        'rhs',
+        ('ind()', 'ind(x)', 'ind(0)', 'ind(-1)', 'ind(1.5)', 'ind(2) 3'),
+    )
+    def test_invalid_fixed_index(self, rhs):
+        line = f'geo O 1 = {rhs}'
+        with pytest.raises(DisplacementsSyntaxError, match=re.escape(line)):
+            ConstraintLine(line)
+
+    @pytest.mark.parametrize(
+        'line', ('geo O 1 = O 2', 'occ O 1 = O 0.8', 'vib O 1 = 0.1')
+    )
+    def test_other_forms_have_no_fixed_index(self, line):
+        assert ConstraintLine(line).fixed_index is None
 
     def test_offset_in_constrain_line(self):
         with pytest.raises(DisplacementsSyntaxError,

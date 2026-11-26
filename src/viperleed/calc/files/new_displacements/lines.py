@@ -545,8 +545,19 @@ class ConstraintLine(ParsedLine):
     if it is a valid target (e.g., "O 2"), and as a fixed value
     otherwise (e.g., "O 0.8").
 
+    A parameter can also be constrained to a given index of its
+    displacement range with
+        <mode> <target> [, <target> ...] = ind(<index>)
+    (case-insensitive) for all modes. <index> is a positive integer,
+    counted from 1 (i.e., ind(1) is the first value of the range). For
+    this form, `link_target`, `linear_operation`, `fixed_value` and
+    `fixed_element` are all None.
+
     Attributes
     ----------
+    fixed_index : int or None
+        The 1-based index of the displacement range to which the
+        parameter is constrained. None for all other forms.
     fixed_value : float or None
         The value at which the parameter is frozen.
     fixed_element : ElementToken or None
@@ -597,6 +608,7 @@ class ConstraintLine(ParsedLine):
     def _treat_rhs(self):
         self.fixed_value = None
         self.fixed_element = None
+        self.fixed_index = None
 
         # check for an 'offset' tag, which CONSTRAIN never supported
         if 'offset' in self._rhs.lower():
@@ -634,11 +646,30 @@ class ConstraintLine(ParsedLine):
             self.link_target = None
             return
 
+        if self._rhs.lower().strip().startswith('ind('):
+            self._treat_fixed_index()
+            return
+
         # A number is never a target, but a '-' makes it look like a label
         if self._treat_fixed_value(numeric_only=True):
             return
 
         self._treat_link()
+
+    def _treat_fixed_index(self):
+        """Read the rhs as ind(<index>) with a positive integer index."""
+        match = re.fullmatch(
+            r'ind\(\s*(\d+)\s*\)', self._rhs.lower().strip()
+        )
+        if not match or int(match.group(1)) < 1:
+            msg = (
+                f'Invalid index constraint in line "{self.raw_line}". '
+                'Expected ind(<n>) with n a positive integer.'
+            )
+            raise DisplacementsSyntaxError(msg)
+        self.fixed_index = int(match.group(1))
+        self.link_target = None
+        self.linear_operation = None
 
     def _treat_link(self):
         """Read the rhs as [<linear_operation>] <target> or a fixed value."""
@@ -713,6 +744,8 @@ class ConstraintLine(ParsedLine):
         return ', '.join(str(t) for t in self.targets)
 
     def _format_rhs_str(self):
+        if self.fixed_index is not None:
+            return f'ind({self.fixed_index})'
         if self.fixed_value is not None:
             if self.fixed_element is None:
                 return f'{self.fixed_value}'
