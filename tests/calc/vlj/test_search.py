@@ -7,13 +7,10 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-26'
 __license__ = 'GPLv3+'
 
-import logging
-import subprocess
-
-import pytest
-
 from importlib import import_module
 from importlib.util import find_spec
+import logging
+import subprocess
 
 import pytest
 

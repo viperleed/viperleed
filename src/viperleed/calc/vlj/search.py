@@ -1,7 +1,7 @@
 """Module viperleed.calc.vlj.search."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-04-17'
 __license__ = 'GPLv3+'
 
