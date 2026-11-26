@@ -29,25 +29,29 @@ class DirectionTokenParserError(TokenParserError):
 
 
 class DirectionToken(DisplacementsFileToken):
-    """Abstract base class for direction tokens in the DISPLACEMENTS file.
+    """Abstract base class for direction tokens in DISPLACEMENTS.
 
-    This class defines the interface for direction tokens, which are used to
-    specify the allowed directions of movements or constraints for geometric
-    displacements.
+    This class defines the interface for direction tokens, which are
+    used to specify the allowed directions of movements or constraints
+    for geometric displacements.
 
-    We do not yet support parsing of azimuthal, and radial directions, as well
-    as fractional directions (e.g., 'a', 'b', 'c'). These are supported in the
-    old viperleed.calc parser. They will need to be added here prior to using
-    this parser for the TensErLEED backend.
-    Comment by @michele-riva:
-    Among the ones we currently support, we are missing in here: ab[i j] (and
-    its [i j] equivalent), azi(ab[i j]) (and its equivalent azi([i j])),
-    azi(xy[k m]), r(ab[i j]) (and its equivalent r([i j])), r(xy[k m]).
+    Supported are Cartesian directions (CartesianDirectionToken: 'x',
+    'xy', 'xyz', 'xy[i j]', 'xyz[i j k]', ...) and fractional ones,
+    in terms of the in-plane unit-cell vectors
+    (FractionalDirectionToken: 'a', 'b', 'ab', 'ab[i j]' and its
+    equivalent '[i j]'). Use make_direction_token to get the right
+    one for a string.
 
-    Others that we should probably consider (see also #413): a, b, c, ab, bc, ac
+    Not yet supported are the azimuthal and radial directions of the
+    old viperleed.calc parser: azi(ab[i j]) (and its equivalent
+    azi([i j])), azi(xy[k m]), r(ab[i j]) (and its equivalent
+    r([i j])), r(xy[k m]). They are needed before this parser can be
+    used for the TensErLEED backend. Directions along the c unit-cell
+    vector ('c', 'ac', 'bc', 'abc') and directions mixing the
+    Cartesian and fractional frames (e.g., 'az') are rejected.
 
-    In addition, we can introduce some syntax leniency and accept also
-    the following:
+    Comment by @michele-riva: we can introduce some syntax leniency and
+    accept also the following:
 
     - various permutations of the letters when displacing in the 2D
       plane (i.e. ba == ab, zy == yz, etc):
@@ -94,8 +98,10 @@ class CartesianDirectionToken(DirectionToken):
         If the direction string is invalid or if the number of components does
         not match the number of directions.
     DirectionTokenParserError
-        If the direction string contains unsupported components like azimuthal
-        or radial directions.
+        If the direction string contains unsupported components like
+        azimuthal or radial directions, or if it is a fractional
+        direction (use FractionalDirectionToken or make_direction_token
+        for those).
     """
 
     def __init__(self, direction_str):
