@@ -549,7 +549,8 @@ class ConstraintLine(ParsedLine):
             # parse the total occupation value
             total_occupation_str = self._rhs[len('total ') :].strip()
 
-            # this is a special case, where the linear operation is
+            # This is a special case: the 'linear operation' is the
+            # total occupation itself, and there is no link target.
             self.linear_operation = TotalOccupationToken(total_occupation_str)
             self.link_target = None
             return
