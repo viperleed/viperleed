@@ -67,6 +67,25 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
         return tuple(self._lines)
 
     def read_lines(self, lines):
+        """Consume lines belonging to this segment from an iterator.
+
+        Lines that belong to this segment, or to one of its
+        subsegments, are collected. Reading stops at the first line
+        that belongs to neither, or when `lines` is exhausted, and
+        the segment is validated.
+
+        Parameters
+        ----------
+        lines : iterator
+            The lines to read. It is consumed up to the first line
+            that does not belong to this segment.
+
+        Returns
+        -------
+        iterator
+            The lines not consumed, starting with the one that ended
+            this segment.
+        """
         while True:
             try:
                 line = next(lines)
