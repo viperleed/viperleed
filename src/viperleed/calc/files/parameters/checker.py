@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 import logging
 import operator
 
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.lib.base import available_cpu_count   # For N_CORES
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.sections.calc_section import CalcSection as Section
@@ -100,7 +101,7 @@ class ParametersChecker:
         amplitude calculations in the RUN parameter and remove them if
         necessary. We also warn the user that this is the case.
         """
-        if self._rpars.BACKEND["search"] != "viperleed-jax":
+        if self._rpars.BACKEND['search'] is not SearchBackend.VLJ:
             # ignore for TensErLEED backend
             return
 

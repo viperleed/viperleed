@@ -11,6 +11,7 @@ import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 
@@ -139,3 +140,27 @@ class TestNCoresChecked:
         checker.check_parameter_conflicts(rpars)
         msg = 'Consider reducing N_CORES'
         assert msg in caplog.text
+
+
+class TestBackendSearchRunSegments:
+    """Check that RUN is cleaned up for the ViPErLEED-JAX search backend."""
+
+    _deltas_msg = 'Delta-amplitude calculations are not supported'
+
+    def test_vlj_removes_deltas(self, checker, rpars_with_attrs, caplog):
+        """Check that delta-amplitude segments are removed with a warning."""
+        rpars = rpars_with_attrs(BACKEND={'search': SearchBackend.VLJ},
+                                 RUN=[0, 1, 2, 3])
+        checker.check_parameter_conflicts(rpars)
+        assert rpars.RUN == [0, 1, 3]
+        assert self._deltas_msg in caplog.text
+
+    def test_tensorleed_unchanged(self, checker, rpars_with_attrs, caplog):
+        """Check that RUN is left alone for the TensErLEED backend."""
+        rpars = rpars_with_attrs(
+            BACKEND={'search': SearchBackend.TENSERLEED},
+            RUN=[0, 1, 2, 3],
+            )
+        checker.check_parameter_conflicts(rpars)
+        assert rpars.RUN == [0, 1, 2, 3]
+        assert self._deltas_msg not in caplog.text
