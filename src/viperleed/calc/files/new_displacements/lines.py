@@ -46,6 +46,10 @@ LOOP_END_PATTERN = re.compile(r'<\s*[/\\]\s*loop\s*>', re.IGNORECASE)
 
 logger = logging.getLogger(__name__)
 
+_OFFSET_KEYWORD = 'offset'
+_MIN_LHS_PARTS_WITH_OFFSET = 2  # targets and the keyword
+_ZERO_OFFSET_WORDS = {'clear', 'original'}
+
 # precompiled direction-at-end regex for separating out the direction token
 _FLOAT_RE = r'-?(?:\d+(?:\.\d*)?|\.\d+)'
 _DIRECTION_BRACKETS_RE = rf'\[\s*{_FLOAT_RE}(?:\s+{_FLOAT_RE})*\s*\]'
@@ -258,12 +262,15 @@ class ParsedLine(ABC):
             If the left-hand side ends with 'offset'.
         """
         lhs_parts = self._lhs.split()
-        if len(lhs_parts) < 2 or lhs_parts[-1].lower() != 'offset':
+        if len(lhs_parts) < _MIN_LHS_PARTS_WITH_OFFSET:
+            return
+        if lhs_parts[-1].lower() != _OFFSET_KEYWORD:
             return
         value = self._rhs.strip()
-        if value.lower() in ('clear', 'original'):
+        if value.lower() in _ZERO_OFFSET_WORDS:
             value = '0'
-        equivalent = f'{mode} {" ".join(lhs_parts[:-1])} = {value}'
+        targets = ' '.join(lhs_parts[:-1])
+        equivalent = f'{mode} {targets} = {value}'
         msg = (
             f'In-line "offset" is not supported: "{self.raw_line}". '
             'Offsets are set in the OFFSETS block. Write '
@@ -628,12 +635,13 @@ class ConstraintLine(ParsedLine):
             return
 
         # A number is never a target, but a '-' makes it look like a label
-        if (
-            self.mode_token.mode is not PerturbationMode.OCC
-            and self._treat_fixed_value()
-        ):
+        if self._treat_fixed_value(numeric_only=True):
             return
 
+        self._treat_link()
+
+    def _treat_link(self):
+        """Read the rhs as [<linear_operation>] <target> or a fixed value."""
         # The default case is to treat it as [<linear_operation>] <target>
         # It's not immediately obvious where to split the tokens since both
         # token types may contain spaces.
@@ -650,7 +658,7 @@ class ConstraintLine(ParsedLine):
                 continue
             break
         else:
-            if self._treat_fixed_value():
+            if self._treat_fixed_value(numeric_only=False):
                 return
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
@@ -670,8 +678,13 @@ class ConstraintLine(ParsedLine):
             else LinearOperationToken.from_array(np.eye(1))
         )
 
-    def _treat_fixed_value(self):
+    def _treat_fixed_value(self, numeric_only):
         """Read the rhs as <value> (geo, vib) or <element> <value> (occ).
+
+        Parameters
+        ----------
+        numeric_only : bool
+            Only consider <value>, i.e., the geo and vib forms.
 
         Returns
         -------
@@ -681,6 +694,8 @@ class ConstraintLine(ParsedLine):
         """
         parts = self._rhs.split()
         is_occ = self.mode_token.mode is PerturbationMode.OCC
+        if is_occ and numeric_only:
+            return False
         if len(parts) != 1 + is_occ:
             return False
         try:
