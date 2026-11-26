@@ -2,10 +2,10 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -31,6 +31,8 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+_LAST_TL_VERSION_ONE_LMAX = Version('1.6')  # Same LMAX at all energies
+_SMALL_LMAX = 6  # Below this, LMAX from PHASESHIFT_EPS is 'small'
 _TENSOR_INPUT_FILES = (
     # These are input/output files of the calculation that are stored
     # inside Tensors_XXX.zip files for purposes of reverting to the
@@ -141,11 +143,11 @@ class RefcalcCompileTask:
         srcpath = sourcedir / 'src'
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
         srcname = next(srcpath.glob('ref-calc*'), None)
-        globalname = srcpath / "GLOBAL"
-        _muftin = self._basedir / "muftin.f"
+        globalname = srcpath / 'GLOBAL'
+        _muftin = self._basedir / 'muftin.f'
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
-            raise RuntimeError(f"Source files missing in {sourcedir}")          # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
+            raise RuntimeError(f'Source files missing in {sourcedir}')          # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
         return lib_tleed, srcname, globalname, muftinname
 
     def copy_source_files_to_local(self):
@@ -435,7 +437,7 @@ def run_refcalc(runtask):
 
 def edit_fin_energy_lmax(runtask):
     """modify FIN: replace the energy range (second line)"""
-    comment, _, rest = runtask.fin.split("\n", maxsplit=2)
+    comment, _, rest = runtask.fin.split('\n', maxsplit=2)
     if runtask.tl_version < Version('1.7.0'):
         eformatter = ff.FortranRecordWriter('3F7.2')
         lj = 24
@@ -447,12 +449,12 @@ def edit_fin_energy_lmax(runtask):
     # now replace LMAX - now makes sure LMAX can be part of directory name
     # this works because even if the directory were to be named LMAX, there is
     #   a timestap after it rather than a \n
-    before_LMAX, after_LMAX = rest.split("   LMAX", maxsplit=1)
+    before_LMAX, after_LMAX = rest.split('   LMAX', maxsplit=1)
     before_LMAX, *_ = before_LMAX.rsplit('\n', maxsplit=1)
     after_LMAX = (str(runtask.comptask.lmax).rjust(3).ljust(45)
-                  + "LMAX" + after_LMAX)
+                  + 'LMAX' + after_LMAX)
     # fin = finparts[0] + "\n" + nl + finparts[1]
-    fin = "\n".join((comment, energy, before_LMAX, after_LMAX))
+    fin = '\n'.join((comment, energy, before_LMAX, after_LMAX))
     return fin
 
 
@@ -466,43 +468,43 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     # delete old refcalc-fd.out if present - not earlier because can be input
     #   for r-factor calculation if no refcalc is executed
     try:
-        os.remove("refcalc-fd.out")
+        os.remove('refcalc-fd.out')
     except FileNotFoundError:
         pass
     try:
         iorefcalc.writeAUXLATGEO(sl, rp)
     except Exception:
-        logger.error("Exception during writeAUXLATGEO: ")
+        logger.error('Exception during writeAUXLATGEO: ')
         raise
     try:
         iorefcalc.writeAUXNONSTRUCT(sl, rp)
     except Exception:
-        logger.error("Exception during writeAUXNONSTRUCT: ")
+        logger.error('Exception during writeAUXNONSTRUCT: ')
         raise
     if rp.TL_VERSION < Version('1.7.3'):
         try:
             beams.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
         except Exception:
-            logger.error("Exception during writeAUXBEAMS: ")
+            logger.error('Exception during writeAUXBEAMS: ')
             raise
     try:
         iorefcalc.writeAUXGEO(sl, rp)
     except Exception:
-        logger.error("Exception during writeAUXGEO: ")
+        logger.error('Exception during writeAUXGEO: ')
         raise
     try:
         fin = iorefcalc.collectFIN(version=rp.TL_VERSION)
     except Exception:
-        logger.error("Exception while trying to collect input for "
-                     "refcalc FIN: ")
+        logger.error('Exception while trying to collect input for '
+                     'refcalc FIN: ')
         raise
     try:
-        with open("refcalc-FIN", "w") as wf:
+        with open('refcalc-FIN', 'w') as wf:
             wf.write(fin)
-        logger.debug("Wrote input for refcalc as file refcalc-FIN.")
+        logger.debug('Wrote input for refcalc as file refcalc-FIN.')
     except Exception:
         logger.error(
-            "Exception while trying to write refcalc-FIN file. ",
+            'Exception while trying to write refcalc-FIN file. ',
             exc_info=True,
             )
         raise  # We need refcalc-FIN for piping to subprocess
@@ -510,119 +512,77 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         try:
             iorefcalc.writeMuftin(rp)
         except Exception:
-            logger.error("Exception during writeMuftin: ")
+            logger.error('Exception during writeMuftin: ')
             raise
-    if rp.SUPPRESS_EXECUTION:
-        logger.warning("SUPPRESS_EXECUTION parameter is on. Reference "
-                       "calculation will not proceed. Stopping...")
-        rp.setHaltingLevel(3)
-        return
-
     energies = np.arange(rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01,         # TODO: use better arange
                          rp.THEO_ENERGIES.step)
-    tl_source = rp.get_tenserleed_directory()
-    tl_path = tl_source.path
     rp.updateCores()
     single_threaded = (rp.N_CORES <= 1)
-    if rp.FORTRAN_COMP[0] == "":
-        try:
-            rp.getFortranComp()
-        except Exception:
-            logger.error("No fortran compiler found, cancelling...")
-            raise RuntimeError("Fortran compile error")
 
     # first, figure out for which LMAX to compile:
-    uses_one_lmax = (
-        single_threaded
-        or rp.LMAX.has_single_value
-        or rp.TL_VERSION <= Version('1.6')
-        )
-    if uses_one_lmax:
-        which_lmax = {rp.LMAX.max,}
-    else:    # find appropriate LMAX per energy
-        ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV)
-                 for (i, ps) in enumerate(rp.phaseshifts)]
-        lmax = {}  # lmax as a function of energy
-        warn_small = True
-        warn_large = True
-        _, _max = rp.get_limits("LMAX")
-        for en in energies:
-            try:
-                ps_ind = [pe[0] for pe in ps_en if pe[1] >= en][0]
-            except IndexError:
-                if ps_en[-1][1] > en and ps_en[-1][1] - en > 1.:
-                    logger.warning(
-                        "No approriate phaseshifts found for {:.2f} eV. Will "
-                        "try highest available phaseshift energy {:.2f} eV "
-                        "instead.".format(en, ps_en[-1][1]))
-                ps_ind = len(rp.phaseshifts) - 1
-            lmax_cands = [1]
-            for site_ps in rp.phaseshifts[ps_ind][1]:
-                try:
-                    lmax_cands.append(max(
-                        [site_ps.index(v) for v in site_ps
-                         if abs(v) > rp.PHASESHIFT_EPS]) + 1)
-                except (IndexError, ValueError):
-                    pass
-            lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
-            if lmax[en] < 6 and warn_small:
-                warn_small = False
-                logger.debug("Found small LMAX value based on PHASESHIFT_EPS "
-                             f"parameter (LMAX = {lmax[en]}, E = {en:.2f} eV)")
-            if lmax[en] > _max:
-                lmax[en] = _max
-                if warn_large:
-                    warn_large = False
-                    logger.info("The LMAX found based on the PHASESHIFT_EPS "
-                                f"parameter is greater than {_max}, which is "
-                                "currently not supported. LMAX was set to "
-                                f"{_max}.")
-        which_lmax = set(lmax.values())
+    lmax = _select_lmax(rp, energies)
+    which_lmax = set(lmax.values())
 
-    # collect compile tasks
-    comp_tasks = []
-    collect_param = ""
+    params = {}
+    collect_param = ''
     for lm in which_lmax:
         try:
-            param = iorefcalc.writePARAM(sl, rp, lmax=lm)
+            params[lm] = iorefcalc.writePARAM(sl, rp, lmax=lm)
         except Exception:
-            logger.error("Exception during writePARAM: ",
+            logger.error('Exception during writePARAM: ',
                          exc_info=rp.is_debug_mode)
             raise
-        comp_tasks.append(
-            RefcalcCompileTask(param, lm, rp.FORTRAN_COMP, tl_path)
-            )
-        collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"
+        collect_param += (f'### PARAM file for LMAX = {lm} ###\n\n'
+                          f'{params[lm]}\n\n')
     try:
-        with open("refcalc-PARAM", "w") as wf:
+        with open('refcalc-PARAM', 'w') as wf:
             wf.write(collect_param)
     except Exception:
         # just for information, can continue
-        logger.warning("Error writing refcalc-PARAM file: ", exc_info=True)
+        logger.warning('Error writing refcalc-PARAM file: ', exc_info=True)
+
+    if rp.SUPPRESS_EXECUTION:
+        logger.warning('SUPPRESS_EXECUTION parameter is on. Reference '
+                       'calculation will not proceed. Stopping...')
+        rp.setHaltingLevel(3)
+        return
+
+    tl_source = rp.get_tenserleed_directory()
+    tl_path = tl_source.path
+    if rp.FORTRAN_COMP[0] == '':
+        try:
+            rp.getFortranComp()
+        except Exception:
+            logger.error('No fortran compiler found, cancelling...')
+            raise RuntimeError('Fortran compile error')
+
+    # collect compile tasks
+    comp_tasks = [RefcalcCompileTask(param, lm, rp.FORTRAN_COMP, tl_path)
+                  for lm, param in params.items()]
 
     # set up log
-    logname = "refcalc-"+rp.timestamp+".log"
+    logname = 'refcalc-'+rp.timestamp+'.log'
     if not single_threaded:
         try:
-            with open(logname, "w") as wf:
+            with open(logname, 'w') as wf:
                 wf.write(
-                    "Logs from multiple reference calculations are "
-                    "collected  here. Their order may not be preserved.\n")
+                    'Logs from multiple reference calculations are '
+                    'collected  here. Their order may not be preserved.\n')
         except Exception:
-            logger.warning("Error creating refcalc log file. This will not "
-                           "affect execution, proceeding...")
+            logger.warning('Error creating refcalc log file. This will not '
+                           'affect execution, proceeding...')
     # set up collection directory
     if not single_threaded:
-        collection_dir = Path("refcalc-out").resolve()
+        collection_dir = Path('refcalc-out').resolve()
         if collection_dir.is_dir():
             try:
                 shutil.rmtree(collection_dir)
             except Exception:
                 logger.warning(
-                    "Failed to delete existing folder "
-                    + os.path.basename(collection_dir) + ". This may cause "
-                    f"old data to end up in the final {DEFAULT_TENSORS}, "
-                    "check results!"
+                    'Failed to delete existing folder '
+                    + os.path.basename(collection_dir) + '. This may cause '
+                    f'old data to end up in the final {DEFAULT_TENSORS}, '
+                    'check results!'
                     )
         collection_dir.mkdir(parents=True, exist_ok=True)
         collection_dir = collection_dir.resolve()  # Use full path
@@ -650,11 +610,11 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         files_to_check = (file for file in comp_tasks[0].get_source_files()
                           if file and 'muftin' not in file.name.lower())
         validate_multiple_files(files_to_check,
-                                logger, "reference calculation",
+                                logger, 'reference calculation',
                                 rp.TL_VERSION)
 
     if single_threaded:
-        logger.info("Compiling fortran files...")
+        logger.info('Compiling fortran files...')
         try:
             r = compile_refcalc(comp_tasks[0])
         except Exception:
@@ -664,19 +624,19 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise
         if r:
             logger.error(r)
-            raise RuntimeError("Error compiling fortran files.")
-        logger.info("Starting reference calculation...\n"
-                    "Refcalc log will be written to file "+logname)
-        logger.info("Reference calculation running without parallelization. "
-                    "Set the N_CORES parameter to speed it up.")
+            raise RuntimeError('Error compiling fortran files.')
+        logger.info('Starting reference calculation...\n'
+                    'Refcalc log will be written to file '+logname)
+        logger.info('Reference calculation running without parallelization. '
+                    'Set the N_CORES parameter to speed it up.')
         r = run_refcalc(ref_tasks[0])
         if r:
             logger.error(r)
-            raise RuntimeError("Error in reference calculation.")
-        logger.info("Reference calculation finished. Processing files...")
+            raise RuntimeError('Error in reference calculation.')
+        logger.info('Reference calculation finished. Processing files...')
     else:
         # compile files
-        logger.info("Compiling fortran files...")
+        logger.info('Compiling fortran files...')
         poolsize = min(len(comp_tasks), rp.N_CORES)
         try:
             parallelization.monitoredPool(rp, poolsize,
@@ -691,13 +651,13 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         if rp.STOP:
             return
         # run executions
-        logger.info("Running reference calculations...")
+        logger.info('Running reference calculations...')
         poolsize = min(len(ref_tasks), rp.N_CORES)
         parallelization.monitoredPool(rp, poolsize, run_refcalc, ref_tasks,
                                       update_from=parent_dir)
         if rp.STOP:
             return
-        logger.info("Reference calculations finished. Processing files...")
+        logger.info('Reference calculations finished. Processing files...')
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in comp_tasks:
@@ -705,7 +665,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         try:
             shutil.rmtree(ct.foldername)
         except Exception:
-            logger.warning("Error deleting refcalc compile folder "
+            logger.warning('Error deleting refcalc compile folder '
                            + ct.foldername)
 
     if not single_threaded:
@@ -715,21 +675,21 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         try:
             shutil.rmtree(collection_dir)
         except Exception:
-            logger.warning("Failed to delete empty directory "
+            logger.warning('Failed to delete empty directory '
                            + os.path.basename(collection_dir))
 
     try:
-        rp.theobeams["refcalc"], rp.refcalc_fdout = iorefcalc.readFdOut()
+        rp.theobeams['refcalc'], rp.refcalc_fdout = iorefcalc.readFdOut()
     except FileNotFoundError:
-        logger.error("fd.out not found after reference calculation. "
-                     "Check settings and refcalc log.")
+        logger.error('fd.out not found after reference calculation. '
+                     'Check settings and refcalc log.')
         raise
     except Exception:
-        logger.error("Error reading fd.out after reference calculation. "
-                     "Check settings and refcalc log.")
+        logger.error('Error reading fd.out after reference calculation. '
+                     'Check settings and refcalc log.')
         raise
-    if rp.theobeams["refcalc"] is None:
-        logger.error("No data found in fd.out. Check if file is empty.")
+    if rp.theobeams['refcalc'] is None:
+        logger.error('No data found in fd.out. Check if file is empty.')
         raise RuntimeError                                                      # TODO: better exception
     # clear oriState for atoms and sites, current state will be new origin
     for at in sl:
@@ -739,69 +699,69 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     # compare beam sets:
     eq = True
     eps = 1e-3
-    if len(rp.ivbeams) != len(rp.theobeams["refcalc"]):
+    if len(rp.ivbeams) != len(rp.theobeams['refcalc']):
         eq = False
-        message = "Number of beams is inconsitent."
+        message = 'Number of beams is inconsitent.'
     else:
-        eq = all([rp.ivbeams[i].isEqual(rp.theobeams["refcalc"][i], eps=eps)
+        eq = all([rp.ivbeams[i].isEqual(rp.theobeams['refcalc'][i], eps=eps)
                   for i in range(0, len(rp.ivbeams))])
-        message = "Beam labels are inconsistent."
+        message = 'Beam labels are inconsistent.'
     if not eq:
-        logger.error("The list of beams read from IVBEAMS is not "
-                     "equivalent to the list of beams in the fd.out file "
-                     "produced by the reference calculation! " + message)
+        logger.error('The list of beams read from IVBEAMS is not '
+                     'equivalent to the list of beams in the fd.out file '
+                     'produced by the reference calculation! ' + message)
         rp.setHaltingLevel(2)
     # check for beams with very low values
     if not subdomain:
         small_intensities = []
-        for b in [b for b in rp.theobeams["refcalc"]
+        for b in [b for b in rp.theobeams['refcalc']
                   if max(b.intens.values()) < 1e-10]:
             small_intensities.append(b.label)
         if small_intensities:
             logger.warning(
-                "Some calculated beams only contain very small intensities. "
-                "This may indicate that the beams do not exist for this "
-                "structure. Consider removing them from IVBEAMS: "
-                + ", ".join(small_intensities))
+                'Some calculated beams only contain very small intensities. '
+                'This may indicate that the beams do not exist for this '
+                'structure. Consider removing them from IVBEAMS: '
+                + ', '.join(small_intensities))
     try:
-        beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
-        theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
+        beams.writeOUTBEAMS(rp.theobeams['refcalc'], filename='THEOBEAMS.csv')
+        theobeams_norm = copy.deepcopy(rp.theobeams['refcalc'])
         for b in theobeams_norm:
             b.normMax()
-        beams.writeOUTBEAMS(theobeams_norm, filename="THEOBEAMS_norm.csv")
+        beams.writeOUTBEAMS(theobeams_norm, filename='THEOBEAMS_norm.csv')
     except Exception:
-        logger.error("Error writing THEOBEAMS after reference "
-                     "calculation: ", exc_info=True)
+        logger.error('Error writing THEOBEAMS after reference '
+                     'calculation: ', exc_info=True)
         rp.setHaltingLevel(2)
-    if len(rp.theobeams["refcalc"][0].complex_amplitude) != 0:
+    if len(rp.theobeams['refcalc'][0].complex_amplitude) != 0:
         try:
-            beams.writeOUTBEAMS(rp.theobeams["refcalc"],
-                                filename="Complex_amplitudes_real.csv",
-                                which="amp_real")
-            beams.writeOUTBEAMS(rp.theobeams["refcalc"],
-                                filename="Complex_amplitudes_imag.csv",
-                                which="amp_imag")
+            beams.writeOUTBEAMS(rp.theobeams['refcalc'],
+                                filename='Complex_amplitudes_real.csv',
+                                which='amp_real')
+            beams.writeOUTBEAMS(rp.theobeams['refcalc'],
+                                filename='Complex_amplitudes_imag.csv',
+                                which='amp_imag')
         except Exception:
-            logger.error("Error writing complex amplitudes after reference "
-                         "calculation.", exc_info=rp.is_debug_mode)
+            logger.error('Error writing complex amplitudes after reference '
+                         'calculation.', exc_info=rp.is_debug_mode)
     try:
-        plot_iv(theobeams_norm, "THEOBEAMS.pdf", formatting=rp.PLOT_IV)
+        plot_iv(theobeams_norm, 'THEOBEAMS.pdf', formatting=rp.PLOT_IV)
     except Exception:
-        logger.warning("Error writing THEOBEAMS.pdf after reference "
-                       "calculation.")
+        logger.warning('Error writing THEOBEAMS.pdf after reference '
+                       'calculation.')
 
     try:
         os.rename('fd.out', 'refcalc-fd.out')
     except Exception:
-        logger.warning("Failed to rename refcalc output file fd.out to "
-                       "refcalc-fd.out")
+        logger.warning('Failed to rename refcalc output file fd.out to '
+                       'refcalc-fd.out')
     try:
         os.rename('amp.out', 'refcalc-amp.out')
     except FileNotFoundError:
         pass
     except Exception:
-        logger.warning("Failed to rename refcalc output file amp.out to "
-                       "refcalc-amp.out")
+        logger.warning('Failed to rename refcalc output file amp.out to '
+                       'refcalc-amp.out')
     if 1 not in rp.TENSOR_OUTPUT:
         return
 
@@ -854,9 +814,9 @@ def _reinitialize_deltas(slab):
             delta_file.unlink()
         except Exception:
             logger.warning(
-                "Error deleting old Delta file in work directory. This may "
-                "cause the delta file to incorrectly be labelled as belonging "
-                "with the new set of tensors.")
+                'Error deleting old Delta file in work directory. This may '
+                'cause the delta file to incorrectly be labelled as belonging '
+                'with the new set of tensors.')
 
     # empty atom.current_deltas, reset displacements and constraints
     for at in slab:
@@ -892,26 +852,26 @@ def refcalc_domains(rp):
     """Runs reference calculations for the domains that require them."""
     rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     if not rr:
-        logger.info("Found no domain which requires a reference calculation.")
+        logger.info('Found no domain which requires a reference calculation.')
         return
     # make sure there's a compiler ready, and we know the number of cores:
-    if rp.FORTRAN_COMP[0] == "":
+    if rp.FORTRAN_COMP[0] == '':
         try:
             rp.getFortranComp()
         except Exception:
-            logger.error("No fortran compiler found, cancelling...")
+            logger.error('No fortran compiler found, cancelling...')
             raise
     for dp in rp.domainParams:
         dp.rpars.FORTRAN_COMP = rp.FORTRAN_COMP
     rp.updateCores()  # if number of cores is not defined, try to find it
     rr = [dp for dp in rp.domainParams if dp.refcalc_required]
-    logger.info("Running reference calculations in subfolders for domains: "
-                + ", ".join([d.name for d in rr]))
+    logger.info('Running reference calculations in subfolders for domains: '
+                + ', '.join([d.name for d in rr]))
 
     for dp in rr:
         logger.info(f'Starting reference calculation for {dp}')
         run_refcalc_for_one_domain(dp)
-    logger.info("Domain reference calculations finished.")
+    logger.info('Domain reference calculations finished.')
 
     if len(rr) < len(rp.domainParams):
         return
@@ -920,32 +880,99 @@ def refcalc_domains(rp):
         weights = [rp.searchResultConfig[0][i][0]
                    for i in range(0, len(rp.domainParams))]
         logger.info(
-            "Reference calculations were done for all domains. Getting "
-            "weighted average over domain beams, using weights from last "
-            "search result...")
+            'Reference calculations were done for all domains. Getting '
+            'weighted average over domain beams, using weights from last '
+            'search result...')
     else:
         weights = None
         logger.info(
-            "Reference calculations were done for all domains, but no "
-            "area weights for the different domains are available yet. "
-            "Getting unweighted average over domain beams...")
-    rp.theobeams["refcalc"] = beams.averageBeams([dp.rpars.theobeams["refcalc"]
+            'Reference calculations were done for all domains, but no '
+            'area weights for the different domains are available yet. '
+            'Getting unweighted average over domain beams...')
+    rp.theobeams['refcalc'] = beams.averageBeams([dp.rpars.theobeams['refcalc']
                                                   for dp in rp.domainParams],
                                                  weights=weights)
     try:
-        beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
-        theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
+        beams.writeOUTBEAMS(rp.theobeams['refcalc'], filename='THEOBEAMS.csv')
+        theobeams_norm = copy.deepcopy(rp.theobeams['refcalc'])
         for b in theobeams_norm:
             b.normMax()
-        beams.writeOUTBEAMS(theobeams_norm, filename="THEOBEAMS_norm.csv")
+        beams.writeOUTBEAMS(theobeams_norm, filename='THEOBEAMS_norm.csv')
     except Exception:
-        logger.error("Error writing THEOBEAMS after reference calculation.",
+        logger.error('Error writing THEOBEAMS after reference calculation.',
                      exc_info=rp.is_debug_mode)
     try:
-        rp.superpos_specout = beams.writeFdOut(rp.theobeams["refcalc"],
+        rp.superpos_specout = beams.writeFdOut(rp.theobeams['refcalc'],
                                                rp.beamlist,
-                                               filename="refcalc-fd.out",
+                                               filename='refcalc-fd.out',
                                                header=rp.systemName)
     except Exception:
-        logger.error("Error writing averaged refcalc-fd.out for R-factor "
-                     "calculation.", exc_info=rp.is_debug_mode)
+        logger.error('Error writing averaged refcalc-fd.out for R-factor '
+                     'calculation.', exc_info=rp.is_debug_mode)
+
+
+def _select_lmax(rpars, energies):
+    """Return the LMAX to use at each energy of a reference calculation.
+
+    A single LMAX value, the largest of `rpars.LMAX`, is used if the
+    calculation runs on one core, if `rpars.LMAX` is a single value,
+    or for TensErLEED versions up to 1.6. Otherwise, LMAX is chosen
+    per energy from the phase shifts larger than
+    `rpars.PHASESHIFT_EPS`, and clipped to the range of `rpars.LMAX`
+    and to the largest supported value.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The run parameters. N_CORES must be defined.
+    energies : Sequence
+        The energies (eV) of the reference calculation.
+
+    Returns
+    -------
+    lmax : dict
+        The LMAX value (int) for each of `energies`.
+    """
+    uses_one_lmax = (
+        rpars.N_CORES <= 1
+        or rpars.LMAX.has_single_value
+        or rpars.TL_VERSION <= _LAST_TL_VERSION_ONE_LMAX
+        )
+    if uses_one_lmax:
+        return dict.fromkeys(energies, rpars.LMAX.max)
+    ps_energies = [ps[0]*leedbase.HARTREE_TO_EV for ps in rpars.phaseshifts]
+    lmax = {}
+    warn_small = True
+    warn_large = True
+    _, max_supported = rpars.get_limits('LMAX')
+    for energy in energies:
+        try:
+            ps_ind = next(i for i, ps_energy in enumerate(ps_energies)
+                          if ps_energy >= energy)
+        except StopIteration:
+            if energy - ps_energies[-1] > 1.:
+                logger.warning(
+                    'No appropriate phaseshifts found for %.2f eV. Will '
+                    'try highest available phaseshift energy %.2f eV '
+                    'instead.', energy, ps_energies[-1]
+                    )
+            ps_ind = len(rpars.phaseshifts) - 1
+        lmax_cands = [rpars.LMAX.min]
+        for site_ps in rpars.phaseshifts[ps_ind][1]:
+            lmax_cands.extend(i + 1 for i, v in enumerate(site_ps)
+                              if abs(v) > rpars.PHASESHIFT_EPS)
+        lmax[energy] = min(max(lmax_cands), rpars.LMAX.max)
+        if lmax[energy] < _SMALL_LMAX and warn_small:
+            warn_small = False
+            logger.debug('Found small LMAX value based on PHASESHIFT_EPS '
+                         'parameter (LMAX = %d, E = %.2f eV)',
+                         lmax[energy], energy)
+        if lmax[energy] > max_supported:
+            lmax[energy] = max_supported
+            if warn_large:
+                warn_large = False
+                logger.info('The LMAX found based on the PHASESHIFT_EPS '
+                            'parameter is greater than %d, which is '
+                            'currently not supported. LMAX was set to %d.',
+                            max_supported, max_supported)
+    return lmax

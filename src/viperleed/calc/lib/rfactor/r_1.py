@@ -1,16 +1,16 @@
-"""viperleed.calc.lib.rfactor.r_2."""
+"""Module r_1 of viperleed.calc.lib.rfactor."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
                'Florian Kraushofer (@fkraushofer)',)
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
+from . import utils
 from .groups import group_rfactors
-from .utils import nansum_trapezoid
 
 
-def R_1(
+def r_1(
     v0_imag,
     energy_step,
     energy_grid,
@@ -18,11 +18,16 @@ def R_1(
     data_and_derivatives_1=None,
     data_spline_2=None,
     data_and_derivatives_2=None,
-    shift_2nd_spline=0.0,   # only available if passed as spline
+    shift_2nd_spline=0.0,  # only available if passed as spline
     **kwargs,
-    ):
+):
     """
-    R2 R-factor. Uses two sets of beam data, either passed as splines or as
+    Calculate the R1 R factor.
+
+    The R1 R factor is kept for legacy reasons only. It cannot be
+    selected via the R_FACTOR_TYPE parameter.
+
+    Uses two sets of beam data, either passed as splines or as
     already calculated arrays of intensities.
 
     For each dataset, pass either data_spline or data_and_derivatives, but not
@@ -52,37 +57,44 @@ def R_1(
         Evaluate the 2nd spline on a shifted energy grid. This is meant for
         testing V0r variations. Note that this is NOT available when the 2nd
         dataset is passed as data_and_derivatives.
+
+    Raises
+    ------
+    TypeError
+        If neither data_spline nor data_and_derivatives is passed for
+        either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    if data_and_derivatives_1 is None:
-        if data_spline_1 is None:
-            raise TypeError('R_2 requires either data splines or '
-                            'pre-computed data_and_derivatives arrays.')
-        data_1_intensity = data_spline_1(energy_grid)
-    else:
-        data_1_intensity, _, _ = data_and_derivatives_1
-    # 2nd data also uses shifted grid if spline
-    shifted_grid = energy_grid - shift_2nd_spline
-    if data_and_derivatives_2 is None:
-        if data_spline_2 is None:
-            raise TypeError('R_2 requires either data splines or '
-                            'pre-computed data_and_derivatives arrays.')
-        # evaluate on shifted grid, allowing continuous shifts
-        data_2_intensity = data_spline_2(shifted_grid)
-    else:
-        data_2_intensity, _, _ = data_and_derivatives_2
+    data_1_intensity, *_ = utils.coerce_to_energy_grid(
+        data_and_derivatives_1, data_spline_1, energy_grid, derivs=0
+    )
+    # 2nd data also shifted grid if spline
+    data_2_intensity, *_ = utils.coerce_to_energy_grid(
+        data_and_derivatives_2,
+        data_spline_2,
+        energy_grid - shift_2nd_spline,
+        derivs=0,
+    )
+
+    # all integrals are restricted to the overlap of the two datasets
+    overlap = utils.overlap_mask(data_1_intensity, data_2_intensity)
 
     # calculate normalization for each beam
-    beam_normalization = nansum_trapezoid(
-        data_1_intensity, energy_step, axis=0
-    ) / nansum_trapezoid(data_2_intensity, energy_step, axis=0)
+    beam_normalization = utils.overlap_trapezoid(
+        data_1_intensity, energy_step, overlap, axis=0
+    ) / utils.overlap_trapezoid(
+        data_2_intensity, energy_step, overlap, axis=0
+    )
 
-    numerators = nansum_trapezoid(
-        (data_1_intensity - beam_normalization * data_2_intensity),
+    numerators = utils.overlap_trapezoid(
+        abs(data_1_intensity - beam_normalization * data_2_intensity),
         energy_step,
+        overlap,
         axis=0,
     )
-    denominators = nansum_trapezoid(data_1_intensity**2, energy_step, axis=0)
+    denominators = utils.overlap_trapezoid(
+        data_1_intensity**2, energy_step, overlap, axis=0
+    )
 
     # calculate R-factor with requested grouping
     return group_rfactors(numerators, denominators, **kwargs)

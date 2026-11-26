@@ -7,9 +7,9 @@ The functionality in this module used to be in __main__.py.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-04'
 __license__ = 'GPLv3+'

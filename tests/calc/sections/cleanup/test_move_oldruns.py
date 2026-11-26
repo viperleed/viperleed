@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
@@ -560,11 +560,14 @@ class TestMoveOldruns:
             mock.assert_called_once()
             mock.assert_has_calls((call,))
 
-    def test_implementation_called_domains(self, rpars, run, mocker):
+    def test_implementation_called_domains(self, rpars, run,
+                                           tmp_path, mocker):
         """Check expected calls to the implementation with domains."""
-        # Prepare some fake domains
+        # Prepare some fake domains. Their work folder must exist, as
+        # move_oldruns enters it.
         domain_rp = Rparams()
-        domain_wrk = mocker.MagicMock(spec=Path)
+        domain_wrk = tmp_path / 'domain'
+        domain_wrk.mkdir()
         rpars.domainParams = [
             mocker.MagicMock(rpars=domain_rp, workdir=domain_wrk),
             ]

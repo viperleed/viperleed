@@ -2,9 +2,9 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+    'Alexandra Mia Imre (@alexmiame)',
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
@@ -13,8 +13,10 @@ import os
 
 from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.r_error import R_Error
+from viperleed.calc.classes.r_error import R_TYPES_WITH_VAR_R
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
+from viperleed.calc.files import iorfactor
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
@@ -137,7 +139,7 @@ def errorcalc(sl, rp):
         logger.info("Error calculation: Returning with no output.")
         return
 
-    if str(rp.R_FACTOR_TYPE) not in {'pendry', 'smooth'}:
+    if rp.R_FACTOR_TYPE not in R_TYPES_WITH_VAR_R:
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
                     "and Smooth R-factors.")
@@ -168,6 +170,13 @@ def errorcalc(sl, rp):
     ioerrorcalc.write_errors_summary_csv(summary_csv_content,
                                          summary_fname='Errors_summary.csv')
 
-    # Errors.pdf
-    errors_figs = ioerrorcalc.make_errors_figs(errors, formatting=rp.PLOT_IV)
+    # Errors.pdf, labelled with the R factor actually computed
+    r_factor_type = rp.R_FACTOR_TYPE
+    if rp.R_FACTOR_LEGACY:  # Old TensErLEED versions lack smooth
+        r_factor_type = iorfactor.legacy_r_factor_type(rp)
+    errors_figs = ioerrorcalc.make_errors_figs(
+        errors,
+        r_factor_type=r_factor_type,
+        formatting=rp.PLOT_IV,
+        )
     ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')

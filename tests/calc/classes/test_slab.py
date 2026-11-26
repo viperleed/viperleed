@@ -1,10 +1,10 @@
 """Tests for viperleed.calc.classes.slab."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -24,6 +24,7 @@ from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import errors as err
@@ -37,22 +38,18 @@ from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import SingularMatrixError
 
+from ...helpers import check_draws
+from ...helpers import duplicate_all
 from ...helpers import exclude_tags, not_raises
 from .. import cases_ase, poscar_slabs
 from ..tags import CaseTag as Tag
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
 todo = pytest.mark.skip('To be implemented')
-if_ase = pytest.mark.skipif(
-    not surface_slab._HAS_ASE,  # pylint: disable=protected-access
-    reason='No ASE module'
-    )
 with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
                                           has_tag=Tag.BULK_PROPERTIES)
-with_layers = parametrize_with_cases(
-    'args',
-    cases=CasePOSCARSlabs.case_layer_info_poscar
-    )
+with_layers = parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                                     has_tag=Tag.LAYER_INFO)
 infoless_poscar = parametrize_with_cases(
     'args',
     cases=CasePOSCARSlabs.case_infoless_poscar
@@ -168,7 +165,6 @@ class TestAtlistIsNotList:
         slab.create_layers(rpars)
         self._check_not_list(slab)
 
-    @if_ase
     @parametrize_with_cases('args', cases=cases_ase)
     def test_from_ase(self, args):
         """Check that from_ase does not mess with atlist."""
@@ -377,10 +373,12 @@ class TestBulk3DOperations:
     """Tests for 3D symmetry operations of BulkSlab objects."""
 
     @staticmethod
-    def move_atom(slab, atom_index, distance):
+    def move_atom(slab, atom_index, distance, rng):
         """Move the atom at a given index by distance in a random direction."""
         atom = slab.atlist.get(atom_index)
-        direction = np.random.randn(2)
+        # rng is a seeded generator (see the draws fixture in
+        # tests/conftest.py), so that the outcome is reproducible
+        direction = rng.standard_normal(2)
         direction /= np.linalg.norm(direction)
         atom.cartpos[:2] += distance * direction
         slab.update_fractional_from_cartesian()
@@ -426,16 +424,29 @@ class TestBulk3DOperations:
         glide = SymPlane(np.array([0.25, 0]), ab_cell[1], ab_cell)
         return slab, glide, eps
 
-    @pytest.mark.xfail(reason='Known bug. Will be fixed in better-symmetry',
-                       strict=False)  # Sometimes they succeed
-    @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
+    _seeded_glide_bug = pytest.mark.xfail(
+        reason=('Known bug, fails with some of the seeded directions. '
+                'Will be fixed in better-symmetry'),
+        strict=True,
+        )
+
+    @parametrize(atoms_to_move=(
+        (1,),
+        pytest.param((3,), marks=_seeded_glide_bug),
+        pytest.param((1, 3), marks=_seeded_glide_bug),
+        ))
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
-                                             bulk_slab_with_glide):
+                                             bulk_slab_with_glide, draws):
         """Check identification of bulk glide plane with atoms a bit off."""
         slab, glide, eps = bulk_slab_with_glide
-        for atom_ind in atoms_to_move:
-            self.move_atom(slab, atom_ind, 0.99*eps)
-        assert slab.is_bulk_glide_symmetric(glide, 2, eps)
+
+        def _check(draw):
+            draw_slab, draw_glide = duplicate_all(slab, glide)
+            for atom_ind in atoms_to_move:
+                self.move_atom(draw_slab, atom_ind, 0.99*eps, draw.rng)
+            assert draw_slab.is_bulk_glide_symmetric(draw_glide, 2, eps)
+
+        check_draws(draws, _check)
 
     fe3o4_bulk = poscar_slabs.CaseBulkSlabs.case_fe3o4_bulk
 
@@ -447,35 +458,59 @@ class TestBulk3DOperations:
         glide = SymPlane(np.array([0, 0]), ab_cell[0] + ab_cell[1], ab_cell)
         assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
+    @staticmethod
+    def _check_known_screw_bug(draws, check, reason):
+        """Expect check to fail for some default draws, unless fresh."""
+        if draws.fresh:
+            check_draws(draws, check)
+            return
+        try:
+            check_draws(draws, check)
+        except AssertionError:
+            pytest.xfail(reason)
+        raise AssertionError('XPASS: This test should FAIL unless '
+                             'this is the better-symmetry branch')
+
     @parametrize_with_cases('bulk', cases=fe3o4_bulk)
-    def test_bulk_screw_symmetric(self, bulk, subtests):
+    def test_bulk_screw_symmetric(self, bulk, subtests, draws):
         """Check correct identification of bulk screw axis."""
         slab, rpars, *_ = bulk
-        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': rpars.SYMMETRY_EPS}
+        eps = rpars.SYMMETRY_EPS
+        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': eps}
+        # The moves of the subtests accumulate on the slab of each draw.
+        slabs = {draw.index: duplicate_all(slab)[0] for draw in draws}
+
+        def _move(atom_indices, draw):
+            for atom_ind in atom_indices:
+                self.move_atom(slabs[draw.index], atom_ind, 0.99*eps,
+                               draw.rng)
+
+        def _check_screw(draw):
+            assert slabs[draw.index].is_bulk_screw_symmetric(**kwargs)
+
         with subtests.test('Move atom that is transformed by 4-fold screw'):
             # Atom no. 49 (oxygen) is not on the 4-fold screw
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
-            assert slab.is_bulk_screw_symmetric(**kwargs)
+            for draw in draws:
+                _move((49,), draw)
+            check_draws(draws, _check_screw)
         with subtests.test('Move atom at 4-fold screw'):
             # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
-            try:
-                assert slab.is_bulk_screw_symmetric(**kwargs)
-            except AssertionError:
-                pytest.xfail('Known bug. Will be fixed in better-symmetry')
-            else:
-                raise AssertionError('XPASS: This test should FAIL unless '
-                                     'this is the better-symmetry branch')
+            for draw in draws:
+                _move((33,), draw)
+            self._check_known_screw_bug(
+                draws,
+                _check_screw,
+                'Known bug. Will be fixed in better-symmetry',
+                )
         with subtests.test('Move both atoms'):
-            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
-            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
-            try:
-                assert slab.is_bulk_screw_symmetric(**kwargs)
-            except AssertionError:
-                pytest.xfail('Known bug. Will be fixed in better-symmetry')
-            else:
-                raise AssertionError('XPASS: This test should FAIL unless '
-                                     'this is the better-symmetry branch')
+            for draw in draws:
+                _move((33, 49), draw)
+            self._check_known_screw_bug(
+                draws,
+                _check_screw,
+                'Known bug, fails with some of the seeded directions. '
+                'Will be fixed in better-symmetry',
+                )
 
 
 class TestBulkDetect:
@@ -1177,7 +1212,6 @@ class TestExtraBulk:
             slab.with_extra_bulk_units(rpars, 1)
 
 
-@if_ase
 class TestFromAse:
     """Collection of tests for the from_ase class method."""
 
@@ -1497,7 +1531,8 @@ class TestSlabLayers:
         assert n_atoms_per_layer_after == n_atoms_per_layer_original
         # Check that all atoms are in the unit cell
         eps = 1e-8
-        assert np.all(-eps <= at.pos <= 1 + eps for at in slab)
+        assert all(np.all((-eps <= at.pos) & (at.pos <= 1 + eps))
+                   for at in slab)
 
     @with_layers
     def test_full_update_without_topat_ori_z(self, args):
@@ -1798,6 +1833,21 @@ class TestSuperAndSubCell:
         'not a subcell': (np.diag((2, 2)), ValueError),
         }
 
+    # Transforms whose determinant numpy does not compute exactly
+    inexact_det = {
+        '3x3': np.diag((3, 3)),
+        '9x2': np.diag((9, 2)),
+        'oblique': np.array([[-3, 3], [0, -3]]),
+        }
+
+    @parametrize(transform=inexact_det.values(), ids=inexact_det)
+    def test_subcell_inexact_det(self, transform, ag100):
+        """Check make_subcell for transforms with an inexact numpy det."""
+        slab, rpars, *_ = ag100
+        supercell = slab.make_supercell(transform)
+        subcell = supercell.make_subcell(rpars, transform)
+        assert subcell.n_atoms == slab.n_atoms
+
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
     def test_subcell_invalid(self, matrix, exc, ag100):
         """Check complaints for invalid input to make_subcell."""
@@ -1937,17 +1987,6 @@ class TestUnitCellTransforms:
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
-    @parametrize_with_cases('args', cases=poscar_slabs,
-                            has_tag=Tag.NON_MINIMAL_CELL)
-    def test_ab_cell_minimization(self, args):
-        """Check correct identification of minimal ab cell (by area)."""
-        slab, rpars, info = args
-        ab_slab = slab.ab_cell.T.copy()
-        ab_small = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
-                                            rpars.SYMMETRY_EPS.z)
-        area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
-        assert area_ratio == pytest.approx(info.poscar.n_cells)
-
     _minimal = {'cases': poscar_slabs,
                 'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
                                        Tag.NO_INFO)}
@@ -1958,6 +1997,129 @@ class TestUnitCellReduction:
         slab, rpars, *_ = args
         with pytest.raises(err.AlreadyMinimalError):
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
+
+    _non_minimal = {'cases': poscar_slabs, 'has_tag': Tag.NON_MINIMAL_CELL}
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization(self, args):
+        """Check correct identification of minimal ab cell (by area)."""
+        slab, rpars, info = args
+        ab_slab = slab.ab_cell.T.copy()
+        ab_small = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                            rpars.SYMMETRY_EPS.z)
+        area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
+        assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
+
+    # Position noise much smaller than SYMMETRY_EPS, as for
+    # structures coming from DFT or other programs (Angstrom)
+    position_noise = 1e-5
+
+    @staticmethod
+    def add_position_noise(slab, noise, rng):
+        """Move each atom in-plane by noise, in a random direction."""
+        # rng is a seeded generator (see the draws fixture in
+        # tests/conftest.py), so that the outcome is reproducible
+        for atom in slab:
+            direction = rng.standard_normal(2)
+            direction /= np.linalg.norm(direction)
+            atom.cartpos[:2] += noise * direction
+        slab.update_fractional_from_cartesian()
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization_noisy(self, args, draws):
+        """Check that small position noise does not hinder reduction."""
+        slab, rpars, info = args
+        ab_slab = slab.ab_cell.T.copy()
+
+        def _check(draw):
+            (noisy_slab,) = duplicate_all(slab)
+            self.add_position_noise(noisy_slab, self.position_noise, draw.rng)
+            ab_small = noisy_slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                                      rpars.SYMMETRY_EPS.z)
+            area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
+            assert area_ratio == pytest.approx(info.poscar.n_cells, rel=1e-3)
+
+        check_draws(draws, _check)
+
+    @parametrize_with_cases('args', **_non_minimal)
+    def test_ab_cell_minimization_subcell(self, args):
+        """Check that the minimal ab cell gives a valid subcell.
+
+        This is what INITIALIZATION does when the POSCAR
+        cell is not minimal (to write POSCAR_mincell).
+        """
+        slab, rpars, info = args
+        mincell = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                           rpars.SYMMETRY_EPS.z)
+        transform = slab.ab_cell.T.dot(np.linalg.inv(mincell)).round()
+        subcell = slab.make_subcell(rpars, transform)
+        assert subcell.n_atoms * info.poscar.n_cells == slab.n_atoms
+
+    @parametrize('eps,noise', (
+        (0.1, 1e-5),
+        (0.1, 3e-4),
+        (0.1, 5e-3),   # The 5e-2 tolerance on SUPERLATTICE limits this
+        (0.01, 2e-3),  # eps/5, below the eps/4 limit of the symmetry check
+        ))
+    @parametrize_with_cases('args',
+                            cases=CasePOSCARSlabs.case_poscar_ir111_2rt3)
+    def test_minimal_bulk_ab_cell_noisy(self, args, eps, noise, draws):
+        """Check reduction of a noisy fcc(111) bulk to the 1x1 cell."""
+        slab, rpars, info = args
+        rpars.SYMMETRY_EPS = SymmetryEps(eps)
+
+        def _check(draw):
+            noisy_slab, noisy_rpars = duplicate_all(slab, rpars)
+            self.add_position_noise(noisy_slab, noise, draw.rng)
+            noisy_slab.create_layers(noisy_rpars)
+            noisy_slab.make_bulk_slab(noisy_rpars)
+            noisy_slab.ensure_minimal_bulk_ab_cell(noisy_rpars)
+            superlattice = noisy_rpars.SUPERLATTICE
+            assert (abs(np.linalg.det(superlattice))
+                    == pytest.approx(info.poscar.n_cells))
+
+        check_draws(draws, _check)
+
+    @parametrize('candidate,n_atoms,eps,smaller', (
+        ((2.0, 0.0), 10, 0.1, False),  # Area ratio 2.5
+        ((2.3, 0.0), 10, 0.1, False),  # Ratio 2.17, > r/(2*n_atoms) off
+        ((2.5, 0.0), 10, 0.1, True),   # Area ratio 2
+        # Ratio 3.8: within r/(2*n_atoms), not within 1/(2*n_atoms)
+        ((5/3.8, 0.0), 4, 0.1, True),
+        # Ratio 2 is accepted for errors up to ~1.5*eps along a'
+        ((2.51, 0.0), 4, 0.01, True),
+        ((2.52, 0.0), 4, 0.01, False),
+        ((2.501, 0.0), 4, 0.001, True),
+        ((2.502, 0.0), 4, 0.001, False),
+        # Ratio 4.003 > n_atoms, area below A/n_atoms by over eps**2
+        ((1.249, 0.0), 4, 0.001, True),
+        # Ratios 4.9 and 6.3 round to more than n_atoms
+        ((5/4.9, 0.0), 4, 0.1, False),
+        ((5/6.3, 0.0), 4, 0.1, False),
+        ((5/1.02, 0.0), 4, 0.1, False),  # Ratio 1.02, not a reduction
+        ))
+    def test_minimize_ab_area_integer_ratio(self, candidate, n_atoms, eps,
+                                            smaller):
+        """Check that only cells with integer area ratios are kept."""
+        ab_cell = np.array([[5.0, 0.0], [0.0, 5.0]])
+        # pylint: disable-next=protected-access
+        reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms,
+                                            [np.array(candidate)], eps)
+        assert reduced is smaller
+
+    def test_minimize_ab_area_long_vectors(self):
+        """Check that long candidates do not pass a non-integer ratio.
+
+        For long candidate vectors and a large eps, the area tolerance
+        alone would accept area ratios far from an integer.
+        """
+        ab_cell = np.array([[10.0, 0.0], [0.0, 10.0]])
+        candidates = [np.array([100.0, 1.04])]
+        n_atoms, eps = 20, 5.0
+        # Area ratio 9.62, more than r/(2*n_atoms) off
+        # pylint: disable-next=protected-access
+        reduced, _ = Slab._minimize_ab_area(ab_cell, n_atoms, candidates, eps)
+        assert not reduced
 
 
 class TestVacuumGap:
@@ -1993,7 +2155,6 @@ class TestVacuumGap:
         slab, *_ = args
         self._check_raises(slab, err.WrongVacuumPositionError)
 
-    @if_ase
     def test_no_vacuum_gap(self):
         """Check complaints when atoms are very close to both c=0 and c=1."""
         slab = Slab.from_ase(

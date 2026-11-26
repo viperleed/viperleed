@@ -5,19 +5,21 @@ available in the from_ase module of viperleed.calc.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-02-23'
 __license__ = 'GPLv3+'
 
 from io import StringIO
+import logging
 
 import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
+from viperleed import calc
 from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.constants import DEFAULT_WORK
@@ -38,6 +40,8 @@ from . import cases_ase
 
 
 ASE_DATA = TEST_DATA / 'from_ase'
+# A level that no caller of run_calc uses, to detect any re-setting
+_UNUSED_LEVEL = logging.WARNING + 1
 
 
 def _make_refcalc_ok_transforms():
@@ -349,6 +353,27 @@ def fixture_run_from_ase_initialization(case, tmp_path_factory, request):
     return results, exec_path, ase_atoms
 
 
+@parametrize_with_cases('args', cases=cases_ase)
+def test_calc_logger_unchanged(args, tmp_path):
+    """Ensure the calc logger is as before after run_from_ase."""
+    level_before = calc.LOGGER.level
+    handlers_before = list(calc.LOGGER.handlers)
+    calc.LOGGER.setLevel(_UNUSED_LEVEL)
+    ase_atoms, *_ = args
+    try:
+        vpr_ase.run_from_ase(
+            exec_path=tmp_path,
+            ase_object=ase_atoms,
+            inputs_path=ASE_DATA / 'initialization',  # Fails: no IVBEAMS
+            slab_transforms=vpr_ase.SlabTransform(cut_cell_c_fraction=0.),
+            )
+        level_after = calc.LOGGER.level
+    finally:
+        calc.LOGGER.setLevel(level_before)
+    assert level_after == _UNUSED_LEVEL
+    assert calc.LOGGER.handlers == handlers_before
+
+
 class TestFailingInitialization:
     """Tests for an 'initialization' run that will fail.
 
@@ -483,8 +508,8 @@ class TestSuccessfulRefcalc:
          self.ase_atoms) = run_from_ase_refcalc
 
     @pytest.fixture(autouse=True)
-    @pytest.mark.usefixtures('run_refcalc')
-    def read_theobeams_from_results(self):
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
+    def read_theobeams_from_results(self, run_refcalc):  # noqa: ARG002
         """Store a list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
         # pylint: disable-next=attribute-defined-outside-init
@@ -535,8 +560,8 @@ class TestFailingRefcalc:
          self.ase_atoms) = run_from_ase_refcalc_fails
 
     @pytest.fixture(autouse=True)
-    @pytest.mark.usefixtures('run_refcalc')
-    def read_theobeams_from_results(self):
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
+    def read_theobeams_from_results(self, run_refcalc):  # noqa: ARG002
         """Store an (empty) list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
         # pylint: disable-next=attribute-defined-outside-init

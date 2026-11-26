@@ -1,21 +1,26 @@
 """Tests for the viperleed.calc command-line interface."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import ast
 import inspect
+import logging
 import os
+import subprocess
 import sys
+from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed import calc
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.cli import LOG_VERBOSE
 from viperleed.calc.cli import LOG_VERY_VERBOSE
@@ -37,36 +42,27 @@ from ..helpers import filesystem_from_dict
 from ..helpers import filesystem_to_dict
 
 _MODULE = 'viperleed.calc.cli'
+# A level that no caller of run_calc uses, to detect any re-setting
+_UNUSED_LEVEL = logging.WARNING + 1
 
 
-def test_calc_never_loads_graphics(mocker):
-    """Ensure that 'viperleed calc' does not load graphics-related modules."""
-    mocker.patch('viperleed.gui.detect_graphics.has_pyqt',
-                 return_value=True)
-    cli = ViPErLEEDMain()
-    with pytest.raises(SystemExit):
-        cli(['calc', '--version'])
-    should_not_load = {  # NB: QtCore is acceptable
-        'ViPErLEEDSelectPlugin',
-        'qtw',
-        'qtg',
-        'QtWidgets',
-        'QtGui',
-        }
-    gui_modules = {name: module
-                   for name, module in sys.modules.items()
-                   if 'viperleed.gui' in name}
-    graphics_modules = {}
-    for module_name, module in gui_modules.items():
-        members = dict(inspect.getmembers(module))
-        unexpected = [
-            gui_obj
-            for gui_obj in should_not_load
-            if any(gui_obj in m for m in members)
-            ]
-        if unexpected:
-            graphics_modules[module_name] = unexpected
-    assert not graphics_modules
+@pytest.mark.slow
+def test_calc_never_loads_graphics(repo_root):
+    """Ensure that 'viperleed calc' does not load graphics modules.
+
+    The check runs in a fresh process: in this one, other tests may
+    have loaded graphics modules already.
+    """
+    check = ('from tests.calc.test_cli import _find_graphics_modules; '
+             'print(repr(_find_graphics_modules()))')
+    result = subprocess.run((sys.executable, '-c', check),  # noqa: S603
+                            capture_output=True,
+                            check=False,
+                            cwd=repo_root,
+                            text=True)
+    assert not result.returncode, result.stderr
+    *_, last_line = result.stdout.splitlines()
+    assert not ast.literal_eval(last_line)
 
 
 class TestCalcCliCall:
@@ -129,6 +125,21 @@ class TestCalcCliCall:
         log_file, *others = (f for f in tree_after if f not in tree_before)
         assert not others
         assert log_file.startswith(LOG_PREFIX)
+
+    def test_calc_logger_unchanged(self, tmp_path):
+        """Ensure the calc logger is as before after running the CLI."""
+        level_before = calc.LOGGER.level
+        handlers_before = list(calc.LOGGER.handlers)
+        calc.LOGGER.setLevel(_UNUSED_LEVEL)
+        cli = ViPErLEEDCalcCLI()
+        try:
+            with execute_in_dir(tmp_path):
+                cli([])  # No input files: stops early, runs run_calc
+            level_after = calc.LOGGER.level
+        finally:
+            calc.LOGGER.setLevel(level_before)
+        assert level_after == _UNUSED_LEVEL
+        assert calc.LOGGER.handlers == handlers_before
 
     @parametrize(tree_before=({'history': {}},
                               {'history.info': ''}))
@@ -354,8 +365,11 @@ two/domain_file
         assert copied == expect_copy
         assert not any(s in copied for s in expect_stay)
 
+        # Domains come in the order of the manifest sections, i.e.,
+        # that of expect_copy. The order of copied is the one of the
+        # file system, which is arbitrary.
         expect_domains = [dest/f
-                          for f, contents in copied.items()
+                          for f, contents in expect_copy.items()
                           if contents and isinstance(contents, dict)]
         assert domains == expect_domains
 
@@ -505,6 +519,7 @@ _presets = {  # cli_args: expected_presets
     ('verbose', 'very_verbose'): {'LOG_LEVEL': LOG_VERY_VERBOSE},
     }
 
+
 @parametrize('args,expect', _presets.items())
 def test_verbosity_to_log(args, expect, mocker):
     """Tests for the _verbosity_to_log_level helper."""
@@ -514,3 +529,49 @@ def test_verbosity_to_log(args, expect, mocker):
     presets = {}
     _verbosity_to_log_level(cli_args, presets)
     assert presets == expect
+
+
+def _find_graphics_modules():
+    """Return graphics-related objects loaded by 'viperleed calc'.
+
+    Run this in a fresh process (see test_calc_never_loads_graphics),
+    as other tests may have already loaded graphics modules.
+
+    Returns
+    -------
+    graphics_modules : dict
+        Keys are names of viperleed.gui modules, values the names of
+        the graphics-related objects that they contain. Graphics
+        modules of PyQt5 itself, if imported (from anywhere, e.g., by
+        matplotlib), are listed under the key 'sys.modules'.
+    """
+    with patch('viperleed.gui.detect_graphics.has_pyqt', return_value=True):
+        cli = ViPErLEEDMain()
+        with pytest.raises(SystemExit):
+            cli(['calc', '--version'])
+    should_not_load = {  # NB: QtCore is acceptable
+        'ViPErLEEDSelectPlugin',
+        'qtw',
+        'qtg',
+        'QtWidgets',
+        'QtGui',
+        }
+    gui_modules = {name: module
+                   for name, module in sys.modules.items()
+                   if 'viperleed.gui' in name}
+    graphics_modules = {}
+    for module_name, module in gui_modules.items():
+        members = dict(inspect.getmembers(module))
+        unexpected = [
+            gui_obj
+            for gui_obj in should_not_load
+            if any(gui_obj in m for m in members)
+            ]
+        if unexpected:
+            graphics_modules[module_name] = unexpected
+    pyqt_graphics = [f'PyQt5.{module}'
+                     for module in ('QtGui', 'QtWidgets')
+                     if f'PyQt5.{module}' in sys.modules]
+    if pyqt_graphics:
+        graphics_modules['sys.modules'] = pyqt_graphics
+    return graphics_modules

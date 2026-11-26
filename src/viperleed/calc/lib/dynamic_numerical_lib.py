@@ -1,4 +1,4 @@
-"""viperleed.calc.lib.dynamic_numerical_lib.
+"""Module dynamic_numerical_lib of viperleed.calc.lib.
 
 This module provides dynamic numerical library support, allowing for
 switching between NumPy and JAX for some array computations.
@@ -11,10 +11,17 @@ For example, to use JAX instead of NumPy, you can do:
     from viperleed.calc.lib import dynamic_numerical_lib as dnl
     import jax
     dnl.xp = jax.numpy
+
+This module further provides Numpy-compatible function patches for
+JAX-specific functions such as vmap and stop_gradient.
+
+Note that not all functionality is guaranteed to be fully compatible.
+Scipy splines may be replaced with their JAX-compatible counterparts
+from the interpax package.
 """
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
@@ -34,7 +41,9 @@ PPoly = _SciPPoly
 def stop_gradient(array):
     """Stop gradient calculation of given array.
 
-    This is a no-op when using NumPy as the numerical library.
+    This is a no-op when using NumPy as the numerical library: unlike
+    jax.lax.stop_gradient, it returns `array` itself (not a copy), for
+    any type of `array`.
     When using the R-factor calculation with a numerical library that
     supports automatic differentiation (such as JAX in viperleed-jax),
     this utility function should be patched with a method that stops
@@ -50,32 +59,86 @@ def stop_gradient(array):
 
 
 def bincount(x, weights, length):
-    """Bincount implementation compatible with dynamic numerical libraries.
+    """Return the sum of `weights` for each value in `x`.
 
-    This is a wrapper around `dnl.xp.bincount` to provide a consistent
-    interface across different numerical libraries. Some libraries may
-    use `minlength` instead of `length` as a parameter name.
+    Wrapper around numpy.bincount compatible with JAX argument names.
+    Deviations from jax.numpy.bincount:
+    - `weights` and `length` are required, and the third positional
+      argument is `length`, not `minlength`. There is no `minlength`.
+    - `length` is only a minimum length: values of `x` larger than
+      or equal to `length` extend the output instead of being dropped.
+    - Negative values of `x` raise ValueError instead of being
+      counted as zero.
+
+    Parameters
+    ----------
+    x : array_like of int
+        Non-negative values to count.
+    weights : array_like
+        Weight of each value in `x`, same shape as `x`.
+    length : int
+        Minimum number of bins of the output.
+
+    Returns
+    -------
+    numpy.ndarray
+        Sum of `weights` for each value in `x`, of length
+        max(`length`, max(`x`) + 1).
+
+    Raises
+    ------
+    ValueError
+        If `x` has negative values or is not 1-D, or if `weights`
+        has a different length than `x`.
+    TypeError
+        If `x` is not of integer type.
     """
     return _np.bincount(x, weights=weights, minlength=length)
 
 
-def vmap(func, in_axes=0, out_axis=0):
+def vmap(func, in_axes=0, out_axes=0):
     """Substitute for JAX vmap using NumPy.
+
+    `func` is called once per element along the mapped axis, in a
+    Python loop, and the outputs are stacked. Deviations from jax.vmap:
+    - An int `in_axes` maps only the first positional argument; the
+      others are passed unchanged. (JAX maps all arguments.)
+    - Only a tuple or an int is accepted as `in_axes`: no lists or
+      nested containers (pytrees) of axes. A bare None maps nothing,
+      so calling the wrapped function raises ValueError.
+    - A mapped axis of length zero raises ValueError (from
+      numpy.stack) instead of returning an empty array.
+    - Keyword arguments are never mapped: they are passed unchanged
+      to each call. (JAX maps them along their first axis.)
+    - `out_axes` must be an int. The outputs of `func` are stacked
+      into a single array with numpy.stack, so `func` must return
+      one array (or array-like) of the same shape on each call.
+    - `axis_name`, `axis_size`, `spmd_axis_name` and `sum_match` are
+      not implemented.
 
     Parameters
     ----------
     func : callable
         Function to map.
-    in_axes : int | None | tuple
-        For each positional arg: which axis to map over, or None to broadcast.
-        If an int is given, it applies to the first arg and all others are None.
-    out_axis : int
-        Axis along which to stack outputs.
+    in_axes : int or tuple, optional
+        Axis or axes to map over. If an int, the axis of the first
+        positional argument; the others are not mapped. If a tuple,
+        one entry per positional argument: the axis to map over, or
+        None if that argument is not mapped. At least one argument
+        must be mapped, and all mapped axes must have the same
+        length. Default is 0.
+    out_axes : int, optional
+        Axis of the output along which the results of each call are
+        stacked. Default is 0.
 
     Returns
     -------
     callable
-        Wrapped function that maps `func` over the specified axis.
+        Wrapped function that maps `func` over the specified axes.
+        Calling it raises ValueError if `in_axes` does not match the
+        positional arguments, if no argument is mapped, if the
+        mapped axes have different lengths, or if they have length
+        zero.
     """
 
     def wrapped(*args, **kwargs):
@@ -115,21 +178,32 @@ def vmap(func, in_axes=0, out_axis=0):
                     sliced_args.append(_np.take(a_arr, i, axis=ax))
             outs.append(func(*sliced_args, **kwargs))
 
-        return _np.stack(outs, axis=out_axis)
+        return _np.stack(outs, axis=out_axes)
 
     return wrapped
 
 
 def segment_sum(values, segment_ids, num_segments):
-    """NumPy equivalent of jax.lax.segment_sum.
+    """NumPy equivalent of jax.ops.segment_sum.
+
+    Deviations from jax.ops.segment_sum:
+    - Only 1-D `values` are supported.
+    - `num_segments` is required.
+    - `indices_are_sorted`, `unique_indices`, `bucket_size` and
+      `mode` are not implemented.
+    - Segment ids outside [-`num_segments`, `num_segments`) raise
+      IndexError, and negative ones count from the end, instead of
+      being dropped.
+    - Non-integer `segment_ids` are silently truncated to integers.
 
     Parameters
     ----------
     values : array_like, shape (N,)
         Values to sum.
     segment_ids : array_like of int, shape (N,)
-        Segment index for each value. Must satisfy
-        0 <= segment_ids[i] < num_segments.
+        Segment index for each value, in the range
+        [-`num_segments`, `num_segments`). Negative ids count from
+        the end.
     num_segments : int
         Total number of segments.
 
@@ -138,6 +212,14 @@ def segment_sum(values, segment_ids, num_segments):
     np.ndarray
         Array of shape (num_segments,) where entry g is the sum of
         values with segment_ids == g.
+
+    Raises
+    ------
+    ValueError
+        If `values` is not 1-D, or if `segment_ids` has a different
+        shape.
+    IndexError
+        If a segment id is outside [-`num_segments`, `num_segments`).
     """
     values = _np.asarray(values)
     segment_ids = _np.asarray(segment_ids, dtype=_np.int64)

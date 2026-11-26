@@ -10,7 +10,7 @@ Rfactor_analysis_superpos.pdf) plot the results of the |R-factor|
 calculations, as well as rudimentary analysis.
 
 The topmost plot on each page is the same as given in the
-:ref:`Rfactor_plots.pdf<Rfactorplots>` files, i.e., the theoretical and 
+:ref:`Rfactor_plots.pdf<Rfactorplots>` files, i.e., the theoretical and
 experimental |IV| curves for a given beam, as well as the |R factor|.
 
 The second plot shows the Y functions (see, e.g.,
@@ -21,9 +21,19 @@ idea where the main contributions to the |R factor| come from.
 
 Finally, the third plot on each page makes this more explicit by  plotting
 the cumulative sum of the squared difference between the Y functions
-:math:`\frac{(Y_1 - Y_2)^2}{(Y_1^2 + Y_2^2)}`, which is the term used 
-in the Pendry |R factor|. This allows quick identification of the areas 
+:math:`\frac{(Y_1 - Y_2)^2}{(Y_1^2 + Y_2^2)}`, which is the term used
+in the Pendry |R factor|. This allows quick identification of the areas
 contributing most to the |R factor|.
+
+The Rfactor_analysis files are written only for Pendry's and the smooth
+|R factor| (see :ref:`RFACTORTYPE`). For the smooth |R factor|, the
+Y functions of |RS| are plotted, unless the Pendry |R factor| is
+computed instead (TensErLEED |R factor| with versions older than
+v2.1.0, see :ref:`RFACTORTYPE`).
+
+.. versionchanged:: 0.15.0
+   Earlier versions also wrote Rfactor_analysis files for :math:`R_2`,
+   with the Y functions of the Pendry |R factor|.
 
 
 .. figure:: /_static/output_examples/Rfactor_analysis_refcalc_example.svg

@@ -5,10 +5,10 @@ ViPErLEED calculation section INITIALIZATION.
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -972,7 +972,12 @@ def _read_inputs_for_domain(domain, main_rpars):
     warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain)
 
     silent = rpars.LOG_LEVEL > logging.DEBUG
-    parameters.interpret(rpars, slab=slab, silent=silent)
+    parameters.interpret(
+        rpars,
+        slab=slab,
+        silent=silent,
+        check_rfactor=False,
+        )
     slab.full_update(rpars)
     rpars.fileLoaded['POSCAR'] = True
     rpars.updateDerivedParams()

@@ -4,10 +4,10 @@ Collects tests for running bookkeeper in ARCHIVE mode.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
@@ -96,6 +96,8 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         for root_path in (main_bookie.cwd, *domains):
             history = root_path/DEFAULT_HISTORY
             for folder in history.glob('**'):
+                if not folder.is_dir():  # Python >= 3.13 yields files
+                    continue
                 try:
                     (folder/_METADATA_NAME).unlink()
                 except FileNotFoundError:

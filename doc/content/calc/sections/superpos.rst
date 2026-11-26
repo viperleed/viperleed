@@ -24,6 +24,6 @@ and :ref:`Rfactor_analysis_superpos.pdf<rfactoranalysis>` files
 (see the corresponding sections for details and examples).
 
 .. note::
-    It is recommended to run another reference calculation for the 
-    final structure, as the :ref:`FITBEAMS` contain errors due to the 
+    It is recommended to run another reference calculation for the
+    final structure, as the :ref:`FITBEAMS` contain errors due to the
     :ref:`tensor-LEED approximation<tensor_leed_errors>`.

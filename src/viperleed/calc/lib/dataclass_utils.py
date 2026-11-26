@@ -7,7 +7,7 @@ stdlib module.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-07-25'
 __license__ = 'GPLv3+'
 
@@ -19,6 +19,7 @@ from dataclasses import field as data_field
 from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
 from dataclasses import replace as data_replace
+import types
 import typing
 import sys
 
@@ -204,6 +205,10 @@ _SpecialType = tuple({  # These types are not pubic API
     type(typing.Any),   # In Py3.12 they are different
     })
 
+# Origins of union hints that are classes rather than special forms:
+# Union[...] since Python 3.14, X | Y since Python 3.10
+_UNION_ORIGINS = (typing.Union, getattr(types, 'UnionType', typing.Union))
+
 
 def _find_type_origin(type_hint):
     """Yield nested type origins from a `type_hint`."""
@@ -217,7 +222,7 @@ def _find_type_origin(type_hint):
         return
 
     actual_type = ty_get_origin(type_hint) or type_hint
-    if isinstance(actual_type, _SpecialType):
+    if isinstance(actual_type, _SpecialType) or actual_type in _UNION_ORIGINS:
         # Case of typing.Union[...] or typing.ClassVar[...] or ...
         args = ty_get_args(type_hint)
         all_origins = (tuple(_find_type_origin(arg)) for arg in args)

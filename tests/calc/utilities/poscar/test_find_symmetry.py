@@ -1,10 +1,10 @@
 """Tests for the viperleed poscar find symmetry utility."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-11-20'
 __license__ = 'GPLv3+'
 
@@ -17,7 +17,8 @@ from ... import poscar_slabs
 
 with_info = parametrize_with_cases(
     'test_case',
-    cases=poscar_slabs.CasePOSCARSlabs.case_poscar,
+    cases=(poscar_slabs.CasePOSCARSlabs.case_poscar,
+           poscar_slabs.CasePOSCARSlabs.case_poscar_tio2_supercell),
     )
 
 

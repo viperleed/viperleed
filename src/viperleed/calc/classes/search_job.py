@@ -1,9 +1,9 @@
 """Module search_job of viperleed.calc.classes."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-07-17'
 __license__ = 'GPLv3+'

@@ -1,18 +1,86 @@
 """viperleed.calc.lib.rfactor.utils."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
 import numpy as np
+
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
-def nansum_trapezoid(y, dx, axis=-1):
-    y_arr = dnl.xp.moveaxis(y, axis, -1)
-    # select the axis to integrate over
-    return dnl.xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
+def overlap_mask(data_1, data_2):
+    """Return where neither of two arrays is NaN.
+
+    Parameters
+    ----------
+    data_1, data_2 : dnl.xp.ndarray
+        Arrays of the same shape. NaN marks points to be ignored.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        Boolean array, True where both data_1 and data_2 are defined.
+    """
+    return dnl.xp.logical_not(
+        dnl.xp.logical_or(dnl.xp.isnan(data_1), dnl.xp.isnan(data_2))
+    )
+
+
+def nonzero_or_nan(values):
+    """Return values with zeros replaced by NaN.
+
+    Dividing by the result gives NaN rather than inf or a warning.
+
+    Parameters
+    ----------
+    values : dnl.xp.ndarray
+        Divisors to be guarded.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        Copy of values, with NaN in place of zeros.
+    """
+    # Array comparison: bool(array) would be ambiguous
+    # pylint: disable-next=compare-to-zero
+    return dnl.xp.where(values != 0, values, dnl.xp.nan)
+
+
+# `y` and `dx` follow the naming of scipy.integrate.trapezoid
+def overlap_trapezoid(y, dx, mask, axis=0):  # pylint: disable=invalid-name
+    """Integrate y by the trapezoidal rule over masked points.
+
+    Only intervals with both end points inside the mask contribute, so
+    the first and last masked points of each run carry a weight of 1/2
+    and a run of a single point integrates to zero. Values of y
+    outside the mask are ignored (they may be NaN). The shape of the
+    arrays is static, which keeps this usable under JIT compilation.
+
+    Parameters
+    ----------
+    y : dnl.xp.ndarray
+        Values to integrate.
+    dx : float
+        Spacing of the points along axis.
+    mask : dnl.xp.ndarray
+        Boolean array with the shape of y, True for the points to use.
+    axis : int, optional
+        Axis along which to integrate. Default is 0.
+
+    Returns
+    -------
+    dnl.xp.ndarray
+        The integral, with the integration axis removed.
+    """
+    y = dnl.xp.moveaxis(y, axis, -1)
+    mask = dnl.xp.moveaxis(mask, axis, -1)
+    interval_in_overlap = dnl.xp.logical_and(mask[..., 1:], mask[..., :-1])
+    pair_sums = dnl.xp.where(
+        interval_in_overlap, y[..., 1:] + y[..., :-1], 0.0
+    )
+    return dnl.xp.sum(pair_sums, axis=-1) * dx * 0.5
 
 
 def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
@@ -37,19 +105,16 @@ def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     dnl.xp.ndarray
         Shifted theoretical intensity array of shape (n_energies, n_beams)
     """
-    # Determine the mask for valid (non-NaN) intensities
-    valid_exp_mask = ~dnl.xp.isnan(exp_intensity)
-    valid_theo_mask = ~dnl.xp.isnan(theo_intensity)
-    overlap_mask = dnl.xp.logical_and(valid_exp_mask, valid_theo_mask)
+    overlap = overlap_mask(exp_intensity, theo_intensity)
 
-    # Calculate the minimum theoretical intensity in the valid regions
-    masked_theo_intensity = dnl.xp.where(
-        overlap_mask, theo_intensity, dnl.xp.nan
+    # Calculate the minimum theoretical intensity in the valid regions.
+    # Beams without overlap have no minimum (inf here): do not shift.
+    # Not using nanmin to avoid warnings for all-NaN beams.
+    masked_theo_mins = dnl.xp.min(
+        dnl.xp.where(overlap, theo_intensity, dnl.xp.inf), axis=0
     )
-    masked_theo_mins = dnl.xp.nanmin(masked_theo_intensity, axis=0)
-    # Ensure that we do not consider NaNs in the minimum calculation
     min_theo_intensity = dnl.xp.where(
-        dnl.xp.isnan(masked_theo_mins), 0.0, masked_theo_mins
+        dnl.xp.isinf(masked_theo_mins), 0.0, masked_theo_mins
     )
     # only shift if minimum is negative
     shifts = dnl.xp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
@@ -69,8 +134,10 @@ def average_beam_array(beam_array, beam_correspondence):
         The beam array to average, shape (n_energies, n_beams).
     beam_correspondence : tuple
         A tuple containing the beam correspondence, which maps the
-        experimental beams to the theoretical beams. It should be a 1D array
-        of integers with shape (n_beams,).
+        two sets of beams to each other (usually experimental and
+        theoretical). Should be a 1D array of integers with shape
+        (n_beams,). Any beams assigned a value of -1 are removed from
+        the beam array.
 
     Returns
     -------
@@ -84,7 +151,8 @@ def average_beam_array(beam_array, beam_correspondence):
         the beam correspondence.
     """
     # convert beam correspondence to numpy array
-    beam_corr = np.array(beam_correspondence, dtype=np.int32)  # force numpy
+    # force numpy to ensure it can be used as an index array
+    beam_corr = np.array(beam_correspondence, dtype=np.int32)
 
     # check if beam_array and beam_corr have the same number of beams
     if beam_array.shape[1] != beam_corr.shape[0]:
@@ -111,3 +179,61 @@ def average_beam_array(beam_array, beam_correspondence):
 
     # apply the averaged weights
     return averaged * averaged_beam_weights[dnl.xp.newaxis, :]
+
+
+def coerce_to_energy_grid(
+    data_and_derivatives, data_spline, energy_grid, derivs
+):
+    """Coerce data or splines to the energy grid.
+
+    Utitlity function to allow flexible input of either pre-computed
+    data and derivatives or splines that can be evaluated on the energy grid.
+    If both are passed, data_and_derivatives will be used and data_spline
+    will be ignored.
+
+    Parameters
+    ----------
+    data_and_derivatives : tuple of arrays or None
+        Pre-computed data and derivatives, expected to be a tuple of
+        arrays (intensity, 1st derivative, ..., nth derivative) on the
+        energy_grid. It is not checked (and not possible to check)
+        whether the data is actually on the energy_grid.
+        If None, data_spline will be used to evaluate the data.
+    data_spline : scipy.interpolate.CubicSpline or similar or None
+        Spline of the data, which will be evaluated on energy_grid.
+        Ignored if data_and_derivatives is not None.
+    energy_grid : array
+        The grid on which data should be evaluated. Only used if
+        data_and_derivatives is None.
+    derivs : int
+        The number of derivatives to compute. Only used if
+        data_and_derivatives is None.
+
+    Returns
+    -------
+    tuple of arrays
+        Tuple of arrays (intensity, 1st derivative, ..., nth derivative)
+        on the energy_grid, either taken from data_and_derivatives or
+        evaluated from data_spline.
+
+    Raises
+    ------
+    TypeError
+        If both data_and_derivatives and data_spline are None.
+    """
+    if data_and_derivatives is None and data_spline is None:
+        raise TypeError(
+            'R_pendry requires either data splines or '
+            'pre-computed data_and_derivatives arrays.'
+        )
+    if data_and_derivatives is None:
+        # evaluate splines on energy grid to get data and derivatives
+        # deriv 0 is the sampled spline itself
+        return tuple(
+            data_spline.derivative(nu=deriv)(energy_grid)
+            for deriv in range(derivs + 1)
+        )
+
+    # otherwise just return data and derivatives truncated to the
+    # requested number of derivatives
+    return data_and_derivatives[: derivs + 1]

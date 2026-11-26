@@ -33,6 +33,6 @@ scheme, in which
    stack... and so on.
 
 The doubling process is repeated a maximum number of times equal to
-:ref:`BULKDOUBLEITER`, and until the reflection/transmission matrices 
+:ref:`BULKDOUBLEITER`, and until the reflection/transmission matrices
 do not change by more that BULKDOUBLING_EPS between two subsequent
 doubling iterations.

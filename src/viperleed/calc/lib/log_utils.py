@@ -9,7 +9,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-08-05'
 __license__ = 'GPLv3+'
 
@@ -146,18 +146,18 @@ class CalcLogFormatter(logging.Formatter):
     """Logging Formatter for level-dependent message formatting."""
 
     formats = {
-        logging.DEBUG: 'dbg: %(msg)s',
-        logging.INFO: '%(msg)s',
-        logging.WARNING: '# WARNING: %(msg)s',
+        logging.DEBUG: 'dbg: %(message)s',
+        logging.INFO: '%(message)s',
+        logging.WARNING: '# WARNING: %(message)s',
         logging.ERROR: (
             '### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n'
-            '# %(msg)s\n#############'
+            '# %(message)s\n#############'
             ),
         logging.CRITICAL: (
             '### CRITICAL ### in %(module)s:%(funcName)s:%(lineno)s\n'
-            '# %(msg)s\n################'
+            '# %(message)s\n################'
             ),
-        'DEFAULT': '%(msg)s',
+        'DEFAULT': '%(message)s',
         }
 
     def format(self, record):

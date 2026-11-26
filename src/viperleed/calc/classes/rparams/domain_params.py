@@ -9,7 +9,7 @@ refactored by Michele Riva in Oct 2023.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 
@@ -150,4 +150,12 @@ class DomainParameters:
     def _collect_inputs_from_tensor_folder(self, tensor_dir):
         """Fetch input files from an unpacked `tensor_dir`."""
         for file in (_DOMAIN_INPUT_FILES + ('IVBEAMS',)):
-            shutil.copy2(tensor_dir / file, self.workdir)
+            source = tensor_dir / file
+            try:
+                shutil.copy2(source, self.workdir)
+            except FileNotFoundError as exc:
+                # Callers report exc.filename, but shutil does not
+                # always set it (e.g., on Windows with Python 3.12+)
+                if exc.filename is None:
+                    exc.filename = str(source)
+                raise

@@ -9,8 +9,8 @@ values.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
-    'Alexander M. Imre (@amimre)',
-    )
+    'Alexandra Mia Imre (@alexmiame)',
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-12-16'
 __license__ = 'GPLv3+'

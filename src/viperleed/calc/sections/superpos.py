@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michael Riva (@michele-riva)'
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -258,7 +258,7 @@ def _best_config_from_sdtl(rp):                                                 
 
     if sdtl is not None:
         sdtl = readSDTL_blocks("\n".join(sdtl),
-                               whichR=rp.SEARCH_BEAMS,
+                               which_beams=rp.SEARCH_BEAMS,
                                n_expect=rp.SEARCH_POPULATION)
     if not sdtl:
         logger.error("Superpos: No data found in SD.TL")

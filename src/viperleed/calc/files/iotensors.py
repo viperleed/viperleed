@@ -8,10 +8,10 @@ Part of the functionality in this module used to be part of leedbase
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-03-22'
 __license__ = 'GPLv3+'
 
@@ -105,7 +105,12 @@ def getTensorOriStates(sl, path):
     try:
         tsl = poscar.read(path / "POSCAR")
         trp = parameters.read(filename=path/"PARAMETERS")
-        parameters.interpret(trp, slab=tsl, silent=True)
+        parameters.interpret(
+            trp,
+            slab=tsl,
+            silent=True,
+            check_rfactor=False,
+            )
         tsl.full_update(trp)
         vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
         tsl.full_update(trp)

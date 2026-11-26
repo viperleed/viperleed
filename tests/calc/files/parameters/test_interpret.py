@@ -1,15 +1,17 @@
 """Tests for module interpret of viperleed.calc.files.parameters."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
     'Florian Kraushofer (@fkraushofer)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-06-09'
 __license__ = 'GPLv3+'
 
 import logging
+import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -22,6 +24,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,
     LayerCutTokenType as CutType
     )
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
@@ -554,6 +557,9 @@ class TestFortranComp(_TestInterpretBase):
     """Tests for interpreting FORTRAN_COMP."""
 
     param = 'FORTRAN_COMP'
+    # A test that skips on a missing one of these fails with
+    # --require-all.
+    gnu_compilers = 'gfortran', 'mpifort'
     valid = {  # id: (assign_flag, assign_value, expect_pre, expect_post)
         'default_intel': ('', 'ifort',
                           'ifort -O2 -I/opt/intel/mkl/include',
@@ -561,7 +567,8 @@ class TestFortranComp(_TestInterpretBase):
         'default_gnu': ('', 'gfortran', 'gfortran',
                         '-llapack -lpthread -lblas'),
         'default_intel_mpi': ('mpi', 'mpiifort', 'mpiifort', None),
-        'default_gnu_mpi': ('mpi', 'mpifort', 'mpifort -Ofast -no-pie', None),
+        # Version-dependent flags: see test_mpifort_version_flags
+        'default_gnu_mpi': ('mpi', 'mpifort', 'mpifort -Ofast', None),
         'custom_no_flag': ('', '"ifort -O3 -march=native"',
                            'ifort -O3 -march=native', None),
         'custom_post_flag': ('post', '"-L/opt/intel/mkl/lib/intel64"',
@@ -586,7 +593,7 @@ class TestFortranComp(_TestInterpretBase):
     @parametrize('flag,val,pre,post', valid.values(), ids=valid)
     # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, flag, val, pre, post,
-                             interpreter, subtests):
+                             interpreter, subtests, missing_dependency):
         """Check correct interpretation of valid FORTRAN_COMP(_MPI)."""
         assignment = self.assignment(val, flags_str=flag)
         rpars = interpreter.rpars
@@ -597,10 +604,16 @@ class TestFortranComp(_TestInterpretBase):
         try:
             finish_interpret._check_and_update_fortran_comp()
         except FileNotFoundError:
-            pytest.skip(f'Compiler {val} not available')
+            if val in self.gnu_compilers:
+                missing_dependency(val, 'compiler not found')
+            pytest.skip(f'Intel compiler {val} not installed '
+                        '(optional alternative to gfortran/mpifort)')
         # pylint: enable=protected-access
         attr_name = self.param + ('_MPI' if 'mpi' in flag else '')
         compiler = getattr(rpars,  attr_name)
+        if os.name == 'nt' and val == 'ifort':
+            self._check_default_ifort_on_windows(*compiler)
+            return
         if pre is not None:
             with subtests.test('Check pre'):
                 assert pre in compiler[0]
@@ -612,6 +625,30 @@ class TestFortranComp(_TestInterpretBase):
     def test_invalid(self, flag, val, exc, interpreter):
         """Ensure invalid FORTRAN_COMP raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+    @parametrize('version,expect', (
+        ('9.4.0', 'mpifort -Ofast'),
+        ('10.0.0', 'mpifort -Ofast -fallow-argument-mismatch'),
+        ('10.1.0', 'mpifort -Ofast -fallow-argument-mismatch'),
+        ))
+    def test_mpifort_version_flags(self, version, expect, mocker):
+        """Check the version-dependent flags of an mpifort compiler."""
+        mocker.patch('shutil.which', return_value='mpifort')
+        mocker.patch(
+            'viperleed.calc.lib.fortran_utils.get_mpifort_version',
+            return_value=Version(version),
+            )
+        rpars = Rparams()
+        rpars.getFortranMpiComp(comp='mpifort')
+        compiler, post = rpars.FORTRAN_COMP_MPI
+        assert compiler == expect
+        assert not post
+
+    def _check_default_ifort_on_windows(self, pre, post):
+        """Check the default flags for ifort on Windows."""
+        mkl_path = Path(os.environ['MKLROOT'], 'include').resolve()
+        assert pre == f'ifort -O2 -I"{mkl_path}"'
+        assert post == '-Qmkl:parallel -traceback'
 
 
 class TestIntpolDeg(_TestInterpretBase):
@@ -1059,6 +1096,60 @@ class TestPlotIV(_TestInterpretBase):
     def test_interpret_invalid(self, flag, val, exc, interpreter):
         """Ensure invalid PLOT_IV raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
+class TestRFactorType(_TestInterpretBase):
+    """Tests for interpretation of parameter R_FACTOR_TYPE."""
+
+    param = 'R_FACTOR_TYPE'
+
+    valid = {
+        # canonical names
+        'pendry': ('pendry', RFactorType.PENDRY),
+        'r2': ('r2', RFactorType.R2),
+        'zj': ('zj', RFactorType.ZJ),
+        'smooth': ('smooth', RFactorType.SMOOTH),
+        # aliases / normalization
+        'pendry alias rp': ('rp', RFactorType.PENDRY),
+        'zj alias dashed': ('zanazzi-jona', RFactorType.ZJ),
+        'smooth alias schmid': ('schmid', RFactorType.SMOOTH),
+        'case and whitespace': ('  PeNdRy  ', RFactorType.PENDRY),
+        # numeric codes passed as strings
+        'code 1': ('1', RFactorType.PENDRY),
+        'code 2': ('2', RFactorType.R2),
+        'code 3': ('3', RFactorType.ZJ),
+        'code 4': ('4', RFactorType.SMOOTH),
+    }
+
+    invalid = {
+        'unknown name': 'nonsense',
+        'invalid numeric code': '5',
+    }
+
+    @parametrize('value,expected', valid.values(), ids=valid)
+    def test_interpret_valid(self, interpreter, value, expected):
+        self.interpret(interpreter, value)
+        r_factor_type = self.rpars_value(interpreter)
+
+        assert r_factor_type is expected
+
+    @parametrize('value', invalid.values(), ids=invalid)
+    def test_interpret_invalid_value(self, interpreter, value):
+        self.check_raises(interpreter, value, err.ParameterValueError)
+
+    def test_interpret_rejects_multiple_values(self, interpreter):
+        with pytest.raises(err.ParameterNumberOfInputsError):
+            self.interpret(interpreter, 'pendry r2')
+
+    def test_interpret_rejects_flag(self, interpreter):
+        with pytest.raises(err.ParameterUnknownFlagError):
+            self.interpret(interpreter, 'pendry', flags_str='foo')
+
+    def test_interpret_assigns_rfactortype_instance(self, interpreter):
+        self.interpret(interpreter, 'z')
+        value = self.rpars_value(interpreter)
+
+        assert value is RFactorType.ZJ
 
 
 class TestRun(_TestInterpretBase):

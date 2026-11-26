@@ -1,0 +1,13 @@
+== SEARCH geo+vib+occ
+    = GEO_DELTA
+        O 1 z = -0.1 0.1 0.1
+        Me 3 z = -0.1 0.1 0.1
+        Rh 4 z = -0.2 0.2 0.2
+    = VIB_DELTA
+        Me 3 = -0.01 0.01 0.01
+        Rh 4 = -0.02 0.02 0.02
+    = OCC_DELTA
+        Me 3 = Pt 0.15 0.25 0.1, Rh 0.65 0.75 0.1
+        Me 4 = Pt 0.15 0.25 0.1, Rh 0.65 0.75 0.1
+    = CONSTRAINT
+        occ Me 4 = ind(1)

@@ -1,10 +1,10 @@
 """Tests for module info of viperleed.calc.bookkeeper.history."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
@@ -235,7 +235,10 @@ class TestHistoryInfoFile:
             assert last_entry is None or not last_entry.can_be_removed
             return
         history_info.append_entry(last_entry)
-        clean_contents = re.sub(rf'{HISTORY_INFO_SEPARATOR}$', '', contents, 1)
+        clean_contents = re.sub(rf'{HISTORY_INFO_SEPARATOR}$',
+                                '',
+                                contents,
+                                count=1)
         clean_contents = re.sub(rf'{HISTORY_INFO_SEPARATOR.rstrip()}$', '',
                                 clean_contents, count=1)
         assert history_info.raw_contents == clean_contents

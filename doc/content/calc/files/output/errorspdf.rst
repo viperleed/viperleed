@@ -28,15 +28,20 @@ information. The information given for each parameter is:
 - displacement direction,
 - minimum |R factor| of the error curve,
 - standard error of the |R factor| (labeled ``var(R)``. See
-  :ref:`error_calculation`; only applicable for Pendry's |R factor|),
+  :ref:`error_calculation`; only for Pendry's and the smooth |R factor|),
 - parameter value at minimum |R factor| (labeled ``p_min``),
 - statistical error estimates for the parameter fit (labeled ``-Δp``
-  and ``+Δp``. Only for Pendry's |R factor| and only if the error
-  curve reaches ``R_min + var(R)`` in the displacement range considered.
+  and ``+Δp``. Only for Pendry's and the smooth |R factor| and only if
+  the error curve reaches ``R_min + var(R)`` in the displacement range
+  considered.
   See also :ref:`error_calculation`.).
 
 For geometric displacements the column ``Direction`` lists the direction
 requested in :ref:`DISPLACEMENTS`.
+
+.. versionchanged:: 0.15.0
+   ``var(R)``, ``-Δp``, and ``+Δp`` are also given for the smooth
+   |R factor|.
 
 The contents of ``Errors_summary.csv`` may look something like this:
 
@@ -77,4 +82,11 @@ the same error calculation, these would nevertheless be plotted together.
 
 For each parameter type, the ``Errors.pdf`` file contains *one* plot in which
 the results for *all* parameters of that type are shown together, as well as
-separate single plots for each parameter.
+separate single plots for each parameter. The axis labels name the
+|R-factor| type actually computed. This is the one selected by
+:ref:`RFACTORTYPE`, except for the smooth |R factor| calculated by
+TensErLEED older than v2.1.0, where the Pendry |R factor| is computed
+and named instead (see :ref:`RFACTORTYPE`).
+
+.. versionchanged:: 0.15.0
+   Earlier versions always labeled the axis as Pendry |R factor|.
