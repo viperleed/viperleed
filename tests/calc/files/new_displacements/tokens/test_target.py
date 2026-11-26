@@ -39,6 +39,13 @@ from viperleed.calc.files.new_displacements.tokens.target import (
         ('A L(1 4-5 7)', re.compile(r'^A'), None, (1, 4, 5, 7)),
         # wildcard label
         ('* 1-2', re.compile(r'^\w*'), (1, 2), None),
+        # numbers and layers: their union (D-013)
+        ('O 1 3 L(2)', re.compile(r'^O'), (1, 3), (2,)),
+        ('O L(1) 5-6', re.compile(r'^O'), (5, 6), (1,)),
+        ('A L(1-2) 3', re.compile(r'^A'), (3,), (1, 2)),
+        ('O 1 L(2) 4', re.compile(r'^O'), (1, 4), (2,)),
+        ('O L(1) L(3-4)', re.compile(r'^O'), None, (1, 3, 4)),
+        ('O L(1) 2 L(3)', re.compile(r'^O'), (2,), (1, 3)),
     ],
 )
 def test_parse_valid_targets(
@@ -56,8 +63,12 @@ def test_parse_valid_targets(
 @pytest.mark.parametrize(
     'raw',
     [
-        # combined layer and number
-        'A L(1-2) 3',
+        # malformed layer specs
+        'A L(1',
+        'A 1 L(2',
+        'A L(1) 2)',
+        'A 1 L 2',
+        'A L(x)',
         # numeric without label
         '1 2 3',
         '2',
@@ -106,6 +117,22 @@ def test_eq_layer_specifier():
     a = TargetToken('Fe L(1-3)')
     b = TargetToken('Fe L(1-3)')
     assert a == b
+
+
+@pytest.mark.parametrize(
+    ('first', 'second', 'equal'),
+    [
+        ('O 1 3 L(2)', 'O L(2) 1 3', True),
+        ('O 1 3 L(2)', 'O 1-3 L(2)', False),
+        ('O 1 3 L(2)', 'O 1 3', False),
+        ('O 1 3 L(2)', 'O L(2)', False),
+        ('O 1 3 L(2)', 'O 1 3 L(1)', False),
+        ('O L(1) L(2)', 'O L(1-2)', True),
+    ],
+)
+def test_eq_nums_and_layers(first, second, equal):
+    """Check equality of targets with both numbers and layers."""
+    assert (TargetToken(first) == TargetToken(second)) is equal
 
 
 def test_selection_regex_matching():

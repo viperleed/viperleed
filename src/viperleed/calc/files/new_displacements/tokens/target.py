@@ -12,6 +12,7 @@ from viperleed.calc.lib.string_utils import read_int_range
 from .base import DisplacementsFileToken, TokenParserError
 
 LAYER_REGEX = r'L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)'
+MALFORMED_LAYER_CHARS = ('L', '(', ')')
 
 
 class TargetingError(TokenParserError):
@@ -19,7 +20,23 @@ class TargetingError(TokenParserError):
 
 
 class TargetToken(DisplacementsFileToken):
-    """Class to handle the <target> token in the DISPLACEMENTS file."""
+    """Class to handle the <target> token in the DISPLACEMENTS file.
+
+    A target is a site label (with optional '*' wildcards), followed
+    by optional atom numbers and L(...) layer specifications, in any
+    order (e.g., 'O 1 3 L(2)'). The target selects the atoms matching
+    the label that have one of the numbers or are in one of the
+    layers (their union). Without numbers and layers, the label alone
+    selects the atoms.
+
+    Attributes
+    ----------
+    nums : tuple of int or None
+        The atom numbers given, None if there are none.
+    layers : tuple of int or None
+        The layers given (1-based) in all L(...), None if there are
+        none.
+    """
 
     def __init__(self, target_str):
         self.target_str = target_str.strip()
@@ -34,7 +51,7 @@ class TargetToken(DisplacementsFileToken):
         return self._regex
 
     def _parse_target(self):
-        """Parse the site, and optional nums or layers from the target string."""
+        """Parse the site label and optional nums and layers."""
         parts = self.target_str.split(maxsplit=1)
         if not parts:
             raise TargetingError('Target string is empty')
@@ -51,24 +68,24 @@ class TargetToken(DisplacementsFileToken):
             # only site is specified, no nums or layers
             return
 
-        # Check if we have a layer specification
-        layer_match = re.match(LAYER_REGEX, parts[1])
-        if layer_match:
-            # make sure there is nothing else after the layer
-            if not re.fullmatch(LAYER_REGEX, parts[1]):
-                msg = f'Invalid layer specification: "{parts[1]}".'
-                raise TargetingError(msg)
-            int_ranges = read_int_range(layer_match['ranges'].strip())
-            self.layers = tuple(int_ranges)
+        self._parse_nums_and_layers(parts[1])
 
-            return
+    def _parse_nums_and_layers(self, specs):
+        """Parse atom numbers and L(...) layers following the label.
 
-        # Check for a list of numbers or range like "1-4"
-        try:
-            self.nums = tuple(read_int_range(parts[1]))
-        except ValueError as err:
-            msg = f'Invalid target specification: "{parts[1]}".'
-            raise TargetingError(msg) from err
+        Numbers and layers may come in any order, with any number of
+        L(...) groups. The target is their union: the atoms with the
+        given numbers, plus those in the given layers.
+        """
+        layer_specs = [m['ranges'] for m in re.finditer(LAYER_REGEX, specs)]
+        nums_spec = re.sub(LAYER_REGEX, ' ', specs).strip()
+        if any(c in nums_spec for c in MALFORMED_LAYER_CHARS):
+            msg = f'Invalid layer specification: "{specs}".'
+            raise TargetingError(msg)
+        if layer_specs:
+            self.layers = _read_ints(' '.join(layer_specs), specs)
+        if nums_spec:
+            self.nums = _read_ints(nums_spec, specs)
 
     def __str__(self):
         """Return a string representation of the TargetToken object."""
@@ -87,6 +104,15 @@ class TargetToken(DisplacementsFileToken):
             and self.layers == other.layers
             and self.regex == other.regex
         )
+
+
+def _read_ints(ranges, specs):
+    """Return a tuple of the integers in `ranges`, part of `specs`."""
+    try:
+        return tuple(read_int_range(ranges))
+    except ValueError as err:
+        msg = f'Invalid target specification: "{specs}".'
+        raise TargetingError(msg) from err
 
 
 def _generate_label_match_regex(label):
