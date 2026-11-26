@@ -110,18 +110,6 @@ def test_read_from_unsupported_file(displacements_file_path_xfail):
     df = DisplacementsFile()
     df.read(displacements_file_path_xfail)
 
-def test_next(displacements_file_path):
-    """Test the next() method of DisplacementsFile."""
-
-    df = DisplacementsFile()
-    df.read(displacements_file_path)
-
-    # try calling next() until we reach StopIteration
-    with pytest.raises(StopIteration):
-        while True:
-            line = df.next(current_rfac=0.1)
-            assert line is not None
-
 
 def _exhaust(displacements_file):
     """Return all search blocks that next() yields until it stops."""
@@ -131,6 +119,13 @@ def _exhaust(displacements_file):
             blocks.append(displacements_file.next(current_rfac=0.1))
         except StopIteration:
             return blocks
+
+
+def test_next(displacements_file_path):
+    """Test the next() method of DisplacementsFile."""
+    df = DisplacementsFile()
+    df.read(displacements_file_path)
+    assert all(block is not None for block in _exhaust(df))
 
 
 def test_reset_iterator(displacements_file_path):
