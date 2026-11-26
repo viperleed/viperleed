@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
@@ -232,8 +232,8 @@ class TestCopyFilesAndDirectories:
         assert copied == expect
         assert copy_file.call_count == len(files)
         assert copy_dir.call_count == len(dirs)
-        log_msg_file = 'Error moving test_target file {}'
-        log_msg_dir = 'Error moving test_target directory {}'
+        log_msg_file = 'Error copying file {} to test_target'
+        log_msg_dir = 'Error copying directory {} to test_target'
         assert all(log_msg_file.format(f.name) in caplog.text for f in files)
         assert all(log_msg_dir.format(d.name) in caplog.text for d in dirs)
         assert not any(result)

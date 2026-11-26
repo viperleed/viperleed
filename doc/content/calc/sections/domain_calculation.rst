@@ -63,7 +63,8 @@ point to a complete :file:`Tensors_<index>.zip` :ref:`file<tensorszip>`
 (e.g., :file:`my_domain_2/Tensors/Tensors_005.zip` in
 :numref:`list_domains_inputs`) or to a folder containing the
 :ref:`usual input files<list_input_files>` for a reference calculation
-(:ref:`EXPBEAMS` and :ref:`DISPLACEMENTS` files in the subfolder are ignored),
+(:ref:`EXPBEAMS`, :ref:`BEAM_EQUIVALENCE`, and :ref:`DISPLACEMENTS` files
+in the subfolder are ignored),
 as those in :file:`my_domain_1` of :numref:`list_domains_inputs`. If
 the target path is a directory in which previous ViPErLEED calculations
 have been executed, |calc| will check whether there is a :file:`Tensors`

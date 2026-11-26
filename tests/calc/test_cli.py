@@ -408,6 +408,17 @@ class TestCopyInputFiles:
         assert copy.call_count == len(ALL_INPUT_FILES)
         assert not caplog.text
 
+    def test_beam_equivalence(self, tmp_path):
+        """Check that an optional BEAM_EQUIVALENCE file is copied."""
+        work = tmp_path / 'work'
+        work.mkdir()
+        contents = '(1 0) = (1 0)\n'
+        (tmp_path / 'BEAM_EQUIVALENCE').write_text(contents, encoding='utf-8')
+        with execute_in_dir(tmp_path):
+            _copy_input_files_to_work(work)
+        copied = work / 'BEAM_EQUIVALENCE'
+        assert copied.read_text(encoding='utf-8') == contents
+
 
 class TestCopyTensorsDeltas:
     """Tests for the _copy_tensors_and_deltas_to_work helper."""

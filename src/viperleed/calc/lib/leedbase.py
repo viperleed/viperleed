@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -20,6 +20,8 @@ from zipfile import ZipFile
 import numpy as np
 from quicktions import Fraction
 
+from viperleed.calc.classes.beam_correspondence import BEAM_EPS
+from viperleed.calc.classes.beam_correspondence import BeamCorrespondence
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.math_utils import cosvec
@@ -659,10 +661,62 @@ def getSymEqBeams(sl, rp):
 
 
 def getBeamCorrespondence(sl, rp):
-    """Compares theoretical and experimental beams, returns a list containing
-    a number for each theoretical beam, indicating which experimental beam it
-    corresponds to."""
-    eps = 1e-5  # for comparing beams
+    """Return the experimental-beam index of each calculated beam.
+
+    Experimental beams without a calculated counterpart are removed
+    from rp.expbeams (not when a BEAM_EQUIVALENCE file was loaded).
+    See build_beam_correspondence for details.
+
+    Parameters
+    ----------
+    sl : Slab
+        The slab, used for finding symmetry-equivalent beams.
+    rp : Rparams
+        The run parameters. Its expbeams attribute is modified.
+
+    Returns
+    -------
+    list of int
+        One entry per beam in rp.ivbeams: the index in rp.expbeams of
+        the experimental beam it corresponds to, or -1 if none.
+    """
+    beam_correspondence = build_beam_correspondence(sl, rp)
+    return beam_correspondence.legacy_vector(rp.expbeams, rp.ivbeams)
+
+
+def build_beam_correspondence(sl, rp):
+    """Return the beam correspondence to use in the R factor.
+
+    If a BEAM_EQUIVALENCE file was loaded (rp.fileLoaded), this is
+    rp.beam_correspondence, which initialization already filtered
+    against rp.expbeams and rp.ivbeams; nothing is modified. Otherwise,
+    it is the automatic, symmetry-based correspondence.
+
+    In the automatic correspondence, each calculated beam is assigned
+    (with weight 1) to the experimental beam it equals or, failing
+    that, to a symmetry-equivalent one. Experimental beams without a
+    calculated counterpart are removed from rp.expbeams, with a
+    warning, and the halting level is raised to 1.
+
+    Parameters
+    ----------
+    sl : Slab
+        The slab, used for finding symmetry-equivalent beams.
+    rp : Rparams
+        The run parameters. Its expbeams and ivbeams attributes
+        are used; in the automatic case, expbeams is modified
+        in place.
+
+    Returns
+    -------
+    BeamCorrespondence
+        One beam assignment for each experimental beam that has at
+        least one calculated beam assigned, in the order of
+        rp.expbeams; all weights are equal.
+    """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        return rp.beam_correspondence
+    eps = BEAM_EPS  # for comparing beams
     #   make dictionary {theoretical_beam: experimental_beam}
     beamcorr = {}
     # get symmetry-equivalence list:
@@ -724,11 +778,34 @@ def getBeamCorrespondence(sl, rp):
     if notfound:
         logger.debug("No experimental beams found for calculated beams: "
                      + ", ".join(notfound))
-    beamcorr_list = [-1]*len(rp.ivbeams)
-    for i, tb in enumerate(rp.ivbeams):
-        if tb in beamcorr:
-            beamcorr_list[i] = rp.expbeams.index(beamcorr[tb])
-    return beamcorr_list
+    return _make_beam_correspondence(beamcorr, rp.expbeams, rp.ivbeams)
+
+
+def _make_beam_correspondence(calc_to_exp, expbeams, ivbeams):
+    """Return a BeamCorrespondence from a beam-to-beam dict.
+
+    Parameters
+    ----------
+    calc_to_exp : dict
+        {calculated_beam: experimental_beam}, with Beam keys and values.
+    expbeams : Sequence of Beam
+        The experimental beams. Defines the order of the assignments.
+    ivbeams : Sequence of Beam
+        The calculated beams. Defines the order within an assignment.
+
+    Returns
+    -------
+    BeamCorrespondence
+        All weights equal. Experimental beams without
+        calculated beams have no beam assignment.
+    """
+    assignments = {}
+    for exp_beam in expbeams:
+        calc_weights = {calc_beam.hkfrac: 1 for calc_beam in ivbeams
+                        if calc_to_exp.get(calc_beam) is exp_beam}
+        if calc_weights:
+            assignments[exp_beam.hkfrac] = calc_weights
+    return BeamCorrespondence(assignments)
 
 # TODO: can eventually become part of compileTask class
 def copy_compile_log(rp, logfile, save_as='fortran-compile'):

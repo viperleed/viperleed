@@ -21,14 +21,26 @@ import re
 
 import fortranformat as ff
 import numpy as np
+from quicktions import Fraction
 
 from viperleed.calc.classes.beam import Beam
+from viperleed.calc.classes.beam import MAX_DENOMINATOR
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
+from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.gui.base import project_to_first_domain
+from viperleed.gui.classes.beamindex import BeamIndex
 
 
 logger = logging.getLogger(__name__)
+
+# Largest difference between a decimal index in IVBEAMS and the
+# fraction it was rounded from: writeIVBEAMS writes six decimals.
+_DECIMALS_TOLERANCE = Fraction(1, 2_000_000)
+
+# Tolerance for matching beams to BEAMLIST, whose
+# indices are stored as floats with few decimals
+BEAMLIST_EPS = 1e-3
 
 
 def averageBeams(beams, weights=None):
@@ -61,76 +73,114 @@ def averageBeams(beams, weights=None):
     return avbeams
 
 
-def readBEAMLIST(filename="BEAMLIST"):
-    """Reads the BEAMLIST file and returns the contents as a list of the
-    lines as strings."""
-    beamlist = []
+def readBEAMLIST(filename='BEAMLIST'):
+    """Return the lines of the BEAMLIST file as a list of strings."""
     try:
-        with open(filename, "r") as rf:
-            beamlist = rf.readlines()
-        logger.debug("BEAMLIST file was read successfully")
-    except Exception:
-        logger.error("Error opening BEAMLIST file.")
+        with open(filename, 'r', encoding='utf-8') as file:
+            beams = file.readlines()
+    except FileNotFoundError:
+        logger.error('BEAMLIST not found.')
         raise
-    return beamlist
+    except Exception:
+        logger.error('Error opening BEAMLIST file.')
+        raise
+    logger.debug('BEAMLIST file was read successfully.')
+    return beams
 
 
 def readIVBEAMS(filename='IVBEAMS'):
-    """Reads an IVBEAMS file and returns a list of beams (using Beam class)"""
-    # open input file
-    try:
-        with open(filename, 'r') as rf:
-            ivbeamlines = rf.readlines()
-    except Exception:
-        raise
-    linenum = 1		# iterates the current line being read
-    hklist = []
-    # TODO: skip commented out lines (same as PARAMETERS, etc.)
-    for line in ivbeamlines:
-        # ignore brackets and vbars, except as spacers
-        line = line.replace("(", " ")
-        line = line.replace(")", " ")
-        line = line.replace("|", " ")
-        llist = line.split()
-        if len(llist) == 1 and linenum != 1:
+    """Return a list of Beam objects read from an IVBEAMS file."""
+    with open(filename, 'r', encoding='utf-8') as file:
+        ivbeamlines = file.readlines()
+    spacer_chars = '(|)'  # Use brackets and vbars as spacers
+    all_indices = {}      # Use a dict to remove duplicates
+    for linenum, raw_line in enumerate(ivbeamlines, start=1):
+        line = strip_comments(raw_line)
+        for spacer in spacer_chars:
+            line = line.replace(spacer, ' ')
+        indices = line.split()
+        if len(indices) == 1 and linenum != 1:
             logger.warning('A line with only one element was found in '
-                           'IVBEAMS and will be skipped: '+line)
-        elif len(llist) >= 2:
-            f = [None, None]
+                           f'IVBEAMS and will be skipped: {raw_line.rstrip()}')
+            continue
+        if len(indices) < 2:
+            continue
+        try:
+            beam_index = BeamIndex(','.join(indices[:2]))
+        except ValueError:
+            if linenum == 1:
+                continue
+            logger.error(f'Error reading IVBEAMS line: {raw_line.rstrip()}')
+            raise
+        if linenum == 1:  # Header line has some data
+            logger.warning(
+                'It looks like the first line in the IVBEAMS file may contain '
+                'data. Note that the first line should be a header line, so '
+                'the data will not be read.'
+                )
+            continue
+        beam_index = BeamIndex(*(snap_to_fraction(index)
+                                 for index in beam_index))
+        all_indices[beam_index] = None  # Don't care about dict value
+    # With floats, Beam also limits the denominator of the indices that
+    # were not snapped (e.g., 1/127), and keeps their float value as hk
+    beams = [Beam(tuple(float(index) for index in hk_indices))
+             for hk_indices in all_indices]
+    logger.debug('IVBEAMS file was read successfully')
+    return beams
+
+
+def snap_to_fraction(index):
+    """Return a fractional index rounded to six decimals as a fraction.
+
+    Decimals, as writeIVBEAMS writes them, are exact fractions like
+    333333/1000000 rather than the 1/3 they were rounded from.
+
+    Parameters
+    ----------
+    index : Fraction
+        One fractional index of a beam, e.g., as read from IVBEAMS.
+
+    Returns
+    -------
+    snapped_index : Fraction
+        The fraction with denominator up to MAX_DENOMINATOR closest
+        to `index`, if within the rounding to six decimals, otherwise
+        `index` itself.
+    """
+    limited = index.limit_denominator(MAX_DENOMINATOR)
+    if abs(limited - index) <= _DECIMALS_TOLERANCE:
+        return limited
+    return index
+
+
+def beamlist_to_hks(beamlist):
+    """Return the [h, k] floats of the beams in BEAMLIST lines.
+
+    Parameters
+    ----------
+    beamlist : Sequence of str
+        The lines of a BEAMLIST file. Lines from which two
+        numbers cannot be read are skipped.
+
+    Returns
+    -------
+    list of list of float
+        The h and k indices of each beam.
+    """
+    blfs = []
+    for line in beamlist:
+        llist = line.split()
+        if len(llist) > 1:
+            fl = []
             for i in range(0, 2):
                 try:
-                    f[i] = float(llist[i])
-                except ValueError:
-                    if '/' in llist[i]:
-                        try:
-                            f[i] = (float(llist[i].split('/')[0])
-                                    / float(llist[i].split('/')[1]))
-                        except ValueError:
-                            if linenum != 1:
-                                logger.error('Error reading IVBEAMS line: '
-                                             + line)
-                                raise
-                    else:
-                        if linenum != 1:
-                            logger.error('Error reading IVBEAMS line: '+line)
-                            raise
-            if linenum != 1:
-                if not (f[0], f[1]) in hklist and None not in f:
-                    hklist.append((f[0], f[1]))
-            else:
-                # check whether there is data in first line by mistake
-                if None not in f:  # data was read
-                    logger.warning(
-                        'It looks like the first line in the '
-                        'IVBEAMS file may contain data. Note that the first '
-                        'line should be a header line, so the data will not '
-                        'be read.')
-        linenum += 1
-    beams = []
-    for hk in hklist:
-        beams.append(Beam(hk))
-    logger.debug("IVBEAMS file was read successfully")
-    return beams
+                    fl.append(float(llist[i]))
+                except (ValueError, IndexError):
+                    pass
+            if len(fl) == 2:
+                blfs.append(fl)
+    return blfs
 
 
 def sortIVBEAMS(sl, rp):
@@ -146,21 +196,9 @@ def sortIVBEAMS(sl, rp):
         except FileNotFoundError:
             logger.error("BEAMLIST not found.")
             raise
-    err = 1e-3          # since beams are saved as floats, give error tolerance
-    symeq = leedbase.getSymEqBeams(sl, rp)
-    # first, get beamlist as floats
-    blfs = []
-    for line in rp.beamlist:
-        llist = line.split()
-        if len(llist) > 1:
-            fl = []
-            for i in range(0, 2):
-                try:
-                    fl.append(float(llist[i]))
-                except (ValueError, IndexError):
-                    pass
-            if len(fl) == 2:
-                blfs.append(fl)
+    err = BEAMLIST_EPS
+    symeq = _get_symmetry_equivalent_beams(sl, rp)
+    blfs = beamlist_to_hks(rp.beamlist)
     # now figure out if there are beams in IVBEAMS without a partner
     not_found = []
     found_equivalent = []
@@ -365,13 +403,24 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
     return beams
 
 
+def _get_symmetry_equivalent_beams(sl, rp):
+    """Return symmetry-equivalent beams, or none with BEAM_EQUIVALENCE.
+
+    With a BEAM_EQUIVALENCE file, beams are never merged based on
+    symmetry: only those with the same (h, k) are considered equal.
+    """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        return []
+    return leedbase.getSymEqBeams(sl, rp)
+
+
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = leedbase.getSymEqBeams(sl, rp)
+    symeq = _get_symmetry_equivalent_beams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
-        eqbl = []   # hk of equivalent beams
+        eqbl = [b.hk]   # hk of equivalent beams (always incl. b itself)
         for (hk, i) in symeq:
             if b.isEqual_hk(hk):
                 eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
@@ -481,23 +530,56 @@ def readAUXEXPBEAMS(
 
 
 def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
-    """Writes an IVBEAMS file based on rp.exbeams. Returns
-    those beams in IVBEAMS form."""
-    if not domains:
-        d = [leedbase.getLEEDdict(sl, rp)]
+    """Write an IVBEAMS file with the beams to calculate.
+
+    The beams are those of rp.expbeams (projected to the first domain
+    if beams are averaged) or, if a BEAM_EQUIVALENCE file was loaded,
+    all those on its right-hand sides.
+
+    Parameters
+    ----------
+    sl : Slab or None
+        The slab. Unused for domains or with BEAM_EQUIVALENCE.
+    rp : Rparams
+        The run parameters.
+    filename : str, optional
+        The name of the file to write. Default is 'IVBEAMS'.
+    domains : bool, optional
+        Whether this is a run with multiple structural domains.
+        Default is False.
+
+    Returns
+    -------
+    list of Beam
+        The beams written, or an empty list if the LEED parameters
+        cannot be determined.
+
+    Raises
+    ------
+    Exception
+        If writing the file fails.
+    """
+    if rp.fileLoaded['BEAM_EQUIVALENCE']:
+        source = 'BEAM_EQUIVALENCE'
+        ivbeams = [Beam(hk) for hk in rp.beam_correspondence.calculated_beams]
     else:
-        d = [leedbase.getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
-    if any([v is None for v in d]):
-        logger.error("Failed to write IVBEAMS")
-        return []
+        source = 'EXPBEAMS'
+        if not domains:
+            d = [leedbase.getLEEDdict(sl, rp)]
+        else:
+            d = [leedbase.getLEEDdict(dp.slab, dp.rpars)
+                 for dp in rp.domainParams]
+        if any([v is None for v in d]):
+            logger.error("Failed to write IVBEAMS")
+            return []
+        if rp.AVERAGE_BEAMS is not False:
+            makebeams = project_to_first_domain(
+                [b.hkfrac for b in rp.expbeams], *d)
+            ivbeams = [Beam(hk) for hk in makebeams]
+        else:
+            ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
     output = ("  h         k          Beams to calculate, automatically "
-              "generated from EXPBEAMS\n")
-    if rp.AVERAGE_BEAMS is not False:
-        makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
-                                            *d)
-        ivbeams = [Beam(hk) for hk in makebeams]
-    else:
-        ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
+              f"generated from {source}\n")
     for b in ivbeams:
         output += "{: 10.6f} {: 10.6f}\n".format(b.hk[0], b.hk[1])
     try:

@@ -7,7 +7,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-01-23'
 __license__ = 'GPLv3+'
 
@@ -238,3 +238,11 @@ ALL_INPUT_FILES = set(chain.from_iterable(_REQUIRED_FILES.values()))
 # files will be used in precedence from left to right
 EXPBEAMS_NAMES = ('EXPBEAMS.csv', 'EXPBEAMS')
 ALL_INPUT_FILES.update(set(EXPBEAMS_NAMES))
+
+# optional file assigning calculated beams to experimental beams
+BEAM_EQUIVALENCE_NAME = 'BEAM_EQUIVALENCE'
+# Work-folder file in which the correspondence actually used is
+# written. It differs from BEAM_EQUIVALENCE_NAME to not overwrite
+# an input file; cleanup stores it in SUPP as BEAM_EQUIVALENCE_NAME.
+BEAM_EQUIVALENCE_USED_NAME = f'{BEAM_EQUIVALENCE_NAME}_used'
+ALL_INPUT_FILES.add(BEAM_EQUIVALENCE_NAME)

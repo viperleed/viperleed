@@ -9,7 +9,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
@@ -34,6 +34,8 @@ from viperleed.calc.lib import fs_utils
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_NAME
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_USED_NAME
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
@@ -70,15 +72,22 @@ _SUPP_FILES = (
     'VIBROCC_generated',
     )
 
+# Work-folder files that go in SUPP under a different name. They are
+# not collected into the manifest, nor copied back to the input folder.
+_SUPP_FILES_RENAMED = {
+    BEAM_EQUIVALENCE_USED_NAME: BEAM_EQUIVALENCE_NAME,
+    }
+
 _SUPP_DIRS = (
     ORIGINAL_INPUTS_DIR_NAME,
     'compile_logs',
     )
 
-# Files that may be generated automatically and do not need
-# storage into original_inputs.
+# Files that may be generated automatically or are optional, and
+# need no storage into original_inputs if absent.
 OPTIONAL_INPUT_FILES = (
     'BEAMLIST',
+    BEAM_EQUIVALENCE_NAME,
     )
 
 # Files to go in OUT
@@ -281,6 +290,7 @@ def _collect_supp_contents(rpars):
         files_to_copy,
         directories_to_copy,
         Path(DEFAULT_SUPP),
+        renamed_files=_SUPP_FILES_RENAMED,
         )
     has_files = (
         any(copied_files)
@@ -306,8 +316,30 @@ def _collect_out_contents(rpars):
         rpars.manifest.add(DEFAULT_OUT)
 
 
-def _copy_files_and_directories(files, directories, target):
-    """Copy files and directories to target, creating it if not existing."""
+def _copy_files_and_directories(files, directories, target,
+                                renamed_files=None):
+    """Copy files and directories to target, creating it if not existing.
+
+    Parameters
+    ----------
+    files : Iterable
+        Paths of the files to copy. Missing files are skipped.
+    directories : Iterable
+        Paths of the directories to copy. Missing ones are skipped.
+    target : Path
+        The directory to copy to.
+    renamed_files : Mapping, optional
+        Maps paths of further files to their names in `target`.
+        Missing files are skipped. Default is None.
+
+    Returns
+    -------
+    copied_files : set
+        The paths of the files that were copied, including those
+        in `renamed_files`.
+    copied_directories : set
+        The paths of the directories that were copied.
+    """
     copied_files, copied_directories = set(), set()
     try:
         target.mkdir(parents=True, exist_ok=True)
@@ -315,17 +347,20 @@ def _copy_files_and_directories(files, directories, target):
         _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
         return copied_files, copied_directories
 
-    for item in (*files, *directories):
+    new_names = {item: item.name for item in (*files, *directories)}
+    new_names.update((Path(item), name)
+                     for item, name in (renamed_files or {}).items())
+    for item, name in new_names.items():
         _copy = shutil.copy2 if item.is_file() else fs_utils.copytree_exists_ok
         container = copied_files if item.is_file() else copied_directories
         try:
-            _copy(item, target/item.name)
+            _copy(item, target/name)
         except FileNotFoundError:
             pass
         except OSError:
             which = 'file' if item.is_file() else 'directory'
-            _LOGGER.error(f'Error moving {target.name} {which} {item.name}: ',
-                          exc_info=True)
+            _LOGGER.error(f'Error copying {which} {item.name} to '
+                          f'{target.name}: ', exc_info=True)
         else:
             container.add(item)
     return copied_files, copied_directories
@@ -519,7 +554,8 @@ def _find_next_workistory_contents(rpars, prerun):
             if f not in rpars.manifest
             and f not in rpars.files_to_out
             and f not in _IOFILES
-            and (f.endswith('.log') or f in _OUT_FILES or f in _SUPP_FILES)
+            and (f.endswith('.log') or f in _OUT_FILES or f in _SUPP_FILES
+                 or f in _SUPP_FILES_RENAMED)
             ]
         directories = [d for d in all_dirs if d in (DEFAULT_SUPP, DEFAULT_OUT)]
     else:

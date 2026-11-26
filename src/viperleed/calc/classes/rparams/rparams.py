@@ -32,6 +32,7 @@ from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files.beam_equivalence import read_beam_equivalence
 from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
@@ -46,6 +47,7 @@ from viperleed.calc.lib.matplotlib_utils import use_calc_style
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
+from viperleed.calc.sections.calc_section import BEAM_EQUIVALENCE_NAME
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 from .defaults import DEFAULTS
@@ -203,7 +205,8 @@ class Rparams:
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
-            'DISPLACEMENTS': False, 'BEAMLIST': False, 'EXPBEAMS': False
+            'DISPLACEMENTS': False, 'BEAMLIST': False, 'EXPBEAMS': False,
+            'BEAM_EQUIVALENCE': False,
             }
         self.runHistory = []   # sections that have been executed before
         self.lastOldruns = []
@@ -223,6 +226,7 @@ class Rparams:
         self.beamlist = []  # lines as strings from BEAMLIST
         self.ivbeams = []   # uses Beam class; list of beams only
         self.expbeams = []  # uses Beam class; contains intensities
+        self.beam_correspondence = None  # From BEAM_EQUIVALENCE, if any
         self.theobeams = {  # uses Beam class; contains intensities
             'refcalc': None,
             'superpos': None
@@ -299,6 +303,27 @@ class Rparams:
             self.fileLoaded['EXPBEAMS'] = True
         else:
             _LOGGER.error(f'{err_msg}: No data was read.')
+
+    def try_loading_beam_equivalence_file(self):
+        """Read a BEAM_EQUIVALENCE file if not already available.
+
+        Raises
+        ------
+        ValueError
+            If the file is present but cannot be parsed.
+        """
+        if self.fileLoaded['BEAM_EQUIVALENCE']:
+            return
+        if not Path(BEAM_EQUIVALENCE_NAME).is_file():
+            return
+        try:
+            self.beam_correspondence = read_beam_equivalence(
+                BEAM_EQUIVALENCE_NAME
+                )
+        except ValueError as exc:
+            _LOGGER.error(f'Error while reading BEAM_EQUIVALENCE: {exc}')
+            raise
+        self.fileLoaded['BEAM_EQUIVALENCE'] = True
 
     @classmethod
     def get_default(cls, param):

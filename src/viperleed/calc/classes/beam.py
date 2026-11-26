@@ -17,6 +17,10 @@ import math
 import numpy as np
 from quicktions import Fraction
 
+# Default largest denominator of the fractional indices of a Beam
+# built from float indices
+MAX_DENOMINATOR = 99
+
 
 class Beam:
     """Class storing properties and data of a diffraction beam.
@@ -37,7 +41,7 @@ class Beam:
         Label for the beam
     """
 
-    def __init__(self, hk, maxdenom=99):
+    def __init__(self, hk, maxdenom=MAX_DENOMINATOR):
         if all([isinstance(v, Fraction) for v in hk]):
             self.hkfrac = hk
             self.hk = (float(hk[0]), float(hk[1]))
@@ -57,7 +61,7 @@ class Beam:
     def intensities(self):
         return np.fromiter(self.intens.values(), float)
 
-    def updateIndex(self, hk, maxdenom=99):
+    def updateIndex(self, hk, maxdenom=MAX_DENOMINATOR):
         """Keep values but change indices"""
         if all([isinstance(v, Fraction) for v in hk]):
             self.hkfrac = hk
