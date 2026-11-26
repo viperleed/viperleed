@@ -495,6 +495,25 @@ class ConstraintLine(ParsedLine):
     the amount of vacancies constant, but allows the individual occupations to
     vary freely. This can, for example, be used to vary the occupation in an
     alloy, without introducing vacancies.
+
+    Finally, a parameter can be frozen at a fixed value with
+        <mode> <target> [, <target> ...] = <value>
+    for geometric and vibrational parameters, and with
+        occ <target> [, <target> ...] = <element> <value>
+    for occupational ones. For a fixed value, the `link_target` and
+    `linear_operation` attributes are None, `fixed_value` is the float
+    <value>, and `fixed_element` is the ElementToken of an occupation
+    (None for geo and vib). Both are None for all other forms. For
+    occupations, a rhs of the form <element> <number> is read as a link
+    if it is a valid target (e.g., "O 2"), and as a fixed value
+    otherwise (e.g., "O 0.8").
+
+    Attributes
+    ----------
+    fixed_value : float or None
+        The value at which the parameter is frozen.
+    fixed_element : ElementToken or None
+        The element whose occupation is frozen.
     """
 
     block_name = 'CONSTRAIN'
@@ -539,6 +558,9 @@ class ConstraintLine(ParsedLine):
         self.targets = self._parse_targets(targets_str)
 
     def _treat_rhs(self):
+        self.fixed_value = None
+        self.fixed_element = None
+
         # check for an 'offset' tag, which CONSTRAIN never supported
         if 'offset' in self._rhs.lower():
             msg = (
@@ -575,6 +597,13 @@ class ConstraintLine(ParsedLine):
             self.link_target = None
             return
 
+        # A number is never a target, but a '-' makes it look like a label
+        if (
+            self.mode_token.mode is not PerturbationMode.OCC
+            and self._treat_fixed_value()
+        ):
+            return
+
         # The default case is to treat it as [<linear_operation>] <target>
         # It's not immediately obvious where to split the tokens since both
         # token types may contain spaces.
@@ -591,6 +620,8 @@ class ConstraintLine(ParsedLine):
                 continue
             break
         else:
+            if self._treat_fixed_value():
+                return
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         if len(link_targets) != 1:
@@ -609,10 +640,38 @@ class ConstraintLine(ParsedLine):
             else LinearOperationToken.from_array(np.eye(1))
         )
 
+    def _treat_fixed_value(self):
+        """Read the rhs as <value> (geo, vib) or <element> <value> (occ).
+
+        Returns
+        -------
+        bool
+            Whether the rhs is a fixed value. If so, the fixed-value
+            attributes are set.
+        """
+        parts = self._rhs.split()
+        is_occ = self.mode_token.mode is PerturbationMode.OCC
+        if len(parts) != 1 + is_occ:
+            return False
+        try:
+            value = float(parts[-1])
+        except ValueError:
+            return False
+        if is_occ:
+            self.fixed_element = self._parse_element(parts[0])
+        self.fixed_value = value
+        self.link_target = None
+        self.linear_operation = None
+        return True
+
     def _format_lhs_str(self):
         return ', '.join(str(t) for t in self.targets)
 
     def _format_rhs_str(self):
+        if self.fixed_value is not None:
+            if self.fixed_element is None:
+                return f'{self.fixed_value}'
+            return f'{self.fixed_element} {self.fixed_value}'
         return f'{self.linear_operation} {self.link_target}'
 
 

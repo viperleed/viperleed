@@ -501,6 +501,48 @@ class TestConstraintLine:
         with pytest.raises(DisplacementsSyntaxError):
             ConstraintLine(bad_line)
 
+    @pytest.mark.parametrize(
+        'line, exp_mode, exp_value, exp_element',
+        (
+            ('geo O 1 = 0.05', 'geo', 0.05, None),
+            ('vib O 1 = 0.05', 'vib', 0.05, None),
+            ('vib O 1 = -1', 'vib', -1.0, None),
+            ('geo O 1 = -0.05', 'geo', -0.05, None),
+            ('occ O 1 = O 0.8', 'occ', 0.8, ElementToken('O')),
+            ('occ O 1, N 2 = Fe 0.25', 'occ', 0.25, ElementToken('Fe')),
+        ),
+    )
+    def test_fixed_value(self, line, exp_mode, exp_value, exp_element):
+        con = ConstraintLine(line)
+        assert con.mode_token == ModeToken(exp_mode)
+        assert con.fixed_value == pytest.approx(exp_value)
+        assert con.fixed_element == exp_element
+        assert con.link_target is None
+        assert con.linear_operation is None
+
+    @pytest.mark.parametrize(
+        'line',
+        (
+            'geo O 1 = 0.05 0.1',  # two values
+            'occ O 1 = 0.8',  # element missing
+            'occ O 1 = Xx 0.8',  # invalid element
+            'occ O 1 = O 0.8 0.9',  # two values
+        ),
+    )
+    def test_invalid_fixed_value(self, line):
+        with pytest.raises(DisplacementsSyntaxError):
+            ConstraintLine(line)
+
+    def test_link_has_no_fixed_value(self):
+        con = ConstraintLine('occ O 1 = O 2')
+        assert con.fixed_value is None
+        assert con.fixed_element is None
+        assert con.link_target == TargetToken('O 2')
+
+    @pytest.mark.parametrize('mode', ('geo', 'vib', 'occ'))
+    def test_ind_is_accepted(self, mode):
+        ConstraintLine(f'{mode} O 1 = ind(2)')
+
     def test_offset_in_constrain_line(self):
         with pytest.raises(DisplacementsSyntaxError,
                            match=r'do not support "offset".*OFFSETS block'):
