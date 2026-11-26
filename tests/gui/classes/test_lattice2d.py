@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
@@ -353,7 +353,9 @@ class TestSpecialDirections:
 
 
 # Prepare some linear combinations for testing high_symm_transform.
-LINEAR_COMBINATIONS = np.random.randint(-20, 20, size=20)
+# Seeded: the values are in the test IDs, and pytest-xdist workers
+# must all collect the same test IDs.
+LINEAR_COMBINATIONS = np.random.default_rng(1).integers(-20, 20, size=20)
 LINEAR_COMBINATIONS[LINEAR_COMBINATIONS==0] += 1
 
 

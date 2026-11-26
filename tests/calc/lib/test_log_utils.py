@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-08-05'
 __license__ = 'GPLv3+'
 
@@ -93,10 +93,7 @@ class TestAtLevel:
             assert msg not in caplog.text
 
 
-# About the pylint disable: while it is true that this class only has
-# one method, the not-so-simple parametrize seems a good-enough reason
-# to keep it localized into a test class.
-class TestCalcLogFormatter:  # pylint: disable=too-few-public-methods
+class TestCalcLogFormatter:
     """Tests for the CalcLogFormatter class."""
 
     kwargs = {  # For LogRecord
@@ -128,6 +125,27 @@ class TestCalcLogFormatter:  # pylint: disable=too-few-public-methods
         """Check expected outcome of formatting a record."""
         fmt = CalcLogFormatter()
         assert fmt.format(record) == result
+
+    _levels = (
+        1,  # Below DEBUG
+        logging.DEBUG,
+        logging.INFO,
+        logging.WARNING,
+        logging.ERROR,
+        logging.CRITICAL,
+        25,  # No dedicated format
+        )
+
+    @parametrize(level=_levels, ids=logging.getLevelName)
+    def test_format_with_args(self, level):
+        """Check that %-style arguments are merged into the message."""
+        template = 'value %s, number %d'
+        message = 'value arg, number 3'
+        kwargs = {**self.kwargs, 'msg': template, 'args': ('arg', 3)}
+        record = Record(level=level, **kwargs)
+        formatted = CalcLogFormatter().format(record)
+        assert message in formatted
+        assert template not in formatted
 
 
 class TestCloseAllHandlers:

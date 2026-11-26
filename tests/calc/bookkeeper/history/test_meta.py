@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-13'
 __license__ = 'GPLv3+'
 
@@ -151,8 +151,10 @@ class TestBookkeeperMetaFile:
         meta.collect_from(other_meta)
         assert meta.parent == _MOCK_HASH
 
-    def test_compute_hash_fake(self, meta, mocker):
+    def test_compute_hash_fake(self, tmp_path, mocker):
         """Test compute_hash method by mocking methods."""
+        # compute_hash needs an existing folder
+        meta = BookkeeperMetaFile(tmp_path)
         mocker.patch(f'{_MODULE}.hashlib.md5', return_value=_MOCK_OTHER_HASH)
         mock_update_folder = mocker.patch(
             f'{_MODULE}.BookkeeperMetaFile._update_hash_from_folder'

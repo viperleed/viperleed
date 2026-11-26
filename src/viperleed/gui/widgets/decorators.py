@@ -7,7 +7,7 @@ subclasses.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-29'
 __license__ = 'GPLv3+'
 
@@ -43,8 +43,7 @@ def receive_mouse_broadcast(cls, _, args, kwargs):
     return cls(*args, **kwargs)
 
 @ensure_decorates_class(qtw.QWidget)
-@wrapt.decorator
-def broadcast_mouse(cls, _, args, kwargs):
+def broadcast_mouse(cls):
     """
     This is a class decorator intended to be used on a top-level window class.
     The decorated class will broadcast any mouse event to all children (as well
@@ -54,6 +53,12 @@ def broadcast_mouse(cls, _, args, kwargs):
 
     After broadcasting is complete, the mouse events will be handled as
     implemented in the class definition.
+
+    The methods of `cls` are replaced once, when decorating, never at
+    instantiation: PyQt5 keeps no reference to the function of a slot
+    that is a bound method, so replacing on_child_destroyed would free
+    the function connected to the destroyed signal of the children of
+    existing instances.
     """
 
     # Keep references to a few original method names that will be redefined,
@@ -220,4 +225,4 @@ def broadcast_mouse(cls, _, args, kwargs):
     setattr(cls, '__edit_mouse_event', __edit_mouse_event)
     setattr(cls, '__skip_event_broadcast', __skip_event_broadcast)
 
-    return cls(*args, **kwargs)
+    return cls

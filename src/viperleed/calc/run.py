@@ -9,7 +9,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2019-11-12'  # Was originally tleedm.py
 __license__ = 'GPLv3+'
 
@@ -24,6 +24,7 @@ from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
 from viperleed.calc.files.manifest import ManifestFile
+from viperleed.calc.files.tenserleed import TL_VERSIONS_WITH_WRONG_TENSORS
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.log_utils import prepare_calc_logger
@@ -57,6 +58,8 @@ def run_calc(
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
     replaced by passing the `slab` and/or `preset_params` kwargs.
+    On return or exception, the level of the viperleed.calc logger is
+    restored and its handlers are closed.
 
     Parameters
     ----------
@@ -101,6 +104,35 @@ def run_calc(
         objects at the end of each executed section. None if the run
         terminates before any section is executed.
     """
+    # The logger level is set while running, and should not leak
+    # to whoever uses the calc logger after this function returns.
+    previous_level = LOGGER.level
+    try:
+        return _run_calc(
+            system_name,
+            console_output,
+            slab,
+            preset_params,
+            source,
+            home,
+            )
+    except BaseException:
+        # Do not leave handlers (and open files) behind
+        close_all_handlers(LOGGER)
+        raise
+    finally:
+        LOGGER.setLevel(previous_level)
+
+
+def _run_calc(
+    system_name,
+    console_output,
+    slab,
+    preset_params,
+    source,
+    home,
+        ):
+    """Run a calculation. See run_calc for the arguments."""
     os.umask(0)
 
     # Start logger, write to file:
@@ -135,6 +167,7 @@ def run_calc(
 
     rpars.updateDerivedParams()
     LOGGER.info(f'ViPErLEED is using TensErLEED version {rpars.TL_VERSION}.')
+    _warn_if_wrong_tensors(rpars)
 
     _preprocess_work(rpars, log_name)  # Store inputs BEFORE any edit!
     exit_code, state_recorder = section_loop(rpars, slab)
@@ -347,6 +380,22 @@ def _set_log_level(rpars, preset_params):
     if 'LOG_LEVEL' in preset_params:
         LOGGER.info(f'Overriding log level to {rpars.LOG_LEVEL}.')
     LOGGER.setLevel(rpars.LOG_LEVEL)
+
+
+def _warn_if_wrong_tensors(rpars):
+    """Warn if rpars.TL_VERSION computes wrong top-layer tensors."""
+    version = rpars.TL_VERSION
+    if not any(version == v for v in TL_VERSIONS_WITH_WRONG_TENSORS):
+        return
+    LOGGER.warning(
+        f'TensErLEED version {version} computes wrong tensors for the '
+        'topmost layer (bug in subroutine ADREF2T, fixed in TensErLEED '
+        'v2.1.0). Results of delta-amplitude calculations, structure '
+        'searches and error curves are affected. Reference-calculation '
+        'I(V) curves are not. Consider upgrading to TensErLEED v2.1.0 '
+        'or later, available at '
+        'https://github.com/viperleed/viperleed-tensorleed/releases'
+        )
 
 
 def _set_tensorleed_source(rpars, source):

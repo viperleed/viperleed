@@ -190,8 +190,8 @@ optimization. For this stage, a choice of 10 pm range with 1 pm steps
 
 .. hint::
     In preparing this example we found that the default search parameters
-    lead to rather slow convergence in this and the following steps. To speed 
-    up the process, we recommend using these settings for :ref:`searchstart` 
+    lead to rather slow convergence in this and the following steps. To speed
+    up the process, we recommend using these settings for :ref:`searchstart`
     and :ref:`SEARCH_CONVERGENCE` (simply append the lines to PARAMETERS):
 
         .. code-block:: console
@@ -306,7 +306,7 @@ Error calculation
 We can also perform an error calculation for this system to gauge how
 sensitive our result is to minor changes of structural parameters. This
 can also give us an estimate of the uncertainty of the fit parameters.
-To run an error calculation, we need a :ref:`DISPLACEMENTS` file specifying 
+To run an error calculation, we need a :ref:`DISPLACEMENTS` file specifying
 the requested steps.
 
 .. only:: html

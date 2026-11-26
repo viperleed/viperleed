@@ -1,0 +1,172 @@
+STRUCTURE:
+stored-input 260101-000000
+'s'  1.00 16      BulkOrSlab('b' or 's'), LatticeConstant(Angstroms), nshell
+7.81    0.0     0.0           CoordinatesOfUnitCell(LCunits)
+-0.0542 7.8098  0.0     
+-0.2315 -0.2331 33.3704 
+72  72                  #AtomTypes,#OccupiedAtomTypes
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+1.8833 1.8964 0.0      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+5.7883 1.8964 0.0      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+1.8562 5.8013 0.0      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+5.7612 5.8013 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0031 3.6692 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.0711 7.5741 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.5464 4.0285 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.6685 0.1236 0.0      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.7612 7.5865 1.7728      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.5735 1.9088 1.7728      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.6414 5.8137 1.7728      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.8833 3.6816 1.7728      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+-0.0421 -0.0424 1.9524      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.8358 3.8625 1.9524      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.8629 -0.0424 1.9524      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+-0.0692 3.8625 1.9524      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.9104 0.1385 2.132      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.0982 5.8162 2.132      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0302 1.9113 2.132      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.7883 4.0434 2.132      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+5.7883 5.8286 3.9048      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+1.8833 5.8286 3.9048      Coordinates(LCunits)
+1 38.  0.  0.  'atom_density_files/Sr/chgdenSr'
+5.8154 1.9237 3.9048      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+1.9104 1.9237 3.9048      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.6685 4.0558 3.9048      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.6005 0.1509 3.9048      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.1252 3.6965 3.9048      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0031 7.6014 3.9048      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.8154 3.7089 5.6776      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.6956 1.9361 5.6776      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.8833 7.6138 5.6776      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.5735 5.841 5.6776      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.8629 3.8898 5.8572      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+-0.0421 3.8898 5.8572      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.89 -0.0151 5.8572      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+-0.015 -0.0151 5.8572      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.9104 4.0707 6.0368      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0302 5.8435 6.0368      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.8425 0.1658 6.0368      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.1523 1.9386 6.0368      Coordinates(LCunits)
+1 38.  0.  0.  'atom_density_files/Sr/chgdenSr'
+1.9375 1.951 7.8096      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+5.8425 1.951 7.8096      Coordinates(LCunits)
+1 38.  0.  0.  'atom_density_files/Sr/chgdenSr'
+1.9104 5.8559 7.8096      Coordinates(LCunits)
+1 57.  0.  0.  'atom_density_files/La/chgdenLa'
+5.8154 5.8559 7.8096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0573 3.7238 7.8096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.1252 7.6287 7.8096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.6005 4.083 7.8096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.7226 0.1781 7.8096      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.8154 7.6411 9.5824      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.6276 1.9634 9.5824      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.6956 5.8682 9.5824      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.9375 3.7362 9.5824      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+0.0121 0.0122 9.762      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.89 3.9171 9.762      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.9171 0.0122 9.762      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+-0.015 3.9171 9.762      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.9646 0.193 9.9416      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.1523 5.8708 9.9416      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0844 1.9659 9.9416      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.8425 4.0979 9.9416      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.8302 7.656 11.7144      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+7.6424 1.9782 11.7144      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+3.7103 5.8831 11.7144      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.9523 3.7511 11.7144      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+0.0269 0.0271 11.894      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.9048 3.9319 11.894      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+3.9318 0.0271 11.894      Coordinates(LCunits)
+1 25.  0.  0.  'atom_density_files/Mn/chgdenMn'
+-0.0002 3.9319 11.894      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+1.9794 0.2079 12.0736      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+0.1671 5.8856 12.0736      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+4.0992 1.9808 12.0736      Coordinates(LCunits)
+1 8.  0.  0.  'atom_density_files/O/chgdenO'
+5.8573 4.1128 12.0736      Coordinates(LCunits)
+SCATTERING: 
+'../TensErLEED/seSernelius' |exchange-correlation file
+18  |lmax
+'r' |SelectCalculation: 'relativistic'/'nonrelativistic'
+'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'
+'n' |phaseshift: print_SpinPhaseShift? 'yes'/no'
+'n' |phaseshift,sigma: print_log10(DsigmaDomega)? 'yes'/'no'
+'n' |phaseshift,sigma: print_DsigmaDtheta? 'yes'/'no'
+'n' |phaseshift,sigma: print_Sherman? 'yes'/'no'
+'n' |phaseshift,sigma: print_TotalCrossSection? 'yes'/'no'
+'n' |dataflow: print_RhoPot? 'yes'/'no'
+'n' |dataflow: print_PSvsE? 'yes'/'no'
+'n' |dataflow: print_WaveFunction? 'yes'/'no'
+0.0,820,3 |'phaseshift'/'dataflow' run: E1->E2,PS_Estep
+100.,100.,1  |'sigma' run: E1->E2,NumVals
+MT OPTIMIZATION (Nelder-Mead):
+'*'           | NMselect: '*' or '+'
+0.05d0   | NMlambda, simplex point shift.
+3            | NMiter, no. of simplex calls.
+1.d-04    ! NMeps,  simplex epsilon.
+0.125d0 | NMepsit, epsilon iteration, eps=eps*epsit.

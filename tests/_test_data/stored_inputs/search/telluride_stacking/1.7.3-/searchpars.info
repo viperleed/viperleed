@@ -1,0 +1,17 @@
+   #  label   atom   elem   mode  steps constr
+---- DOMAIN 1 ----
+   1    P11      1     Te    geo     21      -
+   2    C11      1      -    occ      1      -
+   3    P21      3     Co    geo     21      -
+   4    C22      3      -    occ      1      -
+   5    P31      4     Au    geo      1      -
+   6    P32      4    vac    geo      1      -
+   7    C33      4      -    occ      1      -
+---- DOMAIN 2 ----
+   8    P11      1     Te    geo      3      -
+   9    C11      1      -    occ      1      -
+  10    P21      4     Au    geo      1      -
+  11    P22      4    vac    geo      1      -
+  12    C22      4      -    occ      1      -
+  13      -      -      -    dom    101      -
+  14      -      -      -    dom    101      -

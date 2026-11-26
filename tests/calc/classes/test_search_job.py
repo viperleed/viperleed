@@ -4,7 +4,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-07-17'
 __license__ = 'GPLv3+'
 
@@ -40,6 +40,7 @@ class TestSearchJob:
             return job
         return _make
 
+    @pytest.mark.slow
     def test_termination(self, pyjob, subtests):
         """Check clean termination of an infinite SearchJob."""
         job = pyjob('while True: pass', log_path=None)
@@ -62,6 +63,7 @@ class TestSearchJob:
         job.wait()
         assert job.returncode == COMMAND_NOT_FOUND_RETURN_CODE
 
+    @pytest.mark.slow
     def test_correct_return_code(self, pyjob):
         """Test that the job returns the correct return code."""
         exit_code = 42
@@ -78,6 +80,7 @@ sys.exit({exit_code})
         job.wait()
         assert job.returncode == exit_code
 
+    @pytest.mark.slow
     def test_stdout_and_stderr_to_log_file(self, pyjob, tmp_path, subtests):
         """Both stdout and stderr should be redirected into the log file.
 
@@ -111,6 +114,7 @@ print({messages['stderr']!r}, file=sys.stderr)
             with subtests.test(stream=stream):
                 assert text in content
 
+    @pytest.mark.slow
     def test_job_kill_flag(self, pyjob, subtests):
         """Test that the job can be killed using the kill flag."""
         job = pyjob('while True: pass', log_path=None)
@@ -124,6 +128,7 @@ print({messages['stderr']!r}, file=sys.stderr)
         with subtests.test('is not running after kill'):
             assert not job.is_running()
 
+    @pytest.mark.slow
     def test_notice_immediate_job_death(self, pyjob):
         """Test that the job is not running immediately after start."""
         job = pyjob('pass', log_path=None)
@@ -132,6 +137,7 @@ print({messages['stderr']!r}, file=sys.stderr)
         assert job.returncode == 0
         assert job._mp_proc.exitcode == 0
 
+    @pytest.mark.slow
     @pytest.mark.timeout(10)  # .join waits 5 seconds
     def test_hard_to_kill(self, mocker):
         """Ensure terminate() kills a hard-to-die process."""
@@ -264,6 +270,7 @@ class TestPsutilKillProcessTree:
                 yield proc
         return _make
 
+    @pytest.mark.slow
     @pytest.mark.skipif(IS_WINDOWS,
                         reason='Does .terminate() instead of .kill()')
     def test_hard_to_kill(self, pyproc):
@@ -281,6 +288,7 @@ time.sleep(10)
             _psutil_kill_process_tree(proc.pid)
             assert not ps_proc.is_running()
 
+    @pytest.mark.slow
     def test_parent_without_children(self, pyproc):
         """Test graceful termination of a parent process only, no children."""
         with pyproc('import time; time.sleep(10)') as proc:
@@ -288,6 +296,7 @@ time.sleep(10)
             time.sleep(0.2)  # Give OS a moment to terminate
             assert proc.poll() is not None  # process should be gone
 
+    @pytest.mark.slow
     def test_parent_with_children(self, pyproc):
         """Test graceful termination of a parent process with children."""
         parent_code = '''
@@ -303,6 +312,7 @@ time.sleep(5)
             for child in children_before:
                 assert not child.is_running()
 
+    @pytest.mark.slow
     def test_parent_with_some_children(self, pyproc):
         """Test graceful termination when only some children survive."""
         parent_code = f'''

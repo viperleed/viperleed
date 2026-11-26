@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-08-04'
 __license__ = 'GPLv3+'
 
@@ -12,6 +12,7 @@ from dataclasses import InitVar
 from dataclasses import dataclass
 from dataclasses import field as data_field
 from dataclasses import fields as data_fields
+import sys
 from typing import Any
 from typing import ClassVar
 from typing import Dict
@@ -105,12 +106,29 @@ class TestFindTypeOrigin:
         origin = tuple(_find_type_origin(hint))
         assert origin == expect
 
+    @pytest.mark.skipif(sys.version_info < (3, 10),
+                        reason='X | Y hints need Python >= 3.10')
+    def test_from_union_operator(self):
+        """Check the origins of an X | Y type hint."""
+        hint = int | None  # pylint: disable=unsupported-binary-operation
+        origin = tuple(_find_type_origin(hint))
+        assert origin == (int, type(None))
+
     @parametrize('hint,expect', _type_origins_str.items())
     @pytest.mark.xfail(reason='string annotations are still unsupported')
     def test_from_string(self, hint, expect):
         """Check correct outcome of finding the origin of a type hint."""
         origin = tuple(_find_type_origin(hint))
         assert origin == expect
+
+
+def _any_hint_id(value):
+    """Return a process-independent test ID for test_any_hint."""
+    # The repr of object() holds a per-process address, and
+    # pytest-xdist workers must all collect the same test IDs.
+    if value.__class__ is object:
+        return 'value=object()'
+    return f'value={value!r}'
 
 
 class TestCheckTypes:
@@ -124,7 +142,7 @@ class TestCheckTypes:
 
     _many_types = ({}, set(), tuple(), 3.5, 1+2j, object(), NestedClass())
 
-    @parametrize(value=_many_types)
+    @parametrize(value=_many_types, idgen=_any_hint_id)
     def test_any_hint(self, value):
         """Check that hinting with Any never complains."""
         instance = SampleClass(attr=1, any_attr=value)

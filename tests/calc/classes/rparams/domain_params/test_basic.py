@@ -1,13 +1,13 @@
 """Tests for module domain_params of viperleed.calc.classes.rparams.
 
 This module contains tests for the basic implementation details of the
-DomainParameters class, especially magic methods. 
+DomainParameters class, especially magic methods.
 """
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-19'
 __license__ = 'GPLv3+'
 
@@ -34,7 +34,10 @@ class TestDomainParameters:
         """Test with a non-existent path to ensure it still resolves."""
         work = 'non_existent_path'
         domain = make_domain(work, 'test_domain')
-        assert domain.workdir == Path(work)
+        # Path.resolve() of a non-existent relative path is not made
+        # absolute on Windows with Python < 3.10, so compare against
+        # the very same operation as the implementation.
+        assert domain.workdir == Path(work).resolve()
 
     @parametrize(name=('test_domain', ''))
     def test_str(self, name, make_domain):

@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-26'
 __license__ = 'GPLv3+'
 
@@ -62,9 +62,9 @@ class TestFindAndImportBackend:
     @parametrize('cairo_version,expect', _cairo_version.items())
     def test_import_success(self, cairo_version, expect, mocker):
         """Check the outcome of a successful backend import."""
-        mocker.patch('importlib.import_module')
         mocker.patch(f'{_MODULE}.get_cairo_version',
                      return_value=cairo_version)
+        mocker.patch('importlib.import_module')
         backend = find_and_import_backend()
         assert backend is expect
 
@@ -145,7 +145,8 @@ class TestImportMatplotlib:
         result = import_matplotlib()
         assert result is mock_backend
         mock_import.assert_called_once_with('matplotlib')
-        mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use)
+        mock_matplotlib.use.assert_called_once_with(mock_backend.mpl_use,
+                                                    force=False)
 
 
 class TestImportFigureCanvas:

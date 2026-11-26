@@ -3,8 +3,8 @@
 Constraints for structure optimization
 ======================================
 
-This block of the :ref:`DISPLACEMENTS` file allows you to define specific 
-constraints other than symmetry for the structure-optimization routine. The 
+This block of the :ref:`DISPLACEMENTS` file allows you to define specific
+constraints other than symmetry for the structure-optimization routine. The
 commands are introduced by a header line of the form
 
 ..  code-block:: none

@@ -17,7 +17,7 @@ file matches the symbol of a chemical element (case-insensitive).
    ELEMENT_RENAME A = Fe
    ELEMENT_RENAME B = O
 
-**Acceptable values**: On the left, :ref:`POSCAR`  names (exact match, apart 
+**Acceptable values**: On the left, :ref:`POSCAR`  names (exact match, apart
 from case). On the right, chemical elements from the periodic table (not
 case sensitive).
 
@@ -35,8 +35,8 @@ be used for these sites.
 -  If chemical elements are being defined for multiple POSCAR elements, have
    multiple lines starting with ELEMENT_RENAME and the respective POSCAR
    elements left of the '=' sign.
--  ELEMENT_RENAME is complementary to :ref:`ELEMENT_MIX`, so no POSCAR element 
-   for which ELEMENT_RENAME is defined should appear as an ELEMENT_RENAME 
+-  ELEMENT_RENAME is complementary to :ref:`ELEMENT_MIX`, so no POSCAR element
+   for which ELEMENT_RENAME is defined should appear as an ELEMENT_RENAME
    parameter, and vice versa.
 -  The VESTA program for viewing structures reads only the first two
    characters of the POSCAR element name

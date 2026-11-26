@@ -7,7 +7,7 @@ makes new matplotlib features available in older python versions.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-07-10'
 __license__ = 'GPLv+3'
 
@@ -31,10 +31,15 @@ except ModuleNotFoundError:
     CAN_PLOT = False
 else:
     import matplotlib
+    from matplotlib import cm as mpl_cm
     from matplotlib import rc_params_from_file
     from matplotlib import style as mpl_style
-    from matplotlib.style.core import STYLE_EXTENSION
+    from matplotlib.colors import Colormap
     CAN_PLOT = True
+
+# The extension of matplotlib style files. Not imported from matplotlib,
+# as matplotlib.style.core.STYLE_EXTENSION is deprecated since v3.11.
+STYLE_EXTENSION = 'mplstyle'
 
 # The import position is actually correct. Import from viperleed after
 # other third-party modules. The problem is probably the conditionals
@@ -44,6 +49,7 @@ from viperleed.calc.lib.version import Version
 
 
 _CAN_DEAL_WITH_DOTTED_NAMES = '3.7'
+_CAN_RESAMPLE_COLORMAPS = '3.6'  # Colormap.resampled
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -127,6 +133,52 @@ def close_figures(pyplot, *figures):
             pyplot.close(figure)
         except Exception:                                                       # TODO: should catch correct ones, but let's have people tell us.
             _LOGGER.warning(_log_msg, format_exc())
+
+
+@raise_without_matplotlib
+def get_colormap(cmap, n_colors=None):
+    """Return a matplotlib colormap, given its name or itself.
+
+    This is a drop-in replacement for matplotlib.cm.get_cmap, which
+    was removed in matplotlib 3.9.
+
+    Parameters
+    ----------
+    cmap : str or matplotlib.colors.Colormap
+        The name of a registered colormap, or a Colormap. The
+        latter is returned as is, also if `n_colors` is given.
+    n_colors : int, optional
+        If given, and `cmap` is a name, return the colormap
+        resampled to have this many colors. Default is None,
+        i.e., no resampling.
+
+    Returns
+    -------
+    matplotlib.colors.Colormap
+        The colormap. For a name, this is a new object: modifying
+        it does not affect the registered colormap.
+
+    Raises
+    ------
+    ValueError
+        If cmap is neither a Colormap nor the name of one.
+    HasNoMatplotlibError
+        If matplotlib is not available.
+    """
+    if isinstance(cmap, Colormap):
+        return cmap
+    try:
+        colormap = matplotlib.colormaps[cmap]
+    except (KeyError, TypeError) as exc:  # TypeError if unhashable
+        raise ValueError(f'Invalid cmap {cmap!r}. Expected a '
+                         'matplotlib.colors.Colormap or the name '
+                         'of a registered one') from exc
+    if n_colors is None:
+        return colormap
+    if Version(mpl_version) >= _CAN_RESAMPLE_COLORMAPS:
+        return colormap.resampled(n_colors)
+    # Before v3.6, where get_cmap is not deprecated yet (from v3.7)
+    return mpl_cm.get_cmap(cmap, n_colors)
 
 
 @skip_without_matplotlib

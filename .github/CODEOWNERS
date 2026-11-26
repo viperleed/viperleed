@@ -1,0 +1,4 @@
+# Changes to workflows and other repository configuration can change
+# the outcome of required status checks, so they need the review of a
+# maintainer. See #609.
+/.github/ @fkraushofer @michele-riva
