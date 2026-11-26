@@ -102,7 +102,7 @@ class OffsetsHeaderLine(HeaderLine):
 
     def __str__(self):
         """Return the string representation of the offsets header."""
-        return '== OFFSETS'
+        return f'== {self.section}'
 
 
 class SearchHeaderLine(HeaderLine):
