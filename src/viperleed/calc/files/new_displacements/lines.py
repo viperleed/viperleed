@@ -34,8 +34,8 @@ SECTION_HEADER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$', re.IGNORECASE)
-LOOP_START_PATTERN = re.compile(r'<loop>', re.IGNORECASE)
-LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>', re.IGNORECASE)
+LOOP_START_PATTERN = re.compile(r'<\s*loop\s*>', re.IGNORECASE)
+LOOP_END_PATTERN = re.compile(r'<\s*[/\\]\s*loop\s*>', re.IGNORECASE)
 
 
 _BELOW_DEBUG = 2
@@ -155,9 +155,9 @@ class LoopMarkerLine(HeaderLine):
     def __init__(self, line: str):
         """Initialize the LoopMarkerLine with a line string."""
         stripped_line = line.strip().lower()
-        if LOOP_START_PATTERN.match(stripped_line):
+        if LOOP_START_PATTERN.fullmatch(stripped_line):
             self.kind = 'start'
-        elif LOOP_END_PATTERN.match(stripped_line):
+        elif LOOP_END_PATTERN.fullmatch(stripped_line):
             self.kind = 'end'
         else:
             msg = f'Invalid loop marker line: "{line}".'

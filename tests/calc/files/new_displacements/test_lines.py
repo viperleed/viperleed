@@ -7,6 +7,7 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.errors import (
     DisplacementsSyntaxError,
@@ -14,6 +15,7 @@ from viperleed.calc.files.new_displacements.errors import (
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
+    LoopMarkerLine,
     OccDeltaLine,
     OffsetsLine,
     VibDeltaLine,
@@ -456,3 +458,39 @@ def test_separate_direction(input_str, exp_targets, exp_direction):
     targets, direction = separate_direction_from_targets(input_str)
     assert targets == exp_targets
     assert direction == exp_direction
+
+
+class TestLoopMarkerLine:
+    """Tests for the LoopMarkerLine class."""
+
+    _valid = {
+        '<loop>': 'start',
+        '  <LOOP>  ': 'start',
+        '< loop >': 'start',
+        '</loop>': 'end',
+        '<\\loop>': 'end',
+        '< / loop >': 'end',
+        '</Loop>': 'end',
+    }
+    _invalid = (
+        '<loop>junk',
+        '<loop> GEO_DELTA',
+        '</loop> foo',
+        '<\\loop>x',
+        'x <loop>',
+        '<lo op>',
+        '<loops>',
+        'loop',
+    )
+
+    @parametrize('line,kind', _valid.items())
+    def test_valid(self, line, kind):
+        """Check that a plain or spaced marker is read."""
+        marker = LoopMarkerLine(line)
+        assert marker.kind == kind
+
+    @parametrize(line=_invalid)
+    def test_invalid(self, line):
+        """Check that a marker with extra characters is rejected."""
+        with pytest.raises(DisplacementsSyntaxError):
+            LoopMarkerLine(line)
