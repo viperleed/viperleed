@@ -250,3 +250,33 @@ def test_unparsable_line_message_quotes_line(line):
     msg = _unparsable_line_message(line)
     assert f'"{line}"' in msg
     assert ' object at 0x' not in msg
+
+
+@parametrize(
+    'contents, expected',
+    (
+        ('== SEARCH\n' + _MODES + _SEARCH.replace('a', 'search_1'),
+         ['search_2', 'search_1']),
+        (_SEARCH + _SEARCH, ['a', 'a 2']),
+        (_SEARCH + _SEARCH + _SEARCH, ['a', 'a 2', 'a 3']),
+        (_SEARCH + '== SEARCH\n' + _MODES, ['a', 'search_2']),
+        ('== SEARCH\n' + _MODES + _SEARCH, ['search_1', 'a']),
+    ),
+)
+def test_read_unique_search_labels(contents, expected, tmp_path):
+    """Check that search labels are unique and skip used ones."""
+    assert _search_labels(_read_text(contents, tmp_path)) == expected
+
+
+def test_search_label_round_trip(tmp_path):
+    """Check that a generated label is rendered in the header line."""
+    df = _read_text('== SEARCH\n' + _MODES + '== SEARCH\n' + _MODES, tmp_path)
+    headers = [
+        line for line in str(df).splitlines() if '== SEARCH' in line
+    ]
+    labels = [h.split('== SEARCH', 1)[1].strip() for h in headers]
+    assert labels == ['search_1', 'search_2']
+    reread = _read_text(
+        '\n'.join(f'== SEARCH {label}\n{_MODES}' for label in labels), tmp_path
+    )
+    assert _search_labels(reread) == labels

@@ -217,8 +217,17 @@ class SearchBlock(DisplacementsSegmentABC):
     def __init__(self, header_line):
         """Initialize the SearchBlock with a header line."""
         super().__init__(header_line)
-        self.label = header_line.label
         self.parent = None  # Parent can be set later if needed
+
+    @property
+    def label(self):
+        """Return the label of this search block, as in its header."""
+        return self._header.label
+
+    @label.setter
+    def label(self, new_label):
+        """Set the label of this search block and of its header."""
+        self._header.label = new_label
 
     @staticmethod
     def is_my_header_line(line):

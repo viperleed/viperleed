@@ -147,13 +147,33 @@ class DisplacementsFile(NodeMixin):
         return any(isinstance(b, SearchBlock) for b in self.descendants)
 
     def _name_unnamed_search_blocks(self):
-        """Give blocks without a label the name search_<position>."""
-        search_blocks = (
-            b for b in PreOrderIter(self) if isinstance(b, SearchBlock)
-        )
-        for position, block in enumerate(search_blocks, start=1):
+        """Give every search block a unique label.
+
+        Labels given by the user are kept, except that a repeated one
+        gets the first free suffix ' 2', ' 3', ... (as the old reader
+        does). Blocks without a label are named search_<position>, with
+        <position> their 1-based index among all search blocks. If that
+        name is taken, <position> is increased until it is free.
+        """
+        blocks = [b for b in PreOrderIter(self) if isinstance(b, SearchBlock)]
+        used = set()
+        for block in blocks:
             if not block.label:
-                block.label = f'search_{position}'
+                continue
+            label, suffix = block.label, 2
+            while label in used:
+                label = f'{block.label} {suffix}'
+                suffix += 1
+            block.label = label
+            used.add(label)
+        for position, block in enumerate(blocks, start=1):
+            if block.label:
+                continue
+            number = position
+            while f'search_{number}' in used:
+                number += 1
+            block.label = f'search_{number}'
+            used.add(block.label)
 
     def _validate(self):
         """Validate the file structure."""
