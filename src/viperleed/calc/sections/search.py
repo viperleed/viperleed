@@ -387,8 +387,7 @@ def _log_search_start(rp):
         'Starting search. Progress information is written to SD.TL and '
         f'Search-progress.pdf in the work directory ({Path.cwd()}). The '
         'PDF file only appears after the first evaluation of SD.TL, '
-        f'i.e., after about {rp.searchEvalTime} seconds '
-        '(SEARCH_EVAL_TIME).'
+        f'i.e., after about {rp.searchEvalTime} seconds.'
         )
 
 
