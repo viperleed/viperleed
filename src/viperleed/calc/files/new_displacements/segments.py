@@ -284,7 +284,7 @@ class LoopBlock(DisplacementsSegmentABC):
         self._subsegments = (SearchBlock, LoopBlock)
 
     def reset_iterator(self):
-        """Return this loop and its nested loops to their freshly-read state.
+        """Reset this loop and nested loops to their freshly-read state.
 
         This includes forgetting the R factor of earlier passes, e.g.,
         when the search repeats after a new reference calculation.
@@ -339,8 +339,8 @@ class LoopBlock(DisplacementsSegmentABC):
             # if all children have been processed, check convergence
             # specifically do not use abs() here - break if we increased
             if self._last_rfac - current_rfac >= r_fac_eps:
-                # if converged, reset the child index and call next()
-                self._current_child_id = 0
+                # if improved, run another pass, with fresh nested loops
+                self.reset_iterator()
                 self._last_rfac = current_rfac
                 return self.next(current_rfac, r_fac_eps)
             raise StopIteration

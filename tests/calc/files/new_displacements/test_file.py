@@ -6,6 +6,7 @@ __license__ = 'GPLv3+'
 
 
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.errors import (
     AlreadyReadError,
@@ -50,6 +51,32 @@ def test_read_nested_loops():
     assert [c.label for c in (first, third)] == ['a', 'c']
     assert [type(c) for c in inner.children] == [SearchBlock]
     assert inner.children[0].label == 'b'
+
+
+_NESTED_LOOPS_SEQUENCES = {
+    # Each loop runs twice: the second pass does not improve R.
+    'constant R': ((0.5,)*9, 'abbcabbcd'),
+    # The inner loop repeats as long as R improves. When the outer
+    # loop repeats, the inner one starts afresh and runs twice.
+    'improving R': ((0.5, 0.4, 0.3) + (0.2,)*7, 'abbbcabbcd'),
+    # R improves during the outer loop's second pass: a third pass.
+    'outer improves': ((0.5, 0.5, 0.4, 0.4, 0.4) + (0.3,)*8, 'abbcabbcabbcd'),
+}
+
+
+@parametrize(
+    'rfacs,expected',
+    _NESTED_LOOPS_SEQUENCES.values(),
+    ids=_NESTED_LOOPS_SEQUENCES,
+)
+def test_next_nested_loops_sequence(rfacs, expected):
+    """Check the search blocks next() returns for nested loops."""
+    df = DisplacementsFile()
+    df.read(NESTED_LOOPS_PATH)
+    labels = ''.join(df.next(current_rfac=rfac).label for rfac in rfacs)
+    assert labels == expected
+    with pytest.raises(StopIteration):
+        df.next(current_rfac=rfacs[-1])
 
 
 @pytest.mark.xfail(
