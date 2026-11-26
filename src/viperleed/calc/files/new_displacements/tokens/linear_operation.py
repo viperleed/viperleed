@@ -54,11 +54,35 @@ class LinearOperationToken(DisplacementsFileToken):
             msg = f'Could not parse linear operation "{op_str.strip()}".'
             raise LinearOperationTokenParserError(msg) from err
 
+        self.arr = self._validate_array(parsed, op_str.strip())
+
+    @staticmethod
+    def _validate_array(values, description):
+        """Return a square float array from `values`, or raise.
+
+        Parameters
+        ----------
+        values : object
+            Numeric data to convert. Must have 1, 4, or 9 elements.
+        description : object
+            Identifies `values` in error messages (a string, or the
+            values themselves).
+
+        Returns
+        -------
+        numpy.ndarray
+            A 1x1, 2x2, or 3x3 array.
+
+        Raises
+        ------
+        LinearOperationTokenParserError
+            If `values` is not numeric or has the wrong size.
+        """
         try:
-            arr = np.array(parsed, dtype=float)
+            arr = np.array(values, dtype=float)
         except ValueError as err:
             msg = (
-                f'Unable to convert linear operation "{op_str.strip()}" to '
+                f'Unable to convert linear operation "{description}" to '
                 'a numeric array.'
             )
             raise LinearOperationTokenParserError(msg) from err
@@ -68,26 +92,24 @@ class LinearOperationToken(DisplacementsFileToken):
         # (2x2), or (3x3) matrix.
         if arr.size == 1:
             # single value is a 1x1 matrix
-            arr = arr.reshape((1, 1))
-        elif arr.size == 4:
+            return arr.reshape((1, 1))
+        if arr.size == 4:
             # 2x2 matrix
-            arr = arr.reshape((2, 2))
-        elif arr.size == 9:
+            return arr.reshape((2, 2))
+        if arr.size == 9:
             # 3x3 matrix
-            arr = arr.reshape((3, 3))
-        else:
-            msg = (
-                f'Invalid linear operation format: "{op_str.strip()}". '
-                'Expected a 1x1, 2x2, or 3x3 matrix.'
-            )
-            raise LinearOperationTokenParserError(msg)
-        self.arr = arr
+            return arr.reshape((3, 3))
+        msg = (
+            f'Invalid linear operation format: "{description}". '
+            'Expected a 1x1, 2x2, or 3x3 matrix.'
+        )
+        raise LinearOperationTokenParserError(msg)
 
     @classmethod
     def from_array(cls, arr) -> 'LinearOperationToken':
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
-        inst.arr = np.array(arr, dtype=float)
+        inst.arr = cls._validate_array(arr, arr)
         return inst
 
     def __eq__(self, other):

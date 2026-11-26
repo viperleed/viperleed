@@ -8,6 +8,7 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.tokens.linear_operation import (
     LinearOperationToken,
@@ -54,3 +55,14 @@ def test_linear_operation_token_parsing(input_str, expected_array):
 def test_linear_operation_token_invalid_input(invalid_input):
     with pytest.raises(LinearOperationTokenParserError):
         LinearOperationToken(invalid_input)
+
+
+@parametrize(bad=([1, 2, 3], np.eye(4), [[1, 2], [3]]))
+def test_from_array_invalid(bad):
+    with pytest.raises(LinearOperationTokenParserError):
+        LinearOperationToken.from_array(bad)
+
+
+def test_from_array_reshapes_scalar():
+    token = LinearOperationToken.from_array(0.5)
+    assert token.arr.shape == (1, 1)
