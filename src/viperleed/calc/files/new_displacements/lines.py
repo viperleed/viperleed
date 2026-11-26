@@ -35,7 +35,7 @@ from viperleed.calc.files.new_displacements.tokens.total_occupation import (
 SEARCH_HEADER_PATTERN = re.compile(
     r'^==\s+(?i:search)\s+(?P<label>.*)$', re.IGNORECASE
 )
-SECTION_HEADER_PATTERN = re.compile(
+MODE_HEADER_PATTERN = re.compile(
     r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$',
     re.IGNORECASE,
 )
@@ -73,7 +73,7 @@ class HeaderLine(ABC):
     """Base class for header lines in the DISPLACEMENTS file.
 
     This class is used to parse header and loop marker lines that may contain
-    a label or section name.
+    a label or mode name.
     """
 
     @abstractmethod
@@ -126,31 +126,32 @@ class SearchHeaderLine(HeaderLine):
         return f'== SEARCH {self.label}'
 
 
-class SectionHeaderLine(HeaderLine):
-    """Class to parse section header lines in the DISPLACEMENTS file.
+class ModeHeaderLine(HeaderLine):
+    """Class to parse mode header lines in the DISPLACEMENTS file.
 
-    Section header lines are of the form:
-        = <section>
-    where <section> is one of the defined sections in the DISPLACEMENTS file.
+    Mode header lines are of the form:
+        = <mode>
+    where <mode> is one of the perturbation modes that open a mode block
+    in the DISPLACEMENTS file.
     """
 
     def __init__(self, section):
-        """Initialize the SectionHeaderLine with a section name.
+        """Initialize the ModeHeaderLine with a mode name.
 
         Parameters
         ----------
         section : str
-            The text of the section header line.
+            The text of the mode header line.
         """
-        match = SECTION_HEADER_PATTERN.match(section.strip().upper())
+        match = MODE_HEADER_PATTERN.match(section.strip().upper())
         if not match:
-            msg = f'Invalid section header line: "{section}".'
+            msg = f'Invalid mode header line: "{section}".'
             raise DisplacementsSyntaxError(msg)
-        # extract the section name from the match
+        # extract the mode name from the match
         self.section = match['section'].strip()
 
     def __str__(self):
-        """Return the string representation of the section header."""
+        """Return the string representation of the mode header."""
         return f'= {self.section}'
 
 

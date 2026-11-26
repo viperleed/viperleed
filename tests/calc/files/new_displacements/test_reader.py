@@ -8,8 +8,8 @@ __license__ = 'GPLv3+'
 from viperleed.calc.files.new_displacements.lines import (
     GeoDeltaLine,
     LoopMarkerLine,
+    ModeHeaderLine,
     SearchHeaderLine,
-    SectionHeaderLine,
 )
 from viperleed.calc.files.new_displacements.reader import DisplacementsReader
 
@@ -54,7 +54,7 @@ def test_displacements_reader_loop_markers(tmp_path):
         [
             (LoopMarkerLine, {'kind': 'start'}),
             (SearchHeaderLine, {'label': 'a'}),
-            (SectionHeaderLine, {'section': 'GEO_DELTA'}),
+            (ModeHeaderLine, {'section': 'GEO_DELTA'}),
             (GeoDeltaLine, {}),
             (LoopMarkerLine, {'kind': 'end'}),
         ],

@@ -18,11 +18,11 @@ from .lines import (
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
+    ModeHeaderLine,
     OccDeltaLine,
     OffsetsHeaderLine,
     OffsetsLine,
     SearchHeaderLine,
-    SectionHeaderLine,
     VibDeltaLine,
 )
 
@@ -167,7 +167,7 @@ class DeltaBlock(LineContainer):
     def is_my_header_line(cls, line):
         """Check if the line is a header for this DELTA block."""
         return (
-            isinstance(line, SectionHeaderLine)
+            isinstance(line, ModeHeaderLine)
             and line.section == cls.header()
         )
 

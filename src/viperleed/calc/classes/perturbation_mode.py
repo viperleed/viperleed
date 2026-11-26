@@ -9,11 +9,11 @@ from enum import Enum
 
 
 class PerturbationModeError(ValueError):
-    """Error class for unknown perturbation type errors."""
+    """Error class for unknown perturbation mode errors."""
 
 
 class PerturbationMode(str, Enum):
-    """Enum for perturbation types."""
+    """Enum for perturbation modes."""
 
     GEO = 'geo'
     VIB = 'vib'

@@ -14,8 +14,8 @@ from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
+    ModeHeaderLine,
     SearchHeaderLine,
-    SectionHeaderLine,
     VibDeltaLine,
 )
 from viperleed.calc.files.new_displacements.segments import (
@@ -28,11 +28,11 @@ def test_search_block():
     header = SearchHeaderLine('== SEARCH test')
     lines = iter(
         [
-            SectionHeaderLine('= GEO_DELTA'),
+            ModeHeaderLine('= GEO_DELTA'),
             GeoDeltaLine('Fe 1 z = 0.0 0.1'),
-            SectionHeaderLine('= CONSTRAIN'),
+            ModeHeaderLine('= CONSTRAIN'),
             ConstraintLine('geo Fe 1 = Fe 2'),
-            SectionHeaderLine('= VIB_DELTA'),
+            ModeHeaderLine('= VIB_DELTA'),
             VibDeltaLine('Fe 1 = 0.0 0.1'),
         ]
     )
@@ -51,11 +51,11 @@ def test_layered_loop_block():
         [
             LoopMarkerLine('<loop>'),
             SearchHeaderLine('== SEARCH z'),
-            SectionHeaderLine('= GEO_DELTA'),
+            ModeHeaderLine('= GEO_DELTA'),
             GeoDeltaLine('Fe 1 z = 0.0 0.1'),
             LoopMarkerLine('</loop>'),
             SearchHeaderLine('== SEARCH y'),
-            SectionHeaderLine('= GEO_DELTA'),
+            ModeHeaderLine('= GEO_DELTA'),
             GeoDeltaLine('Fe 1 xy[0 1] = 0.0 0.1'),
             LoopMarkerLine('</loop>'),
         ]
@@ -98,7 +98,7 @@ def test_loop_with_only_loop_child_complains():
         [
             LoopMarkerLine('<loop>'),
             SearchHeaderLine('== SEARCH test'),
-            SectionHeaderLine('= GEO_DELTA'),
+            ModeHeaderLine('= GEO_DELTA'),
             GeoDeltaLine('Fe 1 z = 0.0 0.1'),
             LoopMarkerLine('</loop>'),
             LoopMarkerLine('</loop>'),
@@ -119,10 +119,10 @@ def test_loop_reset_iterator():
     lines = iter(
         [
             SearchHeaderLine('== SEARCH first'),
-            SectionHeaderLine('= GEO_DELTA'),
+            ModeHeaderLine('= GEO_DELTA'),
             GeoDeltaLine('Fe 1 z = 0.0 0.1'),
             SearchHeaderLine('== SEARCH second'),
-            SectionHeaderLine('= VIB_DELTA'),
+            ModeHeaderLine('= VIB_DELTA'),
             VibDeltaLine('Fe 1 = 0.0 0.1'),
             LoopMarkerLine('</loop>'),
         ]

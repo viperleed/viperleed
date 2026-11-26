@@ -20,11 +20,11 @@ from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
+    ModeHeaderLine,
     OccDeltaLine,
     OffsetsHeaderLine,
     OffsetsLine,
     SearchHeaderLine,
-    SectionHeaderLine,
     VibDeltaLine,
 )
 from viperleed.calc.lib.string_utils import strip_comments
@@ -46,15 +46,15 @@ class DisplacementsReader(InputFileReader):
     """Reader/Parser for the DISPLACEMENTS file based on InputFileReader.
 
     This class reads the DISPLACEMENTS file and parses its content into
-    structured data. It handles different sections of the file, including
-    headers, loop markers, constraints and delta sections (ranges and
-    implicit constraints).
-    Individual lines are parsed into specific line objects, which are organized
-    into sections and search blocks.
+    structured data. It handles the different blocks of the file,
+    including headers, loop markers, constraints and delta mode blocks
+    (ranges and implicit constraints). Individual lines are parsed into
+    specific line objects, which are organized into mode blocks and
+    search blocks.
 
-    Note that this class only performs the reading and parsing of the file, but
-    no interpretation. It does not perform any cross-checking and validation of
-    the user input vs. the structure.
+    Note that this class only performs the reading and parsing of the
+    file, but no interpretation. It does not perform any cross-checking
+    and validation of the user input vs. the structure.
     """
 
     def __init__(self, filename, noisy=True):
@@ -64,7 +64,7 @@ class DisplacementsReader(InputFileReader):
         self._current_section = None
 
     def _read_one_line(self, line):
-        """Extract section header or data line from a single line."""
+        """Extract mode header or data line from a single line."""
         line = strip_comments(line)
         stripped_line = line.strip().lower()
         if not stripped_line:
@@ -76,19 +76,19 @@ class DisplacementsReader(InputFileReader):
             # check for invalid or deprecated syntax
             _check_line_generally_valid(stripped_line)
 
-        # update current section if a new header is found
+        # update current mode if a new header is found
         if isinstance(new_header, (LoopMarkerLine, SearchHeaderLine)):
-            # search headers and loop markers reset the current section
+            # search headers and loop markers reset the current mode
             self._current_section = None
             return new_header
-        if isinstance(new_header, (SectionHeaderLine, OffsetsHeaderLine)):
-            # section headers set the current section
+        if isinstance(new_header, (ModeHeaderLine, OffsetsHeaderLine)):
+            # mode headers set the current mode
             self._current_section = new_header.section
             return new_header
 
-        # parse section lines
+        # parse mode-block lines
         if self._current_section is None:
-            msg = f'Cannot parse line "{line}" without a section header.'
+            msg = f'Cannot parse line "{line}" without a block header.'
             raise DisplacementsSyntaxError(msg)
 
         try:
@@ -96,7 +96,7 @@ class DisplacementsReader(InputFileReader):
             return DISPLACEMENTS_FILE_SECTION[self._current_section](line)
         except (ValueError, KeyError) as err:
             msg = (
-                f'Cannot parse line "{line}" in section '
+                f'Cannot parse line "{line}" in block '
                 f'"{self._current_section}".'
             )
             raise DisplacementsSyntaxError(msg) from err
@@ -108,7 +108,7 @@ def _read_header(line):
         LoopMarkerLine,
         OffsetsHeaderLine,
         SearchHeaderLine,
-        SectionHeaderLine,
+        ModeHeaderLine,
     ):
         try:
             return header(line)
