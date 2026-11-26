@@ -101,14 +101,14 @@ def log_blas_thread_env(calculation):
     user_set = _get_user_blas_threads(os.environ)
     limits = _get_blas_thread_limits(os.environ)
     if not user_set:
-        logger.debug('BLAS thread limit for %s: %s',
-                     calculation, _format_variables(limits))
+        logger.debug(f'BLAS thread limit for {calculation}: '
+                     f'{_format_variables(limits)}')
         return
     automatic = (f'Setting the others automatically: '
                  f'{_format_variables(limits)}.' if limits
                  else 'Not setting a limit automatically.')
-    logger.info('Number of BLAS threads for %s set by the user: %s. %s',
-                calculation, _format_variables(user_set), automatic)
+    logger.info(f'Number of BLAS threads for {calculation} set by the '
+                f'user: {_format_variables(user_set)}. {automatic}')
 
 
 def _format_variables(variables):
