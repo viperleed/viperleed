@@ -56,6 +56,8 @@ from .special.base import SpecialParameter
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
+_GENERIC_BLAS_FLAGS = '-llapack -lpthread -lblas'
+_OPENBLAS_FLAGS = '-lopenblas'
 if CAN_PLOT:
     from matplotlib import pyplot as plt
     use_calc_style()
@@ -712,8 +714,10 @@ class Rparams:
                 '-traceback']  # backtrace should not affect performance
             _LOGGER.debug('Using fortran compiler: ifort')
         elif found == 'gfortran':
-            self.FORTRAN_COMP = ['gfortran -O2', '-llapack -lpthread -lblas '
-                                 '-fbacktrace']  # should not affect performance
+            self.FORTRAN_COMP = [
+                'gfortran -O2',
+                f'{_gfortran_blas_flags()} -fbacktrace',  # Not slower
+                ]
             _LOGGER.debug('Using fortran compiler: gfortran')
 
     def getFortranMpiComp(self, comp='auto'):
@@ -1231,3 +1235,18 @@ class Rparams:
         self.search_maxconc = max(dp.rpars.search_maxconc
                                   for dp in self.domainParams)
         self.mncstep = max(dp.rpars.mncstep for dp in self.domainParams)
+
+
+def _gfortran_blas_flags():
+    """Return the BLAS and LAPACK link flags for gfortran."""
+    # On Linux and macOS, the generic flags let the system decide
+    # which BLAS implementation -lblas is. On Windows, the MSYS2
+    # OpenBLAS package provides only libopenblas.dll.a, which the
+    # generic flags never reach: link it explicitly if gfortran
+    # finds it, otherwise fall back to the generic flags.
+    if os.name == 'nt' and fortran_utils.gfortran_finds_openblas():
+        flags = _OPENBLAS_FLAGS
+    else:
+        flags = _GENERIC_BLAS_FLAGS
+    _LOGGER.debug(f'Linking gfortran with BLAS flags {flags}')
+    return flags

@@ -17,8 +17,8 @@ If ``mpiifort``/``mpifort`` or mpirun are not found on the system, the search
 will be compiled with the standard FORTRAN_COMP compiler and executed *without*
 parallelization.
 
-See the :ref:`installation section<installation>` for details on how to install
-the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
+See the :ref:`installation section<install_fortran_comp>` for details on how
+to install the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
 
 **Default:** if :term:`ifort` is present:
 
@@ -46,10 +46,37 @@ the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
 
 if :term:`ifort` is not present, but gfortran is:
 
-::
+.. tab-set::
 
-   FORTRAN_COMP = 'gfortran -O2'
-   FORTRAN_COMP post = '-llapack -lpthread -lblas -fbacktrace'
+  .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+    :sync: unix
+
+    ::
+
+       FORTRAN_COMP = 'gfortran -O2'
+       FORTRAN_COMP post = '-llapack -lpthread -lblas -fbacktrace'
+
+    Your system decides which BLAS and LAPACK libraries ``-lblas`` and
+    ``-llapack`` link to. See the
+    :ref:`installation section<install_fortran_comp>` for how to use
+    OpenBLAS.
+
+  .. tab-item:: Windows
+    :sync: win
+
+    ::
+
+       FORTRAN_COMP = 'gfortran -O2'
+       FORTRAN_COMP post = '-lopenblas -fbacktrace'
+
+    |calc| uses these flags if gfortran finds the OpenBLAS library
+    :file:`libopenblas.dll.a` (as installed by the MSYS2 ``openblas``
+    package). Otherwise, it falls back to the flags for Linux and macOS,
+    ``-llapack -lpthread -lblas -fbacktrace``.
+
+.. versionchanged:: 0.15.0
+    On Windows, gfortran links OpenBLAS by default when it is installed.
+    Earlier versions always used ``-llapack -lpthread -lblas``.
 
 Additionally, if :program:`mpirun` or, on Windows, :program:`mpiexec` are
 present:

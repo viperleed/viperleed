@@ -39,12 +39,17 @@ compiler (:program:`gcc` and :program:`gfortran` by default), and
 :program:`make` (on Windows, the
 :file:`make.bat` file shipped with :program:`eeasisss` is used instead).
 The script has been tested on Linux, and on Windows with :program:`gcc`
-and :program:`gfortran` of MSYS2 (UCRT64). The tests also need LAPACK
-and BLAS, which :term:`TensErLEED` links with ``-llapack -lblas``. See
-:ref:`install_gcc` (tab "Windows (64 bit), native" on Windows) for how to
-install the compilers and these libraries. Continuous integration uses
-MSYS2 UCRT64 with the prebuilt ``mingw-w64-ucrt-x86_64-lapack`` package
-instead of building LAPACK and BLAS. For the Intel compilers, add
+and :program:`gfortran` of MSYS2 (UCRT64). The tests also need the BLAS
+and LAPACK libraries. :term:`TensErLEED` links them with the default
+:ref:`FORTRAN_COMP` flags: ``-llapack -lpthread -lblas`` on Linux and
+macOS, where the system decides which implementation these are, and
+``-lopenblas`` on Windows, if :program:`gfortran` finds the OpenBLAS
+import library :file:`libopenblas.dll.a` (otherwise the same flags as
+on Linux). See :ref:`install_gcc` (tab "Windows (64 bit), native" on
+Windows) for how to install the compilers and these libraries.
+Continuous integration uses OpenBLAS on both platforms: the Linux job
+installs ``libopenblas-dev``, the Windows job the prebuilt MSYS2 UCRT64
+package ``mingw-w64-ucrt-x86_64-openblas``. For the Intel compilers, add
 ``--compilers intel`` (:program:`icx` and the ``intel`` target of
 :program:`eeasisss`); ``--cc`` and ``--fc`` choose other C and Fortran
 compilers (``--fc`` not on Windows). See
@@ -276,8 +281,8 @@ The tests also run on GitHub Actions:
   tree assembled with :file:`build/scripts/assemble_tensorleed_tree.py`.
   On pull requests, they include the release tests (``--release``, see
   above), and a second job, ``TensErLEED tests (Windows)``, runs the same
-  tests on Windows, with :program:`gcc`, :program:`gfortran` and LAPACK of
-  MSYS2 (UCRT64), but without MPI (the searches run as a single process).
+  tests on Windows, with :program:`gcc`, :program:`gfortran` and OpenBLAS
+  of MSYS2 (UCRT64), but without MPI (the searches run as a single process).
   The Windows job takes 35--40 minutes.
   Their results are the checks ``TensErLEED tests`` and
   ``TensErLEED tests (Windows)``. The workflow does not run
