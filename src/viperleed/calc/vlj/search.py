@@ -110,22 +110,7 @@ def vlj_search(slab, rpars):
     calculator.set_rfactor(str(rpars.R_FACTOR_TYPE))
 
     # (try to) export the tree view of the parameter space to a PDF file
-    try:
-        parameter_space.export_tree_view(
-            f'parameter_space_{search_block.label}.pdf'
-        )
-    except Exception as e:
-        logger.warning(
-            f'Could not export parameter space tree view: {e}. '
-            'Dot language support may not be available. Graphical export is '
-            'handled by the `dot` tool from the `graphviz` package. '
-            'See https://www.graphviz.org for details.'
-        )
-    else:
-        logger.info(
-            f'Parameter space tree view exported to '
-            f'parameter_space_{search_block.label}.pdf'
-        )
+    _export_parameter_space(parameter_space, search_block.label)
 
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
@@ -213,3 +198,19 @@ def vlj_search(slab, rpars):
 
     # delete the calculator to make sure resources are freed asap
     del calculator
+
+
+def _export_parameter_space(parameter_space, label):
+    """Try to export a tree view of `parameter_space` to a PDF file."""
+    filename = f'parameter_space_{label}.pdf'
+    try:
+        parameter_space.export_tree_view(filename)
+    except Exception as e:
+        logger.warning(
+            f'Could not export parameter space tree view: {e}. '
+            'Dot language support may not be available. Graphical export is '
+            'handled by the `dot` tool from the `graphviz` package. '
+            'See https://www.graphviz.org for details.'
+        )
+    else:
+        logger.info(f'Parameter space tree view exported to {filename}')
