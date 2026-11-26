@@ -94,8 +94,7 @@ class TestBlasThreadEnv:
         env = blas_thread_env()
         assert env == {**_UNRELATED, **user_env}
 
-    @parametrize('user_env,expect', tuple(_PER_LIBRARY.values()),
-                 ids=tuple(_PER_LIBRARY))
+    @parametrize('user_env,expect', _PER_LIBRARY.values(), ids=_PER_LIBRARY)
     def test_per_library(self, user_env, expect, patch_environ):
         """Check that only libraries not set by the user get a limit."""
         patch_environ(**user_env)
