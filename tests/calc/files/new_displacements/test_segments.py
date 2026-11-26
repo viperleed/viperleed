@@ -84,6 +84,13 @@ def test_empty_loop_fails():
         loop_block.read_lines(lines)
 
 
+def test_loop_belongs_to_me_with_non_marker_last_line():
+    # a non-marker last line must not raise AttributeError on '.kind'
+    loop_block = LoopBlock(LoopMarkerLine('<loop>'))
+    loop_block._lines.append(SearchHeaderLine('== SEARCH x'))
+    assert loop_block._belongs_to_me(LoopMarkerLine('</loop>'))
+
+
 def test_loop_with_only_loop_child_complains():
     # test that a loop whose only child is another loop raises an error
     header = LoopMarkerLine('<loop>')
