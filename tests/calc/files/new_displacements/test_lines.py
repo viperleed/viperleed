@@ -18,6 +18,7 @@ from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
+    ModeHeaderLine,
     OccDeltaLine,
     OffsetsLine,
     VibDeltaLine,
@@ -745,6 +746,12 @@ def test_separate_direction(input_str, exp_targets, exp_direction):
     targets, direction = separate_direction_from_targets(input_str)
     assert targets == exp_targets
     assert direction == exp_direction
+
+
+@parametrize(header=('= CONSTRAINT', '=constraint', '= Constrain'))
+def test_constraint_header_alias(header):
+    """Check that CONSTRAINT is read as the CONSTRAIN section."""
+    assert ModeHeaderLine(header).section == 'CONSTRAIN'
 
 
 class TestLoopMarkerLine:

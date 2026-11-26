@@ -39,7 +39,8 @@ SEARCH_HEADER_PATTERN = re.compile(
     r'^==\s+(?i:search)(?:\s+(?P<label>.*))?$', re.IGNORECASE
 )
 MODE_HEADER_PATTERN = re.compile(
-    r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$',
+    r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)'
+    r'(?:(?<=CONSTRAIN)T)?$',
     re.IGNORECASE,
 )
 OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$', re.IGNORECASE)

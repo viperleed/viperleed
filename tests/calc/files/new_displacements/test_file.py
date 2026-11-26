@@ -22,6 +22,7 @@ from viperleed.calc.files.new_displacements.file import (
 )
 from viperleed.calc.files.new_displacements.lines import ModeHeaderLine
 from viperleed.calc.files.new_displacements.lines import OffsetsHeaderLine
+from viperleed.calc.files.new_displacements.segments import ConstraintBlock
 from viperleed.calc.files.new_displacements.segments import LoopBlock
 from viperleed.calc.files.new_displacements.segments import SearchBlock
 from viperleed.calc.files.new_displacements.tokens.direction import (
@@ -49,6 +50,14 @@ def test_read_from_file(displacements_file_path, subtests):
     with subtests.test('read() called again'), pytest.raises(AlreadyReadError):
         # check that read() cannot be called again
         df.read(displacements_file_path)
+PTRH_PATH = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o/DISPLACEMENTS'
+
+
+def test_read_constraint_alias_file():
+    """Check that a stored file using '= CONSTRAINT' can be read."""
+    df = DisplacementsFile()
+    df.read(PTRH_PATH)
+    assert any(isinstance(b, ConstraintBlock) for b in df.descendants)
 
 
 _OFFSETS = '== OFFSETS\n    geo Cu_surf z = 0.05\n'
