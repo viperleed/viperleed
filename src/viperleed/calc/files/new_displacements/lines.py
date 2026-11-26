@@ -601,7 +601,8 @@ class OffsetsLine(ParsedLine):
 
     Lines in the OFFSETS block are of the form:
         <mode> <target> [, <target> ...] [<direction>] = <offset>
-    where <target>, ... are tokens that are parsed by the OffsetToken class.
+    where <target>, ... are tokens that are parsed by the TargetToken
+    class, and <offset> is parsed by the OffsetToken class.
     A direction token must be specified if and only if the mode of the offset
     is geometric.
     """
