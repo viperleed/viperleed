@@ -297,7 +297,7 @@ class LoopBlock(DisplacementsSegmentABC):
 
     @property
     def subsegments(self):
-        """Return the possible subsegments; none once the loop is closed."""
+        """Return possible subsegments, none if the loop is closed."""
         if self.lines:
             return ()
         return self._subsegments
