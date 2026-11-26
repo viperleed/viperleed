@@ -8,6 +8,7 @@ __license__ = 'GPLv3+'
 import copy
 import logging
 from pathlib import Path
+import subprocess
 
 import numpy as np
 
@@ -201,11 +202,16 @@ def vlj_search(slab, rpars):
 
 
 def _export_parameter_space(parameter_space, label):
-    """Try to export a tree view of `parameter_space` to a PDF file."""
+    """Try to export a tree view of `parameter_space` to a PDF file.
+
+    Only failures of the external `dot` tool (missing, or exiting
+    with an error) are logged as warnings. Any other error, such
+    as a mismatch with the plugin's interface, is raised.
+    """
     filename = f'parameter_space_{label}.pdf'
     try:
-        parameter_space.export_tree_view(filename)
-    except Exception as e:
+        parameter_space.graphical_export(filename, export_options=None)
+    except (OSError, subprocess.CalledProcessError) as e:
         logger.warning(
             f'Could not export parameter space tree view: {e}. '
             'Dot language support may not be available. Graphical export is '
