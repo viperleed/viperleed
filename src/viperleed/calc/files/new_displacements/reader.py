@@ -71,9 +71,9 @@ class DisplacementsReader(InputFileReader):
             raise ShouldSkipLineError
 
         new_header = _read_header(line)
-        # loop markers are the only lines that contain no '='
-        if not isinstance(new_header, LoopMarkerLine):
-            # check for invalid or deprecated syntax
+        # headers have been validated by their own parsers: only
+        # other lines can contain invalid or deprecated syntax
+        if new_header is None:
             _check_line_generally_valid(stripped_line)
 
         # update current mode if a new header is found

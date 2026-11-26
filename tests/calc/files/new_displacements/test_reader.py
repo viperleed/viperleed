@@ -4,7 +4,12 @@ __authors__ = ('Alexandra Mia Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __license__ = 'GPLv3+'
 
+import pytest
+from pytest_cases import parametrize
 
+from viperleed.calc.files.new_displacements.errors import (
+    DisplacementsSyntaxError,
+)
 from viperleed.calc.files.new_displacements.lines import (
     GeoDeltaLine,
     LoopMarkerLine,
@@ -59,3 +64,19 @@ def test_displacements_reader_loop_markers(tmp_path):
             (LoopMarkerLine, {'kind': 'end'}),
         ],
     )
+
+
+@parametrize(label=('my_sym_delta_run', 'SYM_DELTA'))
+def test_displacements_reader_search_label_with_sym_delta(tmp_path, label):
+    """Check that search-block labels are not mistaken for SYM_DELTA."""
+    path = tmp_path / 'DISPLACEMENTS_label'
+    path.write_text(f'== SEARCH {label}\n')
+    _compare_lines(path, [(SearchHeaderLine, {'label': label})])
+
+
+def test_displacements_reader_sym_delta_deprecated(tmp_path):
+    """Check that the deprecated SYM_DELTA mode header is rejected."""
+    path = tmp_path / 'DISPLACEMENTS_sym_delta'
+    path.write_text('== SEARCH a\n= SYM_DELTA\n')
+    with pytest.raises(DisplacementsSyntaxError, match='SYMMETRY_FIX'):
+        _compare_lines(path, [])
