@@ -12,6 +12,7 @@ import re
 import numpy as np
 
 from viperleed.calc.classes.perturbation_mode import PerturbationMode
+from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.files.new_displacements.errors import (
     DisplacementsSyntaxError,
 )
@@ -42,8 +43,6 @@ OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$', re.IGNORECASE)
 LOOP_START_PATTERN = re.compile(r'<\s*loop\s*>', re.IGNORECASE)
 LOOP_END_PATTERN = re.compile(r'<\s*[/\\]\s*loop\s*>', re.IGNORECASE)
 
-
-_BELOW_DEBUG = 2
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +202,7 @@ class ParsedLine(ABC):
         line : str
             The text of the line.
         """
-        logger.log(_BELOW_DEBUG, f'Parsing DISPLACEMENTS: {line}')
+        logger.log(LOG_VERY_VERBOSE, f'Parsing DISPLACEMENTS: {line}')
         # strip surplus whitespace
         self.raw_line = ' '.join(line.strip().split())
 
@@ -530,7 +529,7 @@ class ConstraintLine(ParsedLine):
 
         # check for 'linked' tag
         if self._rhs.lower().strip() == 'linked':
-            logger.log(_BELOW_DEBUG, 'Detected "linked" tag.')
+            logger.log(LOG_VERY_VERBOSE, 'Detected "linked" tag.')
             # "copy" the first target to the rhs
             self.link_target = self.targets[0]
             # treat as if array is identity
@@ -539,7 +538,7 @@ class ConstraintLine(ParsedLine):
 
         # check for 'total' tag
         if self._rhs.lower().strip().startswith('total '):
-            logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
+            logger.log(LOG_VERY_VERBOSE, 'Detected "total" tag.')
 
             if self.mode_token.mode is not PerturbationMode.OCC:
                 raise DisplacementsSyntaxError(
