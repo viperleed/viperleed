@@ -32,7 +32,8 @@ class TestLEEDPatternSimulator:
         show(simulator)
         yield simulator
         no_blocking_dialogs.assert_not_called()
-        assert simulator.close()  # Answers Yes to "Are you sure?"
+        closed = simulator.close()  # Answers Yes to "Are you sure?"
+        assert closed
 
     @fixture(name='simulator')
     def fixture_simulator(self, import_with_qt, no_blocking_dialogs, show):
@@ -41,7 +42,8 @@ class TestLEEDPatternSimulator:
         show(simulator)
         yield simulator
         no_blocking_dialogs.assert_not_called()
-        assert simulator.close()  # Answers Yes to "Are you sure?"
+        closed = simulator.close()  # Answers Yes to "Are you sure?"
+        assert closed
 
     def test_cell_shapes_alignment(self, layout_simulator, check_aligned,
                                    qtc, qtw):

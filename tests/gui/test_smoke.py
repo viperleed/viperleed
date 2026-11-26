@@ -221,5 +221,6 @@ def test_open_and_close(cls_name, show):
     widget = _create_widget(cls_name)
     _skip_if_crashes_qt(widget)
     show(widget)
-    assert widget.close()
+    closed = widget.close()
+    assert closed
     assert not widget.isVisible()

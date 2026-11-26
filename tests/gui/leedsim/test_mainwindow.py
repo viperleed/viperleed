@@ -33,7 +33,8 @@ class TestLEEDPatternSimulator:
         yield simulator
         # Do not save changes when closing
         no_blocking_dialogs.return_value = qtw.QMessageBox.StandardButton.No
-        assert simulator.close()
+        closed = simulator.close()
+        assert closed
 
     def test_move_event(self, simulator, check_annotations_follow_move):
         """Check that the hover annotations follow the moved window."""

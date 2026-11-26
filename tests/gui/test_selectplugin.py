@@ -59,5 +59,6 @@ def test_open_plugin(plugin, selector, qtbot, qtc):
     module = selector._open_modules[plugin]
     assert module is not None
     qtbot.waitExposed(module)
-    assert selector.close()
+    closed = selector.close()
+    assert closed
     assert selector._open_modules[plugin] is None
