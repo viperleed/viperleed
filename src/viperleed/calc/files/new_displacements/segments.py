@@ -343,7 +343,9 @@ class LoopBlock(DisplacementsSegmentABC):
         """Validate the loop block."""
         # loop block must contain exactly one line – the end loop marker
         if len(self.lines) < 1:
-            raise DisplacementsSyntaxError('Unfinished loop block.')
+            raise DisplacementsSyntaxError(
+                'Found "<loop>" without a matching "</loop>".'
+            )
         # it must contain at least one search block
         if not self.children:
             raise DisplacementsSyntaxError('Loop block cannot be empty.')

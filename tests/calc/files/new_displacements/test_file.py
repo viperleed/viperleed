@@ -11,6 +11,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.errors import (
     AlreadyReadError,
+    DisplacementsSyntaxError,
     OffsetsNotAtBeginningError,
 )
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
@@ -195,6 +196,48 @@ def test_read_unnamed_search_blocks(tmp_path):
     first, second = df.children
     assert first is not second
     assert _search_labels(df) == ['search_1', 'search_2']
+
+
+_BAD_FILES = {
+    'stray_loop_end': (
+        '</loop>\n' + _SEARCH,
+        r'Found "</loop>" without a matching "<loop>"',
+    ),
+    'loop_without_search': (
+        '<loop>\n' + _MODES + '</loop>\n',
+        r'right after "<loop>"',
+    ),
+    'loop_on_search_header': (
+        '<loop> == SEARCH a\n' + _MODES,
+        (r'Found "<loop>" together with other text in line "<loop> == '
+         r'SEARCH a"'),
+    ),
+    'loop_at_end_of_header': (
+        '== SEARCH a <loop>\n' + _MODES,
+        (r'Found "<loop>" together with other text in line "== SEARCH '
+         r'a <loop>"'),
+    ),
+    'end_tag_with_text': (
+        _SEARCH + '</loop> == SEARCH b\n',
+        r'Found "</loop>" together with other text',
+    ),
+    'unclosed_loop': (
+        '<loop>\n' + _SEARCH,
+        r'Found "<loop>" without a matching "</loop>"',
+    ),
+    'mode_after_loop': (
+        '<loop>\n' + _SEARCH + '</loop>\n' + _MODES,
+        r'Line "= GEO_DELTA" is not inside a search block',
+    ),
+}
+
+
+@parametrize('contents, msg', _BAD_FILES.values(), ids=_BAD_FILES)
+def test_read_bad_loop_tags(contents, msg, tmp_path):
+    """Check the error for misplaced or unbalanced loop tags."""
+    with pytest.raises(DisplacementsSyntaxError, match=msg) as exc_info:
+        _read_text(contents, tmp_path)
+    assert ' object at 0x' not in exc_info.value.message
 
 
 @parametrize(

@@ -16,7 +16,7 @@ from .errors import (
     DisplacementsSyntaxError,
     OffsetsNotAtBeginningError,
 )
-from .lines import ModeHeaderLine, SearchHeaderLine
+from .lines import LoopMarkerLine, ModeHeaderLine, SearchHeaderLine
 from .reader import DisplacementsReader
 from .segments import LoopBlock, OffsetsBlock, SearchBlock
 
@@ -238,4 +238,6 @@ class DisplacementsFile(NodeMixin):
 
 def _unparsable_line_message(line):
     """Return an error message for a `line` found at top level."""
+    if isinstance(line, LoopMarkerLine) and line.kind == 'end':
+        return f'Found "{line}" without a matching "<loop>".'
     return f'Unable to parse line "{line}".'

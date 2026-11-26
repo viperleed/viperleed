@@ -181,6 +181,15 @@ class LoopMarkerLine(HeaderLine):
             msg = f'Invalid loop marker line: "{line}".'
             raise DisplacementsSyntaxError(msg)
 
+    @staticmethod
+    def is_marker(line):
+        """Return whether `line` is exactly a loop start or end tag."""
+        stripped_line = line.strip().lower()
+        return bool(
+            LOOP_START_PATTERN.fullmatch(stripped_line)
+            or LOOP_END_PATTERN.fullmatch(stripped_line)
+        )
+
     def __str__(self):
         """Return the string representation of the loop marker."""
         if self.kind == 'start':

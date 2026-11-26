@@ -17,6 +17,8 @@ from viperleed.calc.files.new_displacements.errors import (
     DisplacementsSyntaxError,
 )
 from viperleed.calc.files.new_displacements.lines import (
+    LOOP_END_PATTERN,
+    LOOP_START_PATTERN,
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
@@ -69,6 +71,7 @@ class DisplacementsReader(InputFileReader):
         super().__init__(filename, noisy)
 
         self._current_section = None
+        self._follows_loop_start = False
 
     def _read_one_line(self, line):
         """Extract mode header or data line from a single line."""
@@ -77,7 +80,9 @@ class DisplacementsReader(InputFileReader):
         if not stripped_line:
             raise ShouldSkipLineError
 
+        _check_loop_tags_isolated(line)
         new_header = _read_header(line)
+        self._check_follows_loop_start(line, new_header)
         # headers have been validated by their own parsers: only
         # other lines can contain invalid or deprecated syntax
         if new_header is None:
@@ -108,6 +113,44 @@ class DisplacementsReader(InputFileReader):
                 f'"{self._current_section}".'
             )
             raise DisplacementsSyntaxError(msg) from err
+
+
+    def _check_follows_loop_start(self, line, header):
+        """Complain if `<loop>` is not followed by a search header."""
+        if self._follows_loop_start and not _may_follow_loop_start(header):
+            msg = (
+                f'Found line "{line.strip()}" right after "<loop>". '
+                'A "<loop>" must be followed by "== SEARCH <label>" '
+                '(or by another "<loop>").'
+            )
+            raise DisplacementsSyntaxError(msg)
+        self._follows_loop_start = (
+            isinstance(header, LoopMarkerLine) and header.kind == 'start'
+        )
+
+
+def _may_follow_loop_start(header):
+    """Return whether `header` is acceptable right after a <loop>."""
+    if isinstance(header, SearchHeaderLine):
+        return True
+    # An empty loop is reported when the file is validated
+    return isinstance(header, LoopMarkerLine)
+
+
+def _check_loop_tags_isolated(line):
+    """Complain if `line` has <loop> tags next to other content."""
+    stripped = line.strip()
+    if LoopMarkerLine.is_marker(stripped):
+        return
+    for pattern in (LOOP_START_PATTERN, LOOP_END_PATTERN):
+        tag = pattern.search(stripped)
+        if tag:
+            msg = (
+                f'Found "{tag.group(0)}" together with other text in '
+                f'line "{stripped}". Loop tags must be on a line of their '
+                'own, followed by a "== SEARCH <label>" line.'
+            )
+            raise DisplacementsSyntaxError(msg)
 
 
 def _check_dropped_header(line):
