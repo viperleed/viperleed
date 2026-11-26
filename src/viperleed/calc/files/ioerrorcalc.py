@@ -13,6 +13,7 @@ __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
 import logging
+from operator import attrgetter
 import re
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -338,8 +339,7 @@ def make_errors_figs(errors, formatting=None):
         x_max = np.max([np.max(x) for x in x_values])
         xrange = [x_min - abs(x_max - x_min) * 0.05,
                   x_max + abs(x_max - x_min) * 0.05]
-        for err in mode_errors:
-            err_lin_disp = _plot_x_values(err)
+        for err, err_lin_disp in zip(mode_errors, x_values):
             interp_f = interpolate.interp1d(err_lin_disp,
                                             err.rfacs,
                                             bounds_error=False)
@@ -353,7 +353,7 @@ def make_errors_figs(errors, formatting=None):
             err_x_to_mark[err] = [v - indmark[0] for v in indmark]
         # plot combined figure: R+var line of the lowest R minimum
         rmax = max(r for err in mode_errors for r in err.rfacs)
-        best_err = min(mode_errors, key=lambda err: err.r_min)
+        best_err = min(mode_errors, key=attrgetter('r_min'))
         rmin = best_err.r_min
         var = best_err.var_r
         # Pylint can't tell that we will not execute this,
