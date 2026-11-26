@@ -463,15 +463,15 @@ def test_separate_direction(input_str, exp_targets, exp_direction):
 class TestLoopMarkerLine:
     """Tests for the LoopMarkerLine class."""
 
-    _valid = {
-        '<loop>': 'start',
-        '  <LOOP>  ': 'start',
-        '< loop >': 'start',
-        '</loop>': 'end',
-        '<\\loop>': 'end',
-        '< / loop >': 'end',
-        '</Loop>': 'end',
-    }
+    _valid = (
+        ('<loop>', 'start'),
+        ('  <LOOP>  ', 'start'),
+        ('< loop >', 'start'),
+        ('</loop>', 'end'),
+        ('<\\loop>', 'end'),
+        ('< / loop >', 'end'),
+        ('</Loop>', 'end'),
+    )
     _invalid = (
         '<loop>junk',
         '<loop> GEO_DELTA',
@@ -483,7 +483,7 @@ class TestLoopMarkerLine:
         'loop',
     )
 
-    @parametrize('line,kind', _valid.items())
+    @parametrize('line,kind', _valid)
     def test_valid(self, line, kind):
         """Check that a plain or spaced marker is read."""
         marker = LoopMarkerLine(line)

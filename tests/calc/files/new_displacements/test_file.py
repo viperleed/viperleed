@@ -53,30 +53,29 @@ def test_read_nested_loops():
     assert inner.children[0].label == 'b'
 
 
-_NESTED_LOOPS_SEQUENCES = {
+_NESTED_LOOPS_SEQUENCES = (
     # Each loop runs twice: the second pass does not improve R.
-    'constant R': ((0.5,)*9, 'abbcabbcd'),
+    pytest.param((0.5,)*9, 'abbcabbcd', id='constant R'),
     # The inner loop repeats as long as R improves. When the outer
     # loop repeats, the inner one starts afresh and runs twice.
-    'improving R': ((0.5, 0.4, 0.3) + (0.2,)*7, 'abbbcabbcd'),
+    pytest.param((0.5, 0.4, 0.3) + (0.2,)*7, 'abbbcabbcd', id='improving R'),
     # R improves during the outer loop's second pass: a third pass.
-    'outer improves': ((0.5, 0.5, 0.4, 0.4, 0.4) + (0.3,)*8, 'abbcabbcabbcd'),
-}
-
-
-@parametrize(
-    'rfacs,expected',
-    _NESTED_LOOPS_SEQUENCES.values(),
-    ids=_NESTED_LOOPS_SEQUENCES,
+    pytest.param((0.5, 0.5, 0.4, 0.4, 0.4) + (0.3,)*8,
+                 'abbcabbcabbcd',
+                 id='outer improves'),
 )
+
+
+@parametrize('rfacs,expected', _NESTED_LOOPS_SEQUENCES)
 def test_next_nested_loops_sequence(rfacs, expected):
     """Check the search blocks next() returns for nested loops."""
-    df = DisplacementsFile()
-    df.read(NESTED_LOOPS_PATH)
-    labels = ''.join(df.next(current_rfac=rfac).label for rfac in rfacs)
+    disp_file = DisplacementsFile()
+    disp_file.read(NESTED_LOOPS_PATH)
+    labels = ''.join(disp_file.next(current_rfac=rfac).label
+                     for rfac in rfacs)
     assert labels == expected
     with pytest.raises(StopIteration):
-        df.next(current_rfac=rfacs[-1])
+        disp_file.next(current_rfac=rfacs[-1])
 
 
 @pytest.mark.xfail(
@@ -105,10 +104,11 @@ def test_next(displacements_file_path):
 def _exhaust(displacements_file):
     """Return all search blocks that next() yields until it stops."""
     blocks = []
-    with pytest.raises(StopIteration):
-        while True:
+    while True:
+        try:
             blocks.append(displacements_file.next(current_rfac=0.1))
-    return blocks
+        except StopIteration:
+            return blocks
 
 
 def test_reset_iterator(displacements_file_path):
