@@ -96,9 +96,9 @@ def checkDelta(filename, at, el, rp):
         # The header format depends on the TensErLEED version. A delta
         # file from a different version cannot be reused.
         logger.warning(
-            f'Could not parse the header of delta file {filename} with '
-            'the current TensErLEED version. The delta will be '
-            'recalculated.'
+            f'The header of delta file {filename} does not fit the '
+            'format of the current TensErLEED version. The file '
+            'cannot be used.'
             )
         return False
     if nbeams != len(rp.ivbeams):

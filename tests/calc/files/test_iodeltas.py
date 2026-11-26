@@ -13,6 +13,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.iodeltas import _fetch_auxbeams
 from viperleed.calc.files.iodeltas import _read_file_with_newline
 from viperleed.calc.files.iodeltas import checkDelta
@@ -48,7 +49,19 @@ class TestCheckDelta:
         result = checkDelta(str(delta), atom, 'vac', rpars)
         assert not result
         assert 'DEL_1_Ag' in caplog.text
-        assert 'recalculated' in caplog.text
+
+    def test_header_from_other_version_in_search(self, tmp_path, mocker):
+        """Check that a search refuses a delta of another version."""
+        rpars = Rparams()
+        rpars.TL_VERSION = Version('1.6.0')
+        delta = tmp_path/'DEL_1_Ag'
+        delta.write_text('title\n    8   12    5\n', encoding='utf-8')
+        atom = mocker.MagicMock(is_bulk=False, num=1,
+                                disp_occ={'Ag': [1.0]})
+        slab = mocker.MagicMock(deltas_initialized=False)
+        slab.__iter__.return_value = [atom]
+        with execute_in_dir(tmp_path), pytest.raises(RuntimeError):
+            rpars.generateSearchPars(slab)
 
 
 class TestCollectStaticInputFiles:
