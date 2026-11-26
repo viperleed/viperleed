@@ -80,14 +80,16 @@ problems. viperleed-jax uses the implementation of SLSQP from the
 `SciPy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize>`__
 library.
 
-**Default:** ``grad True, grad_damping 0.1``
+**Default:** ``grad True``
 
 Available setting for ``SLSQP`` are:
 
 -  ``grad``: Toggle calculation of gradients using automatic differentiation.
 
--  ``grad_damping``: A factor applied to the computed gradient which can help to
-   avoid the algorithm jumping outside of the basin around the global minimum.
+-  ``grad_damping``: Deprecated, has no effect. It is still accepted, with a
+   warning, and will be removed in a future version. The gradient is never
+   damped. SLSQP stops when the R factor changes by less than 1e-8
+   in one iteration.
 
 
 BFGS
