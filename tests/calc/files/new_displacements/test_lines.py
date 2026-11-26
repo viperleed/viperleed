@@ -202,6 +202,15 @@ class TestVibDeltaLine:
         with pytest.raises(exp_error):
             VibDeltaLine(bad_line)
 
+    def test_single_value_is_fixed_range(self):
+        vib = VibDeltaLine('O 1 = 0.1')
+        assert vib.range == VibDeltaLine('O 1 = 0.1 0.1').range
+        assert vib.range == RangeToken.from_floats(0.1, 0.1)
+
+    def test_single_value_not_numeric(self):
+        with pytest.raises(DisplacementsSyntaxError):
+            VibDeltaLine('O 1 = foo')
+
     def test_str_shows_targets_and_range(self):
         line = 'X,Y = 2 4 1'
         vib = VibDeltaLine(line)
@@ -209,6 +218,11 @@ class TestVibDeltaLine:
         assert 'TargetToken' in rep
         assert '=' in rep
         assert 'RangeToken' in rep
+
+
+def test_geo_single_value_is_invalid():
+    with pytest.raises(DisplacementsSyntaxError):
+        GeoDeltaLine('O 1 z = 0.1')
 
 
 class TestOffsetLine:
@@ -378,6 +392,12 @@ class TestOccDeltaLine:
     def test_occ_delta_invalid(self, bad_line):
         with pytest.raises(DisplacementsSyntaxError):
             OccDeltaLine(bad_line)
+
+    def test_single_value_is_fixed_range(self):
+        occ = OccDeltaLine('O 1 = O 0.8, N 0.2')
+        explicit = OccDeltaLine('O 1 = O 0.8 0.8, N 0.2 0.2')
+        assert occ.element_ranges == explicit.element_ranges
+        assert occ.element_ranges[0][1] == RangeToken.from_floats(0.8, 0.8)
 
     def test_str_contains_elements_and_ranges(self):
         line = 'A,B = Fe 0.0 1.0, Ni 0.0 0.2'

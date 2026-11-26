@@ -264,7 +264,14 @@ class ParsedLine(ABC):
             )
             raise DisplacementsSyntaxError(msg) from err
 
-    def _parse_range(self, range_str):
+    def _parse_range(self, range_str, single_value=False):
+        """Return a RangeToken for `range_str`.
+
+        If `single_value` is True, a lone number is read as the fixed
+        range <value> <value>.
+        """
+        if single_value and len(range_str.split()) == 1:
+            range_str = f'{range_str.strip()} {range_str.strip()}'
         try:
             return RangeToken(range_str)
         except TokenParserError as err:
@@ -372,7 +379,8 @@ class VibDeltaLine(ParsedLine):
     Lines in the VIB_DELTA block are of the form:
         <target> [, <target>] = <range>
     where <target>, and <range> are tokens that are parsed by the
-    `Targets` and `RangeToken` classes, respectively.
+    `Targets` and `RangeToken` classes, respectively. A single value
+    is read as a fixed range, i.e., <value> <value>.
     """
 
     block_name = 'VIB_DELTA'
@@ -392,8 +400,8 @@ class VibDeltaLine(ParsedLine):
 
         # Right hand side
         _check_moire_tag(self._rhs)
-        # parse to a range
-        self.range = self._parse_range(self._rhs)
+        # parse to a range (a single value is a fixed one)
+        self.range = self._parse_range(self._rhs, single_value=True)
 
     def _format_lhs_str(self):
         return ', '.join(str(t) for t in self.targets)
@@ -408,7 +416,8 @@ class OccDeltaLine(ParsedLine):
     Lines in the OCC_DELTA block are of the form:
         <target> [, <target>] = <element> <range> [, <element> <range> ...]
     where <target>, <element> and <range> are tokens that are parsed by the
-    `Targets`, `Element` and `RangeToken` classes, respectively.
+    `Targets`, `Element` and `RangeToken` classes, respectively. A single
+    value for an element is read as a fixed range, i.e., <value> <value>.
     """
 
     block_name = 'OCC_DELTA'
@@ -463,7 +472,7 @@ class OccDeltaLine(ParsedLine):
             raise DisplacementsSyntaxError(msg) from err
         return (
             self._parse_element(elem_str),
-            self._parse_range(range_str),
+            self._parse_range(range_str, single_value=True),
         )
 
 
