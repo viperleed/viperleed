@@ -93,6 +93,12 @@ class TestGfortranFindsOpenblas:
 
     lib_name = 'libopenblas.dll.a'
     probe_cmd = 'gfortran', f'-print-file-name={lib_name}'
+    on_windows = 'viperleed.calc.lib.fortran_utils._on_windows'
+
+    @pytest.fixture(autouse=True)
+    def fake_windows(self, mocker):
+        """Pretend to be on Windows, where the probe is meant to run."""
+        mocker.patch(self.on_windows, return_value=True)
 
     def mock_run_prints(self, mocker, output):
         """Make subprocess.run print output, and return the mock."""
@@ -155,6 +161,15 @@ class TestGfortranFindsOpenblas:
         _, kwargs = run.call_args
         assert kwargs['check']
         assert kwargs['timeout'] > 0
+
+
+    def test_not_windows(self, mocker):
+        """Check that the probe refuses to run off Windows."""
+        mocker.patch(self.on_windows, return_value=False)
+        run = mocker.patch('subprocess.run')
+        with pytest.raises(RuntimeError, match='Windows'):
+            gfortran_finds_openblas()
+        run.assert_not_called()
 
 
 class TestWrapFortranLine:  # pylint: disable=too-few-public-methods

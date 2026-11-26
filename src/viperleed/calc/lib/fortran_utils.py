@@ -12,6 +12,7 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
+import os
 from pathlib import Path
 import re
 import shutil
@@ -80,7 +81,16 @@ def gfortran_finds_openblas():
         Whether gfortran reported an existing absolute path to the
         OpenBLAS import library. False, without raising, if gfortran
         is missing, fails, or does not answer in time.
+
+    Raises
+    ------
+    RuntimeError
+        If called on a system other than Windows, where the answer
+        would be meaningless.
     """
+    if not _on_windows():
+        raise RuntimeError('gfortran_finds_openblas is meant for Windows '
+                           f'only, not for os.name={os.name!r}')
     probe = 'gfortran', f'-print-file-name={_OPENBLAS_IMPORT_LIB}'
     try:
         result = subprocess.run(probe,
@@ -91,6 +101,11 @@ def gfortran_finds_openblas():
         return False
     lib_path = Path(result.stdout.decode(errors='replace').strip())
     return lib_path.is_absolute() and lib_path.is_file()
+
+
+def _on_windows():
+    """Return whether this is a Windows system."""
+    return os.name == 'nt'
 
 
 def wrap_fortran_line(string):
