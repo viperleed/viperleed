@@ -7,8 +7,7 @@ __license__ = 'GPLv3+'
 
 from operator import attrgetter
 
-import pytest
-from pytest_cases import fixture
+from pytest_cases import fixture, parametrize
 
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
@@ -48,7 +47,7 @@ def displacements_file_id(file_path):
 
 
 @fixture
-@pytest.mark.parametrize(
+@parametrize(
     'file_path',
     DISPLACEMENTS_FILES,
     ids=displacements_file_id,

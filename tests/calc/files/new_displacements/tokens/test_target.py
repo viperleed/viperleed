@@ -17,7 +17,7 @@ from viperleed.calc.files.new_displacements.tokens.target import (
 )
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'raw, expected_regex, expected_nums, expected_layers',
     [
         # only label, no nums or layers
@@ -65,7 +65,7 @@ def test_parse_valid_targets(
     assert tok.layers == expected_layers
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'raw',
     [
         # malformed layer specs
@@ -98,7 +98,7 @@ def test_invalid_target_raises(raw):
         TargetToken(raw)
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'lower, upper',
     (
         ('O l(2)', 'O L(2)'),
@@ -107,11 +107,12 @@ def test_invalid_target_raises(raw):
     ),
 )
 def test_lowercase_layer(lower, upper):
+    """Check that l(...) is read like L(...)."""
     assert TargetToken(lower) == TargetToken(upper)
     assert TargetToken(lower).layers is not None
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'raw, bad_number',
     (
         ('O L(0)', '0'),
@@ -125,16 +126,28 @@ def test_lowercase_layer(lower, upper):
     ),
 )
 def test_non_positive_number_raises(raw, bad_number):
+    """Check that numbers below 1 are rejected and named."""
     with pytest.raises(TargetingError, match=rf'number {bad_number}\b'):
         TargetToken(raw)
 
 
-@pytest.mark.parametrize('raw', ('O L(1)', 'O 1', 'O L(1-2) 1-3'))
-def test_smallest_numbers_accepted(raw):
-    TargetToken(raw)
+@parametrize(
+    'raw, nums, layers',
+    (
+        ('O L(1)', None, (1,)),
+        ('O 1', (1,), None),
+        ('O L(1-2) 1-3', (1, 2, 3), (1, 2)),
+    ),
+)
+def test_smallest_numbers_accepted(raw, nums, layers):
+    """Check that atom and layer numbers starting at 1 are read."""
+    token = TargetToken(raw)
+    assert token.nums == nums
+    assert token.layers == layers
 
 
 def test_empty_string_raises():
+    """Check that an empty target string is rejected."""
     with pytest.raises(TargetingError, match='Target string is empty'):
         TargetToken('')
 
