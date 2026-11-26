@@ -142,21 +142,24 @@ class CartesianDirectionToken(DirectionToken):
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return np.array(vecs), len(vecs)
 
-    def _get_basis_vector(self, label):
+    @staticmethod
+    def _get_basis_vector(label):
         return {
             'x': np.array([1, 0, 0]),
             'y': np.array([0, 1, 0]),
             'z': np.array([0, 0, 1]),
         }[label]
 
-    def _embed_vector(self, dirs, comps):
+    @staticmethod
+    def _embed_vector(dirs, comps):
         vec = np.zeros(3)
         idx_map = {'x': 0, 'y': 1, 'z': 2}
         for direction, component in zip(dirs, comps):
             vec[idx_map[direction]] = component
         return vec
 
-    def _normalize(self, vec):
+    @staticmethod
+    def _normalize(vec):
         norm = np.linalg.norm(vec)
         if norm < DISPLACEMENTS_FILE_EPS:
             msg = f'Zero-length vector: {vec}'
