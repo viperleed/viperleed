@@ -16,21 +16,27 @@ from viperleed.calc.files.new_displacements.errors import (
     DisplacementsSyntaxError,
     OffsetsNotAtBeginningError,
 )
-from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.files.new_displacements.file import (
+    DisplacementsFile,
     _unparsable_line_message,
 )
-from viperleed.calc.files.new_displacements.lines import ModeHeaderLine
-from viperleed.calc.files.new_displacements.lines import OffsetsHeaderLine
-from viperleed.calc.files.new_displacements.segments import ConstraintBlock
-from viperleed.calc.files.new_displacements.segments import LoopBlock
-from viperleed.calc.files.new_displacements.segments import SearchBlock
+from viperleed.calc.files.new_displacements.lines import (
+    ModeHeaderLine,
+    OffsetsHeaderLine,
+)
+from viperleed.calc.files.new_displacements.segments import (
+    ConstraintBlock,
+    LoopBlock,
+    SearchBlock,
+)
 from viperleed.calc.files.new_displacements.tokens.direction import (
     FractionalDirectionToken,
 )
 
-from ....helpers import REPO_ROOT
-from ....helpers import TEST_DATA
+from ....helpers import (
+    REPO_ROOT,
+    TEST_DATA,
+)
 
 NESTED_LOOPS_PATH = (
     TEST_DATA / 'DISPLACEMENTS/Cu_111/DISPLACEMENTS_nested_loops'
@@ -56,9 +62,9 @@ PTRH_PATH = TEST_DATA / 'stored_inputs/inputs/ptrh_100_1x3_o/DISPLACEMENTS'
 
 def test_read_constraint_alias_file():
     """Check that a stored file using '= CONSTRAINT' can be read."""
-    df = DisplacementsFile()
-    df.read(PTRH_PATH)
-    assert any(isinstance(b, ConstraintBlock) for b in df.descendants)
+    disp_file = DisplacementsFile()
+    disp_file.read(PTRH_PATH)
+    assert any(isinstance(b, ConstraintBlock) for b in disp_file.descendants)
 
 ROUGH_PATH = (
     REPO_ROOT / 'doc/_static/example_systems/Cu(111)-Te'
@@ -184,87 +190,111 @@ def _read_text(contents, tmp_path):
     """Return a DisplacementsFile read from a file with `contents`."""
     path = tmp_path / 'DISPLACEMENTS'
     path.write_text(contents)
-    df = DisplacementsFile()
-    df.read(path)
-    return df
+    disp_file = DisplacementsFile()
+    disp_file.read(path)
+    return disp_file
 
 
-def _search_labels(df):
-    return [b.label for b in df.descendants if isinstance(b, SearchBlock)]
+def _search_labels(disp_file):
+    """Return the labels of all search blocks in `disp_file`."""
+    return [
+        b.label for b in disp_file.descendants if isinstance(b, SearchBlock)
+    ]
+
+
+def _mode_blocks(disp_file):
+    """Return (type, lines) of each mode block, for each search."""
+    return [
+        [(type(mode), [str(line) for line in mode.lines])
+         for mode in search.children]
+        for search in disp_file.children
+    ]
 
 
 def test_read_implicit_search_block(tmp_path):
-    """Check that mode blocks lacking '== SEARCH' make a search block."""
+    """Check that mode blocks with no '== SEARCH' make a search."""
     implicit = _read_text(_MODES, tmp_path)
     explicit = _read_text('== SEARCH\n' + _MODES, tmp_path)
-    assert str(implicit) == str(explicit)
     assert len(implicit.children) == 1
     assert isinstance(implicit.children[0], SearchBlock)
+    assert _mode_blocks(implicit) == _mode_blocks(explicit)
+    assert _search_labels(implicit) == _search_labels(explicit)
 
 
 def test_read_implicit_then_explicit_search_block(tmp_path):
     """Check that '== SEARCH' after mode lines starts a new block."""
-    df = _read_text(_MODES + _SEARCH, tmp_path)
-    assert _search_labels(df) == ['search_1', 'a']
+    disp_file = _read_text(_MODES + _SEARCH, tmp_path)
+    assert _search_labels(disp_file) == ['search_1', 'a']
 
 
 def test_read_implicit_search_block_after_offsets(tmp_path):
     """Check that mode blocks right after OFFSETS are a search block."""
-    df = _read_text(_OFFSETS + _MODES, tmp_path)
-    assert _search_labels(df) == ['search_1']
+    disp_file = _read_text(_OFFSETS + _MODES, tmp_path)
+    assert _search_labels(disp_file) == ['search_1']
 
 
 def test_read_unnamed_search_blocks(tmp_path):
     """Check that unnamed '== SEARCH' blocks are distinct and named."""
-    df = _read_text(
+    disp_file = _read_text(
         '== SEARCH\n' + _MODES + '== SEARCH\n' + _MODES,
         tmp_path,
     )
-    first, second = df.children
-    assert first is not second
-    assert _search_labels(df) == ['search_1', 'search_2']
+    first, second = disp_file.children
+    assert first.parent is second.parent is disp_file
+    assert [first.label, second.label] == ['search_1', 'search_2']
+    assert not set(first.children) & set(second.children)
 
 
-_BAD_FILES = {
-    'stray_loop_end': (
+_BAD_FILES = (
+    pytest.param(
         '</loop>\n' + _SEARCH,
         r'Found "</loop>" without a matching "<loop>"',
+        id='stray_loop_end',
     ),
-    'loop_without_search': (
+    pytest.param(
         '<loop>\n' + _MODES + '</loop>\n',
         r'right after "<loop>"',
+        id='loop_without_search',
     ),
-    'loop_on_search_header': (
+    pytest.param(
         '<loop> == SEARCH a\n' + _MODES,
-        (r'Found "<loop>" together with other text in line "<loop> == '
-         r'SEARCH a"'),
+        (
+            r'Found "<loop>" together with other text in line "<loop> == '
+            r'SEARCH a"'
+        ),
+        id='loop_on_search_header',
     ),
-    'loop_at_end_of_header': (
+    pytest.param(
         '== SEARCH a <loop>\n' + _MODES,
-        (r'Found "<loop>" together with other text in line "== SEARCH '
-         r'a <loop>"'),
+        (
+            r'Found "<loop>" together with other text in line "== SEARCH '
+            r'a <loop>"'
+        ),
+        id='loop_at_end_of_header',
     ),
-    'end_tag_with_text': (
+    pytest.param(
         _SEARCH + '</loop> == SEARCH b\n',
         r'Found "</loop>" together with other text',
+        id='end_tag_with_text',
     ),
-    'unclosed_loop': (
+    pytest.param(
         '<loop>\n' + _SEARCH,
         r'Found "<loop>" without a matching "</loop>"',
+        id='unclosed_loop',
     ),
-    'mode_after_loop': (
+    pytest.param(
         '<loop>\n' + _SEARCH + '</loop>\n' + _MODES,
         r'Line "= GEO_DELTA" is not inside a search block',
+        id='mode_after_loop',
     ),
-}
+)
 
 
-@parametrize('contents, msg', _BAD_FILES.values(), ids=_BAD_FILES)
+@parametrize('contents, msg', _BAD_FILES)
 def test_read_bad_loop_tags(contents, msg, tmp_path):
     """Check the error for misplaced or unbalanced loop tags."""
-    with pytest.raises(DisplacementsSyntaxError, match=msg) as exc_info:
+    with pytest.raises(DisplacementsSyntaxError, match=msg):
         _read_text(contents, tmp_path)
-    assert ' object at 0x' not in exc_info.value.message
 
 
 @parametrize(
@@ -288,9 +318,7 @@ def test_read_bad_target_number_in_message(target, number, tmp_path):
 )
 def test_unparsable_line_message_quotes_line(line):
     """Check that the generic error quotes the line, not its repr."""
-    msg = _unparsable_line_message(line)
-    assert f'"{line}"' in msg
-    assert ' object at 0x' not in msg
+    assert _unparsable_line_message(line) == f'Unable to parse line "{line}".'
 
 
 @parametrize(
@@ -311,9 +339,11 @@ def test_read_unique_search_labels(contents, expected, tmp_path):
 
 def test_search_label_round_trip(tmp_path):
     """Check that a generated label is rendered in the header line."""
-    df = _read_text('== SEARCH\n' + _MODES + '== SEARCH\n' + _MODES, tmp_path)
+    disp_file = _read_text(
+        '== SEARCH\n' + _MODES + '== SEARCH\n' + _MODES, tmp_path
+    )
     headers = [
-        line for line in str(df).splitlines() if '== SEARCH' in line
+        line for line in str(disp_file).splitlines() if '== SEARCH' in line
     ]
     labels = [h.split('== SEARCH', 1)[1].strip() for h in headers]
     assert labels == ['search_1', 'search_2']

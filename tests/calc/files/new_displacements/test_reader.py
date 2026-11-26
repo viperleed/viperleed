@@ -83,33 +83,88 @@ def test_displacements_reader_sym_delta_deprecated(tmp_path):
         _compare_lines(path, [])
 
 
-_DROPPED_HEADERS = {
-    'search': ('== S a', '== SEARCH'),
-    'search_long': ('== SEAR a', '== SEARCH'),
-    'geo': ('= G', '= GEO_DELTA'),
-    'geo_long': ('= GEO', '= GEO_DELTA'),
-    'vib': ('= V', '= VIB_DELTA'),
-    'occ': ('= O', '= OCC_DELTA'),
-    'constrain': ('= C', '= CONSTRAIN'),
-    'offsets': ('= OFF', '= OFFSETS'),
-    'regex_on': ('= REGEX on', r'"\*" wildcards'),
-    'regex_off': ('= regex off', r'"\*" wildcards'),
-    'regex_r': ('= R on', r'"\*" wildcards'),
-    'regex_reg': ('= REG off', r'"\*" wildcards'),
-    'geo_delta_prefix': ('= GEO_D', '= GEO_DELTA'),
-    'search_prefix': ('== sea a', '== SEARCH'),
-    'constrain_prefix': ('= constr', '= CONSTRAIN'),
-    'unknown_word': ('= Geometry', r'unknown header .*= GEO_DELTA, = VIB'),
-    'text_after_header': ('= GEO_DELTA x', 'unexpected text after header'),
-    'search_no_space': ('==SEARCH a', r'Write "== SEARCH a"'),
-    'search_glued_label': (
+_DROPPED_HEADERS = (
+    pytest.param(
+        '== S a', '== SEARCH',
+        id='search',
+    ),
+    pytest.param(
+        '== SEAR a', '== SEARCH',
+        id='search_long',
+    ),
+    pytest.param(
+        '= G', '= GEO_DELTA',
+        id='geo',
+    ),
+    pytest.param(
+        '= GEO', '= GEO_DELTA',
+        id='geo_long',
+    ),
+    pytest.param(
+        '= V', '= VIB_DELTA',
+        id='vib',
+    ),
+    pytest.param(
+        '= O', '= OCC_DELTA',
+        id='occ',
+    ),
+    pytest.param(
+        '= C', '= CONSTRAIN',
+        id='constrain',
+    ),
+    pytest.param(
+        '= OFF', '= OFFSETS',
+        id='offsets',
+    ),
+    pytest.param(
+        '= REGEX on', r'"\*" wildcards',
+        id='regex_on',
+    ),
+    pytest.param(
+        '= regex off', r'"\*" wildcards',
+        id='regex_off',
+    ),
+    pytest.param(
+        '= R on', r'"\*" wildcards',
+        id='regex_r',
+    ),
+    pytest.param(
+        '= REG off', r'"\*" wildcards',
+        id='regex_reg',
+    ),
+    pytest.param(
+        '= GEO_D', '= GEO_DELTA',
+        id='geo_delta_prefix',
+    ),
+    pytest.param(
+        '== sea a', '== SEARCH',
+        id='search_prefix',
+    ),
+    pytest.param(
+        '= constr', '= CONSTRAIN',
+        id='constrain_prefix',
+    ),
+    pytest.param(
+        '= Geometry', r'unknown header .*= GEO_DELTA, = VIB',
+        id='unknown_word',
+    ),
+    pytest.param(
+        '= GEO_DELTA x', 'unexpected text after header',
+        id='text_after_header',
+    ),
+    pytest.param(
+        '==SEARCH a', r'Write "== SEARCH a"',
+        id='search_no_space',
+    ),
+    pytest.param(
         '== SEARCHabc',
         r'space is needed between SEARCH and the label.*"== SEARCH abc"',
+        id='search_glued_label',
     ),
-}
+)
 
 
-@parametrize('header, msg', _DROPPED_HEADERS.values(), ids=_DROPPED_HEADERS)
+@parametrize('header, msg', _DROPPED_HEADERS)
 def test_displacements_reader_dropped_header(header, msg, tmp_path):
     """Check errors for abbreviated headers and = REGEX."""
     path = tmp_path / 'DISPLACEMENTS'
@@ -124,19 +179,28 @@ def test_displacements_reader_regex_in_mode_block(tmp_path):
     """Check that an abbreviated = REGEX is reported inside a block."""
     path = tmp_path / 'DISPLACEMENTS'
     path.write_text('== SEARCH a\n= GEO_DELTA\nO 1 z = 0.1 0.2\n= R on\n')
-    with pytest.raises(DisplacementsSyntaxError, match=r'"\*" wildcards'):
-        with DisplacementsReader(path) as reader:
-            list(reader)
+    raises = pytest.raises(DisplacementsSyntaxError, match=r'"\*" wildcards')
+    with raises, DisplacementsReader(path) as reader:
+        list(reader)
 
 
-_DOUBLE_TAGS = {
-    'start': ('<loop><loop>\n== SEARCH a\n', ('start', 'start')),
-    'end': ('</loop></loop>\n', ('end', 'end')),
-    'spaced': ('<loop> <LOOP>\n== SEARCH a\n', ('start', 'start')),
-}
+_DOUBLE_TAGS = (
+    pytest.param(
+        '<loop><loop>\n== SEARCH a\n', ('start', 'start'),
+        id='start',
+    ),
+    pytest.param(
+        '</loop></loop>\n', ('end', 'end'),
+        id='end',
+    ),
+    pytest.param(
+        '<loop> <LOOP>\n== SEARCH a\n', ('start', 'start'),
+        id='spaced',
+    ),
+)
 
 
-@parametrize('text, kinds', _DOUBLE_TAGS.values(), ids=_DOUBLE_TAGS)
+@parametrize('text, kinds', _DOUBLE_TAGS)
 def test_displacements_reader_several_tags_on_line(text, kinds, tmp_path):
     """Check that several loop tags on one line are read as tags."""
     path = tmp_path / 'DISPLACEMENTS'
@@ -148,12 +212,12 @@ def test_displacements_reader_several_tags_on_line(text, kinds, tmp_path):
 
 
 def test_displacements_reader_abbreviation_after_loop(tmp_path):
-    """Check that an abbreviated header after <loop> is named as such."""
+    """Check that an abbreviated header after <loop> is named."""
     path = tmp_path / 'DISPLACEMENTS'
     path.write_text('<loop>\n== S b\n')
-    with pytest.raises(DisplacementsSyntaxError, match='abbreviated'):
-        with DisplacementsReader(path) as reader:
-            list(reader)
+    raises = pytest.raises(DisplacementsSyntaxError, match='abbreviated')
+    with raises, DisplacementsReader(path) as reader:
+        list(reader)
 
 
 @parametrize('header', ('== SEARCH a', '== search a', '= geo_delta'))

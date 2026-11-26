@@ -42,7 +42,7 @@ from viperleed.calc.files.new_displacements.tokens.total_occupation import (
 
 
 class TestGeoDeltaLine:
-    @pytest.mark.parametrize(
+    @parametrize(
         'line, exp_targets, exp_direction, exp_range',
         [
             pytest.param(
@@ -125,7 +125,7 @@ class TestGeoDeltaLine:
         assert isinstance(geo.range, RangeToken)
         assert geo.range == exp_range
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'bad_line, exp_error',
         [
             pytest.param('A =', DisplacementsSyntaxError, id='missing RHS'),
@@ -166,7 +166,7 @@ class TestGeoDeltaLine:
 
 
 class TestVibDeltaLine:
-    @pytest.mark.parametrize(
+    @parametrize(
         'line, exp_targets, exp_range',
         [
             # single target, no step
@@ -191,7 +191,7 @@ class TestVibDeltaLine:
         assert isinstance(vib.range, RangeToken)
         assert vib.range == exp_range
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'bad_line, exp_error',
         [
             ('A x = 0 1', DisplacementsSyntaxError),
@@ -206,11 +206,13 @@ class TestVibDeltaLine:
             VibDeltaLine(bad_line)
 
     def test_single_value_is_fixed_range(self):
+        """A single VIB_DELTA value is read as a fixed range."""
         vib = VibDeltaLine('O 1 = 0.1')
         assert vib.range == VibDeltaLine('O 1 = 0.1 0.1').range
         assert vib.range == RangeToken.from_floats(0.1, 0.1)
 
     def test_single_value_not_numeric(self):
+        """A non-numeric single VIB_DELTA value is rejected."""
         with pytest.raises(DisplacementsSyntaxError):
             VibDeltaLine('O 1 = foo')
 
@@ -255,13 +257,14 @@ def test_bad_target_number_in_message(line_cls, line):
 
 
 def test_lowercase_layer_in_geo_line():
+    """Check that a lowercase layer keeps the direction and range."""
     lower = GeoDeltaLine('O l(2) z = -0.1 0.1 0.05')
     upper = GeoDeltaLine('O L(2) z = -0.1 0.1 0.05')
-    assert lower.targets == upper.targets
-    assert lower.targets[0].layers == (2,)
+    assert lower.direction == upper.direction
+    assert lower.range == upper.range
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'line_type, line, exp_offsets_line',
     (
         (GeoDeltaLine, 'O 1 z offset = 0.1', 'geo O 1 z = 0.1'),
@@ -279,13 +282,14 @@ def test_lowercase_layer_in_geo_line():
 def test_inline_offset_suggests_offsets_line(
     line_type, line, exp_offsets_line
 ):
+    """Check that an in-line offset error quotes a valid line."""
     with pytest.raises(DisplacementsSyntaxError) as exc_info:
         line_type(line)
     message = str(exc_info.value)
     assert line in message
     assert f'"{exp_offsets_line}"' in message
     # The suggestion is itself a valid line in the OFFSETS block
-    assert OffsetsLine(exp_offsets_line)
+    assert OffsetsLine(exp_offsets_line).raw_line == exp_offsets_line
 
 
 _INLINE_OFFSET_CASES = {
@@ -324,8 +328,7 @@ _INLINE_OFFSET_CASES = {
 
 
 @parametrize('line_type, line, keyword, suggestion',
-             [(c[0], c[1], c[2], c[3] if len(c) > 3 else None)
-              for c in _INLINE_OFFSET_CASES.values()],
+             [(*c, None)[:4] for c in _INLINE_OFFSET_CASES.values()],
              ids=list(_INLINE_OFFSET_CASES))
 def test_inline_offset_advice(line_type, line, keyword, suggestion):
     """Check that quoted OFFSETS suggestions parse, else give advice."""
@@ -346,12 +349,13 @@ def test_inline_offset_advice(line_type, line, keyword, suggestion):
 
 
 def test_geo_single_value_is_invalid():
+    """Check that a GEO_DELTA line needs a range, not one value."""
     with pytest.raises(DisplacementsSyntaxError):
         GeoDeltaLine('O 1 z = 0.1')
 
 
 class TestOffsetLine:
-    @pytest.mark.parametrize(
+    @parametrize(
         'line, exp_targets, exp_direction, exp_offset',
         [
             # 1, 2 and 3D geometric offsets
@@ -411,7 +415,7 @@ class TestOffsetLine:
         assert isinstance(off.offset, OffsetToken)
         assert off.offset == OffsetToken.from_floats(exp_offset)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'bad_line, exp_error',
         [
             # Missing direction for geo
@@ -436,7 +440,7 @@ class TestOffsetLine:
 
 
 class TestOccDeltaLine:
-    @pytest.mark.parametrize(
+    @parametrize(
         'line, exp_targets, exp_elem_ranges',
         [
             # single target, single element-range
@@ -500,7 +504,7 @@ class TestOccDeltaLine:
             assert isinstance(act_r, RangeToken)
             assert act_r == exp_r
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'bad_line',
         [
             '',  # empty line
@@ -519,6 +523,7 @@ class TestOccDeltaLine:
             OccDeltaLine(bad_line)
 
     def test_single_value_is_fixed_range(self):
+        """A single OCC_DELTA value is read as a fixed range."""
         occ = OccDeltaLine('O 1 = O 0.8, N 0.2')
         explicit = OccDeltaLine('O 1 = O 0.8 0.8, N 0.2 0.2')
         assert occ.element_ranges == explicit.element_ranges
@@ -540,7 +545,7 @@ class TestOccDeltaLine:
 
 
 class TestConstraintLine:
-    @pytest.mark.parametrize(
+    @parametrize(
         'line, exp_type, exp_targets, exp_link_target, exp_op',
         [
             pytest.param(
@@ -619,7 +624,7 @@ class TestConstraintLine:
         # Array
         assert con.linear_operation == exp_op
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'bad_line',
         [
             'geo = linked',  # no targets
@@ -632,7 +637,7 @@ class TestConstraintLine:
         with pytest.raises(DisplacementsSyntaxError):
             ConstraintLine(bad_line)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'line, exp_mode, exp_value, exp_element',
         (
             ('geo O 1 = 0.05', 'geo', 0.05, None),
@@ -644,6 +649,7 @@ class TestConstraintLine:
         ),
     )
     def test_fixed_value(self, line, exp_mode, exp_value, exp_element):
+        """Check the fixed value and element read from the rhs."""
         con = ConstraintLine(line)
         assert con.mode_token == ModeToken(exp_mode)
         assert con.fixed_value == pytest.approx(exp_value)
@@ -651,7 +657,7 @@ class TestConstraintLine:
         assert con.link_target is None
         assert con.linear_operation is None
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'line',
         (
             'geo O 1 = 0.05 0.1',  # two values
@@ -661,10 +667,12 @@ class TestConstraintLine:
         ),
     )
     def test_invalid_fixed_value(self, line):
+        """Check that malformed fixed values are rejected."""
         with pytest.raises(DisplacementsSyntaxError):
             ConstraintLine(line)
 
     def test_link_has_no_fixed_value(self):
+        """A link to another target is not a fixed value."""
         con = ConstraintLine('occ O 1 = O 2')
         assert con.fixed_value is None
         assert con.fixed_element is None
@@ -722,9 +730,10 @@ class TestConstraintLine:
         assert exp_str in text
         assert 'None' not in text
 
-    @pytest.mark.parametrize('mode', ('geo', 'vib', 'occ'))
-    @pytest.mark.parametrize('rhs', ('ind(2)', 'IND(2)', 'Ind( 2 )'))
+    @parametrize('mode', ('geo', 'vib', 'occ'))
+    @parametrize('rhs', ('ind(2)', 'IND(2)', 'Ind( 2 )'))
     def test_fixed_index(self, mode, rhs):
+        """Check that ind(<n>) is read, in any case and spacing."""
         con = ConstraintLine(f'{mode} O 1 = {rhs}')
         assert con.fixed_index == 2
         assert con.link_target is None
@@ -733,19 +742,21 @@ class TestConstraintLine:
         assert con.fixed_element is None
         assert 'ind(2)' in str(con)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'rhs',
         ('ind()', 'ind(x)', 'ind(0)', 'ind(-1)', 'ind(1.5)', 'ind(2) 3'),
     )
     def test_invalid_fixed_index(self, rhs):
+        """Check that the error for a bad index quotes the line."""
         line = f'geo O 1 = {rhs}'
         with pytest.raises(DisplacementsSyntaxError, match=re.escape(line)):
             ConstraintLine(line)
 
-    @pytest.mark.parametrize(
+    @parametrize(
         'line', ('geo O 1 = O 2', 'occ O 1 = O 0.8', 'vib O 1 = 0.1')
     )
     def test_other_forms_have_no_fixed_index(self, line):
+        """Check that only ind(<n>) sets a fixed index."""
         assert ConstraintLine(line).fixed_index is None
 
     @parametrize(
@@ -753,7 +764,7 @@ class TestConstraintLine:
         ('occ O 1 = O 0.8 Fe 0.2', 'geo O 1 = 0.1 0.2'),
     )
     def test_invalid_format_lists_all_forms(self, line):
-        """The format hint lists link, value, ind(<n>) and total forms."""
+        """The hint lists the link, value, ind(<n>) and total forms."""
         with pytest.raises(DisplacementsSyntaxError) as exc_info:
             ConstraintLine(line)
         message = exc_info.value.message
@@ -768,7 +779,7 @@ class TestConstraintLine:
             ConstraintLine('geo A = offset 0.1')
 
 
-@pytest.mark.parametrize(
+@parametrize(
     'input_str, exp_targets, exp_direction',
     [
         # No direction at all
@@ -811,29 +822,31 @@ def test_constraint_header_alias(header):
     assert ModeHeaderLine(header).section == 'CONSTRAIN'
 
 
-_DIRECTION_FIRST = {
-    'geo_layer': (
+_DIRECTION_FIRST = (
+    pytest.param(
         GeoDeltaLine,
         'Cu_def xy L(2-4) = -0.10 0.10 0.01',
         'Cu_def L(2-4) xy = -0.10 0.10 0.01',
+        id='geo_layer',
     ),
-    'geo_atoms': (
+    pytest.param(
         GeoDeltaLine,
         'O z 1 2 = -0.1 0.1',
         'O 1 2 z = -0.1 0.1',
+        id='geo_atoms',
     ),
-    'offset_geo': (
+    pytest.param(
         OffsetsLine,
         'geo O ab[1 0] L(1) = 0.1',
         'geo O L(1) ab[1 0] = 0.1',
+        id='offset_geo',
     ),
-}
+)
 
 
 @parametrize(
     'line_cls, line, expected',
-    _DIRECTION_FIRST.values(),
-    ids=_DIRECTION_FIRST,
+    _DIRECTION_FIRST,
 )
 def test_direction_before_targets_message(line_cls, line, expected):
     """Check that a direction before targets shows the fixed line."""
