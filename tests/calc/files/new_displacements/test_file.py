@@ -6,6 +6,8 @@ __created__ = '2025-10-01'
 __license__ = 'GPLv3+'
 
 
+import re
+
 import pytest
 from pytest_cases import parametrize
 
@@ -238,6 +240,20 @@ def test_read_bad_loop_tags(contents, msg, tmp_path):
     with pytest.raises(DisplacementsSyntaxError, match=msg) as exc_info:
         _read_text(contents, tmp_path)
     assert ' object at 0x' not in exc_info.value.message
+
+
+@parametrize(
+    'target, number',
+    (('O 0 z', '0'), ('O L(0) z', '0'), ('O -2 z', '-2')),
+)
+def test_read_bad_target_number_in_message(target, number, tmp_path):
+    """Check that the error names the bad atom or layer number."""
+    contents = f'== SEARCH a\n= GEO_DELTA\n    {target} = -0.1 0.1 0.05\n'
+    with pytest.raises(DisplacementsSyntaxError) as exc_info:
+        _read_text(contents, tmp_path)
+    assert re.search(
+        rf'Invalid (atom|layer) number {number}', exc_info.value.message
+    )
 
 
 @parametrize(

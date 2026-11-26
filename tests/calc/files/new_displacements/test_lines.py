@@ -236,6 +236,23 @@ class TestVibDeltaLine:
         assert 'RangeToken' in rep
 
 
+@parametrize(
+    'line_cls, line',
+    (
+        (GeoDeltaLine, 'O 0 z = -0.1 0.1'),
+        (VibDeltaLine, 'O L(0) = -0.1 0.1'),
+        (OccDeltaLine, 'O 0 = Fe 0 1'),
+        (OffsetsLine, 'geo O L(0) z = 0.1'),
+        (ConstraintLine, 'geo O 0 = O 1'),
+    ),
+)
+def test_bad_target_number_in_message(line_cls, line):
+    """Check that the error names the bad atom or layer number."""
+    with pytest.raises(DisplacementsSyntaxError) as exc_info:
+        line_cls(line)
+    assert re.search(r'Invalid (atom|layer) number 0', exc_info.value.message)
+
+
 def test_lowercase_layer_in_geo_line():
     lower = GeoDeltaLine('O l(2) z = -0.1 0.1 0.05')
     upper = GeoDeltaLine('O L(2) z = -0.1 0.1 0.05')
@@ -672,6 +689,20 @@ class TestConstraintLine:
     )
     def test_other_forms_have_no_fixed_index(self, line):
         assert ConstraintLine(line).fixed_index is None
+
+    @parametrize(
+        'line',
+        ('occ O 1 = O 0.8 Fe 0.2', 'geo O 1 = 0.1 0.2'),
+    )
+    def test_invalid_format_lists_all_forms(self, line):
+        """The format hint lists link, value, ind(<n>) and total forms."""
+        with pytest.raises(DisplacementsSyntaxError) as exc_info:
+            ConstraintLine(line)
+        message = exc_info.value.message
+        assert line in message
+        for form in ('<linear_operation>', '<value>', '<element> <value>',
+                     'ind(<n>)', 'total <total_occupation>'):
+            assert form in message
 
     def test_offset_in_constrain_line(self):
         with pytest.raises(DisplacementsSyntaxError,

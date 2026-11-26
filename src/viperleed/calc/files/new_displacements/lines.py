@@ -290,7 +290,7 @@ class ParsedLine(ABC):
         except TokenParserError as err:
             msg = (
                 'Unable to parse <target> tokens from line in '
-                f'{self.block_name} block: {self.raw_line}.'
+                f'{self.block_name} block: {self.raw_line}. {err}'
             )
             raise DisplacementsSyntaxError(msg) from err
 
@@ -576,6 +576,8 @@ class ConstraintLine(ParsedLine):
     block_name = 'CONSTRAIN'
     expected_format = (
         '<mode> <target> [, <target>] = [<linear_operation>] <target>'
+        ' | <value> (geo, vib) | <element> <value> (occ)'
+        ' | ind(<n>) | total <total_occupation> (occ)'
     )
 
     def __init__(self, line):
