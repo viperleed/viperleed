@@ -42,10 +42,17 @@ class LinearOperationToken(DisplacementsFileToken):
             # add commas between adjacent numbers:
             #  "<num>   <num>" -> "<num>, <num>"
             num_pattern = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
-            cleaned = re.sub(rf'({num_pattern})\s+(?={num_pattern})', r'\1, ',
-                             cleaned)
+            cleaned = re.sub(
+                rf'({num_pattern})\s+(?={num_pattern})',
+                r'\1, ',
+                cleaned,
+            )
             # add commas between brackets
-            cleaned = re.sub(r'\]\s+\[', '], [', cleaned)
+            cleaned = re.sub(
+                r'\]\s+\[',
+                '], [',
+                cleaned,
+            )
 
         # parse to expression
         try:
