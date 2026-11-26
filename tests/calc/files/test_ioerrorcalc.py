@@ -45,8 +45,10 @@ class _StubError:
 
 @fixture(name='occ_figs')
 def fixture_occ_figs():
-    """Return the figures for a stub occupation error."""
-    return ioerrorcalc.make_errors_figs([_StubError('occ')])
+    """Yield the figures for a stub occupation error."""
+    figs = ioerrorcalc.make_errors_figs([_StubError('occ')])
+    yield figs
+    close_figures(ioerrorcalc.plt, *figs)
 
 
 class TestMakeErrorsFigsOcc:
