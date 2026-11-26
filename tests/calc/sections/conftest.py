@@ -11,6 +11,8 @@ make_section_tempdir (factory)
     Temporary directory for a system name and a viperleed.calc section.
 init_files
     INITIALIZATION run
+no_user_blas_threads (autouse)
+    BLAS thread settings of the user removed from os.environ.
 refcalc_files
     INITIALIZATION + REFCALC run
 search_files_ag100
@@ -26,6 +28,7 @@ __created__ = '2023-07-26'
 __license__ = 'GPLv3+'
 
 from contextlib import contextmanager
+import os
 from pathlib import Path
 import re
 import shutil
@@ -43,6 +46,7 @@ from viperleed.calc.files import tenserleed
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
+from viperleed.calc.lib.parallelization import USER_BLAS_THREAD_VARIABLES
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 
@@ -97,6 +101,18 @@ with_tl_versions = parametrize(
     tl_version=TENSERLEED_TEST_VERSIONS,
     ids=[str(v) for v in TENSERLEED_TEST_VERSIONS],
     )
+
+
+@fixture(autouse=True)
+def no_user_blas_threads(mocker):
+    """Remove BLAS thread settings of the user from os.environ.
+
+    Tests then do not depend on the environment they run in: blank
+    values count as not set, so the BLAS thread limit is applied (and
+    logged) as by default.
+    """
+    no_user_blas = dict.fromkeys(USER_BLAS_THREAD_VARIABLES, '')
+    mocker.patch.dict(os.environ, no_user_blas)
 
 
 @fixture(scope='session', name='make_section_tempdir')

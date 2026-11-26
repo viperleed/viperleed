@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -263,6 +263,7 @@ def run_delta(runtask):
                                    stdout=log,
                                    stderr=log,
                                    stdin=din_file,
+                                   env=parallelization.blas_thread_env(),
                                    check=False)
                 except Exception:
                     logger.error('Error while executing delta-amplitudes '
@@ -825,6 +826,7 @@ def _run_deltas_in_parallel(rpars, run_tasks):
     if not run_tasks:  # Nothing to run
         return False
     logger.info('Running delta calculations...')
+    parallelization.log_blas_thread_env('delta calculations')
     poolsize = min(len(run_tasks), rpars.N_CORES)
     parallelization.monitoredPool(rpars, poolsize, run_delta, run_tasks)
     return True

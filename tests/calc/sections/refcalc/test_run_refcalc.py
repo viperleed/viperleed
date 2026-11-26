@@ -7,10 +7,12 @@ function. No reference calculation is truly executed.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
+import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,8 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.version import Version
+from viperleed.calc.sections.refcalc import refcalc
 from viperleed.calc.sections.refcalc import run_refcalc
 
 from ....helpers import filesystem_from_dict
@@ -25,6 +29,31 @@ from ....helpers import filesystem_to_dict
 
 
 _MODULE = 'viperleed.calc.sections.refcalc'
+
+
+# User environment and BLAS variables expected in run_refcalc
+_BLAS_USER_ENV = {
+    'default': ({},  # No variable set: limit is 1
+                {'OPENBLAS_NUM_THREADS': '1',
+                 'GOTO_NUM_THREADS': None,
+                 'MKL_NUM_THREADS': '1',
+                 'OMP_NUM_THREADS': '1'}),
+    'blank': ({'OPENBLAS_NUM_THREADS': '', 'OMP_NUM_THREADS': ' '},
+              {'OPENBLAS_NUM_THREADS': '1',
+               'GOTO_NUM_THREADS': None,
+               'MKL_NUM_THREADS': '1',
+               'OMP_NUM_THREADS': '1'}),
+    'manual': ({'OPENBLAS_NUM_THREADS': '', 'OMP_NUM_THREADS': '8'},
+               {'OPENBLAS_NUM_THREADS': '',
+                'GOTO_NUM_THREADS': None,
+                'MKL_NUM_THREADS': None,
+                'OMP_NUM_THREADS': '8'}),
+    'library': ({'MKL_NUM_THREADS': '2'},  # Other libraries get 1
+                {'OPENBLAS_NUM_THREADS': '1',
+                 'GOTO_NUM_THREADS': None,
+                 'MKL_NUM_THREADS': '2',
+                 'OMP_NUM_THREADS': '1'}),
+    }
 
 
 class TestRunRefcalc:
@@ -144,6 +173,18 @@ class TestRunRefcalc:
             file = Path(fname)
             expect_files[f'{file.stem}_5.00eV{file.suffix}'] = contents
         assert filesystem_to_dict(dest_path) == expect_files
+
+    @parametrize('user_env,expect', _BLAS_USER_ENV.values(),
+                 ids=_BLAS_USER_ENV)
+    def test_blas_thread_env(self, user_env, expect,
+                             run, mock_implementation, mocker):
+        """Check that the executable runs with a BLAS thread limit."""
+        mocker.patch.dict(os.environ, user_env, clear=True)
+        mocks = mock_implementation()
+        run(mock=False)
+        _, kwargs = mocks['subprocess.run'].call_args
+        env = kwargs['env']
+        assert {var: env.get(var) for var in expect} == expect
 
     def test_fails_log_append(self, run, mock_implementation, caplog, mocker):
         """Check warnings when failing to extend the main log file."""
@@ -277,3 +318,78 @@ class TestRunRefcalc:
         run(fails=False, mock=True)
         expect_log = 'Contents may get overwritten.'
         assert expect_log in caplog.text
+
+
+class _StopBeforeCompileError(Exception):
+    """Raised to stop refcalc where executables would be compiled."""
+
+
+class TestRefcalcLogsBlasThreadLimit:
+    """Tests for logging the BLAS thread limit in section refcalc."""
+
+    _expect_log = 'BLAS thread limit for reference calculations'
+
+    @fixture(name='rpars')
+    def fixture_rpars(self, mocker):
+        """Return fake Rparams for a single-domain, serial refcalc."""
+        return mocker.MagicMock(
+            domainParams=[],
+            FORTRAN_COMP=['compiler', ''],
+            N_CORES=1,
+            SUPPRESS_EXECUTION=False,
+            THEO_ENERGIES=mocker.MagicMock(start=10, stop=12, step=1),
+            TL_IGNORE_CHECKSUM=True,
+            TL_VERSION=Version('2.0.0'),
+            )
+
+    @fixture(name='call_refcalc')
+    def fixture_call_refcalc(self, rpars, mocker, tmp_path, caplog):
+        """Call refcalc in tmp_path, stopping before compiling."""
+        caplog.set_level(logging.DEBUG)
+        for name in ('RefcalcCompileTask', 'RefcalcRunTask'):
+            mocker.patch(f'{_MODULE}.{name}')
+        iorefcalc = mocker.patch(f'{_MODULE}.iorefcalc')
+        iorefcalc.collectFIN.return_value = 'FIN contents'
+        iorefcalc.writePARAM.return_value = 'PARAM contents'
+        mocker.patch(f'{_MODULE}._select_lmax', return_value={10: 8})
+        mocker.patch(f'{_MODULE}.compile_refcalc',
+                     side_effect=_StopBeforeCompileError)
+        mocker.patch(f'{_MODULE}.leedbase.copy_compile_log')
+
+        def _call(**kwargs):
+            with execute_in_dir(tmp_path):
+                refcalc(mocker.MagicMock(), rpars, **kwargs)
+        return _call
+
+    def test_logs_before_run(self, call_refcalc, caplog):
+        """Check that the limit is logged before running."""
+        with pytest.raises(_StopBeforeCompileError):
+            call_refcalc()
+        assert self._expect_log in caplog.text
+
+    def test_subdomain_not_logged(self, call_refcalc, caplog):
+        """Check that a domain's refcalc does not log the limit."""
+        with pytest.raises(_StopBeforeCompileError):
+            call_refcalc(subdomain=True)
+        assert self._expect_log not in caplog.text
+
+    def test_suppressed_not_logged(self, rpars, call_refcalc, caplog):
+        """Check that nothing is logged when execution is suppressed."""
+        rpars.SUPPRESS_EXECUTION = True
+        call_refcalc()
+        assert self._expect_log not in caplog.text
+
+    @parametrize(required=((True, False), (False, False)))
+    def test_domains(self, required, mocker, caplog):
+        """Check one message if any domain needs a refcalc."""
+        caplog.set_level(logging.DEBUG)
+        run_one = mocker.patch(f'{_MODULE}.run_refcalc_for_one_domain')
+        domains = [mocker.MagicMock(refcalc_required=r) for r in required]
+        for i, domain in enumerate(domains):
+            domain.name = f'domain {i}'
+        rpars = mocker.MagicMock(domainParams=domains,
+                                 FORTRAN_COMP=['compiler', ''])
+        refcalc(mocker.MagicMock(), rpars)
+        n_logged = caplog.text.count(self._expect_log)
+        assert n_logged == (1 if run_one.called else 0)
+        assert run_one.called == any(required)
