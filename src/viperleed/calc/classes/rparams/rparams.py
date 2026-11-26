@@ -1248,5 +1248,5 @@ def _gfortran_blas_flags():
         flags = _OPENBLAS_FLAGS
     else:
         flags = _GENERIC_BLAS_FLAGS
-    _LOGGER.debug('Linking gfortran with BLAS flags %s', flags)
+    _LOGGER.debug(f'Linking gfortran with BLAS flags {flags}')
     return flags
