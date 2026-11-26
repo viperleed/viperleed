@@ -14,6 +14,12 @@ from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.files.new_displacements.segments import LoopBlock
 from viperleed.calc.files.new_displacements.segments import SearchBlock
 
+from ....helpers import TEST_DATA
+
+NESTED_LOOPS_PATH = (
+    TEST_DATA / 'DISPLACEMENTS/Cu_111/DISPLACEMENTS_nested_loops'
+)
+
 
 def test_read_from_file(displacements_file_path, subtests):
     """Test reading a file and checking its validity."""
@@ -28,29 +34,10 @@ def test_read_from_file(displacements_file_path, subtests):
         df.read(displacements_file_path)
 
 
-def test_read_nested_loops(tmp_path):
-    """Check that <loop> markers read from a file give nested LoopBlocks."""
-    path = tmp_path / 'DISPLACEMENTS_nested_loops'
-    path.write_text(
-        '<loop>\n'
-        '== SEARCH a\n'
-        '= GEO_DELTA\n'
-        'Fe 1 z = 0.0 0.1\n'
-        '<loop>\n'
-        '== SEARCH b\n'
-        '= GEO_DELTA\n'
-        'Fe 1 z = 0.0 0.1\n'
-        '</loop>\n'
-        '== SEARCH c\n'
-        '= GEO_DELTA\n'
-        'Fe 1 z = 0.0 0.1\n'
-        '</loop>\n'
-        '== SEARCH d\n'
-        '= GEO_DELTA\n'
-        'Fe 1 z = 0.0 0.1\n'
-    )
+def test_read_nested_loops():
+    """Check that <loop> markers in a file give nested LoopBlocks."""
     df = DisplacementsFile()
-    df.read(path)
+    df.read(NESTED_LOOPS_PATH)
 
     outer, last = df.children
     assert isinstance(outer, LoopBlock)

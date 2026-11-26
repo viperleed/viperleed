@@ -131,5 +131,10 @@ def test_loop_reset_iterator():
     with pytest.raises(StopIteration):
         loop_block.next(0.5)
 
+    # After a reset, the loop behaves as if freshly read: it forgets
+    # the R factor of the earlier passes and repeats once more.
     loop_block.reset_iterator()
-    assert loop_block.next(0.5) is first
+    returned = tuple(loop_block.next(0.5) for _ in expected)
+    assert returned == expected
+    with pytest.raises(StopIteration):
+        loop_block.next(0.5)

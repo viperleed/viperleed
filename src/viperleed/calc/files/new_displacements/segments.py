@@ -284,10 +284,12 @@ class LoopBlock(DisplacementsSegmentABC):
         self._subsegments = (SearchBlock, LoopBlock)
 
     def reset_iterator(self):
+        """Return this loop and its nested loops to their freshly-read state.
+
+        This includes forgetting the R factor of earlier passes, e.g.,
+        when the search repeats after a new reference calculation.
         """
-        Reset to the beginning of the displacement file, e.g. when search
-        repeats after a new reference calculation.
-        """
+        self._last_rfac = np.inf
         self._current_child_id = 0
         for child in self.children:
             if isinstance(child, LoopBlock):
