@@ -99,6 +99,18 @@ class CartesianDirectionToken(DirectionToken):
         self.direction_str = _dir_str
         self._vectors, self.dof = self._parse_direction(_dir_str)
 
+    def __eq__(self, other):
+        """Compare two CartesianDirectionToken objects for equality."""
+        if not isinstance(other, CartesianDirectionToken):
+            return NotImplemented
+        return self.dof == other.dof and np.allclose(
+            self.vectors_xyz, other.vectors_xyz
+        )
+
+    def __str__(self):
+        """Return a string representation of the CartesianDirectionToken object."""
+        return f'CartesianDirectionToken(vectors={self.vectors_xyz}, dof={self.dof})'
+
     @property
     def vectors_xyz(self):
         """Return the vectors in xyz convention."""
@@ -165,18 +177,6 @@ class CartesianDirectionToken(DirectionToken):
             msg = f'Zero-length vector: {vec}'
             raise ValueError(msg)
         return vec / norm
-
-    def __eq__(self, other):
-        """Compare two CartesianDirectionToken objects for equality."""
-        if not isinstance(other, CartesianDirectionToken):
-            return NotImplemented
-        return self.dof == other.dof and np.allclose(
-            self.vectors_xyz, other.vectors_xyz
-        )
-
-    def __str__(self):
-        """Return a string representation of the CartesianDirectionToken object."""
-        return f'CartesianDirectionToken(vectors={self.vectors_xyz}, dof={self.dof})'
 
 
 def _check_unsupported_directions(direction_str):
