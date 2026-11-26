@@ -46,6 +46,10 @@ MODE_HEADER_PATTERN = re.compile(
 OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$', re.IGNORECASE)
 LOOP_START_PATTERN = re.compile(r'<\s*loop\s*>', re.IGNORECASE)
 LOOP_END_PATTERN = re.compile(r'<\s*[/\\]\s*loop\s*>', re.IGNORECASE)
+_LOOP_TAG_PATTERN = re.compile(
+    f'{LOOP_START_PATTERN.pattern}|{LOOP_END_PATTERN.pattern}',
+    re.IGNORECASE,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -198,13 +202,29 @@ class LoopMarkerLine(HeaderLine):
             raise DisplacementsSyntaxError(msg)
 
     @staticmethod
+    def split_tags(line):
+        """Return the loop tags in `line`, if it contains nothing else.
+
+        Parameters
+        ----------
+        line : str
+            The text of a line.
+
+        Returns
+        -------
+        tags : tuple
+            The text of each loop start or end tag in `line`. Empty if
+            `line` has no tags or has any other text besides the tags.
+        """
+        stripped_line = line.strip()
+        if _LOOP_TAG_PATTERN.sub('', stripped_line).strip():
+            return ()
+        return tuple(_LOOP_TAG_PATTERN.findall(stripped_line))
+
+    @staticmethod
     def is_marker(line):
-        """Return whether `line` is exactly a loop start or end tag."""
-        stripped_line = line.strip().lower()
-        return bool(
-            LOOP_START_PATTERN.fullmatch(stripped_line)
-            or LOOP_END_PATTERN.fullmatch(stripped_line)
-        )
+        """Return whether `line` consists only of loop start/end tags."""
+        return bool(LoopMarkerLine.split_tags(line))
 
     def __str__(self):
         """Return the string representation of the loop marker."""

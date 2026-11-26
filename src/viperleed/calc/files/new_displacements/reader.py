@@ -39,12 +39,24 @@ DISPLACEMENTS_FILE_SECTION = {
     'CONSTRAIN': ConstraintLine,
 }
 
-_ABBREVIATED_HEADERS = {
-    'g': '= GEO_DELTA',
-    'v': '= VIB_DELTA',
-    'o': '= OCC_DELTA',
-    'c': '= CONSTRAIN',
+# Full names of the headers that open a mode block. In this order,
+# the first one a word abbreviates is the one suggested for it.
+_MODE_HEADER_NAMES = (
+    'GEO_DELTA',
+    'VIB_DELTA',
+    'OCC_DELTA',
+    'CONSTRAIN',
+    'OFFSETS',
+)
+# Spellings that, followed by extra text, are valid headers that are
+# not abbreviated
+_COMPLETE_MODE_WORDS = {name.lower() for name in _MODE_HEADER_NAMES} | {
+    'constraint',
+    'offset',
 }
+_SEARCH_WORD = 'search'
+_REGEX_WORD = 'regex'
+_SYM_DELTA_WORD = 'sym_delta'
 
 LoopMarker = Enum('LoopMarker', ['LOOP_START', 'LOOP_END'])
 
@@ -72,6 +84,13 @@ class DisplacementsReader(InputFileReader):
 
         self._current_section = None
         self._follows_loop_start = False
+        self._pending_markers = []
+
+    def __next__(self):
+        """Return the next line, including extra tags of a line."""
+        if self._pending_markers:
+            return self._pending_markers.pop(0)
+        return super().__next__()
 
     def _read_one_line(self, line):
         """Extract mode header or data line from a single line."""
@@ -81,12 +100,18 @@ class DisplacementsReader(InputFileReader):
             raise ShouldSkipLineError
 
         _check_loop_tags_isolated(line)
-        new_header = _read_header(line)
-        self._check_follows_loop_start(line, new_header)
+        tags = LoopMarkerLine.split_tags(line)
+        new_header = _read_header(tags[0] if tags else line)
         # headers have been validated by their own parsers: only
         # other lines can contain invalid or deprecated syntax
         if new_header is None:
             _check_dropped_header(line)
+        self._check_follows_loop_start(line, new_header)
+        for tag in tags[1:]:
+            marker = LoopMarkerLine(tag)
+            self._check_follows_loop_start(line, marker)
+            self._pending_markers.append(marker)
+        if new_header is None:
             _check_line_generally_valid(stripped_line)
 
         # update current mode if a new header is found
@@ -156,33 +181,66 @@ def _check_loop_tags_isolated(line):
 def _check_dropped_header(line):
     """Complain if `line` is a header written in an unsupported form."""
     stripped = line.strip()
-    if not stripped.startswith('='):
-        return
-    words = stripped.lstrip('=').split()
-    if not words:
+    equals = stripped[: len(stripped) - len(stripped.lstrip('='))]
+    rest = stripped[len(equals) :]
+    words = rest.split()
+    if not equals or not words:
         return
     word = words[0].lower()
-    if stripped.startswith('=='):
-        if 'search'.startswith(word):
-            msg = (
-                f'Cannot parse header "{stripped}": headers cannot be '
-                'abbreviated. Write "== SEARCH <label>".'
-            )
-            raise DisplacementsSyntaxError(msg)
+    if len(equals) > 1:
+        _check_search_header(stripped, rest, word)
         return
-    if word == 'regex':
+    if word == _SYM_DELTA_WORD:
+        return  # Reported as deprecated
+    if _REGEX_WORD.startswith(word) and word.startswith('r'):
         msg = (
             f'Cannot parse header "{stripped}": "= REGEX" is not '
             'supported. Use "*" wildcards in the atom labels instead.'
         )
         raise DisplacementsSyntaxError(msg)
-    full_name = _ABBREVIATED_HEADERS.get(word[0])
-    if word.startswith('off'):
-        full_name = '= OFFSETS'
-    if full_name:
+    if word in _COMPLETE_MODE_WORDS:
         msg = (
-            f'Cannot parse header "{stripped}": headers cannot be '
-            f'abbreviated. Write "{full_name}".'
+            f'Cannot parse header "{stripped}": unexpected text after '
+            f'header "= {words[0].upper()}".'
+        )
+        raise DisplacementsSyntaxError(msg)
+    for name in _MODE_HEADER_NAMES:
+        if name.lower().startswith(word):
+            msg = (
+                f'Cannot parse header "{stripped}": headers cannot be '
+                f'abbreviated. Write "= {name}".'
+            )
+            raise DisplacementsSyntaxError(msg)
+    valid = ', '.join(f'= {name}' for name in _MODE_HEADER_NAMES)
+    msg = (
+        f'Cannot parse header "{stripped}": unknown header "= '
+        f'{words[0]}". Valid headers: {valid}.'
+    )
+    raise DisplacementsSyntaxError(msg)
+
+
+def _check_search_header(stripped, rest, word):
+    """Complain if `stripped` is a malformed "== SEARCH" header."""
+    if _SEARCH_WORD.startswith(word):
+        if word != _SEARCH_WORD:
+            msg = (
+                f'Cannot parse header "{stripped}": headers cannot be '
+                'abbreviated. Write "== SEARCH <label>".'
+            )
+            raise DisplacementsSyntaxError(msg)
+        if rest[0].isspace():
+            return  # Valid, parsed already
+        msg = (
+            f'Cannot parse header "{stripped}": a space is needed '
+            f'after "==". Write "== {rest.strip()}".'
+        )
+        raise DisplacementsSyntaxError(msg)
+    if word.startswith(_SEARCH_WORD):
+        label = rest.strip()[len(_SEARCH_WORD) :].strip()
+        msg = (
+            f'Cannot parse header "{stripped}": a space is needed '
+            'between SEARCH and the label. Write '
+            f'"== SEARCH {label}".'
         )
         raise DisplacementsSyntaxError(msg)
 
