@@ -65,12 +65,12 @@ class TestPlaneShorthandDeprecated:
     """Tests for the deprecated 'xy'/'ab' two-search-block shorthand."""
 
     @parametrize(
-        ('contents', 'expected_blocks', 'n_warnings'),
+        ('contents', 'expected_blocks', 'expected_warnings'),
         (
             ('== SEARCH s\n= GEO_DELTA\nO 1 xy = -0.1 0.1\n',
              [(['= GEO_DELTA', 'O 1 xy[1 0] = -0.1 0.1'], 's [1 0]'),
               (['= GEO_DELTA', 'O 1 xy[0 1] = -0.1 0.1'], 's [0 1]')],
-             1),
+             (('line 3:', "'xy'"),)),
             (('== SEARCH s\n= GEO_DELTA\nO 1 ab = -0.1 0.1\n'
               'Fe 2 z = -0.1 0.1\nFe 3 ab = -0.2 0.2\n'),
              [(['= GEO_DELTA', 'O 1 ab[1 0] = -0.1 0.1',
@@ -79,20 +79,23 @@ class TestPlaneShorthandDeprecated:
               (['= GEO_DELTA', 'O 1 ab[0 1] = -0.1 0.1',
                 'Fe 2 z = -0.1 0.1', 'Fe 3 ab[0 1] = -0.2 0.2'],
                's [0 1]')],
-             2),
+             (('line 3:', "'ab'"), ('line 5:', "'ab'"))),
             ('== SEARCH s\n= GEO_DELTA\nO 1 xy[1 0] = -0.1 0.1\n',
              [(['= GEO_DELTA', 'O 1 xy[1 0] = -0.1 0.1'], 's')],
-             0),
+             ()),
         ),
         ids=('xy', 'ab twice', 'xy[1 0]'),
     )
-    def test_warning(self, contents, expected_blocks, n_warnings,
+    def test_warning(self, contents, expected_blocks, expected_warnings,
                      write_displacements, caplog):
         """Check one warning per shorthand line and the blocks made."""
         rpars = Rparams()
         readDISPLACEMENTS(rpars, write_displacements(contents))
         warnings = [r for r in caplog.records
                     if _PLANE_SHORTHAND_WARNING in r.getMessage()]
-        assert len(warnings) == n_warnings
+        assert len(warnings) == len(expected_warnings)
+        for record, (line_nr, plane) in zip(warnings, expected_warnings):
+            assert line_nr in record.getMessage()
+            assert f'bare {plane}' in record.getMessage()
         assert all(r.levelname == 'WARNING' for r in warnings)
         assert rpars.disp_blocks == expected_blocks
