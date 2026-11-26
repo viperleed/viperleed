@@ -130,8 +130,14 @@ class SectionHeaderLine(HeaderLine):
     where <section> is one of the defined sections in the DISPLACEMENTS file.
     """
 
-    def __init__(self, section: str):
-        """Initialize the SectionHeaderLine with a section name."""
+    def __init__(self, section):
+        """Initialize the SectionHeaderLine with a section name.
+
+        Parameters
+        ----------
+        section : str
+            The text of the section header line.
+        """
         match = SECTION_HEADER_PATTERN.match(section.strip().upper())
         if not match:
             msg = f'Invalid section header line: "{section}".'
@@ -152,8 +158,14 @@ class LoopMarkerLine(HeaderLine):
     They indicate the start or end of a loop in the DISPLACEMENTS file.
     """
 
-    def __init__(self, line: str):
-        """Initialize the LoopMarkerLine with a line string."""
+    def __init__(self, line):
+        """Initialize the LoopMarkerLine with a line string.
+
+        Parameters
+        ----------
+        line : str
+            The text of the loop marker line.
+        """
         stripped_line = line.strip().lower()
         if LOOP_START_PATTERN.fullmatch(stripped_line):
             self.kind = 'start'
@@ -178,8 +190,14 @@ class ParsedLine(ABC):
     components.
     """
 
-    def __init__(self, line: str):
-        """Perform basic parsing and checking of the line format."""
+    def __init__(self, line):
+        """Perform basic parsing and checking of the line format.
+
+        Parameters
+        ----------
+        line : str
+            The text of the line.
+        """
         logger.log(_BELOW_DEBUG, f'Parsing DISPLACEMENTS: {line}')
         # strip surplus whitespace
         self.raw_line = ' '.join(line.strip().split())
@@ -306,7 +324,7 @@ class GeoDeltaLine(ParsedLine):
     block_name = 'GEO_DELTA'
     expected_format = '<target> [, <target>] <direction> = <range>'
 
-    def __init__(self, line: str):
+    def __init__(self, line):
         super().__init__(line)
 
         # Left hand side
@@ -345,7 +363,7 @@ class VibDeltaLine(ParsedLine):
     block_name = 'VIB_DELTA'
     expected_format = '<target> [, <target>] = <range>'
 
-    def __init__(self, line: str):
+    def __init__(self, line):
         super().__init__(line)
 
         # Left hand side
@@ -383,7 +401,7 @@ class OccDeltaLine(ParsedLine):
         '<target> [, <target>] = <element> <range> [, <element> <range>]'
     )
 
-    def __init__(self, line: str):
+    def __init__(self, line):
         super().__init__(line)
 
         # Left hand side
@@ -460,7 +478,7 @@ class ConstraintLine(ParsedLine):
         '<mode> <target> [, <target>] = [<linear_operation>] <target>'
     )
 
-    def __init__(self, line: str):
+    def __init__(self, line):
         super().__init__(line)
 
         # Left hand side
@@ -645,7 +663,7 @@ class OffsetsLine(ParsedLine):
         return f'{self.offset}'
 
 
-def separate_direction_from_targets(targets_and_direction: str):
+def separate_direction_from_targets(targets_and_direction):
     """Separate a string into targets and direction.
 
     Uses a regex pattern to identify and extract an optional direction

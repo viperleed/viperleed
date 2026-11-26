@@ -56,7 +56,7 @@ class RangeToken(DisplacementsFileToken):
         return self.step is not None
 
     @classmethod
-    def from_floats(cls, start, stop, step=None) -> 'RangeToken':
+    def from_floats(cls, start, stop, step=None):
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
         inst.start = start

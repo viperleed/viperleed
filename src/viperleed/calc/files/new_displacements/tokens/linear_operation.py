@@ -106,7 +106,7 @@ class LinearOperationToken(DisplacementsFileToken):
         raise LinearOperationTokenParserError(msg)
 
     @classmethod
-    def from_array(cls, arr) -> 'LinearOperationToken':
+    def from_array(cls, arr):
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
         inst.arr = cls._validate_array(arr, arr)

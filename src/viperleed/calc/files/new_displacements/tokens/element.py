@@ -33,8 +33,14 @@ class ElementToken(DisplacementsFileToken):
         The string containing the element to be parsed.
     """
 
-    def __init__(self, element_str: str):
-        """Construct an ElementToken from a string."""
+    def __init__(self, element_str):
+        """Construct an ElementToken from a string.
+
+        Parameters
+        ----------
+        element_str : str
+            Element symbol or name.
+        """
         _element_str = element_str.strip()
         # first get atomic number
         try:

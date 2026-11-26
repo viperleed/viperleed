@@ -1,7 +1,7 @@
 """Module perturbation_mode of viperleed.calc.classes."""
 
 __authors__ = ('Alexandra Mia Imre (@alexmiame)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-13'
 __license__ = 'GPLv3+'
 
@@ -25,8 +25,14 @@ class PerturbationMode(str, Enum):
         return self.value
 
     @classmethod
-    def from_string(cls, mode_string: str):
-        """Convert a string to a PerturbationType enum."""
+    def from_string(cls, mode_string):
+        """Convert a string to a PerturbationMode enum.
+
+        Parameters
+        ----------
+        mode_string : str
+            The string to convert. Case-insensitive.
+        """
         try:
             return cls(mode_string.lower())
         except ValueError:

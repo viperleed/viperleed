@@ -32,8 +32,14 @@ class OffsetToken(DisplacementsFileToken):
         If parsing fails.
     """
 
-    def __init__(self, offset_str: str):
-        """Construct an OffsetToken from a string."""
+    def __init__(self, offset_str):
+        """Construct an OffsetToken from a string.
+
+        Parameters
+        ----------
+        offset_str : str
+            One to three whitespace-separated numbers.
+        """
         parts = offset_str.strip().split()
         self.offset = self._validate_offsets(parts, offset_str)
 
@@ -43,8 +49,14 @@ class OffsetToken(DisplacementsFileToken):
         return self.offset.size
 
     @classmethod
-    def from_floats(cls, *offsets: float) -> 'OffsetToken':
-        """Alternate constructor using 1–3 numeric values directly."""
+    def from_floats(cls, *offsets):
+        """Alternate constructor using 1-3 numeric values directly.
+
+        Parameters
+        ----------
+        *offsets : float
+            The offset values.
+        """
         inst = cls.__new__(cls)
         inst.offset = cls._validate_offsets(offsets, offsets)
         return inst

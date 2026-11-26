@@ -31,8 +31,14 @@ class TotalOccupationToken(DisplacementsFileToken):
         The string containing the total occupation to be parsed.
     """
 
-    def __init__(self, total_occupation_str: str):
-        """Construct a TotalOccupationToken from a string."""
+    def __init__(self, total_occupation_str):
+        """Construct a TotalOccupationToken from a string.
+
+        Parameters
+        ----------
+        total_occupation_str : str
+            The total occupation as text.
+        """
         try:
             total_occupation_value = float(total_occupation_str.strip())
         except ValueError as err:
