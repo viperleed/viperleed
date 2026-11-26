@@ -11,8 +11,8 @@ from viperleed.calc.lib.string_utils import read_int_range
 
 from .base import DisplacementsFileToken, TokenParserError
 
-LAYER_REGEX = r'L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)'
-MALFORMED_LAYER_CHARS = ('L', '(', ')')
+# An L(...) group, separated by whitespace from what is around it
+LAYER_REGEX = r'(?<!\S)L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)(?!\S)'
 
 
 class TargetingError(TokenParserError):
@@ -24,10 +24,10 @@ class TargetToken(DisplacementsFileToken):
 
     A target is a site label (with optional '*' wildcards), followed
     by optional atom numbers and L(...) layer specifications, in any
-    order (e.g., 'O 1 3 L(2)'). The target selects the atoms matching
-    the label that have one of the numbers or are in one of the
-    layers (their union). Without numbers and layers, the label alone
-    selects the atoms.
+    order, separated by whitespace (e.g., 'O 1 3 L(2)'). The target
+    selects the atoms matching the label that have one of the numbers
+    or are in one of the layers (their union). Without numbers and
+    layers, the label alone selects the atoms.
 
     Attributes
     ----------
@@ -74,14 +74,14 @@ class TargetToken(DisplacementsFileToken):
         """Parse atom numbers and L(...) layers following the label.
 
         Numbers and layers may come in any order, with any number of
-        L(...) groups. The target is their union: the atoms with the
-        given numbers, plus those in the given layers.
+        L(...) groups, each separated from the rest by whitespace
+        (e.g., 'L(1)2' is invalid). The target is their union: the
+        atoms with the given numbers, plus those in the given layers.
         """
         layer_specs = [m['ranges'] for m in re.finditer(LAYER_REGEX, specs)]
+        # Whatever is not a whitespace-separated L(...) must be atom
+        # numbers: a malformed or glued-on L(...) fails to read below.
         nums_spec = re.sub(LAYER_REGEX, ' ', specs).strip()
-        if any(c in nums_spec for c in MALFORMED_LAYER_CHARS):
-            msg = f'Invalid layer specification: "{specs}".'
-            raise TargetingError(msg)
         if layer_specs:
             self.layers = _read_ints(' '.join(layer_specs), specs)
         if nums_spec:

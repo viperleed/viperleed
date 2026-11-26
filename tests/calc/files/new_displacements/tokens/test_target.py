@@ -46,6 +46,10 @@ from viperleed.calc.files.new_displacements.tokens.target import (
         ('O 1 L(2) 4', re.compile(r'^O'), (1, 4), (2,)),
         ('O L(1) L(3-4)', re.compile(r'^O'), None, (1, 3, 4)),
         ('O L(1) 2 L(3)', re.compile(r'^O'), (2,), (1, 3)),
+        ('O 1 L(2) 3', re.compile(r'^O'), (1, 3), (2,)),
+        # layers and numbers keep their order
+        ('O L(3) L(1)', re.compile(r'^O'), None, (3, 1)),
+        ('O 3 L(2) 1', re.compile(r'^O'), (3, 1), (2,)),
     ],
 )
 def test_parse_valid_targets(
@@ -79,6 +83,11 @@ def test_parse_valid_targets(
         'A one two',
         # malformed layer spec
         'A L()',
+        # numbers and L(...) not separated by whitespace
+        'O L(1)2',
+        'O 1L(2)3',
+        'O L(1)L(2)',
+        'O 1L(2)',
     ],
 )
 def test_invalid_target_raises(raw):
