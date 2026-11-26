@@ -142,7 +142,7 @@ class LineContainer(DisplacementsSegmentABC):
     def _render_name(self):
         sep = '\n\t'
         return (
-            f'{self.header}'
+            f'{self.header()}'
             + sep
             + f'{sep.join(line.raw_line for line in self._lines)}'
         )
@@ -179,7 +179,8 @@ class DeltaBlock(LineContainer):
 
     def validate_segment(self):
         if not self._lines:
-            raise DisplacementsSyntaxError(f'Found empty {self.header} block.')
+            msg = f'Found empty {self.header()} block.'
+            raise DisplacementsSyntaxError(msg)
 
 
 class GeoDeltaBlock(DeltaBlock):
@@ -287,7 +288,7 @@ class SearchBlock(DisplacementsSegmentABC):
             ]
             if len(blocks) > 1:
                 msg = (
-                    f'Multiple {block_type.header} blocks found in search '
+                    f'Multiple {block_type.header()} blocks found in search '
                     f"block: '{self.label}'."
                 )
                 raise DisplacementsSyntaxError(msg)

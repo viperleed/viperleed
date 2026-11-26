@@ -321,3 +321,19 @@ def test_search_label_round_trip(tmp_path):
         '\n'.join(f'== SEARCH {label}\n{_MODES}' for label in labels), tmp_path
     )
     assert _search_labels(reread) == labels
+
+
+def test_str_shows_block_headers(tmp_path):
+    """Check that rendering a file names its blocks, not a method."""
+    rendered = str(_read_text(_OFFSETS + _SEARCH, tmp_path))
+    assert 'bound method' not in rendered
+    assert 'GEO_DELTA' in rendered
+    assert 'OFFSET' in rendered
+
+
+def test_read_empty_mode_block(tmp_path):
+    """Check that an empty mode block is reported by name."""
+    with pytest.raises(
+        DisplacementsSyntaxError, match='Found empty GEO_DELTA block'
+    ):
+        _read_text('== SEARCH a\n= GEO_DELTA\n', tmp_path)
