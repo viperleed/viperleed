@@ -55,8 +55,40 @@ _LOOP_TAG_PATTERN = re.compile(
 logger = logging.getLogger(__name__)
 
 _OFFSET_KEYWORD = 'offset'
-_MIN_LHS_PARTS_WITH_OFFSET = 2  # targets and the keyword
 _ZERO_OFFSET_WORDS = {'clear', 'original'}
+_ADVICE_DROP_CONT = (
+    'Delete the line: "cont" keeps the previous offset, which is the '
+    'default.'
+)
+_ADVICE_DROP_ZERO = (
+    'Delete the line: offsets start from the input positions (zero) '
+    'unless set in the OFFSETS block.'
+)
+_ADVICE_VIB_RANGE = (
+    'Offsets are set in the OFFSETS block, and take one value. To scan '
+    'this range, write "{targets} = {value}" as a line in the VIB_DELTA '
+    'block (offsets are zero unless set in the OFFSETS block).'
+)
+_ADVICE_GEO_NO_DIRECTION = (
+    'A geometric offset in the OFFSETS block needs a direction: write '
+    '"geo <targets> <direction> = <value>" there.'
+)
+_ADVICE_NO_EQUIVALENT = {
+    'geo': (
+        'Offsets are set in the OFFSETS block, where a geometric offset '
+        'takes one value per component of its direction: write '
+        '"geo <targets> <direction> = <values>" there.'
+    ),
+    'vib': (
+        'Offsets are set in the OFFSETS block: write '
+        '"vib <targets> = <value>" there.'
+    ),
+    'occ': (
+        'Offsets are set in the OFFSETS block. An occupation offset '
+        'there has one value and no element: write '
+        '"occ <targets> = <value>".'
+    ),
+}
 
 # precompiled direction-at-end regex for separating out the direction token
 _FLOAT_RE = r'-?(?:\d+(?:\.\d*)?|\.\d+)'
@@ -284,31 +316,77 @@ class ParsedLine(ABC):
 
         Parameters
         ----------
-        mode : {'geo', 'vib'}
+        mode : {'geo', 'vib', 'occ'}
             The perturbation mode of the line, used to suggest the
             equivalent line for the OFFSETS block.
 
         Raises
         ------
         DisplacementsSyntaxError
-            If the left-hand side ends with 'offset'.
+            If the left-hand side ends with 'offset', or with a word
+            that ends with 'offset' (as in 'zoffset').
         """
         lhs_parts = self._lhs.split()
-        if len(lhs_parts) < _MIN_LHS_PARTS_WITH_OFFSET:
+        if not lhs_parts:
             return
-        if lhs_parts[-1].lower() != _OFFSET_KEYWORD:
+        last = lhs_parts[-1]
+        if not last.lower().endswith(_OFFSET_KEYWORD):
             return
-        value = self._rhs.strip()
-        if value.lower() in _ZERO_OFFSET_WORDS:
-            value = '0'
-        targets = ' '.join(lhs_parts[:-1])
-        equivalent = f'{mode} {targets} = {value}'
+        lhs_parts[-1] = last[:-len(_OFFSET_KEYWORD)]
+        targets = ' '.join(part for part in lhs_parts if part)
+        if not targets:
+            return
+        advice = self._inline_offset_advice(mode, targets)
         msg = (
             f'In-line "offset" is not supported: "{self.raw_line}". '
-            'Offsets are set in the OFFSETS block. Write '
-            f'"{equivalent}" there instead.'
+            f'{advice}'
         )
         raise DisplacementsSyntaxError(msg)
+
+    def _inline_offset_advice(self, mode, targets):
+        """Return what to do instead of an in-line offset.
+
+        Parameters
+        ----------
+        mode : {'geo', 'vib', 'occ'}
+            The perturbation mode of the line.
+        targets : str
+            The left-hand side of the line without the 'offset'
+            keyword.
+
+        Returns
+        -------
+        advice : str
+            Text that quotes an OFFSETS line only if that line parses.
+        """
+        value = self._rhs.strip()
+        words = value.lower().split()
+        first = words[0] if words else ''
+        has_direction = bool(separate_direction_from_targets(targets)[1])
+        if first.startswith('cont'):
+            return _ADVICE_DROP_CONT
+        if first in _ZERO_OFFSET_WORDS or _is_zero(first):
+            if mode == 'geo' and not has_direction:
+                return _ADVICE_DROP_ZERO
+            value = '0'
+        candidates = [value]
+        if mode == 'geo' and len(words) > 1:
+            candidates.append(first)
+        for candidate in candidates:
+            equivalent = f'{mode} {targets} = {candidate}'
+            try:
+                OffsetsLine(equivalent)
+            except DisplacementsSyntaxError:
+                continue
+            note = ''
+            if candidate != value:
+                note = 'Only the first value of an offset is used. '
+            return f'{note}Write "{equivalent}" in the OFFSETS block instead.'
+        if mode == 'vib' and len(words) > 1:
+            return _ADVICE_VIB_RANGE.format(targets=targets, value=value)
+        if mode == 'geo' and not has_direction:
+            return _ADVICE_GEO_NO_DIRECTION
+        return _ADVICE_NO_EQUIVALENT[mode]
 
     def _reject_direction_before_targets(self, lhs, prefix=''):
         """Raise if `lhs` has target parts after the direction.
@@ -527,6 +605,7 @@ class OccDeltaLine(ParsedLine):
 
     def __init__(self, line):
         super().__init__(line)
+        self._reject_inline_offset('occ')
 
         # Left hand side
         # check if the last part is a direction
@@ -935,6 +1014,14 @@ class OffsetsLine(ParsedLine):
 
     def _format_rhs_str(self):
         return f'{self.offset}'
+
+
+def _is_zero(text):
+    """Return whether `text` is a number equal to zero."""
+    try:
+        return float(text) == 0
+    except ValueError:
+        return False
 
 
 def separate_direction_from_targets(targets_and_direction):

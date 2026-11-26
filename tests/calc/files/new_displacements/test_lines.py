@@ -288,6 +288,63 @@ def test_inline_offset_suggests_offsets_line(
     assert OffsetsLine(exp_offsets_line)
 
 
+_INLINE_OFFSET_CASES = {
+    'geo_zero_no_direction': (GeoDeltaLine, 'O 1 offset = 0', 'Delete'),
+    'geo_clear_no_direction': (GeoDeltaLine, 'O 1 offset = clear', 'Delete'),
+    'geo_original_no_direction': (
+        GeoDeltaLine, 'O 1 offset = original', 'Delete'
+    ),
+    'geo_original': (
+        GeoDeltaLine, 'O 1 z offset = original', None, 'geo O 1 z = 0'
+    ),
+    'geo_range': (
+        GeoDeltaLine,
+        'O 1 z offset = -0.1 0.1 0.05',
+        None,
+        'geo O 1 z = -0.1',
+    ),
+    'geo_cont': (GeoDeltaLine, 'O 1 z offset = cont', 'Delete'),
+    'geo_nonzero_no_direction': (
+        GeoDeltaLine, 'O 1 offset = 0.1', 'needs a direction'
+    ),
+    'geo_multi_dof_one_value': (
+        GeoDeltaLine, 'O 1 xy offset = 0.1', 'one value per component'
+    ),
+    'geo_suffix_zoffset': (
+        GeoDeltaLine, 'O 1 zoffset = 0.1', None, 'geo O 1 z = 0.1'
+    ),
+    'geo_suffix_bracket': (
+        GeoDeltaLine, 'O 1 [0 1]offset = 0.1', None, 'geo O 1 [0 1] = 0.1'
+    ),
+    'vib_range': (VibDeltaLine, 'O 1 offset = -0.05 0.05 0.01', 'VIB_DELTA'),
+    'vib_cont': (VibDeltaLine, 'O 1 offset = cont', 'Delete'),
+    'occ_element': (OccDeltaLine, 'O 1 offset = O 0.5', 'no element'),
+    'occ_value': (OccDeltaLine, 'O 1 offset = 0.5', None, 'occ O 1 = 0.5'),
+}
+
+
+@parametrize('line_type, line, keyword, suggestion',
+             [(c[0], c[1], c[2], c[3] if len(c) > 3 else None)
+              for c in _INLINE_OFFSET_CASES.values()],
+             ids=list(_INLINE_OFFSET_CASES))
+def test_inline_offset_advice(line_type, line, keyword, suggestion):
+    """Check that quoted OFFSETS suggestions parse, else give advice."""
+    with pytest.raises(DisplacementsSyntaxError) as exc_info:
+        line_type(line)
+    message = str(exc_info.value)
+    assert line in message
+    quoted = re.findall(r'Write "([^"]+)"', message)
+    for offsets_line in quoted:
+        assert OffsetsLine(offsets_line)
+    if suggestion:
+        assert quoted == [suggestion]
+    else:
+        assert not quoted
+        assert keyword in message
+    if keyword == 'VIB_DELTA':
+        assert VibDeltaLine('O 1 = -0.05 0.05 0.01')
+
+
 def test_geo_single_value_is_invalid():
     with pytest.raises(DisplacementsSyntaxError):
         GeoDeltaLine('O 1 z = 0.1')
