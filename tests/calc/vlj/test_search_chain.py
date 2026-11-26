@@ -11,6 +11,8 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-11-26'
 __license__ = 'GPLv3+'
 
+import sys
+from types import ModuleType
 from types import SimpleNamespace
 
 import numpy as np
@@ -50,15 +52,31 @@ class TestOptimizerChainBestResult:
                 (SimpleNamespace(name=name), result)
                 for name, result in chain
                 )
+            fake_plugin_modules = {
+                'viperleed_jax.from_objects': {
+                    'setup_tl_parameter_space': mocker.MagicMock(),
+                    'setup_tl_calculator': mocker.MagicMock(
+                        return_value=calculator
+                        ),
+                    },
+                'viperleed_jax.optimization.iterator': {
+                    'OptimizerIterator': mocker.MagicMock(
+                        return_value=iterator
+                        ),
+                    },
+                'viperleed_jax.utils': {
+                    'benchmark_calculator': mocker.MagicMock(),
+                    'format_benchmark_results': mocker.MagicMock(
+                        return_value=''
+                        ),
+                    },
+                }
+            for mod_name, attrs in fake_plugin_modules.items():
+                module = ModuleType(mod_name)
+                module.__dict__.update(attrs)
+                monkeypatch.setitem(sys.modules, mod_name, module)
             patches = {
                 'VLJ_AVAILABLE': True,
-                'setup_tl_parameter_space': mocker.MagicMock(),
-                'setup_tl_calculator': mocker.MagicMock(
-                    return_value=calculator
-                    ),
-                'OptimizerIterator': mocker.MagicMock(return_value=iterator),
-                'benchmark_calculator': mocker.MagicMock(),
-                'format_benchmark_results': mocker.MagicMock(return_value=''),
                 'determine_integer_or_fractional': mocker.MagicMock(),
                 'writeVIBROCC': mocker.MagicMock(),
                 '_export_parameter_space': mocker.MagicMock(),

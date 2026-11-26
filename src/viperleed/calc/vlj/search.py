@@ -18,17 +18,6 @@ from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.vlj import VLJ_AVAILABLE
 from viperleed.calc.sections.rfactor import determine_integer_or_fractional
 
-if VLJ_AVAILABLE:
-    from viperleed_jax.from_objects import (
-        setup_tl_calculator,
-        setup_tl_parameter_space,
-    )
-    from viperleed_jax.optimization.iterator import OptimizerIterator
-    from viperleed_jax.utils import (
-        benchmark_calculator,
-        format_benchmark_results,
-    )
-
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +45,20 @@ def vlj_search(slab, rpars):
         )
         logger.error(err_msg)
         raise RuntimeError(err_msg)
+
+    # Import the plugin only now: it replaces the numerical backend
+    # of the R-factor library with JAX as a side effect of importing.
+    from viperleed_jax.from_objects import (  # pylint: disable=C0415
+        setup_tl_calculator,
+        setup_tl_parameter_space,
+    )
+    from viperleed_jax.optimization.iterator import (  # pylint: disable=C0415
+        OptimizerIterator,
+    )
+    from viperleed_jax.utils import (  # pylint: disable=C0415
+        benchmark_calculator,
+        format_benchmark_results,
+    )
 
     # select tensors based on the tensor index
     tensor_dir_name = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
