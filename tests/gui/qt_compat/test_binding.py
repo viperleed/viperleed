@@ -25,8 +25,8 @@ BOTH = (PYQT5, PYQT6)
 _MODULE = 'viperleed.gui.qt_compat.binding'
 # PYQT_VERSION_STR of usable bindings, and of too old ones
 _NEW_ENOUGH = {PYQT5: '5.15.10', PYQT6: '6.12.0'}
-_OLDEST = {PYQT5: '5.15.0', PYQT6: '6.1.0'}
-_TOO_OLD = {PYQT5: '5.14.2', PYQT6: '6.0.3'}
+_OLDEST = {PYQT5: '5.15.0', PYQT6: '6.2.0'}
+_TOO_OLD = {PYQT5: '5.14.2', PYQT6: '6.1.1'}
 
 
 def _fake_qt_core(mocker, qt_binding, version):

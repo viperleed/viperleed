@@ -56,10 +56,12 @@ PYQT6 = 'PyQt6'
 QT_API_ENV = 'QT_API'
 SUPPORTED_BINDINGS = (PYQT6, PYQT5)  # In order of preference
 # The oldest (major, minor) versions of the bindings that work. PyQt6
-# before 6.1 lacks names of enums used in viperleed.gui (e.g., it has
-# Qt.MouseButtons rather than Qt.MouseButton), and some enums that
-# Qt functions return as int (e.g., Qt.Key) are not int-based there.
-MIN_VERSIONS = {PYQT5: Version('5.15'), PYQT6: Version('6.1')}
+# before 6.2 lacks the QtSerialPort module, which the measurement GUI
+# needs. Before 6.1, it also lacks names of enums used in viperleed.gui
+# (e.g., it has Qt.MouseButtons rather than Qt.MouseButton), and some
+# enums that Qt functions return as int (e.g., Qt.Key) are not
+# int-based there.
+MIN_VERSIONS = {PYQT5: Version('5.15'), PYQT6: Version('6.2')}
 _QT_API_VALUES = {binding.lower(): binding for binding in SUPPORTED_BINDINGS}
 
 _SELECTED_BINDING = None
