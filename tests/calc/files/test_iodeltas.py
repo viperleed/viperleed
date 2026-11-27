@@ -3,23 +3,30 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-07-08'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
+import zipfile
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.files.iodeltas import _fetch_auxbeams
+from viperleed.calc.files.iodeltas import _read_header_integers
 from viperleed.calc.files.iodeltas import _read_file_with_newline
 from viperleed.calc.files.iodeltas import collect_static_input_files
+from viperleed.calc.files.iodeltas import read_delta_energy_range
 from viperleed.calc.files.iodeltas import write_delta_input_file
 from viperleed.calc.lib.context import execute_in_dir
 
+from ...helpers import TEST_DATA
+from ...helpers import write_delta_stub
 
+
+_AG100_DELTAS = TEST_DATA / 'Ag(100)' / 'search' / 'Deltas' / 'Deltas_z.zip'
 _MODULE = 'viperleed.calc.files.iodeltas'
 
 
@@ -232,3 +239,47 @@ param 3. Has no runtasks
         write_delta_input_file(*mock_tasks)
         expect_log = f'Failed to write file {input_file_name!r}'
         assert expect_log in caplog.text
+
+
+class TestReadDeltaEnergyRange:
+    """Tests for function read_delta_energy_range."""
+
+    @parametrize(old_format=(False, True), ids=('v1.7+', 'v1.6'))
+    def test_energy_range(self, old_format, tmp_path):
+        """Check the energies are those of the energy headers."""
+        file = tmp_path / 'DEL_1_Ag_1'
+        write_delta_stub(file, (27.2114, 54.4228, 81.6342),
+                         old_format=old_format)
+        e_min, e_max = read_delta_energy_range(file)
+        assert e_min == pytest.approx(27.2114, abs=1e-3)
+        assert e_max == pytest.approx(81.6342, abs=1e-3)
+
+    @parametrize(e_min=(50, 200, 300))
+    def test_energy_range_v16(self, e_min, tmp_path):
+        """Check energies of TensErLEED v1.6, which rounds Hartree."""
+        file = tmp_path / 'DEL_1_Ag_1'
+        write_delta_stub(file, (e_min, 350), old_format=True)
+        e_min_read, e_max_read = read_delta_energy_range(file)
+        assert e_min_read == pytest.approx(e_min, abs=1e-3)
+        assert e_max_read == pytest.approx(350, abs=1e-3)
+
+    @parametrize('line,expect', (('    9  100   18', (9, 100, 18)),
+                                 ('  9100 18', (9, 100, 18))))
+    def test_header_integers(self, line, expect):
+        """Check reading of the beam, atom, and step counts."""
+        assert tuple(_read_header_integers(line)) == expect
+
+    def test_real_file(self, tmp_path):
+        """Check the energy range of a delta file from Ag(100)."""
+        with zipfile.ZipFile(_AG100_DELTAS) as archive:
+            file = Path(archive.extract('DEL_1_Ag_1', tmp_path))
+        e_min, e_max = read_delta_energy_range(file)
+        assert e_min == pytest.approx(50, abs=1e-3)
+        assert e_max == pytest.approx(350, abs=1e-3)
+
+    def test_no_energies(self, tmp_path):
+        """Check complaints when there is no energy block."""
+        file = tmp_path / 'DEL_1_Ag_1'
+        file.write_text('0.0000000E+000.0000000E+00\n', encoding='utf-8')
+        with pytest.raises(ValueError, match='No energies'):
+            read_delta_energy_range(file)

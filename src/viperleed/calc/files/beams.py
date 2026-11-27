@@ -23,8 +23,11 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.classes.beam import Beam
+from viperleed.calc.files.input_reader import InputFileReader
+from viperleed.calc.files.input_reader import ShouldSkipLineError
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
+from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.gui.base import project_to_first_domain
 
 
@@ -75,18 +78,45 @@ def readBEAMLIST(filename="BEAMLIST"):
     return beamlist
 
 
+class _IVBeamsReader(InputFileReader):
+    """Iterate the header and the non-empty lines of an IVBEAMS file.
+
+    The first line is the header, and is returned as is (only
+    stripped of white space), even if empty. Comments are removed
+    from all other lines, and lines left empty are skipped.
+    """
+
+    def _read_one_line(self, line):
+        """Return `line` without comments, skipping empty lines."""
+        if self._current_line == 1:  # Header
+            return line.strip()
+        line = strip_comments(line).strip()
+        if not line:
+            raise ShouldSkipLineError
+        return line
+
+
 def readIVBEAMS(filename='IVBEAMS'):
-    """Reads an IVBEAMS file and returns a list of beams (using Beam class)"""
-    # open input file
-    try:
-        with open(filename, 'r') as rf:
-            ivbeamlines = rf.readlines()
-    except Exception:
-        raise
-    linenum = 1		# iterates the current line being read
+    """Read an IVBEAMS file and return a list of beams.
+
+    The first line is the header, and is not interpreted. In all
+    other lines, comments (starting with '!', '#', or '%')
+    are ignored, as are lines left empty.
+
+    Parameters
+    ----------
+    filename : str or Path, optional
+        Path to the IVBEAMS file. Default is 'IVBEAMS'.
+
+    Returns
+    -------
+    beams : list of Beam
+        One Beam for each distinct (h, k) found in the file.
+    """
     hklist = []
-    # TODO: skip commented out lines (same as PARAMETERS, etc.)
-    for line in ivbeamlines:
+    with _IVBeamsReader(filename) as reader:
+        ivbeamlines = list(reader)
+    for linenum, line in enumerate(ivbeamlines, start=1):
         # ignore brackets and vbars, except as spacers
         line = line.replace("(", " ")
         line = line.replace(")", " ")
@@ -125,7 +155,6 @@ def readIVBEAMS(filename='IVBEAMS'):
                         'IVBEAMS file may contain data. Note that the first '
                         'line should be a header line, so the data will not '
                         'be read.')
-        linenum += 1
     beams = []
     for hk in hklist:
         beams.append(Beam(hk))

@@ -218,7 +218,7 @@ stored-input 260101-000000
    0.0000   0.0000                           THETA FI
  0.0010                                      EPS
  10                                          LITER
- 18                                          LMAX
+ 17                                          LMAX
   1                                          PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7
   1                                          IFORM - formatted input and output
 <PHASESHIFTS: verbatim copy of the work-dir PHASESHIFTS>

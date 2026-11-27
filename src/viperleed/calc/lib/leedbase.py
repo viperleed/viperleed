@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -32,6 +32,10 @@ from viperleed.gui.base import get_equivalent_beams
 # constants for conversion Angstrom and eV <-> atomic units
 HARTREE_TO_EV = 27.211396
 EV_TO_HARTREE = 1/HARTREE_TO_EV
+# TensErLEED v1.6 converts between Hartree and eV with this rounded
+# value (PARAMETER HARTREE in its GLOBAL file), later versions with
+# the same value as HARTREE_TO_EV.
+HARTREE_TO_EV_V16 = 27.21
 BOHR_TO_ANGSTROM = 0.529177210903
 ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
 

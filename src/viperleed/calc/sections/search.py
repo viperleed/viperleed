@@ -24,6 +24,8 @@ from viperleed.calc.classes.search_job import IS_WINDOWS
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.files import iodeltas
+from viperleed.calc.files import iorfactor
 from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
@@ -38,6 +40,10 @@ from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+
+# Tolerance (eV) for comparing energies in delta files with the energy
+# range of the search. Delta files store energies with ~7 digits only.
+_DELTA_ENERGY_TOLERANCE = 0.01
 
 
 class SearchError(Exception):
@@ -342,6 +348,77 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
     iosearch.writeSearchOutput(dom_slab, dom_rp, best_config, silent=not final)
 
 
+def _check_delta_energies(rp, domains):
+    """Raise if delta files do not span the energy range of the search.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters of the search.
+    domains : Sequence
+        Elements are (rpars, slab, path) of each domain (or of the
+        only slab). path is the folder with the delta files.
+
+    Raises
+    ------
+    RuntimeError
+        If the energies in any delta file do not cover the energy
+        range of the search.
+    """
+    delta_files = sorted({
+        path / delta_name
+        for rpt, _, path in domains
+        for atom in rpt.search_atlist
+        for delta_name in atom.current_deltas
+        })
+    if not delta_files:
+        return
+    # Delta files span THEO_ENERGIES, while theo_range may be wider
+    _, theo_range, *_ = iorfactor.prepare_rfactor_energy_ranges(rp)
+    search_min = max(theo_range.min, rp.THEO_ENERGIES.min)
+    search_max = min(theo_range.max, rp.THEO_ENERGIES.max)
+    for delta_file in delta_files:
+        e_min, e_max = iodeltas.read_delta_energy_range(delta_file)
+        if (e_min <= search_min + _DELTA_ENERGY_TOLERANCE
+                and e_max >= search_max - _DELTA_ENERGY_TOLERANCE):
+            continue
+        message = (
+            f'Delta file {delta_file} has energies from {e_min:.2f} to '
+            f'{e_max:.2f} eV, which do not cover the search energy range '
+            f'from {search_min:.2f} to {search_max:.2f} eV. '
+            'Rerun the delta-amplitudes calculation, or reduce '
+            'THEO_ENERGIES.'
+            )
+        raise RuntimeError(message)
+
+
+def _read_sdtl_from(filepos, rp):
+    """Return the SD.TL blocks after `filepos`, and the new position.
+
+    Parameters
+    ----------
+    filepos : int
+        Position in SD.TL from which to read.
+    rp : Rparams
+        The run parameters of the search.
+
+    Returns
+    -------
+    filepos : int
+        The position in SD.TL after the content read.
+    blocks : list
+        The blocks read, as returned by iosearch.readSDTL_blocks.
+        Empty if there is no new content.
+    """
+    filepos, content = iosearch.readSDTL_next(offset=filepos)
+    if not content:
+        return filepos, []
+    blocks = iosearch.readSDTL_blocks(content,
+                                      rp.SEARCH_BEAMS,
+                                      n_expect=rp.SEARCH_POPULATION)
+    return filepos, blocks
+
+
 def _check_search_log(search_log_path):
     """Check the file at `search_log_path` for known fatal errors.
 
@@ -450,6 +527,7 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input")
         raise
+    _check_delta_energies(rp, initToDo)
     # delete old control.chem if present - not earlier because can be input!
     try:
         os.remove("control.chem")
@@ -741,14 +819,7 @@ def search(sl, rp):
                     # evaluate
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = iosearch.readSDTL_next(
-                            offset=filepos
-                            )
-                        if content:
-                            newData = iosearch.readSDTL_blocks(
-                                content, whichR=rp.SEARCH_BEAMS,
-                                n_expect=rp.SEARCH_POPULATION
-                                )
+                        filepos, newData = _read_sdtl_from(filepos, rp)
                     elif (search_eval_timer.has_reached_deadline()              # TODO: nicer with a QTimer timeout
                           and rp.HALTING < 3):
                         stop = True
@@ -973,8 +1044,16 @@ def search(sl, rp):
                                          max_configs=max_read_configs)
         if predictR is not None:
             rfac_predict.append((gens[-1], predictR))
+    if len(gens) <= 1 and Path('SD.TL').is_file():
+        # The search ended before the second evaluation of SD.TL
+        _, final_data = _read_sdtl_from(filepos, rp)
+        for gen, rfacs, _ in final_data:
+            gens.append(gen + genOffset)
+            rfaclist.append(np.array(rfacs))
+        if final_data:
+            _, _, lastconfig = final_data[-1]
     # write pdf one more time
-    if len(gens) > 1:
+    if gens:
         try:
             searchpdf.writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                              markers=markers,

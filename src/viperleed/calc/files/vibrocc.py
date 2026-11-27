@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -56,7 +56,11 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                 raise
             return True
         else:
-            logger.error("VIBROCC not found.")
+            logger.error(
+                'VIBROCC not found. Either provide a VIBROCC file, or '
+                'define T_DEBYE and T_EXPERIMENT (and optionally '
+                'VIBR_AMP_SCALE) in PARAMETERS to generate one.'
+                )
             raise
     # read VIBROCC:
     mode = 0  # 0: not reading; 1: vib.amp., 2: occ., 3: search offsets
@@ -252,13 +256,8 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
         if site.el not in site.vibamp:
             if site.el not in rp.ELEMENT_MIX:
                 if generate:
-                    if site.getVibAmp(rp, site.el) == 0:
-                        vibAmpGenerated = True
-                    else:
-                        logger.warning(
-                            'VIBROCC file: Failed to get ' + site.el +
-                            ' vibration amplitude for site ' + site.label)
-                        rp.setHaltingLevel(2)
+                    site.getVibAmp(rp, site.el)  # Raises on failure
+                    vibAmpGenerated = True
                 else:
                     logger.warning(
                         'VIBROCC file: No ' + site.el + ' vibration '
@@ -270,9 +269,9 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                     if subel in site.vibamp:
                         v = site.vibamp[subel]
                     elif generate:
-                        if site.getVibAmp(rp, subel) == 0:
-                            vibAmpGenerated = True
-                            v = site.vibamp[subel]
+                        site.getVibAmp(rp, subel)  # Raises on failure
+                        vibAmpGenerated = True
+                        v = site.vibamp[subel]
                 if v == -1:
                     logger.error(
                         'VIBROCC file: No vibration amplitude defined for '

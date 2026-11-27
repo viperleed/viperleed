@@ -9,10 +9,11 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
+import itertools
 import logging
 from pathlib import Path
 import shutil
@@ -22,9 +23,115 @@ import numpy as np
 
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams
+from viperleed.calc.lib.leedbase import HARTREE_TO_EV
+from viperleed.calc.lib.leedbase import HARTREE_TO_EV_V16
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+
+# A formatted delta file starts with a fixed header: one line of angles
+# and unit-cell vectors, one line with the numbers of beams, atoms and
+# displacement steps, then blocks of 10 values per line (beams, atom
+# positions, displacements, auxiliary displacements). Each energy block
+# that follows has one line with E, VPI, (VO,) VV in Hartree (VO only
+# up to TensErLEED v1.6), then 6 values per line of reference and delta
+# amplitudes (complex, i.e., two values each).
+_ENERGY_HEADER_FORMAT = '6E13.7'
+_ENERGY_HEADER_VALUES_V16 = 4
+_HEADER_VALUES_PER_LINE = 10
+_AMPLITUDES_PER_LINE = 6
+_N_HEADER_INTEGERS = 3
+
+
+def _count_lines(n_values, values_per_line):
+    """Return the number of lines holding `n_values` values."""
+    return -(-n_values // values_per_line)
+
+
+def _read_header_integers(line):
+    """Return the numbers of beams, atoms and steps from `line`.
+
+    TensErLEED writes them as 3I3 (v1.6) or 3I5 (later versions),
+    so the field width follows from the line length. This also works
+    when values fill their field completely, e.g., '  9100 18'.
+    """
+    width = len(line) // _N_HEADER_INTEGERS
+    return ff.FortranRecordReader(f'{_N_HEADER_INTEGERS}I{width}').read(line)
+
+
+def _read_delta_energies(delta_file):
+    """Return the energies (eV) of all energy blocks in `delta_file`."""
+    lines = (line.rstrip('\n') for line in delta_file)
+    next(lines, None)  # Angles and unit-cell vectors
+    counts_line = next(lines, '')
+    if not counts_line.strip():
+        return []
+    n_beams, n_atoms, n_steps = _read_header_integers(counts_line)
+    _skip_lines(lines, sum(
+        _count_lines(n_values, _HEADER_VALUES_PER_LINE)
+        for n_values in (2 * n_beams,             # Beam indices
+                         3 * n_atoms,             # Atom positions
+                         3 * n_atoms * n_steps,   # Displacements
+                         n_steps)                 # Auxiliary
+        ))
+    n_amplitude_lines = sum(
+        _count_lines(n_values, _AMPLITUDES_PER_LINE)
+        for n_values in (2 * n_beams,             # Reference
+                         2 * n_beams * n_steps)   # Delta
+        )
+    read_energy_header = ff.FortranRecordReader(_ENERGY_HEADER_FORMAT).read
+    energies = []
+    for line in lines:
+        if not line.strip():
+            continue
+        values = [v for v in read_energy_header(line) if v is not None]
+        energy, inner_potential = values[0], values[-1]
+        hartree_to_ev = (HARTREE_TO_EV_V16
+                         if len(values) == _ENERGY_HEADER_VALUES_V16
+                         else HARTREE_TO_EV)
+        energies.append((energy - inner_potential) * hartree_to_ev)
+        _skip_lines(lines, n_amplitude_lines)
+    return energies
+
+
+def _skip_lines(lines, n_lines):
+    """Advance iterator `lines` by `n_lines`."""
+    next(itertools.islice(lines, n_lines, n_lines), None)
+
+
+def read_delta_energy_range(file_path):
+    """Return the lowest and highest energy in a delta-amplitude file.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to a formatted delta-amplitude (DEL_*) file, as written
+        by any supported version of TensErLEED.
+
+    Returns
+    -------
+    e_min, e_max : float
+        Smallest and largest energy (in eV, as seen by the search,
+        i.e., relative to the inner potential) with delta amplitudes
+        in the file.
+
+    Raises
+    ------
+    ValueError
+        If no energy block is found in the file.
+
+    Notes
+    -----
+    delta_intensities.read_delta_file parses whole delta files, but
+    it needs the number of energies in advance, and it only handles
+    files written by TensErLEED v1.7 and later.
+    """
+    with Path(file_path).open(encoding='utf-8') as delta_file:
+        energies = _read_delta_energies(delta_file)
+    if not energies:
+        message = f'No energies found in delta file {file_path}'
+        raise ValueError(message)
+    return min(energies), max(energies)
 
 
 def collect_static_input_files(slab, rpars):

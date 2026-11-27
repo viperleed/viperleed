@@ -20,13 +20,18 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.search_job import IS_WINDOWS
+from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.search import search
 
+from ....helpers import TEST_DATA
+from ....helpers import write_delta_stub
 from .conftest import _MODULE
 
+_AG100_INPUTS = TEST_DATA / 'Ag(100)' / 'initialization'
 use = pytest.mark.usefixtures
 
 
@@ -195,6 +200,79 @@ def _find_compiler_or_skip(find_compiler, dependency, missing_dependency):
     return _find_or_skip
 
 
+class TestSearchDeltaEnergies:
+    """Tests for the check of delta energies at the start of search."""
+
+    @fixture(name='run_search')
+    def fixture_run_search(self, rpars, mock_no_run, tmp_path, mocker):
+        """Return a function to run search with given delta files."""
+        # As in Ag(100): EXPBEAMS from 48 eV, THEO_ENERGIES 50-350 eV
+        rpars.expbeams = readOUTBEAMS(str(_AG100_INPUTS / 'EXPBEAMS.csv'))
+        rpars.THEO_ENERGIES = TheoEnergies(50, 350, 3)
+
+        def _run(*delta_ranges, old_format=False):
+            # One delta file per atom, one atom per (e_min, e_max)
+            rpars.search_atlist = []
+            for i, (e_min, e_max) in enumerate(delta_ranges, start=1):
+                delta_name = f'DEL_{i}_Ag_1'
+                write_delta_stub(tmp_path / delta_name,
+                                 range(e_min, e_max + 1, 3),
+                                 old_format=old_format)
+                rpars.search_atlist.append(
+                    mocker.MagicMock(current_deltas=[delta_name])
+                    )
+            with execute_in_dir(tmp_path):
+                search(mocker.MagicMock(name='slab'), rpars)
+            return mock_no_run
+        return _run
+
+    @parametrize(e_min=(50, 47))
+    @parametrize(e_max=(350, 353))
+    def test_delta_covers_range(self, e_min, e_max, run_search):
+        """Check that no complaint is raised for sufficient energies."""
+        mocks = run_search((e_min, e_max))
+        mocks['write_rfinfo'].assert_called_once()
+
+    @parametrize('e_min, e_max', ((50, 347), (53, 350), (50, 101)))
+    def test_delta_too_short(self, e_min, e_max, run_search):
+        """Check complaints if delta energies are too short."""
+        with pytest.raises(RuntimeError, match='DEL_1_Ag_1') as exc:
+            run_search((e_min, e_max))
+        assert f'{e_max:.2f}' in str(exc.value)
+        assert 'from 50.00 to 350.00 eV' in str(exc.value)
+
+    def test_second_file_too_short(self, run_search):
+        """Check that all delta files are checked."""
+        with pytest.raises(RuntimeError, match='DEL_2_Ag_1') as exc:
+            run_search((50, 350), (50, 347))
+        assert 'DEL_1_Ag_1' not in str(exc.value)
+
+    def test_experiment_narrower(self, rpars, run_search):
+        """Check that deltas need to cover the experiment range only."""
+        for beam in rpars.expbeams:
+            beam.intens = {e: intensity
+                           for e, intensity in beam.intens.items()
+                           if 100 <= e <= 300}
+        mocks = run_search((89, 311))
+        mocks['write_rfinfo'].assert_called_once()
+
+    @parametrize(e_min=(50, 200, 302))
+    def test_v16_covers_range(self, e_min, rpars, run_search):
+        """Check delta files of TensErLEED v1.6 at high energies."""
+        rpars.THEO_ENERGIES = TheoEnergies(e_min, 350, 3)
+        mocks = run_search((e_min, 350), old_format=True)
+        mocks['write_rfinfo'].assert_called_once()
+
+    @parametrize(e_min=(50, 200, 302))
+    def test_v16_too_short(self, e_min, rpars, run_search):
+        """Check complaints for too-short v1.6 delta files."""
+        rpars.THEO_ENERGIES = TheoEnergies(e_min, 350, 3)
+        with pytest.raises(RuntimeError, match='DEL_1_Ag_1') as exc:
+            run_search((e_min, 347), old_format=True)
+        assert f'{e_min:.2f} to 347.00' in str(exc.value)
+        assert f'from {e_min:.2f} to 350.00 eV' in str(exc.value)
+
+
 class TestSearch:
     """Collection of tests for the search function."""
 
@@ -238,3 +316,71 @@ class TestSearch:
         for mock in mocks_called_multiple_times:
             mock.assert_called()
         # TODO: check relevant calls
+
+
+class TestSearchPdfOneGeneration:
+    """Tests for plots of a search that ends after one generation."""
+
+    @use('vary', 'mock_src_files', 'tl_version')
+    def test_pdfs_written(self, rpars, mock_run, tmp_path, mocker,
+                          missing_dependency):
+        """Check PDFs are written if SD.TL has a single generation."""
+        rpars.SUPPRESS_EXECUTION = False
+        rpars.N_CORES = 1
+        _skip_on_missing_compiler(rpars, mocker, missing_dependency)
+        # The search finishes before SD.TL is ever evaluated
+        mock_run['eval_timer'].return_value.has_expired.return_value = False
+        sdtl_content = 'one generation'
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_next',
+                     return_value=(len(sdtl_content), sdtl_content))
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_blocks',
+                     return_value=[(100, [0.3, 0.4], [(100, (1, 2))])])
+        write_progress = mocker.patch(
+            f'{_MODULE}.searchpdf.writeSearchProgressPdf'
+            )
+        write_report = mocker.patch(
+            f'{_MODULE}.searchpdf.writeSearchReportPdf'
+            )
+        with execute_in_dir(tmp_path):
+            search(mocker.MagicMock(name='slab'), rpars)
+        write_progress.assert_called_once()
+        write_report.assert_called_once()
+        gens = write_progress.call_args[0][1]
+        assert gens == [100]
+
+    @use('vary', 'mock_src_files', 'tl_version')
+    def test_restart_after_one_generation(self, rpars, mock_run, tmp_path,
+                                          mocker, missing_dependency):
+        """Check the final read of SD.TL after a restarted search."""
+        rpars.SUPPRESS_EXECUTION = False
+        rpars.N_CORES = 1
+        _skip_on_missing_compiler(rpars, mocker, missing_dependency)
+
+        # One generation is read in the first run, which restarts as
+        # GAUSSIAN_WIDTH changes. The second run ends before SD.TL is
+        # evaluated, and has one more generation in the final read.
+        def _change_gaussian_width(rpars_):
+            rpars_.GAUSSIAN_WIDTH *= 0.5
+        mock_run['update_rpars'].side_effect = _change_gaussian_width
+        mock_run['search_job'].return_value.is_running.side_effect = (
+            True, False,   # First run, SD.TL read in the loop
+            False,         # Second run
+            )
+        sdtl_content = 'one generation'
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_next',
+                     return_value=(len(sdtl_content), sdtl_content))
+        first_config, final_config = [(100, (1, 2))], [(100, (2, 1))]
+        mocker.patch(f'{_MODULE}.iosearch.readSDTL_blocks',
+                     side_effect=([(100, [0.3, 0.4], first_config)],
+                                  [(7, [0.2, 0.3], final_config)]))
+        mocker.patch(f'{_MODULE}.parabolaFit', return_value=(None, None))
+        write_progress = mocker.patch(
+            f'{_MODULE}.searchpdf.writeSearchProgressPdf'
+            )
+        mocker.patch(f'{_MODULE}.searchpdf.writeSearchReportPdf')
+        with execute_in_dir(tmp_path):
+            search(mocker.MagicMock(name='slab'), rpars)
+        write_progress.assert_called_once()
+        _, gens, _, lastconfig = write_progress.call_args[0]
+        assert gens == [100, 107]
+        assert lastconfig is final_config

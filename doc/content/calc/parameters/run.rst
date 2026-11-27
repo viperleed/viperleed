@@ -11,35 +11,64 @@ RUN defines what parts of the TensErLEED package should be run.
 **Default:** 0-3
 
 **Allowed values:** list of integers and/or integer ranges, with integers
-0-3, or single integers up to 6. Instead of the integers, also the aliases
-in the table can be used:
+0-3, or single integers up to 6. Instead of the integers, also the section
+names in the table, or their aliases, can be used. Aliases are not case
+sensitive, and the underscores in them are optional (e.g., ``fd_opt`` and
+``fdopt`` are equivalent). Longer and shorter forms of the same words are
+also accepted (e.g., ``calc`` or ``calculation``, ``optimize`` or
+``optimise``). Names that start with an alias are also accepted (e.g.,
+``superposition``), and are interpreted as the section with the longest
+such alias, provided they consist only of letters, digits and
+underscores. Spaces cannot be used inside a name, as they separate items
+in RUN. Hyphens and colons separate ranges. A hyphen can be used inside
+a name only where it replaces the underscore before ``calc``,
+``calculation``, ``amplitudes``, ``opt`` or ``optimization`` (e.g.,
+``delta-amplitudes``, ``ref-calc`` or ``fd-opt``). Any other name with
+a hyphen or a colon is interpreted as a range.
 
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| RUN | Action                                                                                   | Aliases                                       |
-+=====+==========================================================================================+===============================================+
-| 0   | Initialization                                                                           | ``initialization, initialisation, init, ini`` |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 1   | Reference calculation                                                                    | ``refcalc, ref, fd``                          |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 11  | |R-Factor| calculation (automatically inserted after reference calculation,              | ``rfactor, rfac``                             |
-|     | if experimental beam file is found)                                                      |                                               |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 12  | |R-Factor| calculation based on :ref:`Superpos<super_pos>` results                       | ``rfacsuper``                                 |
-|     | (automatically inserted after superpos calculation,                                      |                                               |
-|     | if experimental beam file is found)                                                      |                                               |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 2   | DeltaAmplitudes                                                                          | ``deltaamplitudes, deltas, delta, del``       |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 3   | Search                                                                                   | ``search``                                    |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 31  | :ref:`Superpos<super_pos>`  calculation (automatically inserted after search)            | ``superpos, super, sup``                      |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 4   | :ref:`Domain calculation<domain_calculation>`                                            | ``domains, domain, dom``                      |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 5   | :ref:`Error calculation<error_calculation>`                                              | ``error, err``                                |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
-| 6   | :ref:`Full-dynamic optimization<Fdoptimization>`                                         | ``opt, optimize, fdopt``                      |
-+-----+------------------------------------------------------------------------------------------+-----------------------------------------------+
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| RUN | Action                                                                                   | Aliases (examples)                                 |
++=====+==========================================================================================+====================================================+
+| 0   | Initialization                                                                           | ``init``, ``ini``, ``initialize``,                 |
+|     |                                                                                          | ``initialization``                                 |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 1   | Reference calculation                                                                    | ``ref``, ``fd``, ``refcalc``,                      |
+|     |                                                                                          | ``reference_calculation``, ``full_dynamic``,       |
+|     |                                                                                          | ``fd_calc``                                        |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 11  | |R-Factor| calculation (automatically inserted after reference calculation,              | ``rfac``, ``rfactor``, ``r_factor``                |
+|     | if experimental beam file is found)                                                      |                                                    |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 12  | |R-Factor| calculation based on :ref:`Superpos<super_pos>` results                       | ``rfacsuper``, ``rfac_super``,                     |
+|     | (automatically inserted after superpos calculation,                                      | ``rfactor_superpos``                               |
+|     | if experimental beam file is found)                                                      |                                                    |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 2   | DeltaAmplitudes                                                                          | ``del``, ``delta``, ``deltas``,                    |
+|     |                                                                                          | ``delta_calculation``, ``deltaamplitudes``         |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 3   | Search                                                                                   | ``search``, ``structure_search``,                  |
+|     |                                                                                          | ``struct_search``                                  |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 31  | :ref:`Superpos<super_pos>`  calculation (automatically inserted after search)            | ``sup``, ``super``, ``superpos``                   |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 4   | :ref:`Domain calculation<domain_calculation>`                                            | ``dom``, ``domain``, ``domains``,                  |
+|     |                                                                                          | ``domain_calculation``                             |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 5   | :ref:`Error calculation<error_calculation>`                                              | ``err``, ``error``, ``errors``,                    |
+|     |                                                                                          | ``error_calculation``                              |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+| 6   | :ref:`Full-dynamic optimization<Fdoptimization>`                                         | ``opt``, ``optimize``, ``fdopt``, ``fd_opt``,      |
+|     |                                                                                          | ``full_dynamic_optimization``                      |
++-----+------------------------------------------------------------------------------------------+----------------------------------------------------+
+
+.. versionchanged:: 0.15.0
+   More aliases are accepted (e.g., ``fd_opt`` or ``structure_search``).
+   A name that starts with an alias is interpreted as the section with
+   the longest matching alias. Before, it was interpreted as the first
+   section with a matching alias, so that, e.g., ``fd_opt`` was a
+   reference calculation. Names with hyphens are ranges, except where
+   the hyphen replaces the underscore before ``calc``, ``calculation``,
+   ``amplitudes``, ``opt`` or ``optimization``.
 
 Syntax
 ------

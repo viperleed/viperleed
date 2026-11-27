@@ -20,7 +20,6 @@ from pytest_cases import parametrize_with_cases
 
 from viperleed.calc import psgen
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 from ...helpers import CustomTestException
@@ -31,7 +30,6 @@ from .conftest import SYSTEM_NAME
 
 INPUT_NAME = 'eeasisss-input'
 POSIX_SEP = '/'  # Path separator in the references
-WINDOWS = 'nt'  # Value of os.name on Windows, as psgen checks it
 
 # Cases of POSCARSlabs that carry parameters (presets or mixed sites).
 # Unlike the other stored-input tests, these need only a slab and its
@@ -45,21 +43,6 @@ CASES = (
     POSCARSlabs.case_poscar_ptrh_100_1x3_o,
     POSCARSlabs.case_poscar_ru0001_rt3_te,
     )
-
-
-@fixture(name='stub_tree')
-def fixture_stub_tree(tmp_path):
-    """Return a fake TensErLEED directory with stub eeasisss/data."""
-    tree = tmp_path / 'TensErLEED'
-    tree.mkdir()
-    executable = 'eeasisss.exe' if os.name == WINDOWS else 'eeasisss'
-    (tree / executable).touch()
-    (tree / 'seSernelius').touch()
-    for element in PERIODIC_TABLE:
-        element_dir = tree / 'atom_density_files' / element
-        element_dir.mkdir(parents=True)
-        (element_dir / f'chgden{element}').touch()
-    return tree
 
 
 @fixture(name='written_input')
