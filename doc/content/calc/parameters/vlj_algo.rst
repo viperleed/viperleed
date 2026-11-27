@@ -66,7 +66,7 @@ Available setting for CMAES are:
 
 -  ``ftol``: The convergence criterion on the R-factor value. The algorithm
    will stop standard deviation of the best R-factor values over the last
-   ``convergence_gens`` generations is below this value. 
+   ``convergence_gens`` generations is below this value.
 
 -  ``convergence_gens``: The number of generations to consider when
    evaluating convergence based on the ``ftol`` criterion.

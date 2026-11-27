@@ -4,7 +4,7 @@ OFFSETS block
 -------------
 
 The offsets block is an optional part of the :ref:`DISPLACEMENTS` file.
-If used, it has to be placed at the top of the DISPLACEMENTS file. The 
+If used, it has to be placed at the top of the DISPLACEMENTS file. The
 block is introduced by a header line of the form
 
 ..  code-block:: none
