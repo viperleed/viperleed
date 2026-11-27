@@ -6,12 +6,11 @@ Defines subclasses of matplotlib FigureCanvas for plotting.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 from matplotlib.figure import Figure
-import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
@@ -270,10 +269,10 @@ class MPLFigureCanvas(FigureCanvas):
 
         x_mpl, y_mpl = args
 
-        dpi_ratio = self._dpi_ratio
+        dpi_ratio = self.device_pixel_ratio
         x_qt = x_mpl/dpi_ratio
         y_qt = (self.figure.bbox.height - y_mpl)/dpi_ratio
-        return qtc.QPoint(np.round(x_qt), np.round(y_qt))
+        return qtc.QPoint(round(x_qt), round(y_qt))
 
 
 class MeasurementFigureCanvas(FigureCanvas):

@@ -629,8 +629,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                         #(qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
             shapesLay = qtw.QHBoxLayout()
             shapesLay.addStretch(1)
-            shapesLay.addWidget(self.cellShapes,
-                                qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
+            shapesLay.addWidget(
+                self.cellShapes,
+                alignment=qtc.Qt.AlignHCenter | qtc.Qt.AlignTop,
+                )
             shapesLay.addStretch(1)
             topLayout.addLayout(shapesLay, 1, 0, 1, topLayout.columnCount())#,qtc.Qt.AlignCenter)
             # topLayout.setRowStretch(0,100)
@@ -925,7 +927,8 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         for annot in self.recSpace.annots:
             # NB: one cannot use += for in-place assignment since this redefines
             # the .center attribute that is a @property!
-            annot.center = qtc.QPoint(*annot.center.round()) + delta
+            center = annot.center.round().astype(int)
+            annot.center = qtc.QPoint(*center) + delta
             if annot.isVisible():
                 # move only if visible to handle the situation in which the
                 # window is moved while the annotations are displayed: this way
