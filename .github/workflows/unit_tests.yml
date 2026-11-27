@@ -18,10 +18,21 @@
 #   on Linux in any case, and on Windows where the runner image has
 #   the compiler (today gfortran, not mpifort). Any other missing
 #   dependency still fails.
-#   PyQt5 is installed too, but no test needs it.
-# - Coverage is uploaded to Codecov from the Linux job. This needs the
-#   Codecov app and the CODECOV_TOKEN secret. A failed upload does not
-#   fail the job.
+#   PyQt5 is installed too (the [GUI] extra), as the GUI tests need
+#   it. They run without a display (QT_QPA_PLATFORM).
+# - Hence, GUI tests marked needs_display (see tests/harness/qt.py)
+#   are skipped in all jobs. None exists yet. To run them, a job needs
+#   a display, QT_QPA_PLATFORM unset, and `pytest -m needs_display
+#   --show-windows`. Windows and macOS runners have a display; Linux
+#   ones would need a virtual X server (e.g., xvfb-run) and the X
+#   libraries of Qt's xcb platform.
+# - Coverage is uploaded to Codecov from the jobs with coverage: true
+#   (today, all of them), so that code that runs only on Windows (or
+#   only on Linux) is covered too. Codecov merges the uploads of a
+#   commit; each carries the platform as a flag (Linux, Windows), to
+#   see the coverage of one platform alone. This needs the Codecov app
+#   and the CODECOV_TOKEN secret. A failed upload does not fail the
+#   job.
 # - Require the check "Tests" (job all-tests) in the
 #   rulesets: it fails unless every job of the matrix succeeded, and
 #   its name does not change with the operating systems or the Python
@@ -75,10 +86,12 @@ jobs:
             os: windows-latest
             python-version: '3.7'
             allow-missing: mpifort,gfortran
+            coverage: true
           - platform: Windows
             os: windows-latest
             python-version: '3.x'
             allow-missing: mpifort,gfortran
+            coverage: true
     steps:
       - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
@@ -118,6 +131,8 @@ jobs:
         with:
           files: coverage.xml
           disable_search: true
+          flags: ${{ matrix.platform }}
+          name: ${{ matrix.platform }}, Python ${{ matrix.python-version }}
           token: ${{ secrets.CODECOV_TOKEN }}
 
   pytest-serial:

@@ -7,7 +7,7 @@ in a simulated LEED pattern.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
@@ -58,7 +58,8 @@ class EnergyBlock(TextBoxWithButtons):
         bwLay = qtw.QHBoxLayout()
         bwLay.setSpacing(0)
         bwLay.setContentsMargins(0,0,0,0)
-        bwLay.addWidget(self.limits, qtc.Qt.AlignLeft | qtc.Qt.AlignTop)
+        bwLay.addWidget(self.limits,
+                        alignment=qtc.Qt.AlignLeft | qtc.Qt.AlignTop)
 
         self.bottomWidget.setLayout(bwLay)
         self.subWidgs.extend([self.limits])
