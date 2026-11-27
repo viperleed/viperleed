@@ -246,10 +246,6 @@ and close all their widgets. They find these automatically: a new widget that
 needs arguments to be created is skipped until a factory for it is added to
 ``_FACTORIES`` in that module.
 
-Tests that fail because of a bug of the GUI that is not fixed yet are marked
-as expected failures with the marks of :file:`tests/gui/known_bugs.py`. When
-fixing one of these bugs, remove its mark, there and where it is used.
-
 
 Continuous integration
 ''''''''''''''''''''''

@@ -309,7 +309,7 @@ class Bulk3DSymDialog(qtw.QDialog):
             item = qtg.QStandardItem(txt)
             item.setFlags(qtc.Qt.ItemIsEnabled)
 
-            if op in bulk.group.screws_glides:
+            if extra_op in bulk.group.screws_glides:
                 checked = qtc.Qt.Checked
             else:
                 checked = qtc.Qt.Unchecked

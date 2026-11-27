@@ -114,8 +114,10 @@ def broadcast_mouse(cls):
         # that allows to not send multiple times the same event to the same
         # child, and prevents infinite recursion in case more than one child
         # wants to @receive_mouse_broadcast. Notice that the use of the sets
-        # give a unique list of children here
-        self.__last_broadcasted = {child: 0
+        # give a unique list of children here. Start from None rather
+        # than from zero: events created by the application have a
+        # zero timestamp, unless one is set explicitly.
+        self.__last_broadcasted = {child: None
                                    for child
                                    in self.__broadcast_mouse_to}
         # then call whatever implementation was there on the undecorated class
@@ -154,7 +156,11 @@ def broadcast_mouse(cls):
                     # Notice the filtering is on the basis of event.timestamp()
                     # that has a 1 ms resolution: This should be good enough
                     # even for mouseMoveEvent, as the maximum polling
-                    # rate of mice is 1kHz to date (Jan. 2020)
+                    # rate of mice is 1kHz to date (Jan. 2020).
+                    # Hence, of two consecutive events created by
+                    # the application with the same timestamp
+                    # (e.g., zero, if not set), the second one is
+                    # not broadcast.
 
                     if not child.underMouse():
                         edited_event = self.__edit_mouse_event(child, event)

@@ -11,8 +11,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from ...known_bugs import RETURN_KEY_OLD_NEW_FILE_DIALOG
-
 _MODULE = 'viperleed.gui.leedsim.dialogs.newfiledialog_old'
 
 
@@ -26,10 +24,7 @@ class TestNewFileDialog:
         show(dialog)
         return dialog
 
-    @parametrize(key=(
-        'Key_Enter',
-        pytest.param('Key_Return', marks=RETURN_KEY_OLD_NEW_FILE_DIALOG),
-        ))
+    @parametrize(key=('Key_Enter', 'Key_Return'))
     @pytest.mark.usefixtures('no_blocking_dialogs')  # Fail, do not hang
     def test_key_clicks_focused_button(self, key, dialog, qtbot, qtc):
         """Check that Enter and Return click the focused Cancel button."""

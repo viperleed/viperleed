@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
@@ -31,7 +31,7 @@ class TextBox(qtw.QLineEdit):
 
     def __init__(self, *args, **kwargs):
         # args = contents, parent in any order
-        contens = ''
+        contents = ''
         parent = None
         try:
             if isinstance(args[0], str):

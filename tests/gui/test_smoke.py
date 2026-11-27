@@ -10,9 +10,8 @@ What is tested is collected dynamically, rather than listed: all the
 modules of viperleed.gui, and all the QWidget subclasses that they
 define. Widgets that need constructor arguments are skipped, unless
 a factory is given in _FACTORIES. Tests of specific widgets belong
-to the test modules of the modules that define them. Widgets with
-known bugs that make these tests fail are listed in _KNOWN_BUGS, slow
-ones in _SLOW_WIDGETS.
+to the test modules of the modules that define them. Slow widgets
+are listed in _SLOW_WIDGETS.
 
 All tests need pytest-qt and PyQt5: they are skipped (or fail with
 --require-all) otherwise (see tests/harness/qt.py and the
@@ -40,7 +39,6 @@ from pytest_cases import parametrize
 import viperleed.gui
 
 from ..harness import qt
-from . import known_bugs
 
 try:
     from PyQt5 import QtWidgets as qtw
@@ -161,16 +159,6 @@ _FACTORIES = {
         lambda cls: cls(np.eye(2)),
     }
 
-# Widgets with bugs that make test_open_and_close fail. Keys are
-# 'module:Class', values the xfail marks of tests.gui.known_bugs.
-_KNOWN_BUGS = {
-    'viperleed.gui.leedsim.widgets.hoverannot:HoverAnnot':
-        known_bugs.FLOATS_TO_QSIZE,
-    'viperleed.gui.widgets.spinboxes:TextBox':
-        known_bugs.TEXTBOX_WITHOUT_ARGUMENTS,
-    }
-
-
 # Widgets whose test_open_and_close takes about SLOW_THRESHOLD or
 # more (see tests/harness/tiers.py). They are marked here rather than
 # in SLOW_CASES, as widgets are collected only if Qt can be imported:
@@ -181,12 +169,8 @@ _SLOW_WIDGETS = (
 
 
 def _widget_param(cls_name):
-    """Return a pytest.param for widget `cls_name`, marked if needed."""
-    marks = []
-    if cls_name in _KNOWN_BUGS:
-        marks.append(_KNOWN_BUGS[cls_name])
-    if cls_name in _SLOW_WIDGETS:
-        marks.append(pytest.mark.slow)
+    """Return a pytest.param for widget `cls_name`, marked if slow."""
+    marks = (pytest.mark.slow,) if cls_name in _SLOW_WIDGETS else ()
     return pytest.param(cls_name, marks=marks)
 
 
@@ -237,5 +221,6 @@ def test_open_and_close(cls_name, show):
     widget = _create_widget(cls_name)
     _skip_if_crashes_qt(widget)
     show(widget)
-    assert widget.close()
+    closed = widget.close()
+    assert closed
     assert not widget.isVisible()

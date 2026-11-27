@@ -20,6 +20,12 @@ def fixture_spinboxes(import_with_qt):
 class TestTextBox:
     """Tests for the TextBox class."""
 
+    def test_no_arguments(self, spinboxes):
+        """Check that a TextBox can be created without arguments."""
+        text_box = spinboxes.TextBox()
+        assert not text_box.text()
+        assert text_box.parent() is None
+
     # pylint: disable-next=too-many-arguments  # All fixtures
     def test_wheel(self, spinboxes, show, qtbot, qtc, qtg, qtw):
         """Check that the mouse wheel changes the value of a TextBox."""
