@@ -36,7 +36,7 @@ ALLOW_MISSING_OPTION = '--allow-missing'
 KNOWN_DEPENDENCIES = (  # Add new names here
     'gfortran',
     'mpifort',
-    'PyQt',  # PyQt5, the Qt binding of viperleed.gui
+    'PyQt',  # Either PyQt5 or PyQt6
     'pytest-qt',
     )
 REQUIRE_ALL_OPTION = '--require-all'

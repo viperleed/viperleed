@@ -89,7 +89,7 @@ classifiers = [
 
     [project.optional-dependencies]
     GUI = [
-        'PyQt5',
+        'PyQt5>=5.15',  # As MIN_VERSIONS in gui.qt_compat.binding
         'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
