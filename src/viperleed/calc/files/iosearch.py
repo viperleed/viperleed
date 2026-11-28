@@ -454,6 +454,9 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
 
     """
     # first generate list of SearchPar objects and figure out search parameters
+    # This also merges VIBROCC and DISPLACEMENTS offsets into the
+    # displacements of all search atoms (via checkDelta); otherwise
+    # they were merged when computing the deltas. See #602.
     rp.generateSearchPars(sl)
 
     if rp.indyPars == 0:
@@ -480,43 +483,14 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
         rp.setHaltingLevel(1)
         # TODO: will this crash? If so, raise here
 
-    # merge offsets with displacement lists
     if rp.domainParams:
-        attodo = [at for d in rp.domainParams for at in d.rpars.search_atlist]
         ndom = len(rp.domainParams)
         astep = rp.DOMAIN_STEP
         nplaces = max([len(dp.rpars.search_atlist) for dp in rp.domainParams])
     else:
-        attodo = rp.search_atlist
         ndom = 1
         astep = 100
         nplaces = len(rp.search_atlist)
-    for at in attodo:
-        if at.oriState is None:
-            for el in at.offset_occ:
-                if el not in at.disp_occ:
-                    logger.error(
-                        "{} has occupation offset defined for element {}, "
-                        "which does not appear in atom displacement list. "
-                        "Value will be skipped, this may cause errors."
-                        .format(at, el))
-                else:
-                    at.disp_occ[el] = [v + at.offset_occ[el]
-                                       for v in at.disp_occ[el]]
-                    del at.disp_occ[el] # TODO: why? we write and then delete? Should be offset_occ? If yes, loop should go over .copy
-            for (disp, offset) in [(at.disp_geo, at.offset_geo),
-                           (at.disp_vib, at.offset_vib),
-                           (at.disp_geo, at.disp_geo_offset)]:
-                dl = []
-                for el in offset:
-                    if el not in disp:
-                        disp[el] = copy.copy(disp["all"])
-                    disp[el] = [v + offset[el] for v in disp[el]]
-                    dl.append(el)
-                for el in dl:
-                    if offset != at.disp_geo_offset:
-                        del offset[el]
-            at.disp_geo_offset = {"all": [np.array([0., 0., 0.])]}
 
     # PARAM
     output = """C Here are some global parameterization to be performed

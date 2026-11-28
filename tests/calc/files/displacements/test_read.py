@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-06-08'
 __license__ = 'GPLv3+'
 
@@ -55,3 +55,38 @@ class TestReadDISPLACEMENTSRaises:
         """Test complaints for invalid DISPLACEMENTS for DOMAINs."""
         with pytest.raises(NoDisplacementsError):
             readDISPLACEMENTS(*args)
+
+
+class TestReadDISPLACEMENTSMissingModeHeader:
+    """Tests for blocks with assignments but no GEO/VIB/OCC tag."""
+
+    def test_block_without_mode_header(self, write_displacements):
+        """Check complaints for a search block without a *_DELTA tag."""
+        file_path = write_displacements(
+            '== SEARCH L1-4 x\n'
+            '\n'
+            '* L(1-4) [1 0] = -0.05 0.05 0.01\n'
+            )
+        with pytest.raises(NoDisplacementsError, match='no GEO_DELTA'):
+            readDISPLACEMENTS(Rparams(), file_path)
+
+    def test_block_without_mode_header_domains(
+            self, domains, write_displacements):
+        """Check complaints for a DOMAIN block without a *_DELTA tag."""
+        file_path = write_displacements(
+            '== DOMAIN Domain 0\n'
+            '* L(1-4) z = -0.05 0.05 0.01\n'
+            )
+        with pytest.raises(NoDisplacementsError, match='no GEO_DELTA'):
+            readDISPLACEMENTS(domains, file_path)
+
+    def test_valid_block(self, write_displacements):
+        """Check that a block with a mode header is read correctly."""
+        file_path = write_displacements(
+            '== SEARCH L1-4 x\n'
+            '= GEO_DELTA\n'
+            '* L(1-4) xy[1 0] = -0.05 0.05 0.01\n'
+            )
+        rpars = Rparams()
+        readDISPLACEMENTS(rpars, file_path)
+        assert len(rpars.disp_blocks) == 1

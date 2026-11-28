@@ -5,7 +5,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -20,7 +20,9 @@ from zipfile import ZipFile
 import numpy as np
 from quicktions import Fraction
 
+from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
 from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.math_utils import cosvec
 from viperleed.calc.lib.math_utils import lcm
@@ -36,6 +38,11 @@ BOHR_TO_ANGSTROM = 0.529177210903
 ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
 
 logger = logging.getLogger(__name__)
+
+_COMPILE_LOGS_HINT = (
+    'For details, see the compilation logs in '
+    f'{DEFAULT_SUPP}/{COMPILE_LOGS_DIRNAME}.'
+)
 
 
 ###############################################
@@ -302,7 +309,7 @@ def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
         if not retry:
             raise RuntimeError(
                 "Compiling fortran code failed, likely due to missing "
-                "'-mcmodel=medium'")
+                "'-mcmodel=medium'. " + _COMPILE_LOGS_HINT)
         logger.warning("Compiling fortran code failed; retrying with "
                        "'-mcmodel=medium' option.")
         newtasks = [(pre + " -mcmodel=medium", filename, post)
@@ -310,7 +317,7 @@ def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
         fortran_compile_batch(newtasks, retry=False, logname=logname)
     else:
         raise RuntimeError("Compiling fortran code failed, unknown return "
-                           "value: " + r)
+                           "value: " + r + ". " + _COMPILE_LOGS_HINT)
     return None
 
 
@@ -338,7 +345,7 @@ def fortran_compile(pre="", filename="", post="",
         raise
     if r.returncode not in (0, 1):
             raise RuntimeError("Fortran compiler subprocess returned "
-                               f"{r.returncode}.")
+                               f"{r.returncode}. " + _COMPILE_LOGS_HINT)
     if r.returncode == 1 and "-mcmodel=medium" not in fc:
         mcmodel = False
         with open(logname, "r") as log:
@@ -348,11 +355,11 @@ def fortran_compile(pre="", filename="", post="",
                                "missing '-mcmodel=medium' flag.")
         if not mcmodel:
             raise RuntimeError("Fortran compiler subprocess returned "
-                               f"{r.returncode}.")
+                               f"{r.returncode}. " + _COMPILE_LOGS_HINT)
         return "mcmodel"
     if r.returncode != 0:
             raise RuntimeError("Fortran compiler subprocess returned "
-                               f"{r.returncode}.")
+                               f"{r.returncode}. " + _COMPILE_LOGS_HINT)
     return None
 
 

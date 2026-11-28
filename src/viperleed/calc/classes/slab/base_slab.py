@@ -470,8 +470,34 @@ class BaseSlab(AtomContainer):
         self.foundplanegroup = self.planegroup = 'unknown'
         self.orisymplane = None
 
-    def _get_layer_cut_positions(self, rpars, bulk_cuts):
-        """Return crystal-cut positions from rpars.LAYER_CUTS."""
+    def get_layer_cut_positions(self, rpars, bulk_cuts=()):
+        """Return the positions of the layer cuts from `rpars`.
+
+        These are the positions at which `create_layers` cuts this
+        slab into layers. Notice that this method assumes that
+        fractional coordinates of the atoms are **collapsed to the
+        base cell**.
+
+        .. versionadded:: 0.15.0
+            Previously private as _get_layer_cut_positions.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS. Their LAYER_CUTS attribute is used.
+            Automatic (dz/dc) cuts are placed midway between
+            consecutive atoms further apart than the cut-off.
+        bulk_cuts : Sequence, optional
+            Sequence of fractional positions representing
+            automatically detected bulk layer cuts. If given,
+            they replace all cuts of `rpars` that are not above
+            the topmost of them. Default is an empty tuple.
+
+        Returns
+        -------
+        cuts : list
+            Fractional coordinates (sorted) of the layer cuts.
+        """
         # rpars.LAYER_CUTS is a 'list' of LayerCutTokens. Each either
         # .is_numeric (fractional positions) or .is_auto_cut (dc/dz).
         # We can collect the fractional ones immediately.
@@ -537,7 +563,7 @@ class BaseSlab(AtomContainer):
             bulk_cuts = ()
 
         # Get a sorted list of fractional cut positions
-        cuts = self._get_layer_cut_positions(rpars, bulk_cuts)
+        cuts = self.get_layer_cut_positions(rpars, bulk_cuts)
         n_cuts = len(cuts)  # For checking empty layers later
         cuts_iter = iter(cuts)
 

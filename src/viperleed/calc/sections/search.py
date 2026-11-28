@@ -381,6 +381,15 @@ def _check_search_log(search_log_path):
         pass
 
 
+def _log_search_start(rp):
+    """Tell the user where to follow the progress of a search."""
+    logger.info(
+        'Starting search. Progress information is written to SD.TL and '
+        f'Search-progress.pdf in the work directory ({Path.cwd()}). The '
+        'PDF file only appears after the first evaluation of SD.TL, '
+        f'i.e., after about {rp.searchEvalTime} seconds.'
+        )
+
 
 def search(sl, rp):
     """Generate input for and runs the search, then interprets output.
@@ -670,8 +679,7 @@ def search(sl, rp):
             count_start=0,
             )
     tried_repeat = False  # if SD.TL is not written, try restarting
-    logger.info("Starting search. See files Search-progress.pdf "
-                "and SD.TL for progress information.")
+    _log_search_start(rp)
 
     # Prepare the command to be run via subprocess
     executable = os.path.join('.', searchname)

@@ -23,6 +23,7 @@ from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.search_job import IS_WINDOWS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
+from viperleed.calc.sections.search import _log_search_start
 from viperleed.calc.sections.search import search
 
 from .conftest import _MODULE
@@ -238,3 +239,14 @@ class TestSearch:
         for mock in mocks_called_multiple_times:
             mock.assert_called()
         # TODO: check relevant calls
+
+
+def test_log_search_start(rpars, caplog, tmp_path):
+    """Check that the search start message says where outputs are."""
+    rpars.searchEvalTime = 123
+    with caplog.at_level('INFO'), execute_in_dir(tmp_path):
+        _log_search_start(rpars)
+    message = caplog.text
+    assert 'Search-progress.pdf' in message
+    assert str(tmp_path) in message
+    assert '123 seconds' in message

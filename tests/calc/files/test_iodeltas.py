@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-07-08'
 __license__ = 'GPLv3+'
 
@@ -15,9 +15,11 @@ from pytest_cases import parametrize
 
 from viperleed.calc.files.iodeltas import _fetch_auxbeams
 from viperleed.calc.files.iodeltas import _read_file_with_newline
+from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.iodeltas import collect_static_input_files
 from viperleed.calc.files.iodeltas import write_delta_input_file
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.version import Version
 
 
 _MODULE = 'viperleed.calc.files.iodeltas'
@@ -27,6 +29,25 @@ _MODULE = 'viperleed.calc.files.iodeltas'
 def fixture_rpars(mocker):
     """Return a fake Rparams."""
     return mocker.MagicMock()
+
+
+class TestCheckDelta:
+    """Tests for the checkDelta function."""
+
+    @parametrize('header,current',
+                 (('  8 12  5\n', '1.7.0'),
+                  ('    8   12    5\n', '1.6.0')),
+                 ids=('3I3 read as 3I5', '3I5 read as 3I3'))
+    def test_header_from_other_version(self, header, current, rpars,
+                                       tmp_path, mocker, caplog):
+        """Check that another TensErLEED header format is no match."""
+        rpars.TL_VERSION = Version(current)
+        delta = tmp_path/'DEL_1_Ag'
+        delta.write_text(f'title\n{header}', encoding='utf-8')
+        atom = mocker.MagicMock()
+        result = checkDelta(str(delta), atom, 'vac', rpars)
+        assert not result
+        assert 'DEL_1_Ag' in caplog.text
 
 
 class TestCollectStaticInputFiles:

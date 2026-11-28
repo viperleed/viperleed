@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-15'
 __license__ = 'GPLv3+'
 
@@ -18,7 +18,11 @@ from ....helpers import not_raises
 
 _FLOAT_ZERO_FIVE = Bounds(range_=(0, 5))
 _INT_FIVE_TEN_MODULO = Bounds(type_=int, range_=(5, 10),
+                              accept_limits=(True, False),
                               out_of_range_event='modulo')
+_INT_FIVE_TEN_MODULO_LOW_OPEN = Bounds(type_=int, range_=(5, 10),
+                                       accept_limits=(False, True),
+                                       out_of_range_event='modulo')
 
 
 class TestNumericBounds:
@@ -33,7 +37,7 @@ class TestNumericBounds:
             Bounds(type_=int, range_=(-1, None), accept_limits=(False, False)),
             -20, 'Value -20 is less than or equal to -1'
             ),
-        'modulo': (_INT_FIVE_TEN_MODULO, 3, 'Value 3 is not in range [5, 10]'),
+        'modulo': (_INT_FIVE_TEN_MODULO, 3, 'Value 3 is not in range [5, 10['),
         'upper_limit': (Bounds(range_=(None, 5)), 10,
                         'Value 10 is larger than 5'),
         'upper_limit_open': (
@@ -71,10 +75,20 @@ class TestNumericBounds:
             ),
         'modulo_in_range': (_INT_FIVE_TEN_MODULO, 7, 7),
         'modulo_too_high': (_INT_FIVE_TEN_MODULO, 16, 6),
-        'modulo_at_max': (_INT_FIVE_TEN_MODULO, 10, 10),                        # TODO: should treat better the cases at bounds! Must depend on accept_limits.
-        'modulo_at_min': (_INT_FIVE_TEN_MODULO, 5, 5),                          # TODO: should treat better the cases at bounds! Must depend on accept_limits.
+        'modulo_at_max': (_INT_FIVE_TEN_MODULO, 10, 5),
+        'modulo_at_min': (_INT_FIVE_TEN_MODULO, 5, 5),
+        'modulo_at_min_open': (_INT_FIVE_TEN_MODULO_LOW_OPEN, 5, 10),
+        'modulo_at_max_open': (_INT_FIVE_TEN_MODULO_LOW_OPEN, 10, 10),
+        'modulo_far_above': (_INT_FIVE_TEN_MODULO, 27, 7),
+        'modulo_at_max_plus_period': (_INT_FIVE_TEN_MODULO, 15, 5),
+        'modulo_far_above_phi': (
+            Bounds(range_=(0, 360), accept_limits=(True, False),
+                   out_of_range_event='modulo'),
+            725, 5
+            ),
         'modulo_too_low': (_INT_FIVE_TEN_MODULO, 3, 8),
-        'float_modulo': (Bounds(range_=(5, 10), out_of_range_event='modulo'),
+        'float_modulo': (Bounds(range_=(5, 10), accept_limits=(True, False),
+                                out_of_range_event='modulo'),
                          2.4, 7.4),
         }
 
@@ -147,9 +161,12 @@ class TestNumericBoundsRaises:
         'event': {'range_': (1, 10), 'out_of_range_event': 'invalid_event'},
         'modulo_unlimited': {'type_': int, 'range_': (None, 5),
                              'out_of_range_event': 'modulo'},
-        'modulo_accept_lims': {'range_': (0, 5),
-                               'out_of_range_event': 'modulo',
-                               'accept_limits': (False, False)},
+        'modulo_accept_no_lims': {'range_': (0, 5),
+                                  'out_of_range_event': 'modulo',
+                                  'accept_limits': (False, False)},
+        'modulo_accept_both_lims': {'range_': (0, 5),
+                                    'out_of_range_event': 'modulo',
+                                    'accept_limits': (True, True)},
         }
 
     @parametrize(kwargs=_invalid_args.values(), ids=_invalid_args)

@@ -9,7 +9,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -92,9 +92,15 @@ def checkDelta(filename, at, el, rp):
     try:
         nbeams = int(lines[1][0:intlen])        # no. of beams
         nvar = int(lines[1][2*intlen:3*intlen]) # no. of variations (geo*vib)
-    except Exception:
-        logger.error("Error parsing file " + filename)
-        raise
+    except (ValueError, IndexError):
+        # The header format depends on the TensErLEED version. A delta
+        # file from a different version cannot be reused.
+        logger.warning(
+            f'The header of delta file {filename} does not fit the '
+            'format of the current TensErLEED version. The file '
+            'cannot be used.'
+            )
+        return False
     if nbeams != len(rp.ivbeams):
         return False
     if nvar != len(dgeo)*len(dvib):

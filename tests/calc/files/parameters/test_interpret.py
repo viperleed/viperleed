@@ -159,10 +159,12 @@ class TestNumericalParameter(_TestInterpretBase):
         'int at bound': ('100', Bounds(type_=int, range_=(0, 100)), 100),
         'float at bound': ('-0.5', Bounds(range_=(-0.5, 1)), -0.5),
         'float modulo': ('2.5',
-                         Bounds(range_=(0, 2), out_of_range_event='modulo'),
+                         Bounds(range_=(0, 2), accept_limits=(True, False),
+                                out_of_range_event='modulo'),
                          0.5),
         'int modulo': ('12',
                        Bounds(type_=int, range_=(0, 10),
+                              accept_limits=(True, False),
                               out_of_range_event='modulo'),
                        2),
         }
@@ -259,6 +261,10 @@ class TestBeamIncidence(_TestInterpretBase):
         'negative theta': ('-30 30', (30.0, 210.0)),
         'comma': ('THETA 19.3, PHI 138', (19.3, 138)),
         'comma swap': ('phi 37, THETA 21', (21.0, 37.0)),
+        'phi 360': ('20 360', (20.0, 0.0)),
+        'phi comma 360': ('THETA 20, PHI 360', (20.0, 0.0)),
+        'phi above 360': ('20 725', (20.0, 5.0)),
+        'phi negative': ('20 -10', (20.0, 350.0)),
         }
     invalid = {
         'not float': ('invalid input', '', err.ParameterFloatConversionError),

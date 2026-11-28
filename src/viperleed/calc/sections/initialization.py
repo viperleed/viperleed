@@ -138,6 +138,10 @@ def initialization(sl, rp, subdomain=False):
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
 
+    # Detecting the bulk from BULK_LIKE_BELOW replaces LAYER_CUTS
+    # with fractional cuts (see #121). Decide before it whether the
+    # user asked for cuts to be detected automatically.
+    user_auto_cuts = any(token.is_auto_cut for token in rp.LAYER_CUTS)
     if rp.BULK_LIKE_BELOW > 0:
         if rp.BULK_REPEAT is not None:
             logger.warning('Both BULK_LIKE_BELOW and BULK_REPEAT are defined.'
@@ -266,6 +270,7 @@ def initialization(sl, rp, subdomain=False):
 
     # Check that layer cuts are not too close together
     _check_and_warn_layer_cuts(rp, sl)
+    _log_auto_layer_cuts(rp, sl, user_auto_cuts=user_auto_cuts)
 
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
@@ -664,6 +669,35 @@ def _check_and_warn_layer_cuts(rpars, slab):
             "convergence issues in the reference calculation. Check the "
             "LAYERS_CUTS parameter in the PARAMETERS file."
             )
+
+
+def _log_auto_layer_cuts(rpars, slab, user_auto_cuts):
+    """Log the layer-cut positions if any was detected automatically.
+
+    All the cuts are logged, both those given explicitly as fractions
+    of c and those detected automatically (dz/dc LAYER_CUTS), at the
+    positions used to create the layers of `slab`. Nothing is logged
+    if all LAYER_CUTS were given explicitly by the user.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The PARAMETERS. Its LAYER_CUTS attribute holds the cuts
+        used in this run. They may no longer contain the dz/dc
+        cuts of the user, e.g., when the bulk was detected from
+        BULK_LIKE_BELOW.
+    slab : Slab
+        The slab whose layers are created from `rpars`.
+    user_auto_cuts : bool
+        Whether the LAYER_CUTS given by the user contain cuts to
+        be detected automatically. Nothing is logged otherwise.
+    """
+    if not user_auto_cuts:
+        return
+    cuts = slab.get_layer_cut_positions(rpars)
+    cuts_str = ' '.join(f'{cut:.4f}' for cut in cuts)
+    logger.info('Layer cuts (fractions of c), including automatically '
+                f'detected ones: {cuts_str}')
 
 
 def _check_domain_consistent(domain, main_rpars):

@@ -4,12 +4,17 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
+import logging
+
 import numpy as np
 from pytest import approx
+from pytest_cases import parametrize
+
+from viperleed.calc.files import displacements
 
 
 class TestReadDISPLACEMENTSBlock:
@@ -36,3 +41,40 @@ class TestReadDISPLACEMENTSBlock:
         """Test successful reading of a vibration DISPLACEMENTS block."""
         displ_read = displaced_atom.disp_vib['all']
         assert displ_read == approx([-0.1, 0.0, 0.1])
+
+
+class TestReadDISPLACEMENTSBlockWarnings:
+    """Test warnings emitted while reading a DISPLACEMENTS block."""
+
+    _max_steps = displacements.MAX_RECOMMENDED_STEPS
+
+    @parametrize('n_steps,warns', ((_max_steps + 1, True),
+                                   (_max_steps, False)))
+    @parametrize('mode,prefix', (('GEO', 'Ag z = '),
+                                 ('VIB', 'Ag = '),
+                                 ('OCC', 'Ag = Ag ')))
+    def test_many_steps(self, n_steps, warns, mode, prefix, caplog,
+                        ag100_with_displacements_and_offsets):
+        """Check warnings for ranges with too many steps."""
+        slab, rpars = ag100_with_displacements_and_offsets
+        caplog.clear()
+        start = 0 if mode == 'OCC' else -0.01*(n_steps//2)
+        stop = start + 0.01*(n_steps - 1)
+        lines = [f'= {mode}_DELTA',
+                 f'{prefix}{round(start, 2)} {round(stop, 2)} 0.01']
+        with caplog.at_level(logging.WARNING):
+            displacements.readDISPLACEMENTS_block(rpars, slab, (lines, ''))
+        warned = f'{n_steps} steps' in caplog.text
+        assert warned is warns
+
+    def test_assignment_before_mode_header(self, ag100, caplog):
+        """Check a warning for assignments before any mode tag."""
+        slab, rpars, *_ = ag100
+        lines = ['Ag z = -0.1 0.1 0.05',
+                 '= GEO_DELTA',
+                 'Ag z = -0.2 0.2 0.1']
+        with caplog.at_level(logging.WARNING):
+            displacements.readDISPLACEMENTS_block(rpars, slab, (lines, ''))
+        assert 'before any' in caplog.text
+        assert 'Ag z = -0.1 0.1 0.05' in caplog.text
+        assert 'Ag z = -0.2 0.2 0.1' not in caplog.text

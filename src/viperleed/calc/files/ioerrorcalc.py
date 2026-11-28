@@ -8,11 +8,12 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
 import logging
+from operator import attrgetter
 import re
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -35,6 +36,8 @@ if CAN_PLOT:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
+
+_OCC_TO_PERCENT = 100  # lin_disp of occupations is a fraction
 
 
 def extract_var_r(errors):
@@ -97,12 +100,12 @@ def generate_errors_csv(errors, sep=","):
         summary_columns["at"].append(atoms_str)
         summary_columns["dir"].append(param_err.disp_label)
         summary_columns["mode"].append(param_err.mode)
-        summary_columns["r_min"].append(param_err.get_r_min)
+        summary_columns["r_min"].append(param_err.r_min)
         summary_columns["var_r"].append(param_err.var_r)
-        summary_columns["p_min"].append(param_err.get_p_min)
+        summary_columns["p_min"].append(param_err.p_min)
 
         # statistical error estimates
-        d_p_minus, d_p_plus = param_err.get_error_estimates
+        d_p_minus, d_p_plus = param_err.error_estimates
         summary_columns["d_p_minus"].append(d_p_minus)
         summary_columns["d_p_plus"].append(d_p_plus)
 
@@ -327,42 +330,32 @@ def make_errors_figs(errors, formatting=None):
 
         err_x = {}
         err_y = {}
-        err_x_inters = {}  # x-values of intersections with var(R)
         err_x_to_mark = {}
 
         err_legend = _error_legends(mode, mode_errors)
 
-        x_values = [err.lin_disp for err in mode_errors]
-        if mode == "occ":
-            x_values *= 100  # convert to %
+        x_values = [_plot_x_values(err) for err in mode_errors]
         x_min = np.min([np.min(x) for x in x_values])
         x_max = np.max([np.max(x) for x in x_values])
         xrange = [x_min - abs(x_max - x_min) * 0.05,
                   x_max + abs(x_max - x_min) * 0.05]
-        for err in mode_errors:
-            rmin = err.get_r_min
-            var = err.var_r
-
-            interp_f = interpolate.interp1d(err.lin_disp,
+        for err, err_lin_disp in zip(mode_errors, x_values):
+            interp_f = interpolate.interp1d(err_lin_disp,
                                             err.rfacs,
                                             bounds_error=False)
             x = np.arange(x_min, x_max,
                           (xrange[1] - xrange[0])*1e-4)
             y = interp_f(x)
-            indmark = [np.argmin(abs(x - v)) for v in err.lin_disp]
+            indmark = [np.argmin(abs(x - v)) for v in err_lin_disp]
             err_x_to_mark[err] = indmark
             err_x[err] = x[indmark[0]:indmark[-1]+1]
             err_y[err] = y[indmark[0]:indmark[-1]+1]
             err_x_to_mark[err] = [v - indmark[0] for v in indmark]
-            err_x_inters[err] = []
-            if var and any(err_y[err]) > rmin + var:
-                rv = rmin + var
-                err_x_inters[err] = [
-                    x for i, x in enumerate(err_x[err])
-                    if 0 < i and (np.sign(err_y[err][i-1]-rv)
-                                  != np.sign(err_y[err][i]-rv))]
-        # plot combined figure
+        # plot combined figure: R+var line of the lowest R minimum
         rmax = max(r for err in mode_errors for r in err.rfacs)
+        best_err = min(mode_errors, key=attrgetter('r_min'))
+        rmin = best_err.r_min
+        var = best_err.var_r
         # Pylint can't tell that we will not execute this,
         # as per decorator, if we fail to import matplotlib
         # pylint: disable-next=possibly-used-before-assignment
@@ -379,7 +372,8 @@ def make_errors_figs(errors, formatting=None):
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
             inters = sorted([x for err in mode_errors
-                             for x in err_x_inters[err]]
+                             for x in _crossings(err_x[err], err_y[err],
+                                                 rmin + var)]
                             + [xrange[0], xrange[1]])
             (ind, diff) = max_diff(inters)
             text_x = inters[ind] - diff/2
@@ -427,8 +421,10 @@ def make_errors_figs(errors, formatting=None):
                 [sp.set_linewidth(0.7 * line_width) for ax in axs
                 for sp in ax.spines.values()]
             err = mode_errors.pop(0)
+            rmin = err.r_min
+            var = err.var_r
             rmax = max(r for r in err.rfacs)
-            x_values = err.lin_disp
+            x_values = _plot_x_values(err)
             x_min = np.min(x_values)
             x_max = np.max(x_values)
             xrange = [x_min - abs(x_max - x_min) * 0.05,
@@ -436,7 +432,8 @@ def make_errors_figs(errors, formatting=None):
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
                 axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
                                    linewidth=line_width/2)
-                inters = sorted(err_x_inters[err] + [xrange[0], xrange[1]])
+                inters = _crossings(err_x[err], err_y[err], rmin + var)
+                inters = sorted(inters + xrange)
                 (ind, diff) = max_diff(inters)
                 text_x = inters[ind] - diff/2
                 text_y = rmin + var + (rmax-rmin)*0.015
@@ -491,9 +488,11 @@ def make_errors_figs(errors, formatting=None):
                                          fontsize=6*font_size_scale)
 
             # add uncertainties in plot
-            r_min = min(err.rfacs)
-            p_best = err.lin_disp[err.rfacs.index(r_min)]
-            error_estimates = err.get_error_estimates
+            p_best = x_values[err.rfacs.index(rmin)]
+            error_estimates = [
+                e*_plot_scale(err) if e else e
+                for e in err.error_estimates
+                ]
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]
                 draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin),
@@ -537,6 +536,44 @@ def _error_legends(mode, mode_errors):
     return err_legend
 
 
+def _crossings(x_values, r_values, r_line):
+    """Return the x_values where r_values cross the r_line level.
+
+    Parameters
+    ----------
+    x_values : Sequence of float
+        The abscissae of the curve.
+    r_values : Sequence of float
+        The R factors at x_values. May contain NaN.
+    r_line : float
+        The R-factor level of the horizontal line.
+
+    Returns
+    -------
+    list of float
+        The elements of x_values at which the curve has just crossed
+        r_line, NaN neighbours excluded. Empty if no R factor
+        exceeds r_line.
+    """
+    if not np.nanmax(r_values) > r_line:
+        return []
+    signs = np.sign(np.asarray(r_values) - r_line)
+    known = np.isfinite(signs)
+    return [x for i, x in enumerate(x_values)
+            if i > 0 and known[i-1] and known[i]
+            and signs[i-1] != signs[i]]
+
+
+def _plot_scale(error):
+    """Return the factor to convert lin_disp of error to plot units."""
+    return _OCC_TO_PERCENT if error.mode == 'occ' else 1
+
+
+def _plot_x_values(error):
+    """Return the lin_disp of error in the units shown in plots."""
+    return np.asarray(error.lin_disp) * _plot_scale(error)
+
+
 def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
     r"""Adds annotation for statistical error estimates to individual
     error plots.
@@ -546,7 +583,8 @@ def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
     axis : matplotlib axis
         axis of the error plot to be annotated.
     bound : float
-        Error bound == :math:`p_{min} \pm \sigma(p)`.
+        Error bound == :math:`p_{min} \pm \sigma(p)`, in the units
+        shown in the plot (percent for occupations).
     error : R_Error
         Error object used for error estimation.
     r_interval : float
@@ -554,7 +592,7 @@ def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
         graphical scaling.
     """
     r_min = min(error.rfacs)
-    p_best = error.lin_disp[error.rfacs.index(r_min)]
+    p_best = _plot_x_values(error)[error.rfacs.index(r_min)]
     var_r =error.var_r
 
     # put vertical line at minimum R-factor

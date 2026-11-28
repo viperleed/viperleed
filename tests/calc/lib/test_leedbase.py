@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-31'
 __license__ = 'GPLv3+'
 
@@ -12,8 +12,13 @@ from pathlib import Path
 
 import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
+from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.lib.leedbase import fortran_compile
+from viperleed.calc.lib.leedbase import fortran_compile_batch
 from viperleed.calc.lib.leedbase import get_tensor_indices
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 
@@ -166,3 +171,37 @@ class TestGetTensorIndices:
             )
         result = set(get_tensor_indices(zip_only=True))
         assert result == {1, 2}
+
+
+class TestFortranCompileFailureHint:
+    """Tests for pointing users to the compilation logs on failure."""
+
+    hint = f'{DEFAULT_SUPP}/{COMPILE_LOGS_DIRNAME}'
+
+    @parametrize(returncode=(2, 1))
+    def test_fortran_compile(self, returncode, mocker, tmp_path):
+        """Check the hint in the error of a failing compiler call."""
+        mocker.patch(
+            f'{_MODULE}.subprocess.run',
+            return_value=mocker.MagicMock(returncode=returncode),
+        )
+        with pytest.raises(RuntimeError, match=self.hint):
+            fortran_compile(
+                pre='gfortran',
+                filename='some.f',
+                post='-o out',
+                logname=str(tmp_path / 'fortran-compile.log'),
+            )
+
+    @parametrize('error,retry',
+                 (('unknown', True), ('mcmodel', False)),
+                 ids=('unknown error', 'mcmodel, no retry'))
+    def test_fortran_compile_batch(self, error, retry, mocker, tmp_path):
+        """Check the hint in the error of a failed batch compilation."""
+        mocker.patch(f'{_MODULE}.fortran_compile', return_value=error)
+        with pytest.raises(RuntimeError, match=self.hint):
+            fortran_compile_batch(
+                [('gfortran', 'some.f', '-o out')],
+                retry=retry,
+                logname=str(tmp_path / 'fortran-compile.log'),
+            )
