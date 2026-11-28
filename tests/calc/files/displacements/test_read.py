@@ -3,12 +3,15 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-06-08'
 __license__ = 'GPLv3+'
 
+import logging
+
 import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.classes.rparams.rparams import Rparams
@@ -55,3 +58,44 @@ class TestReadDISPLACEMENTSRaises:
         """Test complaints for invalid DISPLACEMENTS for DOMAINs."""
         with pytest.raises(NoDisplacementsError):
             readDISPLACEMENTS(*args)
+
+
+_PLANE_SHORTHAND_WARNING = 'deprecated shorthand for two search blocks'
+
+
+@parametrize(
+    ('contents', 'expected_blocks', 'expected_warnings'),
+    (
+        ('== SEARCH s\n= GEO_DELTA\nO 1 xy = -0.1 0.1\n',
+         [(['= GEO_DELTA', 'O 1 xy[1 0] = -0.1 0.1'], 's [1 0]'),
+          (['= GEO_DELTA', 'O 1 xy[0 1] = -0.1 0.1'], 's [0 1]')],
+         (('line 3:', "'xy'"),)),
+        (('== SEARCH s\n= GEO_DELTA\nO 1 ab = -0.1 0.1\n'
+          'Fe 2 z = -0.1 0.1\nFe 3 ab = -0.2 0.2\n'),
+         [(['= GEO_DELTA', 'O 1 ab[1 0] = -0.1 0.1',
+            'Fe 2 z = -0.1 0.1', 'Fe 3 ab[1 0] = -0.2 0.2'],
+           's [1 0]'),
+          (['= GEO_DELTA', 'O 1 ab[0 1] = -0.1 0.1',
+            'Fe 2 z = -0.1 0.1', 'Fe 3 ab[0 1] = -0.2 0.2'],
+           's [0 1]')],
+         (('line 3:', "'ab'"), ('line 5:', "'ab'"))),
+        ('== SEARCH s\n= GEO_DELTA\nO 1 xy[1 0] = -0.1 0.1\n',
+         [(['= GEO_DELTA', 'O 1 xy[1 0] = -0.1 0.1'], 's')],
+         ()),
+    ),
+    ids=('xy', 'ab twice', 'xy[1 0]'),
+)
+def test_plane_shorthand_deprecated(contents, expected_blocks,
+                                    expected_warnings,
+                                    write_displacements, caplog):
+    """Check one warning per bare 'xy'/'ab' line and the blocks made."""
+    rpars = Rparams()
+    readDISPLACEMENTS(rpars, write_displacements(contents))
+    warnings = [r for r in caplog.records
+                if _PLANE_SHORTHAND_WARNING in r.getMessage()]
+    assert len(warnings) == len(expected_warnings)
+    for record, (line_nr, plane) in zip(warnings, expected_warnings):
+        assert line_nr in record.getMessage()
+        assert f'bare {plane}' in record.getMessage()
+    assert all(r.levelno == logging.WARNING for r in warnings)
+    assert rpars.disp_blocks == expected_blocks

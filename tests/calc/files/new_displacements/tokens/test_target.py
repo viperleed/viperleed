@@ -1,0 +1,217 @@
+"""Tests for module viperleed.calc.files.new_displacements.tokens.target."""
+
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
+__created__ = '2024-10-14'
+__license__ = 'GPLv3+'
+
+import re
+
+import pytest
+from pytest_cases import parametrize
+
+from viperleed.calc.files.new_displacements.tokens.target import (
+    TargetingError,
+    TargetToken,
+    _generate_label_match_regex,
+)
+
+
+@parametrize(
+    'raw, expected_regex, expected_nums, expected_layers',
+    [
+        # only label, no nums or layers
+        ('A', re.compile(r'^A'), None, None),
+        # list of numbers
+        ('A 1 3 5', re.compile(r'^A'), (1, 3, 5), None),
+        # multi digit numbers
+        ('A 10 30 500', re.compile(r'^A'), (10, 30, 500), None),
+        # numeric range
+        ('A 2-4', re.compile(r'^A'), (2, 3, 4), None),
+        # numeric range
+        ('A 1-3 5 7', re.compile(r'^A'), (1, 2, 3, 5, 7), None),
+        # single layer
+        ('A L(1)', re.compile(r'^A'), None, (1,)),
+        # layer range
+        ('A L(2-3)', re.compile(r'^A'), None, (2, 3)),
+        # layer with spaces
+        ('A L( 1-3 )', re.compile(r'^A'), None, (1, 2, 3)),
+        # complicated layer numbers
+        ('A L(1 4-5 7)', re.compile(r'^A'), None, (1, 4, 5, 7)),
+        # wildcard label
+        ('* 1-2', re.compile(r'^\w*'), (1, 2), None),
+        # numbers and layers: their union
+        ('O 1 3 L(2)', re.compile(r'^O'), (1, 3), (2,)),
+        ('O L(1) 5-6', re.compile(r'^O'), (5, 6), (1,)),
+        ('A L(1-2) 3', re.compile(r'^A'), (3,), (1, 2)),
+        ('O 1 L(2) 4', re.compile(r'^O'), (1, 4), (2,)),
+        ('O L(1) L(3-4)', re.compile(r'^O'), None, (1, 3, 4)),
+        ('O L(1) 2 L(3)', re.compile(r'^O'), (2,), (1, 3)),
+        ('O 1 L(2) 3', re.compile(r'^O'), (1, 3), (2,)),
+        # layers and numbers keep their order
+        ('O L(3) L(1)', re.compile(r'^O'), None, (3, 1)),
+        ('O 3 L(2) 1', re.compile(r'^O'), (3, 1), (2,)),
+    ],
+)
+def test_parse_valid_targets(
+    raw, expected_regex, expected_nums, expected_layers
+):
+    tok = TargetToken(raw)
+    # regex pattern
+    assert isinstance(tok.regex, re.Pattern)
+    assert tok.regex.pattern == expected_regex.pattern
+    # nums and layers
+    assert tok.nums == expected_nums
+    assert tok.layers == expected_layers
+
+
+@parametrize(
+    'raw',
+    [
+        # malformed layer specs
+        'A L(1',
+        'A 1 L(2',
+        'A L(1) 2)',
+        'A 1 L 2',
+        'A L(x)',
+        # numeric without label
+        '1 2 3',
+        '2',
+        '[1 0 0',
+        # layer without label
+        'L(1)',
+        # non-integer in numeric list
+        'A one two',
+        # malformed layer spec
+        'A L()',
+        # numbers and L(...) not separated by whitespace
+        'O L(1)2',
+        'O 1L(2)3',
+        'O L(1)L(2)',
+        'O 1L(2)',
+        'O 1l(2)',
+        'l(1)',
+    ],
+)
+def test_invalid_target_raises(raw):
+    with pytest.raises(TargetingError):
+        TargetToken(raw)
+
+
+@parametrize(
+    'lower, upper',
+    (
+        ('O l(2)', 'O L(2)'),
+        ('O 1 l(2-3) 5', 'O 1 L(2-3) 5'),
+        ('O l( 2 ) l(4)', 'O L( 2 ) L(4)'),
+    ),
+)
+def test_lowercase_layer(lower, upper):
+    """Check that l(...) is read like L(...)."""
+    assert TargetToken(lower) == TargetToken(upper)
+    assert TargetToken(lower).layers is not None
+
+
+@parametrize(
+    'raw, bad_number',
+    (
+        ('O L(0)', '0'),
+        ('O L(-1)', '-1'),
+        ('O L(0-2)', '0'),
+        ('O L(2) L(0)', '0'),
+        ('O 0', '0'),
+        ('O 0-3', '0'),
+        ('O 1 0', '0'),
+        ('O -2', '-2'),
+    ),
+)
+def test_non_positive_number_raises(raw, bad_number):
+    """Check that numbers below 1 are rejected and named."""
+    with pytest.raises(TargetingError, match=rf'number {bad_number}\b'):
+        TargetToken(raw)
+
+
+@parametrize(
+    'raw, nums, layers',
+    (
+        ('O L(1)', None, (1,)),
+        ('O 1', (1,), None),
+        ('O L(1-2) 1-3', (1, 2, 3), (1, 2)),
+    ),
+)
+def test_smallest_numbers_accepted(raw, nums, layers):
+    """Check that atom and layer numbers starting at 1 are read."""
+    token = TargetToken(raw)
+    assert token.nums == nums
+    assert token.layers == layers
+
+
+def test_empty_string_raises():
+    """Check that an empty target string is rejected."""
+    with pytest.raises(TargetingError, match='Target string is empty'):
+        TargetToken('')
+
+
+def test_repr():
+    token = TargetToken('A')
+    repr_str = str(token)
+    assert 'TargetToken(target_str=A)' in repr_str
+
+
+def test_eq_same_and_different():
+    a = TargetToken('A 1-2')
+    b = TargetToken('A 1 2')
+    c = TargetToken('A 1-2')
+    # a and c should be equal (same raw string)
+    assert a == c
+    # a and b: same nums but b parsed as nums=[1,2] as well => they compare regex equal & nums equal
+    assert a == b
+    # different label
+    d = TargetToken('B 1-2')
+    assert a != d
+    # comparing to different type
+    assert a != 'A 1-2'
+
+
+def test_eq_layer_specifier():
+    # regression test for bug
+    a = TargetToken('Fe L(1-3)')
+    b = TargetToken('Fe L(1-3)')
+    assert a == b
+
+
+@parametrize(
+    ('first', 'second', 'equal'),
+    [
+        ('O 1 3 L(2)', 'O L(2) 1 3', True),
+        ('O 1 3 L(2)', 'O 1-3 L(2)', False),
+        ('O 1 3 L(2)', 'O 1 3', False),
+        ('O 1 3 L(2)', 'O L(2)', False),
+        ('O 1 3 L(2)', 'O 1 3 L(1)', False),
+        ('O L(1) L(2)', 'O L(1-2)', True),
+    ],
+)
+def test_eq_nums_and_layers(first, second, equal):
+    """Check equality of targets with both numbers and layers."""
+    assert (TargetToken(first) == TargetToken(second)) is equal
+
+
+def test_selection_regex_matching():
+    # test that regex actually matches sites correctly
+    tok = TargetToken('A*')
+    # should match A, A1, ABCXYZ, but not B
+    regex = tok.regex
+    assert regex.match('A')
+    assert regex.match('A1')
+    assert regex.match('ABCXYZ')
+    assert not regex.match('B')
+
+
+def test_generate_label_match_regex_wildcards():
+    # Directly test helper
+    r = _generate_label_match_regex('X*Y')
+    # Should match XANY, XfooYbar, etc.
+    assert r.match('XANY')
+    assert r.match('XfooYbar')
+    assert r.match('XYX')
+    assert not r.match('Y')

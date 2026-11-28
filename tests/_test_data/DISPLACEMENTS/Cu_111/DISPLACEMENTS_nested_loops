@@ -1,0 +1,21 @@
+# DISPLACEMENTS file for Cu(111) with nested loops
+
+<loop>
+== SEARCH a
+    = GEO_DELTA
+    Cu_surf z = -0.1 0.1 0.05
+
+<loop>
+== SEARCH b
+    = VIB_DELTA
+    Cu_surf = -0.1 0.1 0.05
+</loop>
+
+== SEARCH c
+    = GEO_DELTA
+    Cu_surf z = -0.05 0.05 0.01
+</loop>
+
+== SEARCH d
+    = VIB_DELTA
+    Cu_surf = -0.05 0.05 0.01
