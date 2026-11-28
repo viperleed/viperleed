@@ -25,6 +25,16 @@ the cumulative sum of the squared difference between the Y functions
 in the Pendry |R factor|. This allows quick identification of the areas
 contributing most to the |R factor|.
 
+The Rfactor_analysis files are written only for Pendry's and the smooth
+|R factor| (see :ref:`RFACTORTYPE`). For the smooth |R factor|, the
+Y functions of |RS| are plotted, unless the Pendry |R factor| is
+computed instead (TensErLEED |R factor| with versions older than
+v2.1.0, see :ref:`RFACTORTYPE`).
+
+.. versionchanged:: 0.15.0
+   Earlier versions also wrote Rfactor_analysis files for :math:`R_2`,
+   with the Y functions of the Pendry |R factor|.
+
 
 .. figure:: /_static/output_examples/Rfactor_analysis_refcalc_example.svg
    :width: 60%

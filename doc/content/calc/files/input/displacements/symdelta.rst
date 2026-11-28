@@ -4,6 +4,10 @@
 The SYM_DELTA tag
 =================
 
+.. deprecated:: 0.15.0
+  The SYM_DELTA tag is deprecated and will be removed in a future release.
+  Use :ref:`ISYM` or CONSTRAINTS instead.
+
 .. warning::
   SYM_DELTA is not well tested yet, and has at least one known bug.
   Use of :ref:`ISYM` instead of SYM_DELTA is encouraged where possible.

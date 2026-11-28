@@ -4,16 +4,19 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexandra Mia Imre (@alexmiame)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
 import logging
 import os
 
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.r_error import R_Error
+from viperleed.calc.classes.r_error import R_TYPES_WITH_VAR_R
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
+from viperleed.calc.files import iorfactor
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
@@ -30,8 +33,17 @@ def errorcalc(sl, rp):
         # TODO!! requested by Tilman!!
         # !!! Should be straightforward. Just take the beams from other domains
         # as constant (from refcalc), vary for the one domain as always
-        logger.error("Error calculation not implemented for multiple domains.")
-        return
+        raise NotImplementedError(
+            "Error calculation are not implemented for multiple domains."
+            )
+
+    if rp.BACKEND["search"] == SearchBackend.VLJ:
+        # TODO - straightforward to implement
+        raise NotImplementedError(
+            'Error calculations are not implemented with the viperleed-jax '
+            'backend. To sample amplitude changes explicitly use the '
+            'TensorCalculator.delta_amplitudes() method from the API instead.'
+            )
 
     if rp.best_v0r is None:
         logger.info("Error calculation called without a stored inner "
@@ -127,12 +139,10 @@ def errorcalc(sl, rp):
         logger.info("Error calculation: Returning with no output.")
         return
 
-    # Inform user that statistical error estimates are only available
-    # for Pendry R-factor.
-    if rp.R_FACTOR_TYPE != 1:
+    if rp.R_FACTOR_TYPE not in R_TYPES_WITH_VAR_R:
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
-                    "R-factor.")
+                    "and Smooth R-factors.")
     else:
         # Write var(R) to log as info.
         var_r_info = ioerrorcalc.extract_var_r(errors)
@@ -160,6 +170,13 @@ def errorcalc(sl, rp):
     ioerrorcalc.write_errors_summary_csv(summary_csv_content,
                                          summary_fname='Errors_summary.csv')
 
-    # Errors.pdf
-    errors_figs = ioerrorcalc.make_errors_figs(errors, formatting=rp.PLOT_IV)
+    # Errors.pdf, labelled with the R factor actually computed
+    r_factor_type = rp.R_FACTOR_TYPE
+    if rp.R_FACTOR_LEGACY:  # Old TensErLEED versions lack smooth
+        r_factor_type = iorfactor.legacy_r_factor_type(rp)
+    errors_figs = ioerrorcalc.make_errors_figs(
+        errors,
+        r_factor_type=r_factor_type,
+        formatting=rp.PLOT_IV,
+        )
     ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')

@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
@@ -11,6 +11,7 @@ import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 
@@ -139,3 +140,84 @@ class TestNCoresChecked:
         checker.check_parameter_conflicts(rpars)
         msg = 'Consider reducing N_CORES'
         assert msg in caplog.text
+
+
+class TestBackendSearchRunSegments:
+    """Check that RUN is cleaned up for the ViPErLEED-JAX search backend."""
+
+    _cases = {
+        # (backend, expected RUN, warns about deltas)
+        'vlj removes deltas': (SearchBackend.VLJ, [0, 1, 3], True),
+        'tensorleed unchanged': (SearchBackend.TENSERLEED, [0, 1, 2, 3],
+                                 False),
+        }
+
+    @pytest.mark.parametrize('backend,expect_run,warns',
+                             _cases.values(), ids=_cases)
+    def test_delta_segments(self, backend, expect_run, warns,
+                            checker, rpars_with_attrs, caplog):
+        """Check that only the vlj backend removes delta segments."""
+        rpars = rpars_with_attrs(BACKEND={'search': backend},
+                                 RUN=[0, 1, 2, 3])
+        checker.check_parameter_conflicts(rpars)
+        assert rpars.RUN == expect_run
+        msg = 'Delta-amplitude calculations are not supported'
+        assert (msg in caplog.text) == warns
+
+
+_INTPOL_CASES = {
+    'cubic, python': (3, False, False),
+    'quintic, python': (5, False, True),
+    'quintic, legacy': (5, True, False),
+    'cubic, legacy': (3, True, False),
+    }
+
+
+@parametrize('intpol_deg,legacy,rejected',
+             _INTPOL_CASES.values(), ids=_INTPOL_CASES)
+def test_intpol_deg_python_rfactor(intpol_deg, legacy, rejected,
+                                   checker, rpars_with_attrs):
+    """Check that the Python R factor needs cubic interpolation."""
+    rpars = rpars_with_attrs(INTPOL_DEG=intpol_deg, R_FACTOR_LEGACY=legacy)
+    if not rejected:
+        with not_raises(Exception):
+            checker.check_parameter_conflicts(rpars)
+        return
+    with pytest.raises(ParameterConflictError, match='R_FACTOR_LEGACY'):
+        checker.check_parameter_conflicts(rpars)
+
+
+def test_intpol_deg_python_rfactor_skipped(rpars_with_attrs):
+    """Check that the INTPOL_DEG check can be switched off."""
+    rpars = rpars_with_attrs(INTPOL_DEG=5, R_FACTOR_LEGACY=False)
+    checker = ParametersChecker(python_rfactor_checks=False)
+    with not_raises(ParameterConflictError):
+        checker.check_parameter_conflicts(rpars)
+
+
+_SMOOTHING_CASES = {
+    'python': (2, False, True),
+    'python, one': (1, False, True),
+    'python, below one': (0.5, False, True),
+    'legacy': (2, True, False),
+    'python, no smoothing': (0, False, False),
+    'legacy, no smoothing': (0, True, False),
+    }
+
+
+@parametrize('smoothing,legacy,warns',
+             _SMOOTHING_CASES.values(), ids=_SMOOTHING_CASES)
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def test_smoothing_ignored_python_rfactor(  # noqa: PLR0913, PLR0917
+    smoothing,
+    legacy,
+    warns,
+    checker,
+    rpars_with_attrs,
+    caplog,
+):
+    """Check the R_FACTOR_SMOOTHING warning with the Python R factor."""
+    rpars = rpars_with_attrs(R_FACTOR_SMOOTHING=smoothing,
+                             R_FACTOR_LEGACY=legacy)
+    checker.check_parameter_conflicts(rpars)
+    assert ('R_FACTOR_SMOOTHING' in caplog.text) is warns

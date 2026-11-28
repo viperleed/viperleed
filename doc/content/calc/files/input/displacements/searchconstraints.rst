@@ -30,6 +30,12 @@ The general syntax for a line in the CONSTRAIN block is (examples given below):
    giving an index in the displacement range that should be locked. See below
    for examples for each of these cases.
 
+.. versionremoved:: v0.15.0
+   Freezing parameters in the CONSTRAIN block has become redundant.
+   To fix a parameter to a specific value, you can declare an offset in the
+   :ref:`OFFSETS<search_offsets>` block. If no displacement range is given for
+   an offset parameter, the parameter will be fixed to the offset value.
+
 Linking parameters
 ------------------
 
@@ -92,27 +98,3 @@ fashion, as would the iridium atoms in layer 1. Furthermore, by linking them
 *in the same line*, the movements of oxygen and iridium are coupled as given
 by the two ranges, so when oxygen moves up, iridium moves down (e.g., when O
 moves to +0.01 A, Ir moves to -0.006 A).
-
-Freezing parameters
--------------------
-
-Apart from linking parameters, CONSTRAIN blocks can also be used to freeze a
-parameter to a specific value. This can be used to enforce an offset for a
-given value (within the limitations of tensor LEED) without having to re-do
-the reference calculation. It is also equivalent to giving a displacement
-range with only a single value.
-
-Freezing parameters can be achieved by specifying a value from the
-displacements range, or by giving a specific index:
-
-::
-
-   = VIB_DELTA
-   Ir_top = -0.05 0.05 0.02     ! vary vibration amplitudes for Ir_top atoms over the range [-0.05, 0.05] with step 0.02
-
-   = CONSTRAIN
-   vib Ir_top = -0.03           ! although a displacement range is defined for Ir_top, fix it's value to -0.03 instead
-   vib Ir_top = ind(2)          ! same as the line before: Fix index to 2, i.e. the second entry in the displacement range
-
-Note that in the ind(N) function, indices are counted starting at 1,
-not at 0, to keep them consistent with values in the SD.TL file.

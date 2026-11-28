@@ -1,0 +1,75 @@
+{
+ "tensorleed_version": "2.1.0",
+ "intpol_deg": 3,
+ "r_factor_smoothing": 0,
+ "note": "Reference values from the R-factor of TensErLEED 2.1.0 on the same inputs, frozen; TensErLEED is not run by the tests. r is the overall R factor, r_integer and r_fractional those of the integer- and fractional-order beams (null if absent). The values of r2 are TensErLEED's own, which are half of the usual R2 definition.",
+ "exp_file": "../ag100/EXPBEAMS.csv",
+ "beam_correspondence_file": "beamcorr.json",
+ "system": "Ag(100) 1x1 reference calculation with TensErLEED 1.6.1 and 2.1.0 (theory files); the R factor is that of TensErLEED 2.1.0 in both cases",
+ "fractional": false,
+ "theory": {
+  "THEOBEAMS-tl1.6.1.csv": {
+   "pendry": {
+    "r": 0.1372,
+    "r_integer": 0.1372,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   },
+   "smooth": {
+    "r": 0.1097,
+    "r_integer": 0.1097,
+    "r_fractional": null,
+    "best_v0r": 4.5
+   },
+   "zj": {
+    "r": 0.0428,
+    "r_integer": 0.0428,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   },
+   "r2": {
+    "r": 0.0361,
+    "r_integer": 0.0361,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   }
+  },
+  "THEOBEAMS-tl2.1.0.csv": {
+   "pendry": {
+    "r": 0.1393,
+    "r_integer": 0.1393,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   },
+   "smooth": {
+    "r": 0.1126,
+    "r_integer": 0.1126,
+    "r_fractional": null,
+    "best_v0r": 4.5
+   },
+   "zj": {
+    "r": 0.0435,
+    "r_integer": 0.0435,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   },
+   "r2": {
+    "r": 0.0365,
+    "r_integer": 0.0365,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   }
+  }
+ },
+ "v0_imag": 5.0,
+ "theo_energies": [
+  50.0,
+  350.0,
+  3.0
+ ],
+ "iv_shift_range": [
+  -5.0,
+  8.0,
+  0.5
+ ]
+}

@@ -23,6 +23,8 @@ after the reference calculation and during the search.
 .. versionchanged:: 0.15.0
    Parameter renamed from ``R_FACTOR_SMOOTH`` to ``R_FACTOR_SMOOTHING``.
    The old name is still accepted as an alias for backwards compatibility.
+   The warning for a non-zero value with R_FACTOR_LEGACY = ``False``
+   (see below) is new.
 
 **Default:** 0
 
@@ -35,8 +37,8 @@ after the reference calculation and during the search.
    R_FACTOR_SMOOTHING = 4
 
 .. warning::
-   This parameter is only applied in the old TensErLEED-based fortran codes,
-   and not in the newer |R-factor| implementations. If you use the newer,
-   python-based |R-factor| implementations, for example by setting
-   :ref:`R_FACTOR_LEGACY<rfactorlegacy>` to ``False``, this parameter will have
-   no effect.
+   This parameter applies only to the TensErLEED |R factor|. The
+   python-native |R factor|, used with
+   :ref:`R_FACTOR_LEGACY<rfactorlegacy>` = ``False``, does not smooth the
+   experimental curves and ignores R_FACTOR_SMOOTHING. In that case, a
+   warning is issued if R_FACTOR_SMOOTHING is set to a non-zero value.

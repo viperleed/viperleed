@@ -24,6 +24,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,
     LayerCutTokenType as CutType
     )
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
@@ -1097,6 +1098,60 @@ class TestPlotIV(_TestInterpretBase):
         self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
+class TestRFactorType(_TestInterpretBase):
+    """Tests for interpretation of parameter R_FACTOR_TYPE."""
+
+    param = 'R_FACTOR_TYPE'
+
+    valid = {
+        # canonical names
+        'pendry': ('pendry', RFactorType.PENDRY),
+        'r2': ('r2', RFactorType.R2),
+        'zj': ('zj', RFactorType.ZJ),
+        'smooth': ('smooth', RFactorType.SMOOTH),
+        # aliases / normalization
+        'pendry alias rp': ('rp', RFactorType.PENDRY),
+        'zj alias dashed': ('zanazzi-jona', RFactorType.ZJ),
+        'smooth alias schmid': ('schmid', RFactorType.SMOOTH),
+        'case and whitespace': ('  PeNdRy  ', RFactorType.PENDRY),
+        # numeric codes passed as strings
+        'code 1': ('1', RFactorType.PENDRY),
+        'code 2': ('2', RFactorType.R2),
+        'code 3': ('3', RFactorType.ZJ),
+        'code 4': ('4', RFactorType.SMOOTH),
+    }
+
+    invalid = {
+        'unknown name': 'nonsense',
+        'invalid numeric code': '5',
+    }
+
+    @parametrize('value,expected', valid.values(), ids=valid)
+    def test_interpret_valid(self, interpreter, value, expected):
+        self.interpret(interpreter, value)
+        r_factor_type = self.rpars_value(interpreter)
+
+        assert r_factor_type is expected
+
+    @parametrize('value', invalid.values(), ids=invalid)
+    def test_interpret_invalid_value(self, interpreter, value):
+        self.check_raises(interpreter, value, err.ParameterValueError)
+
+    def test_interpret_rejects_multiple_values(self, interpreter):
+        with pytest.raises(err.ParameterNumberOfInputsError):
+            self.interpret(interpreter, 'pendry r2')
+
+    def test_interpret_rejects_flag(self, interpreter):
+        with pytest.raises(err.ParameterUnknownFlagError):
+            self.interpret(interpreter, 'pendry', flags_str='foo')
+
+    def test_interpret_assigns_rfactortype_instance(self, interpreter):
+        self.interpret(interpreter, 'z')
+        value = self.rpars_value(interpreter)
+
+        assert value is RFactorType.ZJ
+
+
 class TestRun(_TestInterpretBase):
     """Tests for interpreting RUN."""
 
@@ -1546,3 +1601,61 @@ class TestV0Real(_TestInterpretBase):
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid V0_REAL raises exceptions."""
         self.check_raises(interpreter, val, exc)
+
+class TestVLJParameters(_TestInterpretBase):
+    """Tests for interpreting VLJ parameters."""
+
+    def test_interpret_vlj_algo(self, interpreter):
+        """Check assignment of valid VLJ_ALGO list."""
+        assignment = Assignment('CMAES, BFGS', 'VLJ_ALGO')
+        interpreter.interpret_vlj_algo(assignment)
+        assert interpreter.rpars.VLJ_ALGO == ['CMAES', 'BFGS']
+
+    def test_interpret_vlj_algo_settings_cmaes(self, interpreter):
+        """Check assignment of valid vlj_algo_settings for CMAES."""
+        assignment = Assignment('pop 20, max_gens 50, ftol 1e-2', 'VLJ_ALGO', flags_str='CMAES')
+        interpreter.interpret_vlj_algo(assignment)
+        assert interpreter.rpars.vlj_algo_settings['CMAES'] == {
+            'pop': 20,
+            'max_gens': 50,
+            'ftol': 1e-2,
+        }
+
+    def test_interpret_vlj_algo_settings_slsqp(self, interpreter):
+        """Check assignment of valid vlj_algo_settings for SLSQP."""
+        assignment = Assignment('grad false, grad_damping 0.5', 'VLJ_ALGO', flags_str='SLSQP')
+        interpreter.interpret_vlj_algo(assignment)
+        assert interpreter.rpars.vlj_algo_settings['SLSQP'] == {
+            'grad': False,
+            'grad_damping': 0.5,
+        }
+
+    @parametrize(algo=('SLSQP', 'BFGS'))
+    def test_interpret_vlj_algo_grad_damping_deprecated(self, algo,
+                                                        interpreter, caplog):
+        """Check that grad_damping warns once that it has no effect."""
+        assignment = Assignment('grad_damping 0.5', 'VLJ_ALGO', flags_str=algo)
+        with caplog.at_level(logging.WARNING):
+            interpreter.interpret_vlj_algo(assignment)
+        warnings = [r for r in caplog.records if 'grad_damping' in r.message]
+        assert len(warnings) == 1
+        assert 'no effect' in warnings[0].message
+
+    def test_interpret_vlj_batch(self, interpreter):
+        """Check assignment of valid VLJ_BATCH."""
+        assignment = Assignment('energies 4, atoms 2', 'VLJ_BATCH')
+        interpreter.interpret_vlj_batch(assignment)
+        assert interpreter.rpars.VLJ_BATCH == {'energies': 4, 'atoms': 2}
+
+    def test_interpret_vlj_config(self, interpreter):
+        """Check assignment of valid VLJ_CONFIG."""
+        assignment = Assignment(
+            'precondition false, recalc_ref_t_matrices true, t-leed-l_max 4',
+            'VLJ_CONFIG'
+        )
+        interpreter.interpret_vlj_config(assignment)
+        assert interpreter.rpars.VLJ_CONFIG == {
+            'precondition': False,
+            'recalc_ref_t_matrices': True,
+            't-leed-l_max': 4,
+        }

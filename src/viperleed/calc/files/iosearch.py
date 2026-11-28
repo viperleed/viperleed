@@ -23,8 +23,10 @@ import time
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import poscar
+from viperleed.calc.files import tenserleed
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
@@ -35,6 +37,8 @@ from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+
+_R_FACTOR_TYPE_COMMENT = '1: use RPe -- 2: use R2 -- 4: use RS\n'
 
 
 class SearchIORaceConditionError(Exception):
@@ -82,7 +86,7 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
+def readSDTL_blocks(content, which_beams=0, print_info=False, n_expect=0):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -91,7 +95,7 @@ def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
     ----------
     content : str
         A block of data as read from SD.TL.
-    whichR : int, optional
+    which_beams : int, optional
         Which r-factor values to use (average / integer / fractional)
     print_info : bool, optional
         Whether some basic information should be printed to logger.info and
@@ -136,7 +140,7 @@ def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
                         configs.append(tuple(dpars))
                         dpars = []
                     try:
-                        rav = float(line.split("|")[2 + whichR])  # average R
+                        rav = float(line.split("|")[2 + which_beams])  # average R
                         rfacs.append(rav)
                     except ValueError:
                         if print_info:
@@ -199,7 +203,7 @@ def repeat_fetch_SDTL_last_block(which_beams,
     if not content:
         raise SearchIOEmptyFileError("No data found in SD.TL file.")
     # if we get here, we have exceeded the maximum number of repeats
-    raise SearchIORaceConditionError(f"Could not read complete block from "
+    raise SearchIORaceConditionError("Could not read complete block from "
                                      "SD.TL file.")
 
 def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
@@ -213,9 +217,8 @@ def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
         logger.error("Failed to get last block from SD.TL file.")
         raise
     # check if the last block contains the expected number of lines
-    lines_str = "\n".join(lines)
     sdtl_content = readSDTL_blocks("\n".join(lines),
-                                   whichR=which_beams,
+                                   which_beams=which_beams,
                                    print_info=print_info,
                                    n_expect=n_expect)
     return sdtl_content
@@ -429,6 +432,45 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     return output
 
 
+def _format_r_factor_type_line(r_factor_type, int_formatter, tl_version):
+    """Return the search.steu line with the TensErLEED R-factor code.
+
+    Parameters
+    ----------
+    r_factor_type : RFactorType
+        The R-factor type to be used in the search.
+    int_formatter : fortranformat.FortranRecordWriter
+        The formatter for the integer R-factor code.
+    tl_version : Version
+        The version of TensErLEED that runs the search.
+
+    Returns
+    -------
+    str
+        The line of search.steu that selects the R-factor type.
+
+    Raises
+    ------
+    ValueError
+        If the search of `tl_version` cannot use `r_factor_type`,
+        i.e., for the Zanazzi-Jona R-factor, and for the smooth
+        R-factor with TensErLEED older than 2.1.0.
+    """
+    if r_factor_type is RFactorType.ZJ:
+        msg = (f'R_FACTOR_TYPE {r_factor_type.name} cannot be used in the '
+               'TensErLEED search. Use PENDRY, R2 or SMOOTH instead.')
+        raise ValueError(msg)
+    if (r_factor_type is RFactorType.SMOOTH
+            and tl_version < tenserleed.MIN_TL_VERSION_SMOOTH):
+        msg = (f'R_FACTOR_TYPE {r_factor_type.name} needs TensErLEED '
+               f'{tenserleed.MIN_TL_VERSION_SMOOTH} or later for the search '
+               f'(TL_VERSION is {tl_version}). Use a newer TL_VERSION, or '
+               'PENDRY or R2.')
+        raise ValueError(msg)
+    return (int_formatter.write([r_factor_type.value]).ljust(16)
+            + _R_FACTOR_TYPE_COMMENT)
+
+
 def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
     """
     Generates a PARAM and a search.steu file for the search.
@@ -606,8 +648,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += (formatter['int'].write([0]).ljust(16) + "initialisation for "
                "random number generator - 0: use system time, 1,...: use"
                " init\n")
-    output += (formatter['int'].write([rp.R_FACTOR_TYPE]).ljust(16)
-               + "1: use RPe -- 2: use R2\n")
+    output += _format_r_factor_type_line(rp.R_FACTOR_TYPE,
+                                         formatter['int'],
+                                         rp.TL_VERSION)
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")

@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michael Riva (@michele-riva)'
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -16,6 +16,7 @@ import shutil
 import subprocess
 
 from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.files import iosuperpos
 from viperleed.calc.files.beams import averageBeams
 from viperleed.calc.files.beams import writeFdOut
@@ -33,6 +34,17 @@ logger = logging.getLogger(__name__)
 
 def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     """Runs the superpos calculation."""
+
+    # During normal operation the superpos should never be called when using th
+    # viperleed-jax plugin, but for API compatibility we still check for it.
+    if rp.BACKEND["search"] == SearchBackend.VLJ:
+        raise RuntimeError(
+            'The superpos segment is redundant and not supported with the '
+            'viperleed-jax backend. To sample intensity curves use the '
+            'TensorCalculator.intensity() and TensorCalculator.interpolated() '
+            'methods from the API instead.'
+        )
+
     # check whether there is anything to evaluate
     if for_error:
         config = ((None, None),)
@@ -246,7 +258,7 @@ def _best_config_from_sdtl(rp):                                                 
 
     if sdtl is not None:
         sdtl = readSDTL_blocks("\n".join(sdtl),
-                               whichR=rp.SEARCH_BEAMS,
+                               which_beams=rp.SEARCH_BEAMS,
                                n_expect=rp.SEARCH_POPULATION)
     if not sdtl:
         logger.error("Superpos: No data found in SD.TL")

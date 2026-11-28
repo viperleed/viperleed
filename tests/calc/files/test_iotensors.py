@@ -3,10 +3,11 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-02-20'
 __license__ = 'GPLv3+'
 
+import shutil
 from zipfile import BadZipFile
 from zipfile import ZipFile
 
@@ -15,9 +16,14 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.files import parameters
+from viperleed.calc.files import poscar
 from viperleed.calc.files.iotensors import fetch_unpacked_tensor
+from viperleed.calc.files.iotensors import getTensorOriStates
 from viperleed.calc.files.iotensors import unpack_tensor_file
 from viperleed.calc.lib.context import execute_in_dir
+
+from ...helpers import not_raises
 
 _MODULE = 'viperleed.calc.files.iotensors'
 
@@ -146,3 +152,18 @@ class TestUnpackTensorFile:
         mock_archive.extractall.side_effect = OSError('Extraction failed')
         with pytest.raises(OSError, match='Extraction failed'):
             call()
+
+
+def test_get_tensor_ori_states_old_intpol_deg(data_path, tmp_path):
+    """Check that old Tensors with INTPOL_DEG 5 are accepted."""
+    inputs = data_path / 'Ag(100)/initialization'
+    for name in ('POSCAR', 'PARAMETERS', 'VIBROCC'):
+        shutil.copy(inputs / name, tmp_path / name)
+    with (tmp_path / 'PARAMETERS').open('a', encoding='utf-8') as params:
+        params.write('\nINTPOL_DEG = 5\n')
+    slab = poscar.read(tmp_path / 'POSCAR')
+    rpars = parameters.read(filename=inputs / 'PARAMETERS')
+    parameters.interpret(rpars, slab=slab, silent=True)
+    slab.full_update(rpars)
+    with not_raises(RuntimeError):
+        getTensorOriStates(slab, tmp_path)

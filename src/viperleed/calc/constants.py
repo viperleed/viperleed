@@ -11,7 +11,7 @@ __authors__ = (
     'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
 )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2020-08-03'
 __license__ = 'GPLv3+'
 
@@ -24,6 +24,8 @@ DEFAULT_SUPP = 'SUPP'
 DEFAULT_TENSORS = 'Tensors'  # Where Tensor files are stored
 DEFAULT_WORK = 'work'
 DEFAULT_WORK_HISTORY = 'workhistory'
+# epsilon for comparison of user inputs in the DISPLACEMENTS file
+DISPLACEMENTS_FILE_EPS = 1e-6
 LOG_PREFIX = 'viperleed-calc'
 # Below-DEBUG log levels. Can be made visible via -v or -vv CLI flags
 LOG_VERBOSE = 5

@@ -7,20 +7,23 @@ read from a PARAMETERS file do not clash with one another.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
 import logging
 import operator
 
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.lib.base import available_cpu_count   # For N_CORES
 from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.sections.calc_section import CalcSection as Section
 
 from .errors import ParameterConflictError
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
+PYTHON_RFACTOR_INTPOL_DEG = 3
 
 
 # About the disable: ParametersChecker has only one single job:
@@ -35,9 +38,19 @@ class ParametersChecker:
     self._rpars object to access parameter values.
     """
 
-    def __init__(self):
-        """Initialize instance."""
+    def __init__(self, python_rfactor_checks=True):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        python_rfactor_checks : bool, optional
+            Whether parameters should be checked for compatibility
+            with the Python R factor (e.g., INTPOL_DEG). Pass False
+            for PARAMETERS files that are not used for an R-factor
+            calculation (e.g., from old Tensors). Default is True.
+        """
         self._rpars = None
+        self._python_rfactor_checks = python_rfactor_checks
 
     def check_parameter_conflicts(self, rpars):
         """Make sure the parameters in `rpars` are consistent."""
@@ -74,6 +87,38 @@ class ParametersChecker:
         if not post and pre in {'mpifort', 'mpiifort'}:
             self._rpars.getFortranMpiComp(comp=pre)
 
+    def _check_intpol_deg_python_rfactor(self):
+        """Make sure INTPOL_DEG is cubic for the Python R factor."""
+        if not self._python_rfactor_checks:
+            return
+        intpol_deg, legacy = self._get_attribute_values('INTPOL_DEG',
+                                                        'R_FACTOR_LEGACY')
+        if legacy or intpol_deg == PYTHON_RFACTOR_INTPOL_DEG:
+            return
+        message = (
+            'The Python R factor supports only cubic interpolation '
+            f'(INTPOL_DEG = {PYTHON_RFACTOR_INTPOL_DEG}). Set INTPOL_DEG '
+            f'= {PYTHON_RFACTOR_INTPOL_DEG}, or set R_FACTOR_LEGACY = True '
+            'to use the TensErLEED R factor.'
+            )
+        raise ParameterConflictError(
+            'INTPOL_DEG',
+            'R_FACTOR_LEGACY',
+            message=message,
+        )
+
+    def _check_smoothing_ignored_python_rfactor(self):
+        """Warn if R_FACTOR_SMOOTHING is set but R factor is Python."""
+        smoothing, legacy = self._get_attribute_values('R_FACTOR_SMOOTHING',
+                                                       'R_FACTOR_LEGACY')
+        if smoothing and not legacy:
+            _LOGGER.warning(
+                f'R_FACTOR_SMOOTHING is set to {smoothing}, but it is '
+                'ignored by the Python R factor. Set R_FACTOR_LEGACY = '
+                'True to smooth the experimental curves with the '
+                'TensErLEED R factor.'
+                )
+
     def _check_n_cores(self):
         """Warn if N_CORES is larger than the number of available CPUs."""
         n_cores = self._rpars.N_CORES
@@ -88,3 +133,37 @@ class ParametersChecker:
                 'may not be ideal for performance, or may render execution '
                 'impossible. Consider reducing N_CORES.'
                 )
+
+    ##### Methods related to the viperleed-jax plugin #####
+
+    def _check_backend_search_and_run_segments(self):
+        """Check BACKEND['search'] and RUN for consistency.
+
+        When using the ViPErLEED JAX plugin for the search, delta-amplitude
+        calculations become moot. In this method, we check for any delta-
+        amplitude calculations in the RUN parameter and remove them if
+        necessary. We also warn the user that this is the case.
+        """
+        if self._rpars.BACKEND['search'] is not SearchBackend.VLJ:
+            # ignore for TensErLEED backend
+            return
+
+        # TODO: replace with section.DELTAS when segments are full implemented
+        deltas_removed = [sec for sec in self._rpars.RUN if sec != 2]
+        if len(deltas_removed) < len(self._rpars.RUN):
+            # warn that we removed the delta-amplitude calculation
+            _LOGGER.warning(
+                'Delta-amplitude calculations are not supported with the '
+                'ViPErLEED JAX backend. The delta-amplitude calculation '
+                'segments have been removed from the RUN parameter.'
+                )
+        # TODO: replace with section.SUPERPOS when segments are full implemented
+        superpos_removed = [sec for sec in deltas_removed if sec != 31]
+        if len(superpos_removed) < len(deltas_removed):
+            # warn that we removed the superposition calculation
+            _LOGGER.warning(
+                'Superposition calculations are not supported with the '
+                'ViPErLEED JAX backend. The superposition calculation '
+                'segments have been removed from the RUN parameter.'
+                )
+        self._rpars.RUN = superpos_removed
