@@ -33,6 +33,7 @@ from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.rparams.special.l_max import LMax
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
@@ -99,37 +100,39 @@ _SIMPLE_BOOL_PARAMS = {
 # automatically. Key is parameter name, value is a NumericBounds
 _SIMPLE_NUMERICAL_PARAMS = {
     # Positive-only integers
-    'BULKDOUBLING_MAX' : POSITIVE_INT,
-    'N_CORES' : POSITIVE_INT,
-    'SEARCH_MAX_GEN' : POSITIVE_INT,
-    'TENSOR_INDEX' : POSITIVE_INT,
+    'BULKDOUBLING_MAX': POSITIVE_INT,
+    'N_CORES': POSITIVE_INT,
+    'SEARCH_MAX_GEN': POSITIVE_INT,
+    'TENSOR_INDEX': POSITIVE_INT,
     # Positive-only floats
-    'T_DEBYE' : POSITIVE_FLOAT,
-    'T_EXPERIMENT' : POSITIVE_FLOAT,
-    'V0_IMAG' : POSITIVE_FLOAT,
+    'T_DEBYE': POSITIVE_FLOAT,
+    'T_EXPERIMENT': POSITIVE_FLOAT,
+    'V0_IMAG': POSITIVE_FLOAT,
     # Other floats
-    'V0_Z_ONSET' : NumericBounds(),
-    'ATTENUATION_EPS' : NumericBounds(range_=(1e-6, 1),
-                                      accept_limits=(True, False)),
-    'BULKDOUBLING_EPS' : NumericBounds(range_=(1e-4, None),
-                                       out_of_range_event='coerce'),
-    'BULK_LIKE_BELOW': NumericBounds(range_=(0, 1),
-                                     accept_limits=(False, False)),
-    'SCREEN_APERTURE' : NumericBounds(range_=(0, 180)),
+    'V0_Z_ONSET': NumericBounds(),
+    'ATTENUATION_EPS': NumericBounds(
+        range_=(1e-6, 1), accept_limits=(True, False)
+    ),
+    'BULKDOUBLING_EPS': NumericBounds(
+        range_=(1e-4, None), out_of_range_event='coerce'
+    ),
+    'BULK_LIKE_BELOW': NumericBounds(
+        range_=(0, 1), accept_limits=(False, False)
+    ),
+    'SCREEN_APERTURE': NumericBounds(range_=(0, 180)),
     # Other integers
-    'HALTING' : NumericBounds(type_=int, range_=(1, 3)),
-    'N_BULK_LAYERS' : NumericBounds(type_=int, range_=(1, 2)),
-    'R_FACTOR_SMOOTHING' : NumericBounds(type_=int, range_=(0, 999)),
-    'R_FACTOR_TYPE' : NumericBounds(type_=int, range_=(1, 2)),
-    'ZIP_COMPRESSION_LEVEL' : NumericBounds(type_=int, range_=(0, 9))
-    }
+    'HALTING': NumericBounds(type_=int, range_=(1, 3)),
+    'N_BULK_LAYERS': NumericBounds(type_=int, range_=(1, 2)),
+    'R_FACTOR_SMOOTHING': NumericBounds(type_=int, range_=(0, 999)),
+    'ZIP_COMPRESSION_LEVEL': NumericBounds(type_=int, range_=(0, 9)),
+}
 
 
 # parameters that can be optimized in FD optimization
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
 
-def interpret(rpars, slab=None, silent=False):
+def interpret(rpars, slab=None, silent=False, check_rfactor=True):
     """Interpret rpars.readParams to actual values.
 
     Parameters
@@ -142,6 +145,11 @@ def interpret(rpars, slab=None, silent=False):
         passed, some parameters will not be interpreted.
     silent : bool, optional
         If True, less output will be printed. The default is False.
+    check_rfactor : bool, optional
+        Whether to reject parameters that are incompatible with the
+        Python R factor (e.g., INTPOL_DEG other than 3 without
+        R_FACTOR_LEGACY). Should be False for PARAMETERS files that
+        are not the main one (old Tensors, domains). Default is True.
 
     Raises
     ------
@@ -149,7 +157,11 @@ def interpret(rpars, slab=None, silent=False):
         If any parameter interpretation fails.
     """
     interpreter = ParameterInterpreter(rpars)
-    interpreter.interpret(slab=slab, silent=silent)
+    interpreter.interpret(
+        slab=slab,
+        silent=silent,
+        check_rfactor=check_rfactor,
+        )
 
 
 def _with_dynamic_methods(cls):
@@ -218,7 +230,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         # Some flags
         self._search_conv_read = False
 
-    def interpret(self, slab, silent=False):
+    def interpret(self, slab, silent=False, check_rfactor=True):
         """Interpret all known parameters using slab."""
         self.slab = slab
         self._search_conv_read = False
@@ -230,11 +242,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             for param, assignment in self._get_param_assignments():
                 self._complain_if_invalid_param_in_domain_calc(param)
                 self._interpret_param(param, assignment)
-                _LOGGER.log(LOG_VERY_VERBOSE,
-                            f'Successfully interpreted parameter {param}')
+                _LOGGER.log(
+                    LOG_VERY_VERBOSE,
+                    f'Successfully interpreted parameter {param}',
+                )
 
             # Make sure there is no inconsistent combination of parameters
-            checker = ParametersChecker()
+            checker = ParametersChecker(python_rfactor_checks=check_rfactor)
             checker.check_parameter_conflicts(self.rpars)
 
     # ----------------  Helper methods for interpret() ----------------
@@ -1296,6 +1310,15 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.SEARCH_BEAMS = 2
         else:
             raise ParameterValueError(param, value)
+
+    def interpret_r_factor_type(self, assignment):
+        """Assign parameter R_FACTOR_TYPE."""
+        param = 'R_FACTOR_TYPE'
+        self._ensure_simple_assignment(assignment)
+        try:
+            self.rpars.R_FACTOR_TYPE = RFactorType(assignment.value)
+        except ValueError as err:
+            raise ParameterValueError(param, assignment.value) from err
 
     def interpret_search_convergence(self, assignment, is_updating=False):      # TODO: Issue #139
         """Interpret SEARCH_CONVERGENCE parameter.

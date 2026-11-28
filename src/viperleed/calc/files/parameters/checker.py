@@ -7,7 +7,7 @@ read from a PARAMETERS file do not clash with one another.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
@@ -21,6 +21,7 @@ from .errors import ParameterConflictError
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
+PYTHON_RFACTOR_INTPOL_DEG = 3
 
 
 # About the disable: ParametersChecker has only one single job:
@@ -35,9 +36,19 @@ class ParametersChecker:
     self._rpars object to access parameter values.
     """
 
-    def __init__(self):
-        """Initialize instance."""
+    def __init__(self, python_rfactor_checks=True):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        python_rfactor_checks : bool, optional
+            Whether parameters should be checked for compatibility
+            with the Python R factor (e.g., INTPOL_DEG). Pass False
+            for PARAMETERS files that are not used for an R-factor
+            calculation (e.g., from old Tensors). Default is True.
+        """
         self._rpars = None
+        self._python_rfactor_checks = python_rfactor_checks
 
     def check_parameter_conflicts(self, rpars):
         """Make sure the parameters in `rpars` are consistent."""
@@ -73,6 +84,38 @@ class ParametersChecker:
         pre, post = self._rpars.FORTRAN_COMP_MPI
         if not post and pre in {'mpifort', 'mpiifort'}:
             self._rpars.getFortranMpiComp(comp=pre)
+
+    def _check_intpol_deg_python_rfactor(self):
+        """Make sure INTPOL_DEG is cubic for the Python R factor."""
+        if not self._python_rfactor_checks:
+            return
+        intpol_deg, legacy = self._get_attribute_values('INTPOL_DEG',
+                                                        'R_FACTOR_LEGACY')
+        if legacy or intpol_deg == PYTHON_RFACTOR_INTPOL_DEG:
+            return
+        message = (
+            'The Python R factor supports only cubic interpolation '
+            f'(INTPOL_DEG = {PYTHON_RFACTOR_INTPOL_DEG}). Set INTPOL_DEG '
+            f'= {PYTHON_RFACTOR_INTPOL_DEG}, or set R_FACTOR_LEGACY = True '
+            'to use the TensErLEED R factor.'
+            )
+        raise ParameterConflictError(
+            'INTPOL_DEG',
+            'R_FACTOR_LEGACY',
+            message=message,
+        )
+
+    def _check_smoothing_ignored_python_rfactor(self):
+        """Warn if R_FACTOR_SMOOTHING is set but R factor is Python."""
+        smoothing, legacy = self._get_attribute_values('R_FACTOR_SMOOTHING',
+                                                       'R_FACTOR_LEGACY')
+        if smoothing and not legacy:
+            _LOGGER.warning(
+                f'R_FACTOR_SMOOTHING is set to {smoothing}, but it is '
+                'ignored by the Python R factor. Set R_FACTOR_LEGACY = '
+                'True to smooth the experimental curves with the '
+                'TensErLEED R factor.'
+                )
 
     def _check_n_cores(self):
         """Warn if N_CORES is larger than the number of available CPUs."""

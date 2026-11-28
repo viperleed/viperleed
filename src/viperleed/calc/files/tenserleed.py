@@ -53,6 +53,9 @@ OLD_TL_VERSION_NAMES = {
 
 CURRENT_TL_VERSION = max([Version(v) for v in KNOWN_TL_VERSIONS])
 
+# First version with the smooth R-factor (WEXPEL WR and search code 4)
+MIN_TL_VERSION_SMOOTH = Version('2.1.0')
+
 # Versions whose ADREF2T (lib.tleed) computes wrong top-layer tensors
 # (AMP0(N) instead of AMP0(I)). Fixed in v2.1.0.
 TL_VERSIONS_WITH_WRONG_TENSORS = (

@@ -29,6 +29,7 @@ __license__ = 'GPLv3+'
 import contextlib
 import functools
 
+import pytest
 from pytest_cases import case
 from pytest_cases import fixture
 from pytest_cases import get_current_cases
@@ -37,8 +38,10 @@ from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.classes.rparams import rparams
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.files import iosearch
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.version import Version
 
 from ...helpers import private_random
 from . import cases_stored_inputs
@@ -58,6 +61,8 @@ HUGE_MAX_GEN = 10**9  # Above what the input file format allows
 MAX_GEN_WRITTEN = {'1.6.0-1.6.1': 999999, '1.7.3-': 9999999}
 EXP_ENERGIES = tuple(range(50, 351))  # Synthetic experimental beams
 EXP_BEAMS = ((1, 0), (1, 1), (2, 0))
+SMOOTH_MIN_TL_VERSION = Version('2.1.0')
+SMOOTH_CODE_LINE = '    4 '  # R-factor type line for smooth, I5
 
 
 @case(id=CRANDOM_CASE, tags=SEARCH)
@@ -159,3 +164,20 @@ def test_max_generations_limited(group, prepared_deltas):
     generations = next(line for line in lines if MAX_GEN_LINE in line)
     expected = MAX_GEN_WRITTEN[reference_group(group)]
     assert int(generations.split()[0]) == expected
+
+
+@parametrize(r_type=('smooth', 'zj'))
+def test_r_factor_type_checked(group, prepared_deltas, r_type):
+    """Check that the search writes only R types its TensErLEED has."""
+    prepared = prepared_deltas(cases_stored_inputs.case_ag100_z(), group)
+    rpars = prepared.rpars
+    rpars.R_FACTOR_TYPE = RFactorType(r_type)
+    if (rpars.R_FACTOR_TYPE is RFactorType.SMOOTH
+            and rpars.TL_VERSION >= SMOOTH_MIN_TL_VERSION):
+        folder = _write_search_inputs(prepared)
+        steu = (folder / 'search.steu').read_text(encoding='utf-8')
+        assert any(line.startswith(SMOOTH_CODE_LINE)
+                   for line in steu.splitlines())
+        return
+    with pytest.raises(ValueError, match=r_type.upper()):
+        _write_search_inputs(prepared)

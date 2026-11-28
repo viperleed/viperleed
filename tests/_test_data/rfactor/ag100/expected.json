@@ -1,0 +1,49 @@
+{
+ "tensorleed_version": "2.1.0",
+ "intpol_deg": 3,
+ "r_factor_smoothing": 0,
+ "note": "Reference values from the R-factor of TensErLEED 2.1.0 on the same inputs, frozen; TensErLEED is not run by the tests. r is the overall R factor, r_integer and r_fractional those of the integer- and fractional-order beams (null if absent). The values of r2 are TensErLEED's own, which are half of the usual R2 definition.",
+ "exp_file": "EXPBEAMS.csv",
+ "beam_correspondence_file": "beamcorr.json",
+ "system": "Ag(100) 1x1, the Ag(100) example of the viperleed examples",
+ "fractional": false,
+ "theory": {
+  "THEOBEAMS.csv": {
+   "pendry": {
+    "r": 0.1226,
+    "r_integer": 0.1226,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   },
+   "smooth": {
+    "r": 0.0962,
+    "r_integer": 0.0962,
+    "r_fractional": null,
+    "best_v0r": 4.5
+   },
+   "zj": {
+    "r": 0.0502,
+    "r_integer": 0.0502,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   },
+   "r2": {
+    "r": 0.0319,
+    "r_integer": 0.0319,
+    "r_fractional": null,
+    "best_v0r": 4.0
+   }
+  }
+ },
+ "v0_imag": 4.5,
+ "theo_energies": [
+  45.0,
+  300.0,
+  3.0
+ ],
+ "iv_shift_range": [
+  -10.0,
+  10.0,
+  0.5
+ ]
+}

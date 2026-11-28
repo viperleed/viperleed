@@ -1,7 +1,7 @@
   4             number of independent parameters
  0.1000         gaussian width control parameter RMUT
   0             initialisation for random number generator - 0: use system time, 1,...: use init
-  1             1: use RPe -- 2: use R2
+  1             1: use RPe -- 2: use R2 -- 4: use RS
   0             Optimization of which beam group do you want? (0=Aver,1=Int,2=Half)
    100          output interval
 100000          desired number of generations to be performed

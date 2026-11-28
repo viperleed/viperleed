@@ -24,6 +24,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,
     LayerCutTokenType as CutType
     )
+from viperleed.calc.classes.rparams.special.r_factor_type import RFactorType
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
@@ -1095,6 +1096,60 @@ class TestPlotIV(_TestInterpretBase):
     def test_interpret_invalid(self, flag, val, exc, interpreter):
         """Ensure invalid PLOT_IV raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
+class TestRFactorType(_TestInterpretBase):
+    """Tests for interpretation of parameter R_FACTOR_TYPE."""
+
+    param = 'R_FACTOR_TYPE'
+
+    valid = {
+        # canonical names
+        'pendry': ('pendry', RFactorType.PENDRY),
+        'r2': ('r2', RFactorType.R2),
+        'zj': ('zj', RFactorType.ZJ),
+        'smooth': ('smooth', RFactorType.SMOOTH),
+        # aliases / normalization
+        'pendry alias rp': ('rp', RFactorType.PENDRY),
+        'zj alias dashed': ('zanazzi-jona', RFactorType.ZJ),
+        'smooth alias schmid': ('schmid', RFactorType.SMOOTH),
+        'case and whitespace': ('  PeNdRy  ', RFactorType.PENDRY),
+        # numeric codes passed as strings
+        'code 1': ('1', RFactorType.PENDRY),
+        'code 2': ('2', RFactorType.R2),
+        'code 3': ('3', RFactorType.ZJ),
+        'code 4': ('4', RFactorType.SMOOTH),
+    }
+
+    invalid = {
+        'unknown name': 'nonsense',
+        'invalid numeric code': '5',
+    }
+
+    @parametrize('value,expected', valid.values(), ids=valid)
+    def test_interpret_valid(self, interpreter, value, expected):
+        self.interpret(interpreter, value)
+        r_factor_type = self.rpars_value(interpreter)
+
+        assert r_factor_type is expected
+
+    @parametrize('value', invalid.values(), ids=invalid)
+    def test_interpret_invalid_value(self, interpreter, value):
+        self.check_raises(interpreter, value, err.ParameterValueError)
+
+    def test_interpret_rejects_multiple_values(self, interpreter):
+        with pytest.raises(err.ParameterNumberOfInputsError):
+            self.interpret(interpreter, 'pendry r2')
+
+    def test_interpret_rejects_flag(self, interpreter):
+        with pytest.raises(err.ParameterUnknownFlagError):
+            self.interpret(interpreter, 'pendry', flags_str='foo')
+
+    def test_interpret_assigns_rfactortype_instance(self, interpreter):
+        self.interpret(interpreter, 'z')
+        value = self.rpars_value(interpreter)
+
+        assert value is RFactorType.ZJ
 
 
 class TestRun(_TestInterpretBase):
